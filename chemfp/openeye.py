@@ -1,0 +1,468 @@
+"Create OpenEye fingerprints"
+
+# Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
+# Licensed under "the MIT license"
+# See the contents of COPYING or "__init__.py" for full license details.
+
+from __future__ import absolute_import
+
+import sys
+import os
+import textwrap
+import errno
+import select
+import ctypes
+
+from . import argparse, shared
+
+from openeye.oechem import *
+from openeye.oegraphsim import *
+
+# These are the things I consider to be public
+__all__ = ["read_structures"]
+
+
+##### Handle the atom and bond type flags for path fingerprints
+
+# The atom and bond type flags can be specified on the command-line
+# 
+#   --atype=DefaultAtom --btype=BondOrder,InRing
+#   --atype AtomicNumber,InRing  --btype DefaultBond,InRing
+#
+# The type fields may be separated by either a "," or a "|".
+# The relevant OpenEye function (OEGetFPAtomType() and
+# OEGetFPBondType()) use a "|" but that requires escaping for
+# the shell, so I support "," as well.
+
+# There's another conversion of the integer type values into a string
+# representation, used when generating the canonical form of the
+# generation parameters for the FPS output. That case uses "|"
+# (and not ",") and omits the DefaultAtom and DefaultBond name.
+# The result is easier to parse with the OpenEye API functions.
+
+_atype_flags = [(OEGetFPAtomType(atype), atype) for atype in
+                (OEFPAtomType_Aromaticity,
+                OEFPAtomType_AtomicNumber,
+                OEFPAtomType_Chiral,
+                OEFPAtomType_EqAromatic,
+                OEFPAtomType_EqHalogen,
+                OEFPAtomType_FormalCharge,
+                OEFPAtomType_HvyDegree,
+                OEFPAtomType_Hybridization,
+                OEFPAtomType_InRing)]
+_btype_flags = [(OEGetFPBondType(btype), btype) for btype in
+                (OEFPBondType_BondOrder,
+                OEFPBondType_Chiral,
+                OEFPBondType_InRing)]
+
+# Mapping from atype string to flag (includes AtomDefault)
+_atypes = dict(_atype_flags)
+_btypes = dict(_btype_flags)
+
+_atypes["DefaultAtom"] = OEFPAtomType_DefaultAtom
+_btypes["DefaultBond"] = OEFPBondType_DefaultBond
+
+## Go from a "," or "|" separated text field to an integer value
+# Removes extra whitespace, but none should be present.
+
+def _get_type_value(a_or_b, table, description):
+    value = 0
+    # Allow both "|" and "," as separators
+    # (Consistent with OEChem)
+    description = description.replace("|", ",")
+    for word in description.split(","):
+        word = word.strip()
+        try:
+            value |= table[word]
+        except KeyError:
+            raise TypeError("Unknown %s type %r" % (a_or_b, word))
+    return value
+
+
+def atom_description_to_value(description):
+    """atom_description_to_value(description) -> integer
+
+    Convert an atom description like FormalCharge,EqHalogen
+    or FormalCharge|EqHalogen into its atom type value.
+
+    This is similar to OEGetFPAtomType except both "|" and "," are
+    allowed seperators and "AtomDefault" is an allowed term.
+    """
+    return _get_type_value("atom", _atypes, description)
+
+def bond_description_to_value(description):
+    """bond_description_to_value(description) -> integer
+
+    Convert an bond description like BondOrder,Chiral
+    or BondOrder|Chiral into its bond type value.
+
+    This is similar to OEGetFPBondType except both "|" and "," are
+    allowed seperators and "BondDefault" is an allowed term.
+    """
+    return _get_type_value("bond", _btypes, description)
+
+
+## Go from an integer value into a canonical description
+
+# I could make the final string sorter by using DefaultAtom/
+# DefaultBond but OpenEye might change that value in the future. I
+# think this is slightly safer.
+
+# I could use OEGetFPAtomType() and OEGetFPBondType() but I wanted
+# something which has a fixed sort order even for future releases,
+# which isn't part of those functions.
+
+def _get_type_description(a_or_b, flags, value):
+    words = []
+    for (word, flag) in flags:
+        if flag & value == flag:
+            # After over 12 years of full-time use of Python,
+            # I finally have a chance to use the xor operator.
+            value = value ^ flag
+            words.append(word)
+    if value != 0:
+        raise AssertionError("Unsupported %s value" % (a_or_b,))
+    return "|".join(words)
+
+
+def atom_value_to_description(value):
+    """atom_value_to_description(value) -> string
+
+    Convert from an atom type string into its text description,
+    separated by "|"s. The result are compatible with
+    OEGetFPAtomType and are in canonical order.
+    """
+    return _get_type_description("atom", _atype_flags, value)
+
+def bond_value_to_description(value):
+    """bond_value_to_description(value) -> string
+
+    Convert from a bond type string into its text description,
+    separated by "|"s. The result are compatible with
+    OEGetFPBontType and are in canonical order.
+    """
+    return _get_type_description("bond", _btype_flags, value)
+
+##### Create a function which generate fingerprints
+
+# I use functions which return functions because it was a nice way to
+# hide the differences between the two fingerprinters. I also found
+# that I can save a bit of time by not creating a new fingerprint each
+# time. The measured speedup is about 2% for MACCS166 and 6% for path
+# fingerprints.
+
+# Just like the OEGraphMol, these fingerprints must not be reused or
+# stored. They are mutated EVERY TIME. They are NOT thread-safe.
+# If you need to use these in multiple threads, then make multiple
+# fingerprinters.
+
+def get_path_fingerprinter(num_bits, min_bonds, max_bonds, atype, btype):
+    # Extra level of error checking since I expect people will think
+    # of this as part of the public API.
+    if not (16 <= num_bits <= 65536):
+        raise TypeError("num_bits must be between 16 and 65536 (inclusive)")
+    if not (0 <= min_bonds):
+        raise TypeError("min_bonds must be 0 or greater")
+    if not (min_bonds <= max_bonds):
+        raise TypeError("max_bonds must not be smaller than min_bonds")
+
+    # XXX valdiate the atype and type values? Should just
+    # be a simple bitwise-and and test for 0.
+    
+    fp = OEFingerPrint()
+    fp.SetSize(num_bits)
+    data_location = int(fp.GetData())
+    num_bytes = (num_bits+7)//8
+
+    def path_fingerprinter(mol):
+        OEMakePathFP(fp, mol, num_bits, min_bonds, max_bonds, atype, btype)
+        return ctypes.string_at(data_location, num_bytes)
+
+    return path_fingerprinter
+
+# Believe it or not, reusing the preallocated fingerprint does help
+# the performance.
+def get_maccs_fingerprinter():
+    fp = OEFingerPrint()
+    fp.SetSize(166)
+    data_location = int(fp.GetData())
+    num_bytes = (166+7)//8
+    
+    def maccs_fingerprinter(mol):
+        OEMakeMACCS166FP(fp, mol)
+        return ctypes.string_at(data_location, num_bytes)
+
+    return maccs_fingerprinter
+
+### A note on fingerprints and ctypes.string_at
+
+# The FPS format and OEFingerPrint.GetData() values used identical bit
+# and byte order. Bytes are in little-endian order and bits are in
+# big-endian order. That means I can use GetData() to get the
+# underlying C storage area, use ctypes to turn that into a Python
+# string, which I then hex encode.
+
+# The other option is to use OEFingerPrint.ToHexString(). But that's
+# pure little endian, so I would need a transposition to make the bits
+# be what I want them to be. OEChem's hex strings also end with a flag
+# which says how many extra bits to trim, which I don't need since I
+# handle it a different way.
+
+# Here's some info about the bit order, which I tested by setting a
+# few bits though the API then seeing what changed in the hex string
+# and in the underlying GetData() field.
+
+# The bit pattern
+#   01234567 89ABCDEF  pure little endian
+#   10011100 01000011
+#   
+#         93 2C    using ToHexString()  (pure little endian)
+#       0x39 c2    using hex(ord(GetData())) (litle endian byte, big endian bit)
+#
+#   76543210 FEDCBA98
+#   00111001 11000010   little endian byte, big endian bit
+
+
+################ Handle formats
+
+# Make format names to OEChem format types
+_formats = {
+    "smi": OEFormat_SMI,
+    "ism": OEFormat_ISM,
+    "can": OEFormat_CAN,
+
+    "sdf": OEFormat_SDF,
+    "mol": OEFormat_SDF,
+
+    "skc": OEFormat_SKC,
+    "mol2": OEFormat_MOL2,
+    "mmod": OEFormat_MMOD,
+    "oeb": OEFormat_OEB,
+    "bin": OEFormat_BIN,
+}
+
+# Some trickiness to verify that the format specification is
+# supported, but without doing anything (yet) to set those flags.
+
+# I return a function which will set the file stream parameters
+# correctly.
+
+def _do_nothing(ifs): pass
+
+def _get_format_setter(format=None):
+    if format is None:
+        return _do_nothing
+    fmt = format.lower()
+
+    is_compressed = 0
+    if fmt.endswith(".gz"):
+        is_compressed = 1
+        fmt = fmt[:-3]
+
+    format_flag = _formats.get(fmt, None)
+    if format_flag is None and fmt.startwith("."):
+        # Some OE tools use a leading ".". Handle
+        # that case for a bit better compatibility.
+        format_flag = _formats.get(fmt[1:], None)
+
+    if format_flag is None:
+        # XXX better exception
+        raise Exception("Unknown format %r" % (format,))
+
+    def _apply_format(ifs):
+        ifs.SetFormat(format_flag)
+        if is_compressed:
+            ifs.Setgz(is_compressed)
+    return _apply_format
+
+def _open_ifs(filename):
+    ifs = oemolistream()
+    if not ifs.open(filename):
+        # XXX Better exception
+        raise Exception("Cannot open %r" % (filename,))
+    return ifs
+
+# This code is a bit strange. It needs to do eager error checking but
+# lazy parsing. That is, it needs to check right away that the file
+# can be opened (if it exists) and the format is understood. But it
+# can wait until later to actually parse the files.
+
+def read_structures(filename=None, format=None):
+    # Check that that the format is known
+    _apply_format = _get_format_setter(format)
+
+    # Input is from a file
+    if filename is not None:
+        ifs = _open_ifs(filename)
+        _apply_format(ifs)
+        return _iter_structures(ifs)
+    else:
+        # Input is from stdin
+        return _stdin_check(_apply_format)
+
+def _iter_structures(ifs):
+    for mol in ifs.GetOEGraphMols():
+        yield mol.GetTitle(), mol
+
+# The reason for this is to allow ^C to work if there hasn't yet been
+# any input. Why? When Python calls out to a C++ function it blocks
+# control-C. It's not possible to get a KeyboardInterrupt until the
+# C++ function returns. Consider someone using this script who omitted
+# a filename by accident. If OEChem has control of stdin then ^C does
+# not work. I found that frustrating, so this is a workaround. When
+# reading from stdin, don't dispatch to OEChem until there's input.
+
+def _stdin_check(_apply_format):
+    try:
+        select.select([sys.stdin], [], [sys.stdin])
+    except KeyboardInterrupt:
+        raise SystemExit()
+    ifs = oemolistream()
+    ifs.open()
+    _apply_format(ifs)
+    for mol in ifs.GetOEGraphMols():
+        yield mol.GetTitle(), mol
+
+
+############# Used when generate the FPS header
+
+SOFTWARE = "OEGraphSim/" + OEGraphSimGetRelease()
+
+format_path_params = (
+    "OpenEye-Path/1 min_bonds={min_bonds} max_bonds={max_bonds} atype={atype} btype={btype}".format)
+
+
+
+##### Handle command-line argument parsing
+
+# Build up some help text based on the atype and btype fields
+atype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(_atypes))))
+btype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(_btypes))))
+
+# Extra help text after the parameter descriptions
+epilog = """\
+
+ATYPE is one or more of the following, separated by commas
+  {atype_options}
+Examples:
+  --atype DefaultAtom
+  --atype AtomicNumber,HvyDegree
+
+BTYPE is one or more of the following, separated by commas
+  {btype_options}
+Examples:
+  --btype DefaultBond,Chiral
+  --btype BondOrder
+
+OEChem guesses the input structure format based on the filename
+extension and assumes SMILES for structures read from stdin.
+Use "--in FORMAT" to select an alternative, where FORMAT is one of:
+ 
+  File Type      Valid FORMATs (use gz if compressed)
+  ---------      ------------------------------------
+   SMILES        smi, ism, can, smi.gz, ism.gz, can.gz
+   SDF           sdf, mol, sdf.gz, mol.gz
+   SKC           skc, skc.gz
+   CDK           cdk, cdk.gz
+   MOL2          mol2, mol2.gz
+   PDB           pdb, ent, pdb.gz, ent.gz
+   MacroModel    mmod, mmod.gz
+   OEBinary v2   oeb, oeb.gz
+   old OEBinary  bin
+""".format(atype_options=atype_options,
+           btype_options=btype_options)
+
+parser = argparse.ArgumentParser(
+    description="Generate FPS fingerprints from a structure file using OEChem",
+    epilog=epilog,
+    formatter_class=argparse.RawDescriptionHelpFormatter,    
+    )
+path_group = parser.add_argument_group("path fingerprints")
+path_group.add_argument(
+    "--path", action="store_true", help="generate path fingerprints (default)")
+path_group.add_argument(
+    "--num-bits", type=int, metavar="INT",
+    help="number of bits in the path fingerprint (default=4096)", default=4096)
+path_group.add_argument(
+    "--min-bonds", type=int, metavar="INT",
+    help="minimum number of bonds in path (default=0)", default=0)
+path_group.add_argument(
+    "--max-bonds", type=int, metavar="INT",
+    help="maximum number of bonds in path (default=5)", default=5)
+path_group.add_argument(
+    "--atype", help="atom type (default=DefaultAtom)", default="DefaultAtom")
+path_group.add_argument(
+    "--btype", help="bond type (default=DefaultBond)", default="DefaultBond")
+
+maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
+maccs_group.add_argument(
+    "--maccs166", action="store_true", help="generate MACCS fingerprints")
+
+parser.add_argument(
+    "--in", metavar="FORMAT", dest="format",
+    help="input structure format (default guesses from filename)")
+parser.add_argument(
+    "-o", "--output", metavar="FILENAME",
+    help="save the fingerprints to FILENAME (default=stdout)")
+parser.add_argument(
+    "filename", nargs="?", help="input structure file (default is stdin)", default=None)
+
+
+#######
+
+def main(args=None):
+    args = parser.parse_args(args)
+    outfile = sys.stdout
+
+    if args.maccs166:
+        if args.path:
+            parser.error("Cannot specify both --maccs166 and --path")
+        # Create the MACCS keys fingerprinter
+        fingerprinter = get_maccs_fingerprinter()
+        num_bits = 166
+        params = "OpenEye-MACCS166/1"
+    else:
+        if not (16 <= args.num_bits <= 65536):
+            parser.error("--num-bits must be between 16 and 65536 bits")
+        num_bits = args.num_bits
+
+        if not (0 <= args.min_bonds):
+            parser.error("--min-bonds must be 0 or greater")
+        if not (args.min_bonds <= args.max_bonds):
+            parser.error("--max-bonds must not be smaller than --min-bonds")
+
+        # Parse the arguments
+        atype = atom_description_to_value(args.atype)
+        btype = bond_description_to_value(args.btype)
+
+        # Create the normalized string form
+        atype_string = atom_value_to_description(atype)
+        btype_string = bond_value_to_description(btype)
+
+
+        params = format_path_params(min_bonds=args.min_bonds,
+                                    max_bonds=args.max_bonds,
+                                    atype=atype_string,
+                                    btype=btype_string)
+
+        # Create the path fingerprinter
+        fingerprinter = get_path_fingerprinter(
+            num_bits=num_bits,
+            min_bonds=args.min_bonds,
+            max_bonds=args.max_bonds,
+            atype=atype,
+            btype=btype)
+
+    # Ready the input reader/iterator
+    reader = read_structures(args.filename, args.format)
+
+    shared.generate_fpsv1_output(dict(num_bits=num_bits,
+                                      software=SOFTWARE,
+                                      source=args.filename,
+                                      params=params),
+                                 reader,
+                                 fingerprinter,
+                                 args.output)
+
+if __name__ == "__main__":
+    main()
