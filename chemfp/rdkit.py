@@ -244,7 +244,7 @@ def make_rdk_fingerprinter(num_bits=NUM_BITS, min_path=MIN_PATH, max_path=MAX_PA
         fp = Chem.RDKFingerprint(
             mol, minPath=min_path, maxPath=max_path, fpSize=num_bits,
             nBitsPerHash=bits_per_hash, useHs=use_Hs)
-        return decoder.from_binary_lsb(fp)
+        return decoders.from_binary_lsb(fp.ToBitString())[1]
     return rdk_fingerprinter
 
 # Use this to make the parameters for the topological fingerprints
