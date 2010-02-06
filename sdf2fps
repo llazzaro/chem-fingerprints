@@ -1,5 +1,5 @@
 #!/usr/bin/env python
 
-from chemfp import sdf
+from chemfp.commandline import sdf2fps
 
-sdf.main()
+sdf2fps.main()
