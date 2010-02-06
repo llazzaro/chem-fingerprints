@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from distutils.core import setup, Extension
 
 setup(name = "chemfp",
       version = "0.5",
@@ -10,5 +10,9 @@ setup(name = "chemfp",
       url = "http://code.google.com/p/chem-fingerprints/",
       packages = ["chemfp"],
       scripts = ["ob2fps", "oe2fps", "rdkit2fps", "sdf2fps"],
+
+      ext_modules = [Extension("_chemfp",
+                               ["src/bitops.c", "src/heapq.c", "src/searches.c",
+                                "src/python_api.c"])],
      )
 
