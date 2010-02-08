@@ -115,16 +115,19 @@ byte_contains(PyObject *self, PyObject *args) {
 }
 
 static PyObject *
-nlargest_tanimoto(PyObject *self, PyObject *args) {
-  unsigned char *query_fp, *fps, *indicies_buffer, *scores_buffer;
-  int query_len, fps_len, num_fps, offset, storage_len;
+nlargest_tanimoto_block(PyObject *self, PyObject *args) {
+  unsigned char *query_fp, *target_block, *indicies_buffer, *scores_buffer;
+  int query_len, target_block_len, num_targets, offset, storage_len;
   int indicies_len, scores_len;
   int n;
-  if (!PyArg_ParseTuple(args, "s#s#iiiw#w#",
+  double threshold;
+  if (!PyArg_ParseTuple(args, "is#s#iidw#w#",
+						&n,
 						&query_fp, &query_len,
-						&fps, &fps_len,
+						&target_block, &target_block_len,
 						&offset, &storage_len,
-						&n, &indicies_buffer, &indicies_len,
+						&threshold,
+						&indicies_buffer, &indicies_len,
 						&scores_buffer, &scores_len))
 	return NULL;
 
@@ -134,6 +137,10 @@ nlargest_tanimoto(PyObject *self, PyObject *args) {
   }
   if (storage_len < 1) {
 	PyErr_SetString(PyExc_TypeError, "storage_len must be negative");
+	return NULL;
+  }
+  if (! (0<= threshold && threshold <= 1.0)) {
+	PyErr_SetString(PyExc_TypeError, "threshold must be between 0.0 and 1.0 inclusive");
 	return NULL;
   }
   if (n < 1) {
@@ -148,25 +155,25 @@ nlargest_tanimoto(PyObject *self, PyObject *args) {
 
   /* Work out how may fingerprints there are */
 
-  if (offset > fps_len) {
+  if (offset > target_block_len) {
 	PyErr_SetString(PyExc_TypeError,
-					"offset is larger than the fps buffer");
+					"offset is larger than the target_block buffer");
 	return NULL;
   }
-  fps_len -= offset;
-  fps += offset;
+  target_block_len -= offset;
+  target_block += offset;
   offset = 0;
-  if (fps_len == 0)
+  if (target_block_len == 0)
 	return PyInt_FromLong(0);
 
-  if ((fps_len % storage_len) != 0) {
+  if ((target_block_len % storage_len) != 0) {
 	PyErr_SetString(PyExc_TypeError,
-					"fps length is not a multiple of the storage size");
+					"adjusted target_block length is not a multiple of the storage size");
 	return NULL;
   }
-  num_fps = fps_len / storage_len;
-  if (n > num_fps)
-	n = num_fps;
+  num_targets = target_block_len / storage_len;
+  if (n > num_targets)
+	n = num_targets;
 
   if (n * sizeof(int) > indicies_len) {
 	PyErr_SetString(PyExc_TypeError, "indicies buffer is not long enough");
@@ -177,10 +184,12 @@ nlargest_tanimoto(PyObject *self, PyObject *args) {
 	return NULL;
   }
 
-  return PyInt_FromLong(chemfp_nlargest_tanimoto(
-		query_len, query_fp,		
-		num_fps, fps, offset, storage_len,
-		n, (int *) indicies_buffer, (double *) scores_buffer));
+  return PyInt_FromLong(chemfp_nlargest_tanimoto_block(
+		n,
+		query_len, query_fp,
+		num_targets, target_block, offset, storage_len,
+		threshold,
+		(int *) indicies_buffer, (double *) scores_buffer));
 }
 
 static PyMethodDef chemfp_methods[] = {
@@ -196,7 +205,8 @@ static PyMethodDef chemfp_methods[] = {
   {"byte_tanimoto", byte_tanimoto, METH_VARARGS, "Tanimoto"},
   {"byte_contains", byte_contains, METH_VARARGS, "contains"},
 
-  {"nlargest_tanimoto", nlargest_tanimoto, METH_VARARGS, "nlargest_tanimoto"},
+  {"nlargest_tanimoto_block", nlargest_tanimoto_block, METH_VARARGS,
+   "nlargest_tanimoto_block"},
 
   {NULL, NULL, 0, NULL}        /* Sentinel */
 

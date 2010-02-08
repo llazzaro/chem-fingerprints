@@ -15,7 +15,9 @@ double chemfp_byte_tanimoto(int len, const unsigned char *fp1,
 int chemfp_byte_contains(int len, const unsigned char *query_fp,
 						 const unsigned char *target_fp);
 
-int chemfp_nlargest_tanimoto(
-		int len, unsigned char *query_fp,
-		int num_fps, unsigned char *fps, int offset, int storage_len,
-		unsigned int n, int *indicies, double *scores);
+int chemfp_nlargest_tanimoto_block(
+        int n,
+		int query_len, unsigned char *query_fp,
+		int num_targets, unsigned char *target_block, int offset, int storage_len,
+		double threshold,
+		int *indicies, double *scores);

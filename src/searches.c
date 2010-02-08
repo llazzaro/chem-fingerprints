@@ -9,7 +9,12 @@ typedef struct {
 
 // XXX Check that heapq preserves order
 int double_score_lt(DoubleScoreData *data, int i, int j) {
-  return data->scores[i] < data->scores[j];
+  if (data->scores[i] < data->scores[j])
+	return 1;
+  if (data->scores[i] > data->scores[j])
+	return 0;
+  // Sort in descending order by index. (XXX immportant or overkill?)
+  return (data->indicies[i] >= data->indicies[j]);
 }
 void double_score_swap(DoubleScoreData *data, int i, int j) {
   int tmp_index = data->indicies[i];
@@ -20,13 +25,17 @@ void double_score_swap(DoubleScoreData *data, int i, int j) {
   data->scores[j] = tmp_score;
 }
 
-int chemfp_nlargest_tanimoto(
+int chemfp_nlargest_tanimoto_block(
+        int n,
 		int len, unsigned char *query_fp,
-		int num_fps, unsigned char *fps, int offset, int storage_len,
-		unsigned int n, int *indicies, double *scores) {
-  int i, fp_index;
+		int num_targets, unsigned char *target_block, int offset, int storage_len,
+		double threshold,
+		int *indicies, double *scores) {
+  int fp_index;
+  int num_added = 0;
+  double score;
 
-  if (len < 1) {
+  if (n < 0 || len < 1) {
 	return -1;
   }
   if (storage_len == -1) {
@@ -34,44 +43,47 @@ int chemfp_nlargest_tanimoto(
   } else if (len > storage_len) {
 	return -1;
   }
-  if (num_fps < 0) {
+  if (num_targets < 0) {
 	return -1;
   }
-  if (((long long) num_fps * storage_len) > INT_MAX) {
+  if (((long long) num_targets * storage_len) > INT_MAX) {
 	return -1;
   }
-  fps += offset;
+  target_block += offset;
 
-  for (i=0; i<n; i++) {
-	indicies[i] = -1;
-	scores[i] = -1.0;
-  }
   /* Preamble done. Let's get to work. */
   DoubleScoreData heap;
   heap.indicies = indicies;
   heap.scores = scores;
 
-  for (fp_index=0; fp_index<n && fp_index<num_fps; fp_index++) {
-	indicies[fp_index] = fp_index;
-	scores[fp_index] = chemfp_byte_tanimoto(len, query_fp, fps);
-	fps += storage_len;
+  for (fp_index=0; num_added<n && fp_index<num_targets; fp_index++) {
+	score = chemfp_byte_tanimoto(len, query_fp, target_block);
+	if (score >= threshold) {
+	  indicies[num_added] = fp_index;
+	  scores[num_added] = score;
+	  target_block += storage_len;
+	  num_added++;
+	}
   }
-  heapq_heapify(fp_index, &heap,
+  heapq_heapify(num_added, &heap,
 				(heapq_lt) double_score_lt, (heapq_swap) double_score_swap);
-  if (fp_index < n) {
-	n = fp_index;
+  if (num_added < n) {
+	/* Stopped because there are no more targets */
+	n = num_added;
   } else {
-	double lowest_score, score;
-	lowest_score = scores[0];
-	while (fp_index < num_fps) {
-	  score = chemfp_byte_tanimoto(len, query_fp, fps);
-	  if (lowest_score < score) {
+	/* Process the rest of the targets */
+	/* Reset the threshold to the smallest value in the heap */
+	threshold = scores[0];
+	while (fp_index < num_targets) {
+	  score = chemfp_byte_tanimoto(len, query_fp, target_block);
+	  if (threshold < score) {
 		scores[0] = score;
 		indicies[0] = fp_index;
 		heapq_siftup(n, &heap, 0,
 					 (heapq_lt) double_score_lt, (heapq_swap) double_score_swap);
+		threshold = scores[0]; // Omitting this is hard to test
 	  }
-	  fps += storage_len;
+	  target_block += storage_len;
 	  fp_index++;
 	}
   }
