@@ -5,7 +5,7 @@ import heapq
 from chemfp import bitops
 
 # This code is so much simpler than the C extension code.
-# And about 6 times slower.
+# And about 6 times slower, even with bitops.byte_tanimoto in C!
 
 def generic_tanimoto(query, targets, threshold):
     for fp, id in targets:
