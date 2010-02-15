@@ -1,14 +1,15 @@
 #include <limits.h>
+#include <ctype.h>
 #include "heapq.h"
 #include "chemfp.h"
 
 typedef struct {
   int *indicies;
   double *scores;
-} DoubleScoreData;
+} IndexScoreData;
 
 // XXX Check that heapq preserves order
-int double_score_lt(DoubleScoreData *data, int i, int j) {
+int double_score_lt(IndexScoreData *data, int i, int j) {
   if (data->scores[i] < data->scores[j])
 	return 1;
   if (data->scores[i] > data->scores[j])
@@ -16,7 +17,7 @@ int double_score_lt(DoubleScoreData *data, int i, int j) {
   // Sort in descending order by index. (XXX immportant or overkill?)
   return (data->indicies[i] >= data->indicies[j]);
 }
-void double_score_swap(DoubleScoreData *data, int i, int j) {
+void double_score_swap(IndexScoreData *data, int i, int j) {
   int tmp_index = data->indicies[i];
   double tmp_score = data->scores[i];
   data->indicies[i] = data->indicies[j];
@@ -52,7 +53,7 @@ int chemfp_nlargest_tanimoto_block(
   target_block += offset;
 
   /* Preamble done. Let's get to work. */
-  DoubleScoreData heap;
+  IndexScoreData heap;
   heap.indicies = indicies;
   heap.scores = scores;
 
@@ -61,9 +62,9 @@ int chemfp_nlargest_tanimoto_block(
 	if (score >= threshold) {
 	  indicies[num_added] = fp_index;
 	  scores[num_added] = score;
-	  target_block += storage_len;
 	  num_added++;
 	}
+	target_block += storage_len;
   }
   heapq_heapify(num_added, &heap,
 				(heapq_lt) double_score_lt, (heapq_swap) double_score_swap);
@@ -89,5 +90,139 @@ int chemfp_nlargest_tanimoto_block(
   }
   heapq_heapsort(n, &heap,
 				 (heapq_lt) double_score_lt, (heapq_swap) double_score_swap);
+  return n;
+}
+
+
+static int hex_readline(int len, unsigned char *hex_query_fp,
+						unsigned char *target_block, int *offset_p,
+						double *score_p, unsigned char **start_id_p, int *id_len_p,
+						int *lineno) {
+
+  int offset = *offset_p;
+
+  // Must start with a hex fingerprint
+  *score_p = chemfp_hex_tanimoto(len, hex_query_fp, target_block+offset);
+  if (*score_p == -1.0) {
+	// target was not a hex or wasn't long enough
+	return -4;
+  }
+  // Go to the character after the hex string
+  offset += len;
+  // This must end inside of target_block because it terminates with an '\n'
+  for (; isspace(target_block[offset]); offset++)
+	;
+  // Either the end of the line or the start of the id block
+  if (target_block[offset] == '\n') {
+	return -4; // missing id
+  }
+  // Start of the id
+  *start_id_p = target_block+offset;
+  for (; !isspace(target_block[offset]); offset++)
+	;
+  // End of the id
+  *id_len_p = target_block+offset-*start_id_p;
+  // Skip to end of line if not already there
+  for (;target_block[offset] != '\n'; offset++)
+	;
+  // Skip over the newline character; ready for the next line
+  offset++;
+
+  *offset_p = offset;
+  (*lineno)++;
+  return 0;
+}
+
+typedef struct {
+  double *scores;
+  unsigned char **start_ids;
+  int *id_lens;
+} HexScoreData;
+
+int hex_score_lt(HexScoreData *data, int i, int j) {
+  if (data->scores[i] < data->scores[j])
+	return 1;
+  if (data->scores[i] > data->scores[j])
+	return 0;
+  return i < j; // XXX right?
+}
+void hex_score_swap(HexScoreData *data, int i, int j) {
+  double tmp_score = data->scores[i];
+  unsigned char *tmp_start_id = data->start_ids[i];
+  int tmp_id_len = data->id_lens[i];
+
+  data->scores[i] = data->scores[j];
+  data->start_ids[i] = data->start_ids[j];
+  data->id_lens[i] = data->id_lens[j];
+
+  data->scores[j] = tmp_score;
+  data->start_ids[j] = tmp_start_id;
+  data->id_lens[j] = tmp_id_len;
+}
+
+int chemfp_hex_tanimoto_block(
+        int n,
+		int len, unsigned char *hex_query_fp,
+		int target_len, unsigned char *target_block,
+		double threshold,
+		double *scores, unsigned char **start_ids, int *id_lens, int *lineno_p) {
+  double line_score;
+  int line_id_len;
+  unsigned char *line_start_id;
+
+
+  HexScoreData heap;
+  int err;
+  heap.scores = scores;
+  heap.start_ids = start_ids;
+  heap.id_lens = id_lens;
+
+  if (n < 0 || len < 1 || target_len < 0)
+	return -1;
+  if (target_block[target_len-1] != '\n')
+	return -2;
+  if (!chemfp_hex_isvalid(len, hex_query_fp))
+	return -3;
+
+  int offset = 0;
+  int num_added = 0;
+  while (num_added<n && offset<target_len) {
+	// I know there's at least one to add
+	err = hex_readline(len, hex_query_fp, target_block, &offset,
+					   &line_score, &line_start_id, &line_id_len, lineno_p);
+	if (err < 0)
+	  return err;
+	// 
+	if (line_score >= threshold) {
+	  heap.scores[num_added] = line_score;
+	  heap.start_ids[num_added] = line_start_id;
+	  id_lens[num_added] = line_id_len;
+	  num_added++;
+	}
+  }
+  heapq_heapify(num_added, &heap,
+				(heapq_lt) hex_score_lt, (heapq_swap) hex_score_swap);
+  if (num_added < n) {
+	/* Stopped because there are no more targets */
+	n = num_added;
+  } else {
+	threshold = scores[0];
+	while (offset < target_len) {
+	  err = hex_readline(len, hex_query_fp, target_block, &offset,
+						 &line_score, &line_start_id, &line_id_len, lineno_p);
+	  if (err < 0)
+		return err;
+	  if (threshold < line_score) {
+		scores[0] = line_score;
+		start_ids[0] = line_start_id;
+		id_lens[0] = line_id_len;
+		heapq_siftup(n, &heap, 0,
+					 (heapq_lt) hex_score_lt, (heapq_swap) hex_score_swap);
+		threshold = scores[0]; // Omitting this is hard to test
+	  }
+	}
+  }
+  heapq_heapsort(n, &heap,
+				 (heapq_lt) hex_score_lt, (heapq_swap) hex_score_swap);
   return n;
 }
