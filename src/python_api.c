@@ -2,6 +2,16 @@
 
 #include "chemfp.h"
 
+// Slightly renamed so it won't share the same name as strerror(3)
+static PyObject *
+strerror_(PyObject *self, PyObject *args) {
+  int err;
+  if (!PyArg_ParseTuple(args, "i:strerror", &err))
+	return NULL;
+  return PyString_FromString(chemfp_strerror(err));
+}
+
+
 static PyObject *
 hex_isvalid(PyObject *self, PyObject *args) {
   unsigned char *s;
@@ -114,6 +124,117 @@ byte_contains(PyObject *self, PyObject *args) {
   return PyInt_FromLong(chemfp_byte_contains(len1, s1, s2));
 }
 
+//
+
+static PyObject *
+fps_line_validate(PyObject *self, PyObject *args) {
+  int hex_len, line_len;
+  char *line;
+  
+  if (!PyArg_ParseTuple(args, "is#:fps_line_validate", &hex_len, &line, &line_len))
+	return NULL;
+  return PyInt_FromLong(chemfp_fps_line_validate(hex_len, line_len, line));
+}
+
+static PyObject *
+fps_tanimoto(PyObject *self, PyObject *args) {
+  int hex_len, target_block_len, *id_lens;
+  char *hex_query, *target_block, **id_starts;
+  double threshold, *scores;
+  int *lineno_p = NULL, *num_found;
+  int err;
+  
+  if (!PyArg_ParseTuple(args, "s#s#dwwww|w:fps_tanimoto",
+						&hex_query, &hex_len,
+						&target_block, &target_block_len,
+						&threshold,
+						&num_found,
+						&id_starts, &id_lens, &scores,
+						&lineno_p))
+	return NULL;
+  Py_BEGIN_ALLOW_THREADS;
+  err = chemfp_fps_tanimoto(hex_len, hex_query,
+							target_block_len, target_block,
+							threshold,
+							num_found,
+							id_starts, id_lens, scores,
+							lineno_p);
+  Py_END_ALLOW_THREADS;
+
+  return PyInt_FromLong(err);
+}
+
+static PyObject *
+fps_tanimoto_count(PyObject *self, PyObject *args) {
+  int hex_len, target_block_len, *num_found, *lineno=NULL;
+  char *hex_query, *target_block;
+  double threshold;
+  int err;
+  if (!PyArg_ParseTuple(args, "s#s#dw|w:fps_tanimoto_count",
+						&hex_query, &hex_len,
+						&target_block, &target_block_len,
+						&threshold,
+						&num_found, &lineno))
+	return NULL;
+  Py_BEGIN_ALLOW_THREADS;
+  err = chemfp_fps_tanimoto_count(hex_len, hex_query,
+								  target_block_len, target_block,
+								  threshold,
+								  num_found, lineno);
+  Py_END_ALLOW_THREADS;
+  return PyInt_FromLong(err);
+}
+
+static PyObject *
+fps_heap_init(PyObject *self, PyObject *args) {
+  chemfp_heap *heap;
+  int k;
+  double threshold;
+  double *scores;
+  int *indicies, *id_lens;
+  char **id_starts;
+  if (!PyArg_ParseTuple(args, "widwwww:fps_heap_init", &heap,
+						&k, &threshold, &indicies, &scores,
+						&id_starts, &id_lens))
+	return NULL;
+  chemfp_fps_heap_init(heap, k, threshold, indicies, scores,
+  					   id_starts, id_lens);
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject *
+fps_heap_update_tanimoto(PyObject *self, PyObject *args) {
+  chemfp_heap *heap;
+  int hex_len, target_block_len;
+  char *hex_query, *target_block;
+  int err;
+  if (!PyArg_ParseTuple(args, "ws#s#",
+						&heap, &hex_query, &hex_len,
+						&target_block, &target_block_len))
+	return NULL;
+
+  Py_BEGIN_ALLOW_THREADS;
+  err = chemfp_fps_heap_update_tanimoto(heap, hex_len, hex_query,
+										target_block_len, target_block,
+										NULL);
+  Py_END_ALLOW_THREADS;
+  return PyInt_FromLong(err);
+}
+
+static PyObject *
+fps_heap_finish_tanimoto(PyObject *self, PyObject *args) {
+  chemfp_heap *heap;
+  if (!PyArg_ParseTuple(args, "w", &heap))
+	return NULL;
+  chemfp_fps_heap_finish_tanimoto(heap);
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+////////////////////////////////////////
+
 static PyObject *
 nlargest_tanimoto_block(PyObject *self, PyObject *args) {
   unsigned char *query_fp, *target_block, *indicies_buffer, *scores_buffer;
@@ -192,7 +313,39 @@ nlargest_tanimoto_block(PyObject *self, PyObject *args) {
 		(int *) indicies_buffer, (double *) scores_buffer));
 }
 
+static PyObject *
+hex_nlargest_tanimoto_block(PyObject *self, PyObject *args) {
+  int n, query_len, target_block_len;
+  unsigned char *query_fp, *target_block;
+  double threshold;
+  int endpos;
+  double *scores;
+  int *id_lens, *lineno;
+  unsigned char **start_ids;
+  int err;
+  if (!PyArg_ParseTuple(args, "is#s#idwwww:hex_largest_tanimoto_block",
+						&n, &query_fp, &query_len,
+						&target_block, &target_block_len,
+						&endpos,
+						&threshold,
+						&scores,
+						&start_ids,
+						&id_lens,
+						&lineno))
+	return NULL;
+
+  err = chemfp_hex_tanimoto_block(n, query_len, query_fp,
+								  endpos, target_block,
+								  threshold,
+								  scores, start_ids, id_lens, lineno);
+  return PyInt_FromLong(err);
+
+}
+
+
 static PyMethodDef chemfp_methods[] = {
+  {"strerror", strerror_, METH_VARARGS, "error code to string"},
+
   {"hex_isvalid", hex_isvalid, METH_VARARGS, "is this a valid hex fingerprint"},
   {"hex_popcount", hex_popcount, METH_VARARGS, "popcount"},
   {"hex_intersect_popcount", hex_intersect_popcount, METH_VARARGS, "intersect_popcount"},
@@ -205,8 +358,20 @@ static PyMethodDef chemfp_methods[] = {
   {"byte_tanimoto", byte_tanimoto, METH_VARARGS, "Tanimoto"},
   {"byte_contains", byte_contains, METH_VARARGS, "contains"},
 
+  // FPS
+  {"fps_line_validate", fps_line_validate, METH_VARARGS, "is it a valid fps line?"},
+  {"fps_tanimoto", fps_tanimoto, METH_VARARGS, "calculate Tanimoto scores"},
+  {"fps_tanimoto_count", fps_tanimoto_count, METH_VARARGS, "count Tanimoto scores"},
+
+  {"fps_heap_init", fps_heap_init, METH_VARARGS, "init heap"},
+  {"fps_heap_update_tanimoto", fps_heap_update_tanimoto, METH_VARARGS, "update heap"},
+  {"fps_heap_finish_tanimoto", fps_heap_finish_tanimoto, METH_VARARGS, "finish heap"},
+
   {"nlargest_tanimoto_block", nlargest_tanimoto_block, METH_VARARGS,
    "nlargest_tanimoto_block"},
+
+  {"hex_nlargest_tanimoto_block", hex_nlargest_tanimoto_block, METH_VARARGS,
+   "hex_nlargest_tanimoto_block"},
 
   {NULL, NULL, 0, NULL}        /* Sentinel */
 
