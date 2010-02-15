@@ -10,6 +10,7 @@ from _chemfp import (byte_popcount, byte_intersect_popcount,
                      byte_tanimoto, byte_contains)
 
 from _chemfp import nlargest_tanimoto_block as _nlargest_tanimoto_block
+from _chemfp import hex_nlargest_tanimoto_block as _hex_nlargest_tanimoto_block
 
 def _score_iterator(calculate_score, target_fps):
     for i, (target_fp, target_id) in enumerate(target_fps):
@@ -20,18 +21,6 @@ def _score_iterator(calculate_score, target_fps):
 def _nlargest_tanimoto(n, calculate_score, target_fps):
     result = heapq.nlargest(n, _score_iterator(calculate_score, target_fps))
     return [(-i, target_id, target_score) for (target_score, i, target_id) in result]
-
-import itertools
-c = itertools.count()
-def hex_nlargest_tanimoto(n, query_fp, target_fps):
-    def calculate_hex_score(target_fp, hex_tanimoto=hex_tanimoto, query_fp=query_fp):
-        print repr(query_fp)
-        print repr(target_fp)
-        score = hex_tanimoto(query_fp, target_fp)
-        if score == -1.0:
-            raise TypeError("Fingerprint index %i is not a hex fingerprint" % (index,))
-        return score
-    return _nlargest_tanimoto(n, calculate_hex_score, target_fps)
 
 def byte_nlargest_tanimoto(n, query_fp, target_fps):
     return _nlargest_tanimoto(n, functools.partial(byte_tanimoto, query_fp), target_fps)
@@ -46,4 +35,3 @@ def byte_nlargest_tanimoto_block(n, query_fp, target_block, offset=0,
     k = _nlargest_tanimoto_block(n, query_fp, target_block, offset,
                                  storage_len, threshold, indicies, scores)
     return [(indicies[i], scores[i]) for i in range(k)]
-
