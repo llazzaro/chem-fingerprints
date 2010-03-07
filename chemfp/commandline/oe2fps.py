@@ -91,7 +91,7 @@ def main(args=None):
         if args.path:
             parser.error("Cannot specify both --maccs166 and --path")
         # Create the MACCS keys fingerprinter
-        fingerprinter = get_maccs_fingerprinter()
+        fingerprinter = oe.get_maccs_fingerprinter()
         num_bits = 166
         params = "OpenEye-MACCS166/1"
     else:
