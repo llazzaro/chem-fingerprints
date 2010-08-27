@@ -1,3 +1,5 @@
+/* This file contains code which deals with the hex file format */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -223,7 +225,7 @@ int chemfp_fps_heap_update_tanimoto(chemfp_heap *heap,
   char *next_line;
   double score;
   double threshold = heap->threshold;
-
+  
   if (target_block_len == 0 || target_block[target_block_len-1] != '\n')
 	return CHEMFP_MISSING_NEWLINE;
 
@@ -254,7 +256,8 @@ int chemfp_fps_heap_update_tanimoto(chemfp_heap *heap,
 	  if (size == k) {
 		heapq_heapify(k, (void *)heap,
 					  (heapq_lt) fps_heap_lt, (heapq_swap) fps_heap_swap);
-		threshold = heap->scores[0];
+		// Update the minimum threshold
+		heap->threshold = threshold;
 		lineno++;
 		heap->size = size;
 		line = next_line;
@@ -269,7 +272,6 @@ int chemfp_fps_heap_update_tanimoto(chemfp_heap *heap,
   goto finish;
 
  replace_in_heap:
-  threshold = heap->scores[0];
   while (line < end) {
 	err = parse_line(hex_len, line, &id_start, &id_len);
 	if (err < 0)
@@ -284,6 +286,13 @@ int chemfp_fps_heap_update_tanimoto(chemfp_heap *heap,
 	  heapq_siftup(heap->size, (void *) heap, 0,
 				   (heapq_lt) fps_heap_lt, (heapq_swap) fps_heap_swap);
 	  threshold = heap->scores[0];
+	  /*
+		// could jump to the end here
+		// But then the lineno isn't right for the block
+		// and I don't do validation.
+	  if (threshold == 1.0) {
+	  }
+	  */
 	}
 	lineno++;
 	line = next_line;
