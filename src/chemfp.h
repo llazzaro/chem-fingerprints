@@ -6,6 +6,7 @@ enum chemfp_errors {
   CHEMFP_OK = 0,
   CHEMFP_BAD_ARG = -1,
 
+  /* File format errors */
   CHEMFP_UNSUPPORTED_WHITESPACE = -30,
   CHEMFP_MISSING_FINGERPRINT = -31,
   CHEMFP_BAD_FINGERPRINT = -32,
@@ -122,6 +123,4 @@ int chemfp_hex_tanimoto_block(
 		double threshold,
 		double *scores, unsigned char **start_ids, int *id_lens, int *lineno);
 
-double chemfp_byte_tanimoto_128(const unsigned char *fp1,
-								const unsigned char *fp2);
 #endif /* CHEMFP_H */
