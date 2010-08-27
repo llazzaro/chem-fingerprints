@@ -268,60 +268,6 @@ double chemfp_byte_tanimoto(int len, const unsigned char *fp1,
   return (intersect_popcount + 0.0) / union_popcount;  /* +0.0 to coerce to double */
 }
 
-#if 0
-// Some experimental code for testing a higher-performance popcount
-// This is for 1024 bit fingerprints which are 32-bit aligned.
-// It uses 64-bit words internally.
-typedef unsigned long long uint64;  //assume this gives 64-bits
-typedef unsigned int uint32;  //assume this gives 32-bits
-const uint64 m1  = 0x5555555555555555ULL; //binary: 0101...
-const uint64 m2  = 0x3333333333333333ULL; //binary: 00110011..
-const uint64 m4  = 0x0f0f0f0f0f0f0f0fULL; //binary:  4 zeros,  4 ones ...
-const uint64 m8  = 0x00ff00ff00ff00ffULL; //binary:  8 zeros,  8 ones ...
-const uint64 m16 = 0x0000ffff0000ffffULL; //binary: 16 zeros, 16 ones ...
-const uint64 m32 = 0x00000000ffffffffULL; //binary: 32 zeros, 32 ones
-const uint64 hff = 0xffffffffffffffffULL; //binary: all ones
-const uint64 h01 = 0x0101010101010101ULL; //the sum of 256 to the power of 0,1,2,3...
-
-// uintptr_t -- an int long enough for a pointer
-
-// 1024 bits is 128 bytes is 16 uint64s
-double chemfp_byte_tanimoto_128(const unsigned char *fp1,
-								const unsigned char *fp2) {
-  uint32 *ifp1 = (uint32 *) fp1;
-  uint32 *ifp2 = (uint32 *) fp2;
-  uint64 u, i;
-  int union_popcount=0;
-  int intersect_popcount=0;
-
-  //  if ((fp1 & 0x7) != 4 || (fp2 & 0x7 != 4)) {
-  //	printf("SKIP!\n");
-  //	return chemfp_byte_tanimoto(128, fp1, fp2);
-  //  }
-  int n=16;
-  do {
-	u = (((uint64)(ifp1[0] | ifp2[0])) << 32) + (ifp1[1] | ifp2[1]);
-	i = (((uint64)(ifp1[0] & ifp2[0])) << 32) + (ifp1[1] & ifp2[1]);
-    u -= (u >> 1) & m1;             //put count of each 2 bits into those 2 bits
-    i -= (i >> 1) & m1;
-    u = (u & m2) + ((u >> 2) & m2); //put count of each 4 bits into those 4 bits 
-    i = (i & m2) + ((i >> 2) & m2);
-    u = (u + (u >> 4)) & m4;        //put count of each 8 bits into those 8 bits 
-    i = (i + (i >> 4)) & m4;
-    union_popcount += (u * h01)>>56;  //returns left 8 bits of x + (x<<8) + (x<<16) + (x<<24)+...
-    intersect_popcount += (i * h01)>>56;
-	ifp1+=2;
-	ifp2+=2;
-  } while (--n);
-  if (union_popcount == 0) {
-	return 1.0;
-  }
-  return (intersect_popcount + 0.0) / union_popcount;
-}
-
-#endif
-
-
 /* Return 1 if the query fingerprint is contained in the target, 0 if it isn't */
 int chemfp_byte_contains(int len, const unsigned char *query_fp,
 						 const unsigned char *target_fp) {
