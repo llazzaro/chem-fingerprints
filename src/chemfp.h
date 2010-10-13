@@ -4,7 +4,7 @@
 /* Errors are always negative numbers. */
 enum chemfp_errors {
   CHEMFP_OK = 0,
-  CHEMFP_BAD_ARG = -1,  /* This is here for people who think -1 means something */
+  CHEMFP_BAD_ARG = -1,  /* Generic error; not used */
 
   /* File format errors */
   CHEMFP_UNSUPPORTED_WHITESPACE = -30,
@@ -101,8 +101,6 @@ int chemfp_fps_tanimoto_count(int hex_len, char *hex_query,
 							  double threshold,
 							  int *num_found, int *lineno);
 
-/**** Data structure and functions for k-nearest fps (hex) fingerprint searches *****/
-
 typedef struct {
   int size;           /* current heap size */
   int k;              /* max number of elements to find */
@@ -135,6 +133,7 @@ int chemfp_fps_heap_update_tanimoto(chemfp_heap *heap,
    sorted array. */
 void chemfp_fps_heap_finish_tanimoto(chemfp_heap *heap);
 
+
 /***** The byte-oriented algorithms  ********/
 
 
@@ -152,24 +151,5 @@ int chemfp_hex_tanimoto_block(
 		int target_len, unsigned char *target_block,
 		double threshold,
 		double *scores, unsigned char **start_ids, int *id_lens, int *lineno);
-
-/**** Manage a heap, for the best-of-N algorithms ****/
-
-/* Returns -1 on error, 1 for lt, otherwise 0 */
-typedef int (*chemfp_heapq_lt)(void *data, int i, int j);
-
-/* Must never fail */
-typedef void (*chemfp_heapq_swap)(void *data, int i, int j);
-
-int chemfp_heapq_heapify(int len, void *heap,
-						 chemfp_heapq_lt lt, chemfp_heapq_swap swap);
-
-/* Call after replacing the first element in a heapified list */
-int chemfp_heapq_siftup(int len, void *heap, int pos,
-						chemfp_heapq_lt lt, chemfp_heapq_swap swap);
-
-/* Must heapify first */
-int chemfp_heapq_heapsort(int len, void *heap,
-						  chemfp_heapq_lt lt, chemfp_heapq_swap swap);
 
 #endif /* CHEMFP_H */
