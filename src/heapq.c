@@ -1,3 +1,4 @@
+#include "heapq.h"
 
 /* Implement nlargest from the Python */
 
@@ -47,12 +48,6 @@ int chemfp_heapq_siftup(int len, void *heap, int pos,
   return chemfp_heapq_siftdown(len, heap, startpos, pos, lt, swap);
 }
 
-#if 0
-
-/* Convert an unsorted heapt into a heap. Used during testing. */
-
-int chemfp_heapq_heapify(int len, void *heap,
-						 chemfp_heapq_lt lt, chemfp_heapq_swap swap);
 
 int chemfp_heapq_heapify(int len, void *heap,
 						 chemfp_heapq_lt lt, chemfp_heapq_swap swap) {
@@ -70,7 +65,7 @@ int chemfp_heapq_heapify(int len, void *heap,
   }
   return 0;
 }
-#endif
+
 
 /* http://en.wikipedia.org/wiki/Heapsort */
 
@@ -81,7 +76,7 @@ int chemfp_heapq_heapsort(int len, void *heap,
 	return 0;
   for (end = len-1; end>0; end--) {
 	swap(heap, 0, end);
-	if (heapq_siftup(end, heap, 0, lt, swap) == -1)
+	if (chemfp_heapq_siftup(end, heap, 0, lt, swap) == -1)
 	  return -1;
   }
   return 0;

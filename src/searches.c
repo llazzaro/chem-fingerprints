@@ -66,8 +66,9 @@ int chemfp_nlargest_tanimoto_block(
 	}
 	target_block += storage_len;
   }
-  heapq_heapify(num_added, &heap,
-				(heapq_lt) double_score_lt, (heapq_swap) double_score_swap);
+  chemfp_heapq_heapify(num_added, &heap, (chemfp_heapq_lt) double_score_lt,
+					   (chemfp_heapq_swap) double_score_swap);
+				
   if (num_added < n) {
 	/* Stopped because there are no more targets */
 	n = num_added;
@@ -80,16 +81,17 @@ int chemfp_nlargest_tanimoto_block(
 	  if (threshold < score) {
 		scores[0] = score;
 		indicies[0] = fp_index;
-		heapq_siftup(n, &heap, 0,
-					 (heapq_lt) double_score_lt, (heapq_swap) double_score_swap);
+		chemfp_heapq_siftup(n, &heap, 0, (chemfp_heapq_lt) double_score_lt,
+							(chemfp_heapq_swap) double_score_swap);
 		threshold = scores[0]; // Omitting this is hard to test
 	  }
 	  target_block += storage_len;
 	  fp_index++;
 	}
   }
-  heapq_heapsort(n, &heap,
-				 (heapq_lt) double_score_lt, (heapq_swap) double_score_swap);
+  chemfp_heapq_heapsort(n, &heap, (chemfp_heapq_lt) double_score_lt,
+						(chemfp_heapq_swap) double_score_swap);
+				 
   return n;
 }
 
@@ -200,8 +202,9 @@ int chemfp_hex_tanimoto_block(
 	  num_added++;
 	}
   }
-  heapq_heapify(num_added, &heap,
-				(heapq_lt) hex_score_lt, (heapq_swap) hex_score_swap);
+  chemfp_heapq_heapify(num_added, &heap, (chemfp_heapq_lt) hex_score_lt,
+					   (chemfp_heapq_swap) hex_score_swap);
+				
   if (num_added < n) {
 	/* Stopped because there are no more targets */
 	n = num_added;
@@ -216,13 +219,14 @@ int chemfp_hex_tanimoto_block(
 		scores[0] = line_score;
 		start_ids[0] = line_start_id;
 		id_lens[0] = line_id_len;
-		heapq_siftup(n, &heap, 0,
-					 (heapq_lt) hex_score_lt, (heapq_swap) hex_score_swap);
+		chemfp_heapq_siftup(n, &heap, 0, (chemfp_heapq_lt) hex_score_lt,
+							(chemfp_heapq_swap) hex_score_swap);
+					 
 		threshold = scores[0]; // Omitting this is hard to test
 	  }
 	}
   }
-  heapq_heapsort(n, &heap,
-				 (heapq_lt) hex_score_lt, (heapq_swap) hex_score_swap);
+  chemfp_heapq_heapsort(n, &heap, (chemfp_heapq_lt) hex_score_lt,
+						(chemfp_heapq_swap) hex_score_swap);
   return n;
 }
