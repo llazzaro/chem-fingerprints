@@ -1,6 +1,27 @@
+/* Low-level heap commands */
+
+/* These are private internal functions used by the rest of the chemfp code */
+/* They are not part of the public API */
+
 #include "heapq.h"
 
-/* Implement nlargest from the Python */
+/* This code is derived from Python's _heapqmodule.c
+
+Heritage from _heapqmodule.c
+
+   Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Python Software Foundation; All Rights Reserved
+
+   C implementation derived directly from heapq.py in Py2.3 which was
+   written by Kevin O'Connor, augmented by Tim Peters, annotated by
+   François Pinard, and converted to C by Raymond Hettinger.
+
+I'm only using a few of the functions from that module. For those, I stripped
+out the dependencies on Python's data structures and changed it to take
+user-defined comparison and swap functions. Those are gloss; the code hasn't
+really changed at all.
+
+*/
 
 int chemfp_heapq_siftdown(int len, void *heap, int startpos, int pos,
 						  chemfp_heapq_lt lt, chemfp_heapq_swap swap) {
@@ -66,8 +87,8 @@ int chemfp_heapq_heapify(int len, void *heap,
   return 0;
 }
 
-
-/* http://en.wikipedia.org/wiki/Heapsort */
+/* Put the heap into sorted order. The code must already be heapified. */
+/* Details at http://en.wikipedia.org/wiki/Heapsort */
 
 int chemfp_heapq_heapsort(int len, void *heap,
 						  chemfp_heapq_lt lt, chemfp_heapq_swap swap) {
