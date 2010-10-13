@@ -9,7 +9,7 @@ typedef struct {
 } IndexScoreData;
 
 // XXX Check that heapq preserves order
-int double_score_lt(IndexScoreData *data, int i, int j) {
+static int double_score_lt(IndexScoreData *data, int i, int j) {
   if (data->scores[i] < data->scores[j])
 	return 1;
   if (data->scores[i] > data->scores[j])
@@ -17,7 +17,7 @@ int double_score_lt(IndexScoreData *data, int i, int j) {
   // Sort in descending order by index. (XXX immportant or overkill?)
   return (data->indicies[i] >= data->indicies[j]);
 }
-void double_score_swap(IndexScoreData *data, int i, int j) {
+static void double_score_swap(IndexScoreData *data, int i, int j) {
   int tmp_index = data->indicies[i];
   double tmp_score = data->scores[i];
   data->indicies[i] = data->indicies[j];
@@ -139,14 +139,14 @@ typedef struct {
   int *id_lens;
 } HexScoreData;
 
-int hex_score_lt(HexScoreData *data, int i, int j) {
+static int hex_score_lt(HexScoreData *data, int i, int j) {
   if (data->scores[i] < data->scores[j])
 	return 1;
   if (data->scores[i] > data->scores[j])
 	return 0;
   return i < j; // XXX right?
 }
-void hex_score_swap(HexScoreData *data, int i, int j) {
+static void hex_score_swap(HexScoreData *data, int i, int j) {
   double tmp_score = data->scores[i];
   unsigned char *tmp_start_id = data->start_ids[i];
   int tmp_id_len = data->id_lens[i];
