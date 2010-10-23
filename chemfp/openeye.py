@@ -1,4 +1,8 @@
-"Create OpenEye fingerprints"
+"""Create OpenEye fingerprints
+
+
+"""
+
 
 # Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 # Licensed under "the MIT license"
@@ -15,8 +19,7 @@ import ctypes
 from openeye.oechem import *
 from openeye.oegraphsim import *
 
-# These are the things I consider to be public
-__all__ = ["read_structures"]
+__all__ = ["read_structures", "get_path_fingerprinter", "get_maccs_fingerprinter"]
 
 
 ##### Handle the atom and bond type flags for path fingerprints
