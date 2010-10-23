@@ -1,0 +1,40 @@
+This release includes an EXPERIMENTAL C library containing he
+fingerprint processing kernal used by the "chemfp" Python module. At
+this point the interfact contains no documentation.
+
+The build system is based on cmake. The distribution includes the
+cmake-generated Makefile. I will assume you can figure out what that
+means.
+
+To build libchemfp go to the "src/" subdirectory and do
+
+   make
+
+The result should be a shared directory for your OS. On my Mac this
+builds "libchemfp.dylib".
+
+There is a quick self-test program. To build it
+
+  make test_libchemfp
+
+then run it with
+
+  ./test_libchemfp
+
+
+The last line should have "Fail: 0", as in
+
+  Pass: 36   Fail: 0
+
+You can read through "test_libchemfp.c" to get some idea of how the
+API is supposed to work.
+
+
+While cmake does include an "install" target, I have never tested it.
+
+The shared libary build should include the version number, as in
+"libchemfp-0.9.dylib" but I have not done that.
+
+The goal of this code is to get feedback from you. Do you use the C
+code? Is the API sufficient for you or do you need something else?
+What else do you need from the build process?
