@@ -2,6 +2,12 @@
 
 #include "chemfp.h"
 
+static PyObject *
+version(PyObject *self, PyObject *args) {
+  return PyString_FromString(chemfp_version());
+}
+
+
 // Slightly renamed so it won't share the same name as strerror(3)
 static PyObject *
 strerror_(PyObject *self, PyObject *args) {
@@ -344,34 +350,50 @@ hex_nlargest_tanimoto_block(PyObject *self, PyObject *args) {
 
 
 static PyMethodDef chemfp_methods[] = {
-  {"strerror", strerror_, METH_VARARGS, "error code to string"},
+  {"version", version, METH_NOARGS,
+   "version()\n\nReturn the chemfp library version, as a string like '1.0'"},
+  {"strerror", strerror_, METH_VARARGS,
+   "strerror(n)\n\nConvert the error code integer to more descriptive text"},
+  {"hex_isvalid", hex_isvalid, METH_VARARGS,
+   "hex_isvalid(s)\n\nReturn 1 if the string is a valid hex fingerprint, otherwise 0"},
+  {"hex_popcount", hex_popcount, METH_VARARGS, 
+   "hex_popcount(fp)\n\nReturn the number of bits set in a hex fingerprint, or -1 for non-hex strings"},
+  {"hex_intersect_popcount", hex_intersect_popcount, METH_VARARGS,
+   "hex_intersect_popcount(fp1, fp2)\n\nReturn the number of bits set in the intersection of the two hex fingerprint,\nor -1 if either string is a non-hex string"},
+  {"hex_tanimoto", hex_tanimoto, METH_VARARGS,
+   "hex_tanimoto(fp1, fp2)\n\nCompute the Tanimoto similarity between two hex fingerprints.\nReturn a float between 0.0 and 1.0, or -1.0 if either string is not a hex fingerprint"},
+  {"hex_contains", hex_contains, METH_VARARGS,
+   "hex_contains(super_fp, sub_fp)\n\nReturn 1 if the on bits of sub_fp are also 1 bits in super_fp, otherwise 0.\nReturn -1 if either string is not a hex fingerprint"},
 
-  {"hex_isvalid", hex_isvalid, METH_VARARGS, "is this a valid hex fingerprint"},
-  {"hex_popcount", hex_popcount, METH_VARARGS, "popcount"},
-  {"hex_intersect_popcount", hex_intersect_popcount, METH_VARARGS, "intersect_popcount"},
-  {"hex_tanimoto", hex_tanimoto, METH_VARARGS, "Tanimoto"},
-  {"hex_contains", hex_contains, METH_VARARGS, "contains"},
 
-
-  {"byte_popcount", byte_popcount, METH_VARARGS, "popcount"},
-  {"byte_intersect_popcount", byte_intersect_popcount, METH_VARARGS, "intersect_popcount"},
-  {"byte_tanimoto", byte_tanimoto, METH_VARARGS, "Tanimoto"},
-  {"byte_contains", byte_contains, METH_VARARGS, "contains"},
+  {"byte_popcount", byte_popcount, METH_VARARGS,
+   "byte_popcount(fp)\n\nReturn the number of bits set in a byte fingerprint"},
+  {"byte_intersect_popcount", byte_intersect_popcount, METH_VARARGS,
+   "byte_intersect_popcount(fp1, fp2)\n\nReturn the number of bits set in the instersection of the two byte fingerprints"},
+  {"byte_tanimoto", byte_tanimoto, METH_VARARGS,
+   "byte_tanimoto(fp1, fp2)\n\nCompute the Tanimoto similarity between two byte fingerprints"},
+  {"byte_contains", byte_contains, METH_VARARGS,
+   "byte_contains(super_fp, sub_fp)\n\nReturn 1 if the on bits of sub_fp are also 1 bits in super_fp"},
 
   // FPS
-  {"fps_line_validate", fps_line_validate, METH_VARARGS, "is it a valid fps line?"},
-  {"fps_tanimoto", fps_tanimoto, METH_VARARGS, "calculate Tanimoto scores"},
-  {"fps_tanimoto_count", fps_tanimoto_count, METH_VARARGS, "count Tanimoto scores"},
+  {"fps_line_validate", fps_line_validate, METH_VARARGS,
+   "fps_line_validate(s)\n\nReturn 1 if the string is a valid FPS line, else return 0"},
+  {"fps_tanimoto", fps_tanimoto, METH_VARARGS,
+   "Calculate Tanimoto scores against a block of FPS lines (TODO: document)"},
+  {"fps_tanimoto_count", fps_tanimoto_count, METH_VARARGS,
+   "Count Tanimoto scores (TODO: document)"},
 
-  {"fps_heap_init", fps_heap_init, METH_VARARGS, "init heap"},
-  {"fps_heap_update_tanimoto", fps_heap_update_tanimoto, METH_VARARGS, "update heap"},
-  {"fps_heap_finish_tanimoto", fps_heap_finish_tanimoto, METH_VARARGS, "finish heap"},
+  {"fps_heap_init", fps_heap_init, METH_VARARGS, "init heap (TODO: document)"},
+  {"fps_heap_update_tanimoto", fps_heap_update_tanimoto, METH_VARARGS, 
+   "update heap (TODO: document)"},
+  {"fps_heap_finish_tanimoto", fps_heap_finish_tanimoto, METH_VARARGS,
+   "finish heap (TODO: document)"},
 
   {"nlargest_tanimoto_block", nlargest_tanimoto_block, METH_VARARGS,
-   "nlargest_tanimoto_block"},
+   "nlargest_tanimoto_block (TODO: document)"},
 
   {"hex_nlargest_tanimoto_block", hex_nlargest_tanimoto_block, METH_VARARGS,
-   "hex_nlargest_tanimoto_block"},
+   "hex_nlargest_tanimoto_block (TODO: document)"},
 
   {NULL, NULL, 0, NULL}        /* Sentinel */
 
