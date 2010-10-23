@@ -255,8 +255,8 @@ int chemfp_fps_heap_update_tanimoto(chemfp_heap *heap,
       size++;
 
       if (size == k) { /* Convert to a heap */
-        heapq_heapify(k, (void *)heap,
-                      (heapq_lt) fps_heap_lt, (heapq_swap) fps_heap_swap);
+        chemfp_heapq_heapify(k, (void *)heap,
+                 (chemfp_heapq_lt) fps_heap_lt, (chemfp_heapq_swap) fps_heap_swap);
         heap->threshold = threshold; /* "You must be at least -->this<-- tall to enter" */
         lineno++;
         heap->size = size;
@@ -284,8 +284,8 @@ int chemfp_fps_heap_update_tanimoto(chemfp_heap *heap,
       heap->scores[0] = score;
       heap->id_starts[0] = id_start;
       heap->id_lens[0] = id_len;
-      heapq_siftup(heap->size, (void *) heap, 0,
-                   (heapq_lt) fps_heap_lt, (heapq_swap) fps_heap_swap);
+      chemfp_heapq_siftup(heap->size, (void *) heap, 0,
+						  (chemfp_heapq_lt) fps_heap_lt, (chemfp_heapq_swap) fps_heap_swap);
       threshold = heap->scores[0];
       if (threshold == 1.0) {
         /* No new element can be added because nothing can beat 1.0.
@@ -309,9 +309,9 @@ int chemfp_fps_heap_update_tanimoto(chemfp_heap *heap,
 void chemfp_fps_heap_finish_tanimoto(chemfp_heap *heap) {
   if (heap->size < heap->k) {
     // still adding to the array; need the first heapify
-    heapq_heapify(heap->size, (void *)heap,
-                  (heapq_lt) fps_heap_lt, (heapq_swap) fps_heap_swap);
+    chemfp_heapq_heapify(heap->size, (void *)heap,
+						 (chemfp_heapq_lt) fps_heap_lt, (chemfp_heapq_swap) fps_heap_swap);
   }
-  heapq_heapsort(heap->size, (void *)heap,
-                 (heapq_lt) fps_heap_lt, (heapq_swap) fps_heap_swap);
+  chemfp_heapq_heapsort(heap->size, (void *)heap,
+						(chemfp_heapq_lt) fps_heap_lt, (chemfp_heapq_swap) fps_heap_swap);
 }
