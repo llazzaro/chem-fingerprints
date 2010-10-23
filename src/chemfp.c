@@ -1,5 +1,9 @@
 #include "chemfp.h"
 
+const char *chemfp_version(void) {
+  return CHEMFP_VERSION_STRING;
+}
+
 const char *chemfp_strerror(int err) {
   switch (err) {
   case CHEMFP_OK: return "Ok";

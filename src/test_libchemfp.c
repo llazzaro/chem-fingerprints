@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "chemfp.h"
 
 /* This is not a comprehensive test suite. That's done in Python code. */
@@ -12,8 +13,11 @@ int failed = 0;
 int passed = 0;
 
 int main() {
+  char version_prefix[100];
+  sprintf(version_prefix, "%d.%d", CHEMFP_MAJOR_VERSION, CHEMFP_MINOR_VERSION);
+
   puts("== info functions ==");
-  CHECK("version", strcmp(chemfp_version(), "0.9"), 0);
+  CHECK("version", strncmp(chemfp_version(), version_prefix, strlen(version_prefix)), 0);
   CHECK("error code", strcmp(chemfp_strerror(CHEMFP_OK), "Ok"), 0);
   puts("== Hex checks ==");
   CHECK("empty string", chemfp_hex_isvalid(0, ""), 1);
