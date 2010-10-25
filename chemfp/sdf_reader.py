@@ -1,131 +1,223 @@
-class Location(object):
-    def __init__(self, lineno=0, title=None, filename=None):
-        self.lineno = lineno
-        self.title = title
-        self.filename = filename
-    def where(self):
-        if self.filename is None:
-            return "line {self.lineno}".format(self=self)
-        else:
-            return "line {self.lineno} of {self.filename!r}".format(self=self)
-    def message(self):
-        return "SD record ({title!r}) at {where}".format(
-            title=self.title, where=self.where())
+"""sdf_reader - iterate through records in an SD file"""
 
-class LinesWithLocation(list):
-    def __init__(self, filename):
-        list.__init__(self)
-        self.location = Location(filename=filename)
-            
+# This is used by the command-line SDF reader, used when the source
+# fingerprints are already encoded in fields of an SD file.
 
-def read_sdf_records(infile, filename=None):
-    """read_sdf_records(infile) -> iterator over SD record lines
+# It's also used by the RDKit parser - see the comments there.
 
-    Iterate through each record in the SD file, returning the list of
-    lines for each record.
+import re
+
+# Do a quick check that the SD record is in the correct format
+_sdf_check_pat = re.compile(r"""
+.*\n     # line 1
+.*\n     # line 2
+.*\n     # line 3
+         # next are the number of atoms and bonds. This format allows
+         #  '  0', ' 00', '000', '00 ', '0  ' and ' 0 ', which is the
+         # same as checking for field.strip().isdigit()
+         # The escape '\040' is for the space character
+(\040\040\d|\040\d\d|\d\d\d|\d\d\040|\d\040|\040\d\040)  # number of bonds
+(\040\040\d|\040\d\d|\d\d\d|\d\d\040|\d\040|\040\d\040)  # number of bonds
+        # Only space and digits are allowed before the required V2000 or V3000
+[\0400-9]{28}V(2000|3000)
+""", re.X)
+
+class FileLocation(object):
+    """A mutable instance used to track record title and position information
+
+    You may pass one of these to the readers to that information. I'm
+    a bit unsure about doing it this way but I liked the options of
+    passing back a 2-ple of (record, position) or records with an
+    attribute like record.position even less.
+
+    WARNING: the attributes '.lineno', and '._record' be set-able.
+    Passing in a non-FileLocation object may cause interoperability
+    problems in the future.
     """
-    if filename is None:
-        filename = getattr(infile, "name")
-    infile_reader = enumerate(infile)
-    lines = LinesWithLocation(filename)
+    def __init__(self, filename):
+        self.filename = filename
+        self.lineno = 0
+        self._record = None  # internal variable; it only valid enough to get the title
+    @property
+    def title(self):
+        # The title isn't needed for most cases so don't extract it unless needed
+        if self._record is None:
+            return None
+        return self._record[:self._record.find("\n")].strip()
+    
+    def where(self):
+        s = "line {self.lineno}".format(self=self)
+        if self.filename is not None:
+            s += " of {self.filename!r}".format(self=self)
+        title = self.title
+        if title is not None:
+            s += " ({title})".format(title=title)
+        return s
+
+def default_reader_error(msg, loc):
+    "This is the default error handler. It raises an informative TypeError"
+    raise TypeError(msg + " at " + loc.where())
+
+# My original implementation used a line-oriented parser.  That was
+# decently fast, but this version, which reads a block at a time and
+# works directly on those blocks, is over 3 times as fast.
+
+def read_sdf_records(infile, loc=None, reader_error=default_reader_error):
+    """Iterate over records in an SD file, returning records as strings
+
+    infile - an input stream (its 'name' attribute should be the source filename)
+    loc - an optional FileLocation instance, used to track the current line number.
+    reader_error - a callback function taking (msg, loc) where 'msg' is an
+       error string and 'loc' is the FileLocation, valid for the given error
+    """
+    if loc is None:
+        loc = FileLocation(getattr(infile, "name", None))
+    pushback_buffer = ''
+    records = None
     while 1:
-        loc = lines.location
-        # Do a simple check that we are reading an SD file.
-        # Get the 4th line. It must contain atom and bond counts
-        # and the string "V2000" or "V3000"
-        for i, (lineno, line) in zip("1234", infile_reader):
-            if i == "1":
-                loc.lineno = lineno+1
-                loc.title = line.strip()
-            lines.append(line)
-        if not lines:
-            # No lines read. End of file. Stop.
-            break
+        if not records:
+            read_data = infile.read(32768)
+            if not read_data:
+                # No more data from the file. If there is something in the
+                # pushback buffer then it's an incomplete record
+                if pushback_buffer:
+                    if pushback_buffer.endswith("\n$$$$"):
+                        # The file is missing the terminal newline. Compensate.
+                        # This will cause an extra read after the known end-of-file.
+                        # (Is that a problem? It's not supposed to be one.)
+                        pushback_buffer += "\n"
+                    else:
+                        loc._record = None
+                        reader_error("data after last record (is the file truncated?)", loc)
+                        break
+                else:
+                    # We're done!
+                    break
+            # Join the two blocks of text. This should be enough to
+            # have lots of records, so split, and the last term is
+            # either a partial record or the empty string. Keep track
+            # of that for use in the next go-around.
+            records = (pushback_buffer + read_data).split("\n$$$$\n")
+            pushback_buffer = records.pop()  # either '' or a partial record
 
-        if len(lines) != 4:
-            raise TypeError(
-      "Unexpected end of file shortly after starting SD record at {where}".format(
-                    where=loc.where()))
-
-        count_line = lines[-1]
-        if (("V2000" not in count_line and "V3000" not in count_line) or
-            not count_line[0:3].strip().isdigit() or
-            not count_line[3:6].strip().isdigit()):
-            loc.lineno = lineno+1
-            raise TypeError("Record at {where} is not a valid SD counts line".format(
-                    where=loc.where()))
-
-        # Likely good - read the rest of this record.
-        for lineno, line in infile_reader:
-            lines.append(line)
-            if line.startswith("$$$$"):
-                yield lines
-                lines = LinesWithLocation(filename)
-                break
+            # It is possible though unlikely that the merged blocks of
+            # text contains only an incompelte record, so this might
+            # loop again. However, the joining and searching is an
+            # O(n**2) operation, so I don't want to do that too often.
+            # While it's possible to fix this, there should be no
+            # reason to support huge records - they don't exist unless
+            # you are really stretching and doing things like storing
+            # images or other large data in the SD tags.
+            # To prevent timing problems, don't allow huge records.
+            if len(pushback_buffer) > 200000:
+                loc._record = None
+                reader_error("record is too large for this reader", loc)
+                return
         else:
-            if lines:
-                raise TypeError(
-       "Unexpected end of file while parsing SD record {message}".format(loc.message()))
-
-def _find_tag_value(record_lines, data_pattern):
-    for lineno, line in enumerate(record_lines):
-        if line.startswith(">") and data_pattern in line:
-            data_value = record_lines[lineno+1]
-            if data_value[:1] == ">" or data_value[:4] == "$$$$":
-                # Empty tag value?
-                return None
-            return data_value.rstrip()
-
-    # No matching tag found
-    return None
-
-
-def read_title_and_data_tag(infile, data_tag):
-    """read_sdf_title_and_tag(infile) -> yield record titles and a tag value"""
-    data_pattern = "<" + data_tag + ">"
-    for record_lines in read_sdf_records(infile):
-        title = record_lines[0].strip()
-        if not title:
-            title = None
-        data_tag_value = _find_tag_value(record_lines, data_pattern)
-        yield record_lines.location, title, data_tag_value
-
-def _find_two_tag_values(record_lines, title_pattern, data_pattern):
-    # Use -1 as a flag to mean "has not been found yet"
-    title_value = data_value = -1
-    for lineno, line in enumerate(record_lines):
-        if line.startswith(">"):
-            if title_pattern in line:
-                value = record_lines[lineno+1]
-                if value[:1] == ">" or value[:4] == "$$$$":
-                    title_value = None
+            # We have a set of records, one string per record. Pass them back.
+            for record in records:
+                # A simple, quick check that it looks about right
+                if not _sdf_check_pat.match(record):
+                    loc._record = record
+                    reader_error("incorrectly formatted record", loc)
                 else:
-                    title_value = value.rstrip()
-                if data_value is not -1:
-                    # Have seen both fields at least once
-                    return title_value, data_value
+                    record += "\n$$$$\n"  # restore the split text
+                    loc._record = record
+                    yield record
+                loc.lineno += record.count("\n")
+            records = None
 
-            elif data_pattern in line:
-                value = record_lines[lineno+1]
-                if value[:1] == ">" or value[:4] == "$$$$":
-                    data_value = None
-                else:
-                    data_value = value.rstrip()
-                if title_value is not -1:
-                    # Have seen both fields at least once
-                    return title_value, data_value
+# I tried implementing this search with a regular expression but it
+# was about 30% slower than this more direct (and complicated) search.
 
-    # Didn't find both
-    if title_value is -1:
-        title_value = None
-    if data_value is -1:
-        data_value = None
-    return title_value, data_value
+# Note: tag_substr must contain the "<" and ">"
+def _find_tag_data(rec, tag_substr):
+    "Return the first data line for the given tag substring, or return None"
+    startpos = 0
+    while 1:
+        tag_start = rec.find(tag_substr, startpos)
+        if tag_start == -1:
+            return None
 
-def read_title_tag_and_data_tag(infile, title_tag, data_tag):
-    title_tag_pattern = "<" + title_tag + ">"
-    data_tag_pattern = "<" + data_tag + ">"
-    for record_lines in read_sdf_records(infile):
-        title_value, data_value = _find_two_tag_values(
-            record_lines, title_tag_pattern, data_tag_pattern)
-        yield record_lines.location, title_value, data_value
+        # rfind cannot return -1 because _sdf_check_pat verified there
+        # are at least 3 newlines. The +1 is safe because there's at
+        # least the "<" and ">" from the tag.
+        tag_line_start = rec.rfind("\n", None, tag_start) + 1
+        if rec[tag_line_start] != ">":
+            # This tag is not on a data tag line. It might be the value for
+            # some of the text field.
+            startpos = tag_start + 1
+            continue
+
+        # This is an actual tag line. Find the start of the next line.
+        # The record must end with "\n$$$$\n" so find will never return -1
+        # and never return the last character position.
+        next_line_start = rec.find("\n", tag_start) + 1
+
+        # These might occur if there is no data content
+        if rec[next_line_start]==">" or rec[next_line_start:next_line_start+4]=="$$$$":
+            return ""
+
+        # Otherwise, get up to the end of the line
+        return rec[next_line_start:rec.find("\n", next_line_start)]
+
+# These are not legal tag characters (while others may be against the
+# SD file spec, these will break the parser)
+_bad_char = re.compile(r"[<>\n\r\t]")
+
+def read_title_tag_and_fp_tag(infile, title_tag, fp_tag,
+                              loc=None, reader_error=default_reader_error):
+    """Iterate over SD records to get the title tag and fingerprint tag values
+    
+    (NOTE: this gets the title from a tag and not from the first line of the record.)
+
+    The values are returned as a (title_value, fp_value) 2-ple,
+    where the value comes from the first line after the given tag (if
+    present). If there is no line then return the empty string. If the
+    tag isn't present, return None. If the tag exists mutliple times
+    then only the first value is returned.
+
+    infile - an input stream (its 'name' attribute should be the source filename)
+    title_tag - the tag which should contain the title value
+    fp_tag - the tag which should contain the fingerprint value
+    loc - an optional FileLocation instance, used to track the current line number.
+    reader_error - a callback function taking (msg, loc) where 'msg' is an
+       error string and 'loc' is the FileLocation, valid for the given error
+    """
+    m = _bad_char.search(title_tag)
+    if m:
+        raise TypeError("title_tag must not contain the character %r" % (m.group(0),))
+    m = _bad_char.search(fp_tag)
+    if m:
+        raise TypeError("fp_tag must not contain the character %r" % (m.group(0),))
+        
+    title_substr = "<" + title_tag + ">"
+    fp_substr = "<" + fp_tag + ">"
+    for rec in read_sdf_records(infile, loc=loc, reader_error=reader_error):
+        yield _find_tag_data(rec, title_substr), _find_tag_data(rec, fp_substr)
+
+def read_title_and_fp_tag(infile, fp_tag, loc=None, reader_error=default_reader_error):
+    """Iterate over SD records to get the title line and fingerprint tag values
+
+    (NOTE: the title line is the first line of the SD file, and not an SD tag.)
+
+    The values are returned as a (title_value, fp_value) 2-ple,
+    where the value comes from the first line after the given tag (if
+    present). If there is no line then return the empty string. If the
+    tag isn't present, return None. If the tag exists mutliple times
+    then only the first value is returned.
+
+    infile - an input stream (its 'name' attribute should be the source filename)
+    title_tag - the tag which should contain the title value
+    fp_tag - the tag which should contain the fingerprint value
+    loc - an optional FileLocation instance, used to track the current line number.
+    reader_error - a callback function taking (msg, loc) where 'msg' is an
+       error string and 'loc' is the FileLocation, valid for the given error
+    """
+    m = _bad_char.search(fp_tag)
+    if m:
+        raise TypeError("fp_tag must not contain the character %r" % (m.group(0),))
+    
+    fp_substr = "<" + fp_tag + ">"
+    for rec in read_sdf_records(infile, loc=loc, reader_error=reader_error):
+        yield rec[:rec.find("\n")].strip(), _find_tag_data(rec, fp_substr)
