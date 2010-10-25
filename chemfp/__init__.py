@@ -26,6 +26,7 @@
 
 
 def open(filename):
+    """Open a fingerprint file for reading and searching, given its filename"""
     ext = filename[-4:].lower()
     if ext == ".fps":
         from chemfp import fps_reader
@@ -36,6 +37,14 @@ def open(filename):
     raise NotImplementedError("Unknown fingerprint format")
 
 def tanimoto_count(query, targets, threshold=0.0):
+    """Count the number of targets at least 'threshold' similar to the the query fingerprint
+
+    The 'query' fingerprint string must be in binary representation, not hex.
+    If 'targets' implements '_chemfp_tanimoto_count' then the search is delegated to it
+      as targets._chemfp_tanimoto_count(query, threshold)
+    Otherwise, 'targets' must be iterable, returning binary fingerprint strings.
+    'threshold' is the minimum allowed Tanimoto score and must be between 0.0 and 1.0
+    """
     if not (0.0 <= threshold <= 1.0):
         raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
 
@@ -47,25 +56,47 @@ def tanimoto_count(query, targets, threshold=0.0):
     return search.generic_tanimoto_count(query, targets, k, threshold)
 
 
-def tanimoto(query, targets, threshold=0.0):
+def tanimoto_search(query, targets, threshold=0.0):
+    """Find all targets at least 'threshold' similar to the query fingerprint
+
+    The 'query' fingerprint string must be in binary representation, not hex.
+    If 'targets' implements '_chemfp_tanimoto_search' then the search is delegated to it
+      as targets._chemfp_tanimoto_search(query, threshold)
+    Otherwise, 'targets' must be iterable, returning binary fingerprint strings.
+    'threshold' is the minimum allowed Tanimoto score and must be between 0.0 and 1.0 .
+
+    """
     if not (0.0 <= threshold <= 1.0):
         raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
 
-    f = getattr(targets, "_chemfp_tanimoto", None)
+    # Allow the targets to override the default search code
+    f = getattr(targets, "_chemfp_tanimoto_search", None)
     if f is not None:
         return f(query, threshold)
     
     from chemfp import search
     return search.generic_tanimoto(query, targets, k, threshold)
 
-def tanimoto_knearest(query, targets, k, threshold=0.0):
+def tanimoto_knearest_search(query, targets, k, threshold=0.0):
+    """Find the 'k' closest targets at least 'threshold' similar to the query fingerprint
+
+    The 'query' fingerprint string must be in binary representation, not hex.
+    If 'targets' implements '_chemfp_tanimoto_knearset_search' then the search is
+      delegated to it as targets._chemfp_tanimoto_knearest_search(query, threshold)
+    Otherwise, 'targets' must be iterable, returning binary fingerprint strings.
+    'k' must be a positive integer. k=3 would return the nearest 3 neighbors
+    'threshold' is the minimum allowed Tanimoto score and must be between 0.0 and 1.0 .
+
+    Ties are broken arbitrarily but consistently for a given data set.
+    """
+
     if not (k > 0):
         raise TypeError("k must be a postive integer")
     if not (0.0 <= threshold <= 1.0):
         raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
 
     # Allow the targets to override the default search code
-    f = getattr(targets, "_chemfp_tanimoto_knearest", None)
+    f = getattr(targets, "_chemfp_tanimoto_knearest_search", None)
     if f is not None:
         return f(query, k, threshold)
 
