@@ -91,7 +91,7 @@ def normalize_format(filename, format):
 # ended up not using Chem.SmilesMolSupplier.
 
 def read_smiles_structures(infile):
-    """read_smiles_structure(infile) -> (title, Chem.Mol) iterator
+    """read_smiles_structures(infile) -> (title, Chem.Mol) iterator
 
     Iterate through each record in the SMILES file, returning the
     2-ple of (title, rdkit.Chem.Mol). Each record is a single line of
