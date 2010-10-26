@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import sys
-import gzip
 
 from chemfp import argparse, decoders, sdf_reader, shared
 
@@ -80,22 +79,6 @@ shortcuts_group.add_argument("--pubchem-subskeys", nargs=0, action=AddSubsKeys,
    help = ("decode CACTVS substructure keys. Same as "
            " --software=PubChem-SubsKeys/1.3 --fp-tag=PUBCHEM_CACTVS_SUBSKEYS --cactvs"))
 
-def open_sdfile(filename=None, force_gunzip=0):
-    is_compressed = 0
-    if force_gunzip:
-        is_compressed = 1
-    elif filename is not None:
-        # Unspecified: base it on the extension
-        is_compressed = (filename[-3:].lower() == ".gz")
-            
-    if is_compressed:
-        if filename is None:
-            return gzip.GzipFile(fileobj=sys.stdin)
-        return gzip.GzipFile(filename)
-    else:
-        if filename is None:
-            return sys.stdin
-        return open(filename, "rU")
 
 def main(args=None):
     args = parser.parse_args(args)
