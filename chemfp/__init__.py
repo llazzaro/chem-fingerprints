@@ -24,17 +24,29 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+import __builtin__
 
-def open(filename):
-    """Open a fingerprint file for reading and searching, given its filename"""
-    ext = filename[-4:].lower()
+from . import decompressors
+
+
+def open(source, decompressor = decompressors.AutoDetectDecompression):
+    """Open a fingerprint file for reading and searching, given its filename
+
+    'source' must be a filename or a file object which support seeks
+    'decompressor' must implement the decompressor API in chemfp.decompressors
+       or be one of 'autodetect', 'gzip', 'bzip2', or 'uncompressed'
+    """
+    decompressor = decompressors.get_named_decompressor(decompressor)
+    base_filename = decompressor.strip_extension(source)
+    ext = base_filename[-4:].lower()
     if ext == ".fps":
         from chemfp import fps_reader
-        return fps_reader.open(filename)
+        return fps_reader.open(compression_type.open_filename_binary(source))
     elif ext == ".fpb":
         raise NotImplementedError("No support yet for .fpb files")
     # Should I open and sniff?
-    raise NotImplementedError("Unknown fingerprint format")
+    raise NotImplementedError("Unknown fingerprint format extension %r" % (ext,))
 
 def tanimoto_count(query, targets, threshold=0.0):
     """Count the number of targets at least 'threshold' similar to the the query fingerprint

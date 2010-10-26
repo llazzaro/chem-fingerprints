@@ -5,9 +5,16 @@
 
 # It's also used by the RDKit parser - see the comments there.
 
-import re
 
-__all__ = ["read_sdf_records", "read_title_tag_and_fp_tag", "read_title_and_fp_tag"]
+from __future__ import absolute_import
+import sys
+from . import decompressors
+
+__all__ = ["iter_sdf_records", "iter_title_tag_and_fp_tag", "iter_title_and_fp_tag"]
+
+import re
+import chemfp
+
 
 # Do a quick check that the SD record is in the correct format
 _sdf_check_pat = re.compile(r"""
@@ -60,11 +67,26 @@ def default_reader_error(msg, loc):
     "This is the default error handler. It raises an informative TypeError"
     raise TypeError(msg + " at " + loc.where())
 
-# My original implementation used a line-oriented parser.  That was
-# decently fast, but this version, which reads a block at a time and
-# works directly on those blocks, is over 3 times as fast.
+def open_sdfile(source=None, decompressor=decompressors.AutoDetectDecompression,
+                loc=None, reader_error=default_reader_error):
+    """Open an SD file in universal text mode (where possible)
 
-def read_sdf_records(infile, loc=None, reader_error=default_reader_error):
+    """
+    decompressor = decompressors.get_named_decompressor(decompressor)
+    if source is None:
+        fileobj = decompressor.open_fileobj(sys.stdin)
+    elif isinstance(source, basestring):
+        fileobj = decompressor.open_filename_universal(source)
+    else:
+        fileobj = decompressor.open_fileobj(source)
+    return iter_sdf_records(fileobj, loc, reader_error)
+    
+
+# My original implementation used a slow line-oriented parser.  That
+# was decently fast, but this version, which reads a block at a time
+# and works directly on those blocks, is over 3 times as fast.
+
+def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
     """Iterate over records in an SD file, returning records as strings
 
     infile - an input stream (its 'name' attribute should be the source filename)
@@ -90,7 +112,7 @@ def read_sdf_records(infile, loc=None, reader_error=default_reader_error):
                         pushback_buffer += "\n"
                     else:
                         loc._record = None
-                        reader_error("data after last record (is the file truncated?)", loc)
+                        reader_error("unexpected content at the end of the file (perhaps the last record is truncated?)", loc)
                         break
                 else:
                     # We're done!
@@ -128,6 +150,10 @@ def read_sdf_records(infile, loc=None, reader_error=default_reader_error):
                     yield record
                 loc.lineno += record.count("\n")
             records = None
+
+### Is something like this needed? Perhaps when used as a co-process?
+# def iter_sdf_records_line_buffered(infile, loc=None, reader_error=default_reader_error):
+    
 
 # I tried implementing this search with a regular expression but it
 # was about 30% slower than this more direct (and complicated) search.
@@ -167,7 +193,7 @@ def _find_tag_data(rec, tag_substr):
 # SD file spec, these will break the parser)
 _bad_char = re.compile(r"[<>\n\r\t]")
 
-def read_title_tag_and_fp_tag(infile, title_tag, fp_tag,
+def iter_title_tag_and_fp_tag(infile, title_tag, fp_tag,
                               loc=None, reader_error=default_reader_error):
     """Iterate over SD records to get the title tag and fingerprint tag values
     
@@ -195,10 +221,10 @@ def read_title_tag_and_fp_tag(infile, title_tag, fp_tag,
         
     title_substr = "<" + title_tag + ">"
     fp_substr = "<" + fp_tag + ">"
-    for rec in read_sdf_records(infile, loc=loc, reader_error=reader_error):
+    for rec in iter_sdf_records(infile, loc=loc, reader_error=reader_error):
         yield _find_tag_data(rec, title_substr), _find_tag_data(rec, fp_substr)
 
-def read_title_and_fp_tag(infile, fp_tag, loc=None, reader_error=default_reader_error):
+def iter_title_and_fp_tag(infile, fp_tag, loc=None, reader_error=default_reader_error):
     """Iterate over SD records to get the title line and fingerprint tag values
 
     (NOTE: the title line is the first line of the SD file, and not an SD tag.)
@@ -221,5 +247,5 @@ def read_title_and_fp_tag(infile, fp_tag, loc=None, reader_error=default_reader_
         raise TypeError("fp_tag must not contain the character %r" % (m.group(0),))
     
     fp_substr = "<" + fp_tag + ">"
-    for rec in read_sdf_records(infile, loc=loc, reader_error=reader_error):
+    for rec in iter_sdf_records(infile, loc=loc, reader_error=reader_error):
         yield rec[:rec.find("\n")].strip(), _find_tag_data(rec, fp_substr)
