@@ -117,7 +117,7 @@ def bad_record(message):
     #sys.stderr.write(message)
 
 def read_sdf_structures(infile, filename=None, bad_record=bad_record):
-    """read_sdf_structure(infile) -> (title, Chem.Mol) iterator
+    """read_sdf_structures(infile) -> (title, Chem.Mol) iterator
 
     Iterate through each record in the SD file, returning the 2-ple of
     (title, rdkit.Chem.Mol). The title comes from the "_Name" property
