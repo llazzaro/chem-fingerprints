@@ -63,6 +63,9 @@ class FileLocation(object):
             s += " ({title})".format(title=title)
         return s
 
+    def info(self):
+        return dict(filename=self.filename, lineno=self.lineno, title=self.title)
+
 def default_reader_error(msg, loc):
     "This is the default error handler. It raises an informative TypeError"
     raise TypeError(msg + " at " + loc.where())
@@ -146,6 +149,7 @@ def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
                 if not _sdf_check_pat.match(record):
                     loc._record = record
                     reader_error("incorrectly formatted record", loc)
+                    # If the reader_error callback returns then just skip the record
                 else:
                     record += "\n$$$$\n"  # restore the split text
                     loc._record = record
@@ -195,8 +199,7 @@ def _find_tag_data(rec, tag_substr):
 # SD file spec, these will break the parser)
 _bad_char = re.compile(r"[<>\n\r\t]")
 
-def iter_title_tag_and_fp_tag(infile, title_tag, fp_tag,
-                              loc=None, reader_error=default_reader_error):
+def iter_title_tag_and_fp_tag(sdf_iter, title_tag, fp_tag):
     """Iterate over SD records to get the title tag and fingerprint tag values
     
     (NOTE: this gets the title from a tag and not from the first line of the record.)
@@ -210,9 +213,6 @@ def iter_title_tag_and_fp_tag(infile, title_tag, fp_tag,
     infile - an input stream (its 'name' attribute should be the source filename)
     title_tag - the tag which should contain the title value
     fp_tag - the tag which should contain the fingerprint value
-    loc - an optional FileLocation instance, used to track the current line number.
-    reader_error - a callback function taking (msg, loc) where 'msg' is an
-       error string and 'loc' is the FileLocation, valid for the given error
     """
     m = _bad_char.search(title_tag)
     if m:
@@ -223,10 +223,10 @@ def iter_title_tag_and_fp_tag(infile, title_tag, fp_tag,
         
     title_substr = "<" + title_tag + ">"
     fp_substr = "<" + fp_tag + ">"
-    for rec in iter_sdf_records(infile, loc=loc, reader_error=reader_error):
+    for rec in sdf_iter:
         yield _find_tag_data(rec, title_substr), _find_tag_data(rec, fp_substr)
 
-def iter_title_and_fp_tag(infile, fp_tag, loc=None, reader_error=default_reader_error):
+def iter_title_and_fp_tag(sdf_iter, fp_tag):
     """Iterate over SD records to get the title line and fingerprint tag values
 
     (NOTE: the title line is the first line of the SD file, and not an SD tag.)
@@ -240,14 +240,11 @@ def iter_title_and_fp_tag(infile, fp_tag, loc=None, reader_error=default_reader_
     infile - an input stream (its 'name' attribute should be the source filename)
     title_tag - the tag which should contain the title value
     fp_tag - the tag which should contain the fingerprint value
-    loc - an optional FileLocation instance, used to track the current line number.
-    reader_error - a callback function taking (msg, loc) where 'msg' is an
-       error string and 'loc' is the FileLocation, valid for the given error
     """
     m = _bad_char.search(fp_tag)
     if m:
         raise TypeError("fp_tag must not contain the character %r" % (m.group(0),))
     
     fp_substr = "<" + fp_tag + ">"
-    for rec in iter_sdf_records(infile, loc=loc, reader_error=reader_error):
+    for rec in sdf_iter:
         yield rec[:rec.find("\n")].strip(), _find_tag_data(rec, fp_substr)
