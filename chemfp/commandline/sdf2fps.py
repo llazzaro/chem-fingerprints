@@ -65,6 +65,7 @@ parser.add_argument(
     "--gzip", action="store_true",
     help="input file is gzip compressed (default guesses from filename extension)")
 
+# This adds --cactvs, --base64 and other decoders to the command-line arguments
 decoders._add_decoding_group(parser)
 
 shortcuts_group = parser.add_argument_group("shortcuts")
