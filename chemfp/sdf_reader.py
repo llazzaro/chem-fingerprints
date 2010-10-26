@@ -7,12 +7,14 @@
 
 import re
 
+__all__ = ["read_sdf_records", "read_title_tag_and_fp_tag", "read_title_and_fp_tag"]
+
 # Do a quick check that the SD record is in the correct format
 _sdf_check_pat = re.compile(r"""
 .*\n     # line 1
 .*\n     # line 2
 .*\n     # line 3
-         # next are the number of atoms and bonds. This format allows
+         # next are the number of atoms and bonds. This pattern allows
          #  '  0', ' 00', '000', '00 ', '0  ' and ' 0 ', which is the
          # same as checking for field.strip().isdigit()
          # The escape '\040' is for the space character
