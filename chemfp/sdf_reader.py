@@ -43,9 +43,9 @@ class FileLocation(object):
     Passing in a non-FileLocation object may cause interoperability
     problems in the future.
     """
-    def __init__(self, filename):
+    def __init__(self, filename=None):
         self.filename = filename
-        self.lineno = 0
+        self.lineno = 1
         self._record = None  # internal variable; it only valid enough to get the title
     @property
     def title(self):
@@ -95,7 +95,9 @@ def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
        error string and 'loc' is the FileLocation, valid for the given error
     """
     if loc is None:
-        loc = FileLocation(getattr(infile, "name", None))
+        loc = FileLocation()
+    if loc.filename is None:
+        loc.filename = getattr(infile, "name", None)
     pushback_buffer = ''
     records = None
     while 1:
