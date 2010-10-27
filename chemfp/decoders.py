@@ -63,7 +63,6 @@ def _init():
         while msb_pattern[:1] == "0":
             msb_pattern = msb_pattern[1:]
             _msb_bit_table[msb_pattern] = byte_value
-
     global _reverse_bits_in_a_byte_transtable
     _reverse_bits_in_a_byte_transtable = string.maketrans(
         "".join(chr(i) for i in range(256)),
@@ -99,6 +98,8 @@ def from_binary_lsb(text):
     (8, '\\xa8')
     >>> from_binary_lsb('11101')
     (5, '\\x17')
+    >>> from_binary_lsb('00000000000000010000000000000')
+    (29, '\\x00\\x80\\x00\\x00')
     >>>
     """
     try:
@@ -121,18 +122,24 @@ def from_binary_msb(text):
     (8, '\\x15')
     >>> from_binary_msb('00111')
     (5, '\\x07')
+    >>> from_binary_msb('00000000000001000000000000000')
+    (29, '\\x00\\x80\\x00\\x00')
     >>>
     """
+    # It feels like there should be a faster, more elegant way to do this.
+    # While close,
+    #   hex(int('00010101', 2))[2:].decode("hex")
+    # does not keep the initial 0s
     try:
         N = len(text)
         bytes = []
         end = N
         start = N-8
-        while start > 8:
+        while start > 0:
             bytes.append(_msb_bit_table[text[start:end]])
             end = start
             start -= 8
-        bytes.append(_msb_bit_table[text[start:end]])
+        bytes.append(_msb_bit_table[text[0:end]])
         return (N, "".join(bytes))
     except KeyError:
         raise TypeError("Not a binary string")
@@ -306,6 +313,9 @@ def _add_decoding_group(parser):
         decoding_group.add_argument(*args, **kwargs)
 
 def _extract_decoder(parser, namespace):
+    """An internal helper function for the command-line programs"""
+    # Were any command-line decoder arguments specified?
+    # Make sure that multiple decoders were not specified
     decoder_name = None
     for arg in _decoder_table:
         if getattr(namespace, arg):
@@ -313,13 +323,16 @@ def _extract_decoder(parser, namespace):
                 parser.error("Cannot decode with both --{old_arg} and --{arg}".format(
                         old_arg=decoder_name, arg=arg))
             decoder_name = arg
+    # When in doubt, assume a hex decoder
     if decoder_name is None:
         decoder_name = "hex"
 
+    # If --decoder was specified, do the import and return (name, decoder)
     if decoder_name == "decoder":
         function_name = getattr(namespace, "decoder")
         fp_decoder = import_decoder(function_name)
         return function_name, fp_decoder
 
+    # Otherwise it's in the decoder table
     fp_decoder = _decoder_table[decoder_name]
     return decoder_name, fp_decoder
