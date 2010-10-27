@@ -123,7 +123,7 @@ decompressor_names = {
     "gzip": GzipDecompressor,
     "bzip2": Bzip2Decompressor,
     "none": Uncompressed,
-    "autodetect": AutoDetectDecompression,
+    "auto": AutoDetectDecompression,
     }
 
 def get_named_decompressor(name_or_obj):
