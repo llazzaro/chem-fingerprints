@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import sys
 from . import decompressors
 
-__all__ = ["iter_sdf_records", "iter_title_tag_and_fp_tag", "iter_title_and_fp_tag"]
+__all__ = ["iter_sdf_records", "iter_two_tags", "iter_title_and_single_tag"]
 
 import re
 import chemfp
@@ -199,52 +199,49 @@ def _find_tag_data(rec, tag_substr):
 # SD file spec, these will break the parser)
 _bad_char = re.compile(r"[<>\n\r\t]")
 
-def iter_title_tag_and_fp_tag(sdf_iter, title_tag, fp_tag):
-    """Iterate over SD records to get the title tag and fingerprint tag values
+def iter_two_tags(sdf_iter, tag1, tag2):
+    """Iterate over SD records to get the first data line of the two named tags
     
-    (NOTE: this gets the title from a tag and not from the first line of the record.)
-
-    The values are returned as a (title_value, fp_value) 2-ple,
+    The values are returned as a (tag1_value, tag2_value) 2-ple,
     where the value comes from the first line after the given tag (if
     present). If there is no line then return the empty string. If the
     tag isn't present, return None. If the tag exists mutliple times
     then only the first value is returned.
 
     infile - an input stream (its 'name' attribute should be the source filename)
-    title_tag - the tag which should contain the title value
-    fp_tag - the tag which should contain the fingerprint value
+    tag1 - the name of the first tag
+    tag2 - the name of the second tag
     """
-    m = _bad_char.search(title_tag)
+    m = _bad_char.search(tag1)
     if m:
-        raise TypeError("title_tag must not contain the character %r" % (m.group(0),))
-    m = _bad_char.search(fp_tag)
+        raise TypeError("tag1 must not contain the character %r" % (m.group(0),))
+    m = _bad_char.search(tag2)
     if m:
-        raise TypeError("fp_tag must not contain the character %r" % (m.group(0),))
+        raise TypeError("tag2 must not contain the character %r" % (m.group(0),))
         
-    title_substr = "<" + title_tag + ">"
-    fp_substr = "<" + fp_tag + ">"
+    tag1_substr = "<" + tag1 + ">"
+    tag2_substr = "<" + tag2 + ">"
     for rec in sdf_iter:
-        yield _find_tag_data(rec, title_substr), _find_tag_data(rec, fp_substr)
+        yield _find_tag_data(rec, tag1_substr), _find_tag_data(rec, tag2_substr)
 
-def iter_title_and_fp_tag(sdf_iter, fp_tag):
-    """Iterate over SD records to get the title line and fingerprint tag values
+def iter_title_and_single_tag(sdf_iter, tag):
+    """Iterate over SD records to get the title line and data line for the specified tag
 
     (NOTE: the title line is the first line of the SD file, and not an SD tag.)
 
-    The values are returned as a (title_value, fp_value) 2-ple,
-    where the value comes from the first line after the given tag (if
+    The values are returned as a (title, tag_value) 2-ple, where the
+    value comes from the first line after the specified tag (if
     present). If there is no line then return the empty string. If the
-    tag isn't present, return None. If the tag exists mutliple times
+    tag isn't present, return None. If the tag exists multiple times
     then only the first value is returned.
 
     infile - an input stream (its 'name' attribute should be the source filename)
-    title_tag - the tag which should contain the title value
-    fp_tag - the tag which should contain the fingerprint value
+    tag - the name of the tag value to return
     """
-    m = _bad_char.search(fp_tag)
+    m = _bad_char.search(tag)
     if m:
-        raise TypeError("fp_tag must not contain the character %r" % (m.group(0),))
+        raise TypeError("tag must not contain the character %r" % (m.group(0),))
     
-    fp_substr = "<" + fp_tag + ">"
+    tag_substr = "<" + tag + ">"
     for rec in sdf_iter:
-        yield rec[:rec.find("\n")].strip(), _find_tag_data(rec, fp_substr)
+        yield rec[:rec.find("\n")].strip(), _find_tag_data(rec, tag_substr)
