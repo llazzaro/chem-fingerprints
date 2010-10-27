@@ -16,6 +16,7 @@ from chemfp import sdf_reader
 TRYPTOPHAN_SDF = "tryptophan.sdf"
 PUBCHEM_SDF = "pubchem.sdf"
 PUBCHEM_SDF_GZ = "pubchem.sdf.gz"
+STRANGE_SDF = "strange.sdf"
 
 expected_identifiers = ["9425004", "9425009", "9425012", "9425015",
                         "9425018", "9425021", "9425030", "9425031",
@@ -244,13 +245,47 @@ class TestIterTwoTags(unittest.TestCase):
                                     "PUBCHEM_CACTVS_HBOND_DONOR", "PUBCHEM_CACTVS_XLOGP"))
         self.assertEquals(fields, zip(expected_hbond_donors, expected_xlogp))
         
-        
-class TestReadTitleAndFPTag(unittest.TestCase):
+    def test_edge_conditions1(self):
+        fields = list(iter_two_tags(open_sdfile(STRANGE_SDF), "noblank", "twolines"))
+        self.assertEquals(fields, [("This line is not followed by a blank line",
+                                    "This contains two lines"), (None, None)])
+
+    def test_edge_conditions2(self):
+        fields = list(iter_two_tags(open_sdfile(STRANGE_SDF),
+                                    "duplicate", "embedded-tags"))
+        self.assertEquals(fields, [("This is the first version.",
+                    "I<junk> have<junk> tags  <junk>  in the data line <junk>"),
+                                   (None, None)])
+
+    def test_edge_conditions3(self):
+        fields = list(iter_two_tags(open_sdfile(STRANGE_SDF), "junk", "blank lines"))
+        self.assertEquals(fields, [
+      ("This line contains some of the strange junk that might exist on the tag line", ""),
+            (None, None)])
+
+    def test_edge_conditions4(self):
+        fields = list(iter_two_tags(open_sdfile(STRANGE_SDF), "nada", "fini"))
+        self.assertEquals(fields, [(None, None), ("", "")])
+
+    def test_bad_tags(self):
+        for tag in ("<", ">", "\n", "\t", "1<2", "2<1", "blah\t"):
+            self.assertRaises(TypeError, iter_two_tags([], tag, "fini"))
+            self.assertRaises(TypeError, iter_two_tags([], "fini", tag))
+    
+class TestReadTitleAndTag(unittest.TestCase):
     def test_read_existing_tag(self):
-        fields = list(iter_title_and_single_tag(open_sdfile(PUBCHEM_SDF),
-                                                "PUBCHEM_CACTVS_HBOND_DONOR"))
+        fields = list(iter_title_and_tag(open_sdfile(PUBCHEM_SDF),
+                                         "PUBCHEM_CACTVS_HBOND_DONOR"))
         self.assertEquals(fields, zip(expected_identifiers, expected_hbond_donors))
 
+    def test_missing_tag(self):
+        fields = list(iter_title_and_tag(open_sdfile(PUBCHEM_SDF), "PUBCHEM_CACTVS_XLOGP"))
+                                         
+        self.assertEquals(fields, zip(expected_identifiers, expected_xlogp))
+
+    def test_bad_tags(self):
+        for tag in ("<", ">", "\n", "\t", "1<2", "2<1", "blah\t"):
+            self.assertRaises(TypeError, iter_title_and_tag([], tag))
 
 
 if __name__ == "__main__":
