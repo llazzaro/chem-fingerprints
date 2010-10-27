@@ -61,8 +61,8 @@ parser.add_argument("--type", metavar="TEXT",
                     help="use TEXT as the fingerprint type description")
 
 parser.add_argument(
-    "--gzip", action="store_true",
-    help="input file is gzip compressed (default guesses from filename extension)")
+    "-d", "--decompress", action="store", metavar="METHOD", default="auto",
+    help="use METHOD to decompress the input (default='auto', 'none', 'gzip', 'bzip2')")
 
 # This adds --cactvs, --base64 and other decoders to the command-line arguments
 decoders._add_decoding_group(parser)
@@ -88,13 +88,14 @@ def main(args=None):
 
     fp_decoder_name, fp_decoder = decoders._extract_decoder(parser, args)
 
-    infile = open_sdfile(args.filename, args.gzip)
+    location = sdf_reader.FileLocation()
+    records = sdf_reader.open_sdf(args.filename, args.decompress, loc=location)
     if args.title_tag is not None:
-        reader = sdf_reader.read_title_tag_and_data_tag(infile, args.title_tag, args.fp_tag)
+        reader = sdf_reader.iter_two_tags(records, args.title_tag, args.fp_tag)
         MISSING_TITLE = "Missing title tag {tag}, ".format(tag=args.title_tag)
         MISSING_TITLE += "line {loc.lineno}. Skipping.\n"
     else:
-        reader = sdf_reader.read_title_and_data_tag(infile, args.fp_tag)
+        reader = sdf_reader.iter_title_and_tag(records, args.fp_tag)
         MISSING_TITLE = "Empty record title at line {loc.lineno}. Skipping.\n"
 
     MISSING_FP = ("Missing fingerprint tag {tag} in record {loc.title!r} line {loc.lineno}. "
@@ -115,9 +116,9 @@ def main(args=None):
                     "ERROR: No fingerprints found in the first 100 records. Exiting.")
             skip_count[0] += 1
 
-    for location, title, encoded_fp in reader:
+    for title, encoded_fp in reader:
         if not title:
-            sys.stderr.write(MISSING_TITLE.format(loc=loc))
+            sys.stderr.write(MISSING_TITLE.format(loc=location))
             skip()
             continue
         if not encoded_fp:
