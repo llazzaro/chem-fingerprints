@@ -13,6 +13,7 @@ All decompressors implement the following API:
 import os
 import gzip
 import subprocess
+import sys
 
 # Decompressors must implement the following API:
 #   open_filename_binary(filename) -- open the given file 
@@ -121,7 +122,7 @@ def detect_decompressor(filename):
 decompressor_names = {
     "gzip": GzipDecompressor,
     "bzip2": Bzip2Decompressor,
-    "uncompressed": Uncompressed,
+    "none": Uncompressed,
     "autodetect": AutoDetectDecompression,
     }
 
@@ -133,3 +134,23 @@ def get_named_decompressor(name_or_obj):
     if isinstance(name_or_obj, basestring):
         return decompressor_names[name_or_obj]
     return name_or_obj
+
+def open_and_decompress_universal(source=None, decompressor=AutoDetectDecompression):
+    decompressor = get_named_decompressor(decompressor)
+    if source is None:
+        fileobj = decompressor.open_fileobj(sys.stdin)
+    elif isinstance(source, basestring):
+        fileobj = decompressor.open_filename_universal(source)
+    else:
+        fileobj = decompressor.open_fileobj(source)
+    return fileobj
+
+def open_and_decompress_binary(source=None, decompressor=AutoDetectDecompression):
+    decompressor = get_named_decompressor(decompressor)
+    if source is None:
+        fileobj = decompressor.open_fileobj(sys.stdin)
+    elif isinstance(source, basestring):
+        fileobj = decompressor.open_filename_binary(source)
+    else:
+        fileobj = decompressor.open_fileobj(source)
+    return fileobj
