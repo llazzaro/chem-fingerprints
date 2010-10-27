@@ -2,30 +2,43 @@ from __future__ import absolute_import
 
 import sys
 
-from chemfp import argparse, decoders, sdf_reader, shared
+from .. import argparse, decoders, sdf_reader, shared
 
 
 def _check_num_bits(num_bits,  # from the user
                     fp_num_bits, # not None if the fp decoder know it exactly
                     num_bytes, # length of decoded fp in bytes
                     parser):
+    """Check that the number of fingerprint bits and bytes match the user input
+
+    Difficulties: some fingerprints have only a byte length, and the user
+    doesn't have to specify the input.
+
+    Returns the number of bits, or calls parser.error if there are problems
+    """
     if fp_num_bits is not None:
         # The fingerprint knows exactly how many bits it contains
         if num_bits is None:
+            # The user hasn't specified, so go with the exact number
             return fp_num_bits
 
+        # If the user gave a value, make sure it matches
         if num_bits != fp_num_bits:
             parser.error(
-                ("--num-bits value of {num_bits} does not match "
-                 "the first fingerprint size of {fp_num_bits}").format(
+                ("the first fingerprint has {fp_num_bits} bits which "
+                 "is not the same as the --num-bits value of {num_bits}").format(
                     num_bits=num_bits, fp_num_bits=fp_num_bits))
-        raise AssertionError("should not get here")
+            raise AssertionError("should not get here")
+        return fp_num_bits
 
-    # The fingerprint size may be rounded up to the nearest
-    # factor of 8 from the expected size.
+    # If the number of bits isn't specified, assume it's exactly
+    # enough to fill up the fingerprint bytes.
     if num_bits is None:
         return num_bytes * 8
 
+    # The user specified the number of bits. The first fingerprint
+    # has a number of bytes. This must be enough to hold the bits,
+    # but only up to 7 bits larger.
     if (num_bits+7)//8 != num_bytes:
         parser.error(
             ("The first fingerprint has {num_bytes} bytes so --num-bits "
@@ -38,7 +51,7 @@ def _check_num_bits(num_bits,  # from the user
     return num_bits
 
 parser = argparse.ArgumentParser(
-    description="Generate FPS fingerprints from tags in an SD file",
+    description="Extract a fingerprint tag from an SD file and generate FPS fingerprints",
     #epilog=epilog,
     #formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -46,27 +59,37 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "filename", nargs="?", help="input SD file (default is stdin)", default=None)
 
+parser.add_argument("--title-tag", metavar="TAG", default=None,
+            help="get the record title from TAG instead of the first line of the record")
 parser.add_argument("--fp-tag", metavar="TAG", 
-                    help="tag TAG contains the fingerprint (required)")
+                    help="get the fingerprint from tag TAG (required)")
 
 parser.add_argument("--num-bits", metavar="INT",
-                    help="use the first INT bits of the input")
+                    help="use the first INT bits of the input. Use only when the "
+                    "last 1-7 bits of the last byte are not part of the fingerprint. "
+                    "Unexpected errors will occur if these bits are not all zero.")
+
 parser.add_argument("-o", "--output", metavar="FILENAME",
                     help="save the fingerprints to FILENAME (default=stdout)")
 parser.add_argument("--software", metavar="TEXT",
                     help="use TEXT as the software description")
-parser.add_argument("--title-tag", metavar="TAG", default=None,
-                    help="tag TAG contains the title, instead of the record title")
 parser.add_argument("--type", metavar="TEXT",
                     help="use TEXT as the fingerprint type description")
 
+# Do I want "--gzip", "--auto", "--none", "--bzip2", and "--decompress METHOD"?
+# Do I want to support encoding of the fps output?
 parser.add_argument(
-    "-d", "--decompress", action="store", metavar="METHOD", default="auto",
+    "--decompress", action="store", metavar="METHOD", default="auto",
     help="use METHOD to decompress the input (default='auto', 'none', 'gzip', 'bzip2')")
+#parser.add_argument(
+#    "--compress", action="store", metavar="METHOD", default="auto",
+#    help="use METHOD to compress the output (default='auto', 'none', 'gzip', 'bzip2')")
+
 
 # This adds --cactvs, --base64 and other decoders to the command-line arguments
 decoders._add_decoding_group(parser)
 
+# Support the "--pubchem" option
 shortcuts_group = parser.add_argument_group("shortcuts")
 
 class AddSubsKeys(argparse.Action):
@@ -75,10 +98,11 @@ class AddSubsKeys(argparse.Action):
         namespace.software="PubChem-SubsKeys/1.3",
         namespace.fp_tag="PUBCHEM_CACTVS_SUBSKEYS"
 
-shortcuts_group.add_argument("--pubchem-subskeys", nargs=0, action=AddSubsKeys,
-   help = ("decode CACTVS substructure keys. Same as "
+shortcuts_group.add_argument("--pubchem", nargs=0, action=AddSubsKeys,
+   help = ("decode CACTVS substructure keys used in PubChem. Same as "
            " --software=PubChem-SubsKeys/1.3 --fp-tag=PUBCHEM_CACTVS_SUBSKEYS --cactvs"))
 
+###############
 
 def main(args=None):
     args = parser.parse_args(args)
@@ -90,10 +114,12 @@ def main(args=None):
 
     location = sdf_reader.FileLocation()
     records = sdf_reader.open_sdf(args.filename, args.decompress, loc=location)
+    
     if args.title_tag is not None:
         reader = sdf_reader.iter_two_tags(records, args.title_tag, args.fp_tag)
         MISSING_TITLE = "Missing title tag {tag}, ".format(tag=args.title_tag)
         MISSING_TITLE += "line {loc.lineno}. Skipping.\n"
+        
     else:
         reader = sdf_reader.iter_title_and_tag(records, args.fp_tag)
         MISSING_TITLE = "Empty record title at line {loc.lineno}. Skipping.\n"
@@ -105,9 +131,9 @@ def main(args=None):
 
     # I need to get some information from the first record
     first_time = True
-    outfile = None
-    num_bytes = None
-    expected_fp_num_bits = -1
+    outfile = None       # Don't open it until I'm ready to write the first record
+    num_bytes = None     # Will need to get (or at least check) the fingerprint byte length
+    expected_fp_num_bits = -1   # 
 
     def skip(skip_count=[0]):
         if first_time:
