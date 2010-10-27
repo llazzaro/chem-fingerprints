@@ -30,7 +30,7 @@ import __builtin__
 from . import decompressors
 
 
-def open(source, decompressor = decompressors.AutoDetectDecompression):
+def open_fingerprints(source, decompressor = decompressors.AutoDetectDecompression):
     """Open a fingerprint file for reading and searching, given its filename
 
     'source' must be a filename or a file object which support seeks
