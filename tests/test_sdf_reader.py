@@ -221,13 +221,29 @@ expected_hbond_donors = ["2","2","2","2","2","2","4","4","2", "2",
 expected_complexity = ["491", "513", "419", "597", "545", "590", "660", "660",
                        "394", "544", "458", "589", "532", "506", "640", "557",
                        "557", "520", "437"]
+expected_xlogp = ["2.8", "1.9", "1", "3.3", "1.5", "2.6", None, "-0.9",
+                  "2", "2.1", "2.9", "1.7", "-1.5", "0.4", "0.6",
+                  "0.4", "0.4", "2", "2.5"]
+
 assert len(expected_complexity) == len(expected_hbond_donors) == len(expected_linenos)
+assert len(expected_xlogp) == len(expected_linenos)
 
 class TestIterTwoTags(unittest.TestCase):
     def test_read_two_existing_tags(self):
         fields = list(iter_two_tags(open_sdfile(PUBCHEM_SDF),
                             "PUBCHEM_CACTVS_HBOND_DONOR", "PUBCHEM_CACTVS_COMPLEXITY"))
         self.assertEquals(fields, zip(expected_hbond_donors, expected_complexity))
+
+    def test_read_tag_missing_data_field1(self):
+        fields = list(iter_two_tags(open_sdfile(PUBCHEM_SDF),
+                                    "PUBCHEM_CACTVS_XLOGP", "PUBCHEM_CACTVS_HBOND_DONOR"))
+        self.assertEquals(fields, zip(expected_xlogp, expected_hbond_donors))
+
+    def test_read_tag_missing_data_field2(self):
+        fields = list(iter_two_tags(open_sdfile(PUBCHEM_SDF),
+                                    "PUBCHEM_CACTVS_HBOND_DONOR", "PUBCHEM_CACTVS_XLOGP"))
+        self.assertEquals(fields, zip(expected_hbond_donors, expected_xlogp))
+        
         
 class TestReadTitleAndFPTag(unittest.TestCase):
     def test_read_existing_tag(self):
