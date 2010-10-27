@@ -9,7 +9,7 @@
 from __future__ import absolute_import
 from . import decompressors
 
-__all__ = ["open_sdfile", "iter_sdf_records", "iter_two_tags", "iter_title_and_single_tag"]
+__all__ = ["open_sdfile", "iter_sdf_records", "iter_two_tags", "iter_title_and_tag"]
 
 import re
 import chemfp
@@ -237,7 +237,7 @@ def iter_two_tags(sdf_iter, tag1, tag2):
     for rec in sdf_iter:
         yield _find_tag_data(rec, tag1_substr), _find_tag_data(rec, tag2_substr)
 
-def iter_title_and_single_tag(sdf_iter, tag):
+def iter_title_and_tag(sdf_iter, tag):
     """Iterate over SD records to get the title line and data line for the specified tag
 
     (NOTE: the title line is the first line of the SD file, and not an SD tag.)
