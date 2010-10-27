@@ -37,20 +37,20 @@ class FakeDecompressor(object):
 
 class TestReadRecords(unittest.TestCase):
     def test_reads_the_only_record(self):
-        n = sum(1 for x in open_sdfile(TRYPTOPHAN_SDF))
+        n = sum(1 for x in open_sdf(TRYPTOPHAN_SDF))
         self.assertEquals(n, 1)
     def test_reads_all_records(self):
-        n = sum(1 for x in open_sdfile(PUBCHEM_SDF))
+        n = sum(1 for x in open_sdf(PUBCHEM_SDF))
         self.assertEquals(n, 19)
     def test_reads_all_compressed_records(self):
-        n = sum(1 for x in open_sdfile(PUBCHEM_SDF_GZ))
+        n = sum(1 for x in open_sdf(PUBCHEM_SDF_GZ))
         self.assertEquals(n, 19)
 
     def test_reads_from_stdin(self):
         old_stdin = sys.stdin
         sys.stdin = open(PUBCHEM_SDF, "rb")
         try:
-            n = sum(1 for x in open_sdfile())
+            n = sum(1 for x in open_sdf())
         finally:
             sys.stdin = sys.stdin
         self.assertEquals(n, 19)
@@ -59,34 +59,34 @@ class TestReadRecords(unittest.TestCase):
         old_stdin = sys.stdin
         sys.stdin = open(PUBCHEM_SDF_GZ, "rb")
         try:
-            n = sum(1 for x in open_sdfile(None, "gzip"))
+            n = sum(1 for x in open_sdf(None, "gzip"))
         finally:
             sys.stdin = sys.stdin
         self.assertEquals(n, 19)
 
     def test_reads_from_fileobj(self):
         f = open(PUBCHEM_SDF, "rU")
-        n = sum(1 for x in open_sdfile(f))
+        n = sum(1 for x in open_sdf(f))
         self.assertEquals(n, 19)
         
     def test_reads_from_uncompressed_fileobj(self):
         f = open(PUBCHEM_SDF, "rU")
-        n = sum(1 for x in open_sdfile(f, "none"))
+        n = sum(1 for x in open_sdf(f, "none"))
         self.assertEquals(n, 19)
 
     def test_reads_from_gzip_fileobj(self):
         f = open(PUBCHEM_SDF_GZ, "rb")
-        n = sum(1 for x in open_sdfile(f, "gzip"))
+        n = sum(1 for x in open_sdf(f, "gzip"))
         self.assertEquals(n, 19)
 
     def test_handles_alternate_decompressor(self):
-        n = sum(1 for x in open_sdfile("spam.blah", FakeDecompressor()))
+        n = sum(1 for x in open_sdf("spam.blah", FakeDecompressor()))
         self.assertEquals(n, 19)
 
     def test_handles_loc(self):
         loc = sdf_reader.FileLocation()
         results = []
-        for x in open_sdfile(PUBCHEM_SDF_GZ, loc=loc):
+        for x in open_sdf(PUBCHEM_SDF_GZ, loc=loc):
             self.assertEquals(loc.filename, PUBCHEM_SDF_GZ)
             results.append(dict(title=loc.title,
                                 lineno=loc.lineno))
@@ -94,7 +94,7 @@ class TestReadRecords(unittest.TestCase):
 
     def test_when_using_wrong_compression(self):
         try:
-            n = sum(1 for x in open_sdfile(PUBCHEM_SDF, "gzip"))
+            n = sum(1 for x in open_sdf(PUBCHEM_SDF, "gzip"))
             raise AssertionError("parsed a gzip'ed file?")
         except IOError:
             pass
@@ -111,7 +111,7 @@ class ReadReturnsSmallAmounts(object):
 
 class ReadReturnsOneRecord(object):
     def __init__(self):
-        self.f = open_sdfile(PUBCHEM_SDF)
+        self.f = open_sdf(PUBCHEM_SDF)
     def read(self, n):
         try:
             rec = self.f.next()
@@ -124,7 +124,7 @@ class ReadReturnsOneRecord(object):
 
 class ReadReturnsTwoRecords(object):
     def __init__(self):
-        self.f = open_sdfile(PUBCHEM_SDF)
+        self.f = open_sdf(PUBCHEM_SDF)
     def read(self, n):
         try:
             rec = self.f.next()
@@ -143,26 +143,26 @@ class ReadReturnsTwoRecords(object):
 class TestBoundaryConditions(unittest.TestCase):
     def test_missing_terminal_newline(self):
         f = SIO(tryptophan.rstrip("\n"))
-        n = sum(1 for x in open_sdfile(f))
+        n = sum(1 for x in open_sdf(f))
         self.assertEquals(n, 1)
     def test_small_amounts(self):
         # the O(n**2) behavior really hits hard here - this takes a full second to work
-        n = sum(1 for x in open_sdfile(ReadReturnsSmallAmounts()))
+        n = sum(1 for x in open_sdf(ReadReturnsSmallAmounts()))
         self.assertEquals(n, 19)
     def test_exact_record_boundary_reads(self):
         loc = sdf_reader.FileLocation()
-        titles = [loc.title for x in open_sdfile(ReadReturnsOneRecord(), loc=loc)]
+        titles = [loc.title for x in open_sdf(ReadReturnsOneRecord(), loc=loc)]
         self.assertEquals(titles, expected_identifiers)
     def test_two_record_boundary_reads(self):
         loc = sdf_reader.FileLocation()
-        titles = [loc.title for x in open_sdfile(ReadReturnsTwoRecords(), loc=loc)]
+        titles = [loc.title for x in open_sdf(ReadReturnsTwoRecords(), loc=loc)]
         self.assertEquals(titles, expected_identifiers)
 
 class TestReadErrors(unittest.TestCase):
     def test_wrong_format(self):
         f = SIO("Spam\n")
         try:
-            for x in open_sdfile(f):
+            for x in open_sdf(f):
                 raise AssertionError("Bad parse")
         except TypeError, err:
             self.assertEquals("Could not find a valid SD record" in str(err), True)
@@ -171,7 +171,7 @@ class TestReadErrors(unittest.TestCase):
     def test_record_too_large(self):
         f = SIO( (tryptophan * ((200000 // len(tryptophan)) + 1)).replace("$$$$", "1234"))
         try:
-            for x in open_sdfile(f):
+            for x in open_sdf(f):
                 raise AssertionError("should not be able to read the first record")
         except TypeError, err:
             self.assertEquals("too large" in str(err), True)
@@ -180,7 +180,7 @@ class TestReadErrors(unittest.TestCase):
     def test_has_extra_data(self):
         f = SIO(tryptophan + tryptophan + "blah")
         try:
-            for i, x in enumerate(open_sdfile(f)):
+            for i, x in enumerate(open_sdf(f)):
                 if i > 1:
                     raise AssertionError("bad record count")
         except TypeError, err:
@@ -192,7 +192,7 @@ class TestReadErrors(unittest.TestCase):
     def test_bad_format(self):
         f = SIO(tryptophan + tryptophan.replace("V2000", "V4000"))
         try:
-            for i, x in enumerate(open_sdfile(f)):
+            for i, x in enumerate(open_sdf(f)):
                 if i > 0:
                     raise AssertionError("bad record count")
         except TypeError, err:
@@ -208,7 +208,7 @@ class TestReadErrors(unittest.TestCase):
         my_error_handler = CaptureErrors()
         loc = sdf_reader.FileLocation()
         f = SIO(tryptophan + tryptophan.replace("V2000", "V4000") + tryptophan)
-        titles = [loc.lineno for rec in open_sdfile(f, loc=loc,
+        titles = [loc.lineno for rec in open_sdf(f, loc=loc,
                                                     reader_error=my_error_handler)]
         self.assertEquals(titles, [1, 137])
         self.assertEquals(my_error_handler.errors, [("incorrectly formatted record",
@@ -231,40 +231,40 @@ assert len(expected_xlogp) == len(expected_linenos)
 
 class TestIterTwoTags(unittest.TestCase):
     def test_read_two_existing_tags(self):
-        fields = list(iter_two_tags(open_sdfile(PUBCHEM_SDF),
+        fields = list(iter_two_tags(open_sdf(PUBCHEM_SDF),
                             "PUBCHEM_CACTVS_HBOND_DONOR", "PUBCHEM_CACTVS_COMPLEXITY"))
         self.assertEquals(fields, zip(expected_hbond_donors, expected_complexity))
 
     def test_read_tag_missing_data_field1(self):
-        fields = list(iter_two_tags(open_sdfile(PUBCHEM_SDF),
+        fields = list(iter_two_tags(open_sdf(PUBCHEM_SDF),
                                     "PUBCHEM_CACTVS_XLOGP", "PUBCHEM_CACTVS_HBOND_DONOR"))
         self.assertEquals(fields, zip(expected_xlogp, expected_hbond_donors))
 
     def test_read_tag_missing_data_field2(self):
-        fields = list(iter_two_tags(open_sdfile(PUBCHEM_SDF),
+        fields = list(iter_two_tags(open_sdf(PUBCHEM_SDF),
                                     "PUBCHEM_CACTVS_HBOND_DONOR", "PUBCHEM_CACTVS_XLOGP"))
         self.assertEquals(fields, zip(expected_hbond_donors, expected_xlogp))
         
     def test_edge_conditions1(self):
-        fields = list(iter_two_tags(open_sdfile(STRANGE_SDF), "noblank", "twolines"))
+        fields = list(iter_two_tags(open_sdf(STRANGE_SDF), "noblank", "twolines"))
         self.assertEquals(fields, [("This line is not followed by a blank line",
                                     "This contains two lines"), (None, None)])
 
     def test_edge_conditions2(self):
-        fields = list(iter_two_tags(open_sdfile(STRANGE_SDF),
+        fields = list(iter_two_tags(open_sdf(STRANGE_SDF),
                                     "duplicate", "embedded-tags"))
         self.assertEquals(fields, [("This is the first version.",
                     "I<junk> have<junk> tags  <junk>  in the data line <junk>"),
                                    (None, None)])
 
     def test_edge_conditions3(self):
-        fields = list(iter_two_tags(open_sdfile(STRANGE_SDF), "junk", "blank lines"))
+        fields = list(iter_two_tags(open_sdf(STRANGE_SDF), "junk", "blank lines"))
         self.assertEquals(fields, [
       ("This line contains some of the strange junk that might exist on the tag line", ""),
             (None, None)])
 
     def test_edge_conditions4(self):
-        fields = list(iter_two_tags(open_sdfile(STRANGE_SDF), "nada", "fini"))
+        fields = list(iter_two_tags(open_sdf(STRANGE_SDF), "nada", "fini"))
         self.assertEquals(fields, [(None, None), ("", "")])
 
     def test_bad_tags(self):
@@ -274,12 +274,12 @@ class TestIterTwoTags(unittest.TestCase):
     
 class TestReadTitleAndTag(unittest.TestCase):
     def test_read_existing_tag(self):
-        fields = list(iter_title_and_tag(open_sdfile(PUBCHEM_SDF),
+        fields = list(iter_title_and_tag(open_sdf(PUBCHEM_SDF),
                                          "PUBCHEM_CACTVS_HBOND_DONOR"))
         self.assertEquals(fields, zip(expected_identifiers, expected_hbond_donors))
 
     def test_missing_tag(self):
-        fields = list(iter_title_and_tag(open_sdfile(PUBCHEM_SDF), "PUBCHEM_CACTVS_XLOGP"))
+        fields = list(iter_title_and_tag(open_sdf(PUBCHEM_SDF), "PUBCHEM_CACTVS_XLOGP"))
                                          
         self.assertEquals(fields, zip(expected_identifiers, expected_xlogp))
 

@@ -9,7 +9,7 @@
 from __future__ import absolute_import
 from . import decompressors
 
-__all__ = ["open_sdfile", "iter_sdf_records", "iter_two_tags", "iter_title_and_tag"]
+__all__ = ["open_sdf", "iter_sdf_records", "iter_two_tags", "iter_title_and_tag"]
 
 import re
 import chemfp
@@ -69,8 +69,8 @@ def default_reader_error(msg, loc):
     "This is the default error handler. It raises an informative TypeError"
     raise TypeError(msg + " at " + loc.where())
 
-def open_sdfile(source=None, decompressor=decompressors.AutoDetectDecompression,
-                loc=None, reader_error=default_reader_error):
+def open_sdf(source=None, decompressor=decompressors.AutoDetectDecompression,
+             loc=None, reader_error=default_reader_error):
     """Open an SD file and return an iterator over the SD records, as blocks of text
 
     If 'source' is None, use sys.stdin. If 'source' is a string, then
