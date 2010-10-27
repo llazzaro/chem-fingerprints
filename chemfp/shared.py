@@ -61,6 +61,7 @@ def open_output(output_filename):
     if output_filename is None:
         return sys.stdout
     elif isinstance(output_filename, basestring):
+        # Here's where I could check for a .gz extension and compress the output
         return open(output_filename, "w")
     return output_filename
 
