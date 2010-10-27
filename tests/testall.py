@@ -5,13 +5,14 @@
 import unittest
 
 import test_docstrings
-import test_chemfp
-import test_sdf_reader
 
 suite = unittest.TestSuite()
 suite.addTest(test_docstrings.suite())
-suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(test_chemfp))
-suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(test_sdf_reader))
+
+for name in ("test_chemfp", "test_sdf_reader", "test_sdf2fps"):
+    m = __import__(name)
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(m))
+
 
 class MyLoader(object):
     def loadTestsFromModule(self, name):
