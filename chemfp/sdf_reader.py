@@ -7,10 +7,9 @@
 
 
 from __future__ import absolute_import
-import sys
 from . import decompressors
 
-__all__ = ["iter_sdf_records", "iter_two_tags", "iter_title_and_single_tag"]
+__all__ = ["open_sdfile", "iter_sdf_records", "iter_two_tags", "iter_title_and_single_tag"]
 
 import re
 import chemfp
@@ -72,18 +71,23 @@ def default_reader_error(msg, loc):
 
 def open_sdfile(source=None, decompressor=decompressors.AutoDetectDecompression,
                 loc=None, reader_error=default_reader_error):
-    """Open an SD file in universal text mode (where possible)
+    """Open an SD file and return an iterator over the SD records, as blocks of text
 
+    If 'source' is None, use sys.stdin. If 'source' is a string, then
+    open it for reading in universal mode. Otherwise, 'source' must be
+    an input stream.
+
+    'decompressor' can be 'none', 'gzip', or 'bzip2' to indicate a specific
+    compression type. If 'auto' and the source is a filename then use the
+    extension to determine the compression type.
+
+    'loc' is for the experimental FileLocation tracker
+
+    'reader_error' is a callback used to report failures, some of
+    which may be ignored. This feature is also experimental.
     """
-    decompressor = decompressors.get_named_decompressor(decompressor)
-    if source is None:
-        fileobj = decompressor.open_fileobj(sys.stdin)
-    elif isinstance(source, basestring):
-        fileobj = decompressor.open_filename_universal(source)
-    else:
-        fileobj = decompressor.open_fileobj(source)
-    return iter_sdf_records(fileobj, loc, reader_error)
-    
+    infile = decompressors.open_and_decompress_universal(source, decompressor)
+    return iter_sdf_records(infile, loc, reader_error)
 
 # My original implementation used a slow line-oriented parser.  That
 # was decently fast, but this version, which reads a block at a time
@@ -92,10 +96,13 @@ def open_sdfile(source=None, decompressor=decompressors.AutoDetectDecompression,
 def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
     """Iterate over records in an SD file, returning records as strings
 
-    infile - an input stream (its 'name' attribute should be the source filename)
-    loc - an optional FileLocation instance, used to track the current line number.
-    reader_error - a callback function taking (msg, loc) where 'msg' is an
-       error string and 'loc' is the FileLocation, valid for the given error
+    'infile' is an input stream. If the 'name' attribute exists then it's
+    used in the file location.
+
+    'loc' is for the experimental FileLocation tracker
+
+    'reader_error' is a callback used to report failures, some of
+    which may be ignored. This feature is also experimental.
     """
     if loc is None:
         loc = FileLocation()
@@ -117,7 +124,13 @@ def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
                         pushback_buffer += "\n"
                     else:
                         loc._record = None
-                        reader_error("unexpected content at the end of the file (perhaps the last record is truncated?)", loc)
+                        if loc.lineno == 1:
+                            # No records read. Wrong format.
+                            reader_error("Could not find a valid SD record", loc)
+                        else:
+                            reader_error(
+   "unexpected content at the end of the file (perhaps the last record is truncated?)",
+                                loc)
                         break
                 else:
                     # We're done!
