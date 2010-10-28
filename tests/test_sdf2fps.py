@@ -20,7 +20,8 @@ def run(s):
         sys.stdout = real_stdout
         sys.stdin = real_stdin
     result = stdout.getvalue().splitlines()
-    assert result[0] == "#FPS1"
+    if result:
+        assert result[0] == "#FPS1"
     return result
 
 def run_failure(s):
@@ -32,6 +33,14 @@ def run_failure(s):
             pass
         else:
             raise AssertionError("should have exited: %r" % (s,))
+    finally:
+        sys.stderr = real_stderr
+    return stderr.getvalue()
+
+def run_warning(s):
+    sys.stderr = stderr = SIO()
+    try:
+        run(s)
     finally:
         sys.stderr = real_stderr
     return stderr.getvalue()
@@ -173,7 +182,21 @@ class TestBitSizes(unittest.TestCase):
     def test_user_bits_too_much_smaller_than_bytes(self):
         result = run_failure("--hex --fp-tag hex16 --num-bits 56")
         self.assertEquals("57 <= num-bits <= 64, not 56" in result, True, result)
-    
+
+class TestTitleProcessing(unittest.TestCase):
+    def test_title_from_title_tag(self):
+        result = run("--hex --fp-tag hex2 --title-tag binary3")
+        self.assertEquals("ab 001" in result, True, result)
+
+    def test_missing_title_from_title_line(self):
+        warning = run_warning("--hex --fp-tag hex2 --title-tag FAKE_TITLE")
+        self.assertEquals("Missing title tag FAKE_TITLE, in the record starting at line 146." in warning,
+                          True, warning)
+
+    def test_missing_all_titles(self):
+        warning = run_warning("--hex --fp-tag hex2 --title-tag DOES_NOT_EXIST")
+        self.assertEquals("Missing title tag DOES_NOT_EXIST" in warning, True, warning)
+        self.assertEquals("No input records contained fingerprints" in warning, True, warning)
 
 class TestShortcuts(unittest.TestCase):
     def test_pubchem(self):
