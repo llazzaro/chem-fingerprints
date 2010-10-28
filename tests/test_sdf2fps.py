@@ -147,6 +147,12 @@ class TestDecoderFlags(unittest.TestCase):
         self.assertEquals(result[0], "Greetings, human".encode("hex") + " 9425004")
         self.assertEquals(result[1], "blahblahspamblah".encode("hex") + " 9425009")
 
+
+    def test_bad_decoding(self):
+        msg = run_warning("--base64 --fp-tag binary17")
+        self.assertEquals("Could not base64 decode <binary17> value" in msg, True, msg)
+        self.assertEquals("Skipping record" in msg, True, msg)
+
 class TestBitSizes(unittest.TestCase):
     def test_exact_fingerprint_bits(self):
         result = run("--binary --fp-tag binary3")
@@ -207,6 +213,22 @@ class TestShortcuts(unittest.TestCase):
         self.assertEquals("07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000 9425004" in result, True)
         self.assertEquals("07de0d000000000000000000000000000080460300000c0000000000000000800f0000780038000000301083f920cc09695e0800d5c0e44e6e00492190844145dc1f841d261911164d039b8f29251026b9401313e0ec01007000000000000000000000000000000000000000000000 9425009" in result, True)
 
+class TestBadArgs(unittest.TestCase):
+    def test_missing_fp_tag(self):
+        msg = run_failure("")
+        self.assertEquals("argument --fp-tag is required" in msg, True, msg)
+
+    def test_num_bits_positive(self):
+        msg = run_failure("--fp-tag SPAM --num-bits 0")
+        self.assertEquals("--num-bits must be a positive integer" in msg, True, msg)
+        msg = run_failure("--fp-tag SPAM --num-bits -1")
+        self.assertEquals("--num-bits must be a positive integer" in msg, True, msg)
+
+    def test_bad_char(self):
+        msg = run_failure("--fp-tag SPAM --software this\bthat")
+        self.assertEquals("--software" in msg, True, msg)
+        self.assertEquals("'\\x08'" in msg, True, msg)
+        
         
 if __name__ == "__main__":
     unittest.main()
