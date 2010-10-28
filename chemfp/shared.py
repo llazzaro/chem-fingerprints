@@ -11,7 +11,7 @@ FPSv1_HEADER = (
     "#FPS1\n"
     "#num_bits={num_bits}\n"
     "{software_line}"
-    "{params_line}"
+    "{type_line}"
     "{source_line}"
     "#date={date}\n")
 
@@ -30,7 +30,7 @@ def source_to_source_line(source):
     source = "".join(source.splitlines())
     return "#source=" + source + "\n"
 
-def format_fpsv1_header(num_bits, software=None, params=None, source=None, date=None):
+def format_fpsv1_header(num_bits, software=None, type=None, source=None, date=None):
     if date is None:
         date = now_in_isoformat()
 
@@ -39,15 +39,15 @@ def format_fpsv1_header(num_bits, software=None, params=None, source=None, date=
         software_line = ""
     else:
         software_line = "#software="+software+"\n"
-    if params is None:
-        params_line = ""
+    if type is None:
+        type_line = ""
     else:
-        params_line = "#params="+params+"\n"
+        type_line = "#type="+type+"\n"
 
     return FPSv1_HEADER.format(
         num_bits = num_bits,
         software_line = software_line,
-        params_line = params_line,
+        type_line = type_line,
         source_line = source_line,
         date = date,
         )
