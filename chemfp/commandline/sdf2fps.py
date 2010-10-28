@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import sys
+import re
 
 from .. import argparse, decoders, sdf_reader, shared
 
@@ -95,14 +96,20 @@ shortcuts_group = parser.add_argument_group("shortcuts")
 class AddSubsKeys(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         namespace.cactvs=True
-        namespace.software="PubChem-SubsKeys/1.3",
+        # the 1.3 is solely based on the version of the document at
+        #  ftp://ftp.ncbi.nlm.nih.gov/pubchem/specifications/pubchem_fingerprints.txt
+        namespace.software="PubChem-SubsKeys/1.3"
+        namespace.type="CACTVS-881/1"
         namespace.fp_tag="PUBCHEM_CACTVS_SUBSKEYS"
 
 shortcuts_group.add_argument("--pubchem", nargs=0, action=AddSubsKeys,
    help = ("decode CACTVS substructure keys used in PubChem. Same as "
-           " --software=PubChem-SubsKeys/1.3 --fp-tag=PUBCHEM_CACTVS_SUBSKEYS --cactvs"))
+           "--software=PubChem-SubsKeys/1.3 --type CACTVS-881/1 "
+           "--fp-tag=PUBCHEM_CACTVS_SUBSKEYS --cactvs"))
 
 ###############
+
+_illegal_value_pat = re.compile(r"[\000-\037]")
 
 def main(args=None):
     args = parser.parse_args(args)
@@ -114,6 +121,16 @@ def main(args=None):
 
     location = sdf_reader.FileLocation()
     records = sdf_reader.open_sdf(args.filename, args.decompress, loc=location)
+
+    for attr in ("software", "type"):
+        description = getattr(args, attr, None)
+        if description is None:
+            continue
+        m = _illegal_value_pat.search(description)
+        if m is None:
+            continue
+        parser.error("--{attr} description may not contain the character {c!r}".format(
+                attr=attr, c = m.group(0)))
     
     if args.title_tag is not None:
         reader = sdf_reader.iter_two_tags(records, args.title_tag, args.fp_tag)
@@ -175,8 +192,8 @@ def main(args=None):
             shared.write_to_pipe(outfile,
                                  shared.format_fpsv1_header(
                     num_bits=num_bits,
-                    software=None, # args.software XXX
-                    params=None, # args.params, XXX
+                    software=args.software,
+                    type=args.type,
                     source=args.filename))
 
         else:
@@ -189,6 +206,10 @@ def main(args=None):
             
         shared.write_to_pipe(outfile,
                              "%s %s\n" % (fp.encode("hex"), title))
+    if first_time:
+        # Looks like I didn't find anything.
+        sys.stderr.write("WARNING: No input records contained fingerprints. "
+                         "No output generated.")
 
 if __name__ == "__main__":
     main()
