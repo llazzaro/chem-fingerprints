@@ -41,8 +41,8 @@ def _check_num_bits(num_bits,  # from the user
     # but only up to 7 bits larger.
     if (num_bits+7)//8 != num_bytes:
         parser.error(
-            ("The first fingerprint has {num_bytes} bytes so --num-bits "
-             "must be between {min} <= x <= {max}, not {num_bits}").format(
+            ("The byte length of the first fingerprint is {num_bytes} so --num-bits "
+             "must be {min} <= num-bits <= {max}, not {num_bits}").format(
                 num_bytes=num_bytes, min=num_bytes*8-7, max=num_bytes*8,
                 num_bits=num_bits))
         raise AssertError("should not get here")
