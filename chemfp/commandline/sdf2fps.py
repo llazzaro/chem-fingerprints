@@ -135,7 +135,7 @@ def main(args=None):
     if args.title_tag is not None:
         reader = sdf_reader.iter_two_tags(records, args.title_tag, args.fp_tag)
         MISSING_TITLE = "Missing title tag {tag}, ".format(tag=args.title_tag)
-        MISSING_TITLE += "line {loc.lineno}. Skipping.\n"
+        MISSING_TITLE += "in the record starting at line {loc.lineno}. Skipping.\n"
         
     else:
         reader = sdf_reader.iter_title_and_tag(records, args.fp_tag)
