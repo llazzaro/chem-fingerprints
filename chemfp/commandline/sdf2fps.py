@@ -116,9 +116,12 @@ def main(args=None):
 
     if not args.fp_tag:
         parser.error("argument --fp-tag is required")
+    if args.num_bits is not None and args.num_bits <= 0:
+        parser.error("--num-bits must be a positive integer")
 
     fp_decoder_name, fp_decoder = decoders._extract_decoder(parser, args)
 
+    # Open the file for reading records
     location = sdf_reader.FileLocation()
     records = sdf_reader.open_sdf(args.filename, args.decompress, loc=location)
 
@@ -131,7 +134,9 @@ def main(args=None):
             continue
         parser.error("--{attr} description may not contain the character {c!r}".format(
                 attr=attr, c = m.group(0)))
-    
+
+    # Get the title and fingerprints from the records, and set up the
+    # error messages for missing title and fingerprints.
     if args.title_tag is not None:
         reader = sdf_reader.iter_two_tags(records, args.title_tag, args.fp_tag)
         MISSING_TITLE = "Missing title tag {tag}, ".format(tag=args.title_tag)
@@ -144,6 +149,7 @@ def main(args=None):
     MISSING_FP = ("Missing fingerprint tag {tag} in record {loc.title!r} line {loc.lineno}. "
                   "Skipping.\n")
 
+    # This is either None or a user-specified integer
     num_bits = args.num_bits
 
     # I need to get some information from the first record
@@ -172,10 +178,10 @@ def main(args=None):
             fp_num_bits, fp = fp_decoder(encoded_fp)
         except TypeError, err:
             sys.stderr.write(
-                ("Could not {decoder_name} decode {tag} value {encoded_fp!r}: {err}\n"
+                ("Could not {decoder_name} decode <{tag}> value {encoded_fp!r}: {err}\n"
                  "  Skipping record {message}\n").format(
                     decoder_name=fp_decoder_name, tag=args.fp_tag,
-                    message=location.message(), err=err, encoded_fp=encoded_fp))
+                    message=location.where(), err=err, encoded_fp=encoded_fp))
             skip()
             continue
         
