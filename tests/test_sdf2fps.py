@@ -6,6 +6,7 @@ from chemfp.commandline import sdf2fps
 
 real_stdin = sys.stdin
 real_stdout = sys.stdout
+real_stderr = sys.stderr
 
 DECODER_SDF = "decoder.sdf"
 
@@ -18,7 +19,22 @@ def run(s):
     finally:
         sys.stdout = real_stdout
         sys.stdin = real_stdin
-    return stdout.getvalue().splitlines()
+    result = stdout.getvalue().splitlines()
+    assert result[0] == "#FPS1"
+    return result
+
+def run_failure(s):
+    sys.stderr = stderr = SIO()
+    try:
+        try:
+            run(s)
+        except SystemExit:
+            pass
+        else:
+            raise AssertionError("should have exited: %r" % (s,))
+    finally:
+        sys.stderr = real_stderr
+    return stderr.getvalue()
 
 def run_fps(s, expect_length=None):
     result = run(s)
@@ -121,6 +137,53 @@ class TestDecoderFlags(unittest.TestCase):
         result = run_fps("--base64 --fp-tag base64_16", 2)
         self.assertEquals(result[0], "Greetings, human".encode("hex") + " 9425004")
         self.assertEquals(result[1], "blahblahspamblah".encode("hex") + " 9425009")
+
+class TestBitSizes(unittest.TestCase):
+    def test_exact_fingerprint_bits(self):
+        result = run("--binary --fp-tag binary3")
+        self.assertEquals("#num_bits=3" in result, True, result)
+        
+    def test_user_bits_match_fingerprint_bits(self):
+        result = run("--binary --fp-tag binary3 --num-bits 3")
+        self.assertEquals("#num_bits=3" in result, True, result)
+        self.assertEquals("04 9425004" in result, True, result)
+        self.assertEquals("03 9425009" in result, True, result)
+
+    def test_user_bits_disagree_with_fingerprint_bits(self):
+        errmsg = run_failure("--binary --fp-tag binary3 --num-bits 2")
+        self.assertEquals("has 3 bits" in errmsg, True)
+        self.assertEquals(" 2" in errmsg, True)
+
+    def test_implied_from_fingerprint_bytes(self):
+        result = run("--hex --fp-tag hex2")
+        self.assertEquals("#num_bits=8" in result, True, result)
+
+    def test_user_bits_matches_fingerprint_bytes(self):
+        result = run("--hex --fp-tag hex2 --num-bits 8")
+        self.assertEquals("#num_bits=8" in result, True, result)
+
+    def test_user_bits_too_large_for_bytes(self):
+        result = run_failure("--hex --fp-tag hex2 --num-bits 9")
+        self.assertEquals("1 <= num-bits <= 8, not 9" in result, True, result)
+
+    def test_user_bits_acceptably_smaller_than_bytes(self):
+        result = run("--hex --fp-tag hex2 --num-bits 6")
+        self.assertEquals("#num_bits=6" in result, True, result)
+
+    def test_user_bits_too_much_smaller_than_bytes(self):
+        result = run_failure("--hex --fp-tag hex16 --num-bits 56")
+        self.assertEquals("57 <= num-bits <= 64, not 56" in result, True, result)
+    
+
+class TestShortcuts(unittest.TestCase):
+    def test_pubchem(self):
+        result = run("--pubchem")
+        self.assertEquals("#num_bits=881" in result, True, result)
+        self.assertEquals("#software=PubChem-SubsKeys/1.3" in result, True, result)
+        self.assertEquals("#type=CACTVS-881/1" in result, True, result)
+        self.assertEquals("07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000 9425004" in result, True)
+        self.assertEquals("07de0d000000000000000000000000000080460300000c0000000000000000800f0000780038000000301083f920cc09695e0800d5c0e44e6e00492190844145dc1f841d261911164d039b8f29251026b9401313e0ec01007000000000000000000000000000000000000000000000 9425009" in result, True)
+
         
 if __name__ == "__main__":
     unittest.main()
