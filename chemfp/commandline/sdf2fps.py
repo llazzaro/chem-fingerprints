@@ -64,7 +64,7 @@ parser.add_argument("--title-tag", metavar="TAG", default=None,
 parser.add_argument("--fp-tag", metavar="TAG", 
                     help="get the fingerprint from tag TAG (required)")
 
-parser.add_argument("--num-bits", metavar="INT",
+parser.add_argument("--num-bits", metavar="INT", type=int,
                     help="use the first INT bits of the input. Use only when the "
                     "last 1-7 bits of the last byte are not part of the fingerprint. "
                     "Unexpected errors will occur if these bits are not all zero.")
