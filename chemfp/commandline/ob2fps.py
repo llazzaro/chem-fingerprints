@@ -7,11 +7,12 @@ from chemfp import argparse, shared
 
 epilog = """\
 
-OpenBabel guesses the input structure format based on the filename
+OpenBabel autodetects the input structure format based on the filename
 extension. The default format for structures read from stdin is
-SMILES. Use "--in FORMAT" to select an alternative, where FORMAT is
+SMILES. Use"--in FORMAT" to select an alternative, where FORMAT is
 one of the extensions at http://openbabel.org/wiki/List_of_extensions .
 For a short list of some common formats:
+
 
   File Type      Valid FORMATs
   ---------      -------------
@@ -40,7 +41,7 @@ group.add_argument("--FP4", action="store_true",
 
 parser.add_argument(
     "--in", metavar="FORMAT", dest="format",
-    help="input structure format (default guesses from filename)")
+    help="input structure format (default autodetects from the filename extension)")
 parser.add_argument(
     "-o", "--output", metavar="FILENAME",
     help="save the fingerprints to FILENAME (default=stdout)")
