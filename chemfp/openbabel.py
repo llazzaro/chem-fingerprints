@@ -144,7 +144,7 @@ def _guess_format(filename):
         return "smi"
 
     if ext != ".gz":
-        # Not compressed? Use whever was given.
+        # Not compressed? Use whatever was given.
         return ext[1:] # remove leading "."
 
     # Compressed? Get the next extension
