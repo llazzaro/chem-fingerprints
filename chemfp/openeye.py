@@ -328,5 +328,5 @@ def _stdin_check(_apply_format):
 
 SOFTWARE = "OEGraphSim/" + OEGraphSimGetRelease()
 
-format_path_params = (
+format_path_type = (
     "OpenEye-Path/1 min_bonds={min_bonds} max_bonds={max_bonds} atype={atype} btype={btype}".format)

@@ -1,10 +1,9 @@
+from __future__ import absolute_import
 import sys
 import textwrap
-from chemfp import argparse
 
-from chemfp import shared
-from chemfp import openeye as oe
-
+from .. import argparse, shared
+from .. import openeye as oe
 
 ##### Handle command-line argument parsing
 
@@ -93,7 +92,7 @@ def main(args=None):
         # Create the MACCS keys fingerprinter
         fingerprinter = oe.get_maccs_fingerprinter()
         num_bits = 166
-        params = "OpenEye-MACCS166/1"
+        type = "OpenEye-MACCS166/1"
     else:
         if not (16 <= args.num_bits <= 65536):
             parser.error("--num-bits must be between 16 and 65536 bits")
@@ -113,10 +112,10 @@ def main(args=None):
         btype_string = oe.bond_value_to_description(btype)
 
 
-        params = oe.format_path_params(min_bonds=args.min_bonds,
-                                       max_bonds=args.max_bonds,
-                                       atype=atype_string,
-                                       btype=btype_string)
+        type = oe.format_path_type(min_bonds=args.min_bonds,
+                                   max_bonds=args.max_bonds,
+                                   atype=atype_string,
+                                   btype=btype_string)
 
         # Create the path fingerprinter
         fingerprinter = oe.get_path_fingerprinter(
@@ -132,7 +131,7 @@ def main(args=None):
     shared.generate_fpsv1_output(dict(num_bits=num_bits,
                                       software=oe.SOFTWARE,
                                       source=args.filename,
-                                      params=params),
+                                      type=type),
                                  reader,
                                  fingerprinter,
                                  args.output)
