@@ -98,13 +98,13 @@ class AddSubsKeys(argparse.Action):
         namespace.cactvs=True
         # the 1.3 is solely based on the version of the document at
         #  ftp://ftp.ncbi.nlm.nih.gov/pubchem/specifications/pubchem_fingerprints.txt
-        namespace.software="PubChem-SubsKeys/1.3"
-        namespace.type="CACTVS-881/1"
+        namespace.software="CACTVS/unknown"
+        namespace.type="CACTVS-E_SCREEN/1.0 extended=2"
         namespace.fp_tag="PUBCHEM_CACTVS_SUBSKEYS"
 
 shortcuts_group.add_argument("--pubchem", nargs=0, action=AddSubsKeys,
    help = ("decode CACTVS substructure keys used in PubChem. Same as "
-           "--software=PubChem-SubsKeys/1.3 --type CACTVS-881/1 "
+           "--software=CACTVS/unknown --type 'CACTVS-E_SCREEN/1.0 extended=2' "
            "--fp-tag=PUBCHEM_CACTVS_SUBSKEYS --cactvs"))
 
 ###############

@@ -208,8 +208,8 @@ class TestShortcuts(unittest.TestCase):
     def test_pubchem(self):
         result = run("--pubchem")
         self.assertEquals("#num_bits=881" in result, True, result)
-        self.assertEquals("#software=PubChem-SubsKeys/1.3" in result, True, result)
-        self.assertEquals("#type=CACTVS-881/1" in result, True, result)
+        self.assertEquals("#software=CACTVS/unknown" in result, True, result)
+        self.assertEquals("#type=CACTVS-E_SCREEN/1.0 extended=2" in result, True, result)
         self.assertEquals("07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000 9425004" in result, True)
         self.assertEquals("07de0d000000000000000000000000000080460300000c0000000000000000800f0000780038000000301083f920cc09695e0800d5c0e44e6e00492190844145dc1f841d261911164d039b8f29251026b9401313e0ec01007000000000000000000000000000000000000000000000 9425009" in result, True)
 
