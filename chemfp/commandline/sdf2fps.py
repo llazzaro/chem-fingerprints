@@ -77,8 +77,11 @@ parser.add_argument("--software", metavar="TEXT",
 parser.add_argument("--type", metavar="TEXT",
                     help="use TEXT as the fingerprint type description")
 
+# TODO:
 # Do I want "--gzip", "--auto", "--none", "--bzip2", and "--decompress METHOD"?
 # Do I want to support encoding of the fps output?
+# Or, why support all these? Why not just "--in gz", "--in bz2" and be done
+#  with it (do I really need to specify the 'auto' and 'none' options?)
 parser.add_argument(
     "--decompress", action="store", metavar="METHOD", default="auto",
     help="use METHOD to decompress the input (default='auto', 'none', 'gzip', 'bzip2')")
