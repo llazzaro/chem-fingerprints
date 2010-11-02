@@ -1,10 +1,13 @@
 import unittest
 import sys
+import os
 from cStringIO import StringIO as SIO
 
 from openeye import oechem
 
 from chemfp.commandline import oe2fps
+import chemfp.openeye
+chemfp.openeye._USE_SELECT = False # Grrr. Needed to automate testing.
 
 real_stdout = sys.stdout
 real_stderr = sys.stderr
@@ -92,6 +95,15 @@ def run(s, source=PUBCHEM_SDF):
     if result:
         assert result[0] == "#FPS1"
     return result
+
+def run_stdin(s, source):
+    fd = os.open(source, os.O_RDONLY)
+    oechem.oein.openfd(fd, 0)
+    try:
+        return run(s, None)
+    finally:
+        oechem.oein.openfd(0, 0)
+        os.close(fd)
 
 def run_fps(s, expect_length=None, source=PUBCHEM_SDF):
     result = run(s, source)
@@ -250,6 +262,13 @@ class TestIO(unittest.TestCase):
             
     def test_specify_input_format(self):
         result = run_fps("--in sdf", source=PUBCHEM_ANOTHER_EXT)
+
+
+    def test_from_stdin(self):
+        run_stdin("--in sdf", source=PUBCHEM_SDF)
+
+    def test_from_gziped_stdin(self):
+        run_stdin("--in sdf.gz", source=PUBCHEM_SDF_GZ)
 
 # XXX how to test that this generates a warning?
 #    def test_specify_input_format_with_dot(self):
