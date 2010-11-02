@@ -320,11 +320,13 @@ def _iter_structures(ifs):
 # not work. I found that frustrating, so this is a workaround. When
 # reading from stdin, don't dispatch to OEChem until there's input.
 
+_USE_SELECT = True
 def _stdin_check(_apply_format):
-    try:
-        select.select([sys.stdin], [], [sys.stdin])
-    except KeyboardInterrupt:
-        raise SystemExit()
+    if _USE_SELECT:
+        try:
+            select.select([sys.stdin], [], [sys.stdin])
+        except KeyboardInterrupt:
+            raise SystemExit()
     ifs = oemolistream()
     ifs.open()
     _apply_format(ifs)
