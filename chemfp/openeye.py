@@ -166,7 +166,7 @@ def get_path_fingerprinter(num_bits, min_bonds, max_bonds, atype, btype):
     if not (min_bonds <= max_bonds):
         raise TypeError("max_bonds must not be smaller than min_bonds")
 
-    # XXX valdiate the atype and type values? Should just
+    # XXX validate the atype and type values? Should just
     # be a simple bitwise-and and test for 0.
     
     fp = OEFingerPrint()
@@ -326,7 +326,9 @@ def _stdin_check(_apply_format):
 
 ############# Used when generate the FPS header
 
-SOFTWARE = "OEGraphSim/" + OEGraphSimGetRelease()
+SOFTWARE = "OEGraphSim/{release} (version)".format(
+    release = OEGraphSimGetRelease(),
+    version = OEGraphSimGetVersion())
 
 format_path_type = (
     "OpenEye-Path/1 min_bonds={min_bonds} max_bonds={max_bonds} atype={atype} btype={btype}".format)
