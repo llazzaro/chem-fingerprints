@@ -3,7 +3,6 @@
 
 """
 
-
 # Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 # Licensed under "the MIT license"
 # See the contents of COPYING or "__init__.py" for full license details.
@@ -15,6 +14,7 @@ import os
 import errno
 import select
 import ctypes
+import warnings
 
 from openeye.oechem import *
 from openeye.oegraphsim import *
@@ -184,6 +184,7 @@ def get_path_fingerprinter(num_bits, min_bonds, max_bonds, atype, btype):
 # the performance.
 def get_maccs_fingerprinter():
     fp = OEFingerPrint()
+    # SetSize() now to force space allocation, so I only need one GetData()
     fp.SetSize(166)
     data_location = int(fp.GetData())
     num_bytes = (166+7)//8
@@ -247,7 +248,10 @@ _formats = {
 # I return a function which will set the file stream parameters
 # correctly.
 
-def _do_nothing(ifs): pass
+def _do_nothing(ifs):
+    pass
+
+# Format is something like ".sdf.gz" or "pdb" or "smi.gz"
 
 def _get_format_setter(format=None):
     if format is None:
@@ -257,13 +261,17 @@ def _get_format_setter(format=None):
     is_compressed = 0
     if fmt.endswith(".gz"):
         is_compressed = 1
-        fmt = fmt[:-3]
+        fmt = fmt[:-3]  # Should be something like ".sdf" or "sdf" or "smi"
 
     format_flag = _formats.get(fmt, None)
-    if format_flag is None and fmt.startwith("."):
-        # Some OE tools use a leading ".". Handle
-        # that case for a bit better compatibility.
+    if format_flag is None and fmt.startswith("."):
+        # Some OE tools allow ".sdf" as the format. In the interests
+        # of compatibility, I support that as well as the more
+        # acceptable "sdf".
         format_flag = _formats.get(fmt[1:], None)
+        if format_flag is not None:
+            warnings.warn("format name {format!r} should be written {better!r}".format(
+                format=format, better=format[1:]), DeprecationWarning)
 
     if format_flag is None:
         # XXX better exception
@@ -275,8 +283,9 @@ def _get_format_setter(format=None):
             ifs.Setgz(is_compressed)
     return _apply_format
 
-def _open_ifs(filename):
+def _open_ifs(filename, _apply_format):
     ifs = oemolistream()
+    _apply_format(ifs)
     if not ifs.open(filename):
         # XXX Better exception
         raise Exception("Cannot open %r" % (filename,))
@@ -293,8 +302,7 @@ def read_structures(filename=None, format=None):
 
     # Input is from a file
     if filename is not None:
-        ifs = _open_ifs(filename)
-        _apply_format(ifs)
+        ifs = _open_ifs(filename, _apply_format)
         return _iter_structures(ifs)
     else:
         # Input is from stdin
