@@ -47,33 +47,32 @@ else:
 
 
 #########
+_allowed_formats = ["sdf", "smi"]
+_format_extensions = {
+    ".sdf": "sdf",
+    ".mol": "sdf",
+    ".sd": "sdf",
+    ".mdl": "sdf",
 
-_formats = {
-    "sdf": "sdf",
-    "mol": "sdf",
-    "sd": "sdf",
-    "mdl": "sdf",
-
-    "smi": "smi",
-    "can": "smi",
-    "smiles": "smi",
-    "ism": "smi",
+    ".smi": "smi",
+    ".can": "smi",
+    ".smiles": "smi",
+    ".ism": "smi",
 }
-# allow also ".sdf", ".mol", etc
-for k in list(_formats):
-    _formats["."+k] = _formats[k]
-del k
-
             
 def normalize_input(source=None, format=None, decompressor=None):
+    if decompressor is not None:
+        decompressor = decompressors.get_named_decompressor(decompressor)
+        
     if format is not None:
         if decompressor is None:
             decompressor = decompressors.detect_decompressor(format)
         base_format = decompressor.strip_extension(format)
-        try:
-            return _formats[base_format], decompressor
-        except KeyError:
-            raise TypeError("Unknown structure format {format!r}".format(format=base_format))
+        if base_format not in _allowed_formats:
+            msg = "Unknown structure format {format!r}. Supported formats are: {all}".format(
+                format=base_format, all=", ".join(_allowed_formats))
+            raise TypeError(msg)
+        return base_format, decompressor
         
     elif source is not None:
         format_specified = False
@@ -82,12 +81,14 @@ def normalize_input(source=None, format=None, decompressor=None):
         base_filename = decompressor.strip_extension(source)
         ext = os.path.splitext(base_filename)[1].lower()
         try:
-            return _formats[ext], decompressor
+            return _format_extensions[ext], decompressor
         except KeyError:
             # Unknown extension, assume SMILES
             return "smi", decompressor
     else:
-        return "smi", decompressors.Uncompressed
+        if decompressor is None:
+            decompressor = decompressors.Uncompressed
+        return "smi", decompressor
 
 
 # While RDKit has a SMILES file parser, it doesn't handle reading from
