@@ -334,22 +334,44 @@ class TestArgErrors(unittest.TestCase):
         self._run("--btype DefaultBond|", "Missing bond flag")
 
 class TestHeaderOutput(unittest.TestCase):
+    def _field(self, s, field):
+        result = run(s)
+        filtered = [line for line in result if line.startswith(field)]
+        self.assertEquals(len(filtered), 1, result)
+        return filtered[0]
+
     def test_software(self):
-        result = run("")
-        for line in result:
-            if line.startswith("#software"):
-                break
-        else:
-            raise AssertionError(result)
-        self.assertEquals("#software=OEGraphSim/1.0.0 (20100809)" in line, True, line)
+        result = self._field("", "#software")
+        self.assertEquals("#software=OEGraphSim/1.0.0 (20100809)" in result, True, result)
+
+    def test_type(self):
+        result = self._field("", "#type")
+        self.assertEquals(result,
+  "#type=OpenEye-Path/1 min_bonds=0 max_bonds=5 "
+  "atype=Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization "
+  "btype=BondOrder|Chiral")
+
         
     # different flags. All flags? and order
+    def test_num_bits(self):
+        result = self._field("--num-bits 38", "#num_bits")
+        self.assertEquals(result, "#num_bits=38")
+        
     def test_atype_flags(self):
-        raise NotImplementedError
+        result = self._field("--atype FormalCharge|FormalCharge", "#type") + " "
+        self.assertEquals(" atype=FormalCharge " in result, True, result)
+        
     def test_btype_flags(self):
-        raise NotImplementedError
+        result = self._field("--btype Chiral|BondOrder", "#type") + " "
+        self.assertEquals(" btype=BondOrder|Chiral " in result, True, result)
+    
     def test_pipe_or_comma(self):
-        raise NotImplementedError
+        result = self._field("--atype HvyDegree,FormalCharge --btype Chiral,BondOrder",
+                             "#type") + " "
+        self.assertEquals(" atype=FormalCharge|HvyDegree " in result, True, result)
+        self.assertEquals(" btype=BondOrder|Chiral " in result, True, result)
+        
+    
     def test_various_args(self):
         raise NotImplementedError
     
