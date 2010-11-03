@@ -75,6 +75,8 @@ def _get_type_value(a_or_b, table, description):
         try:
             value |= table[word]
         except KeyError:
+            if not word:
+                raise TypeError("Missing %s flag" % (a_or_b,))
             raise TypeError("Unknown %s type %r" % (a_or_b, word))
     return value
 
@@ -336,7 +338,7 @@ def _stdin_check(_apply_format):
 
 ############# Used when generate the FPS header
 
-SOFTWARE = "OEGraphSim/{release} (version)".format(
+SOFTWARE = "OEGraphSim/{release} ({version})".format(
     release = OEGraphSimGetRelease(),
     version = OEGraphSimGetVersion())
 
