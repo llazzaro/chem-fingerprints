@@ -104,8 +104,11 @@ def main(args=None):
             parser.error("--max-bonds must not be smaller than --min-bonds")
 
         # Parse the arguments
-        atype = oe.atom_description_to_value(args.atype)
-        btype = oe.bond_description_to_value(args.btype)
+        try:
+            atype = oe.atom_description_to_value(args.atype)
+            btype = oe.bond_description_to_value(args.btype)
+        except TypeError, err:
+            parser.error(str(err))
 
         # Create the normalized string form
         atype_string = oe.atom_value_to_description(atype)
