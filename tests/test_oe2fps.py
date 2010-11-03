@@ -3,6 +3,8 @@ import sys
 import os
 from cStringIO import StringIO as SIO
 
+import support
+
 from openeye import oechem
 
 from chemfp.commandline import oe2fps
@@ -77,78 +79,45 @@ hex_test_values = _construct_test_values()
 _fp1 = "00001002200200000000000000000000000008400020000300801002300000000200000840000000000080000000000000204008000000000010000c10000000400000010100000210800002000000009400000000020020088000000000010000918000200000580400002000010020002440000008001001404000000200010000a8c00020400200002000004084000000030100820000000000000002000000510001800000010001000081100110000800480000100400000c00004c000800000808000100000022000228800020004000000200182100000100000000101000010004004808000000800000000001010010201000000090400000100000020010000010201000000040300100000000580000000000000200000000401000000000000008040004000000008002080820000310280200004040a000000010000080005000004010010018000000800000020008208040000400000200000000000000000800080050000008400100004000000200ac001000000000800100200060900010002000000040200000000000040808000048400040000000020000001001000000000302002008200000a044000180800000100000000200000049004080080000100022a00084000400280480000000402400080400404100000000040000020c10000000000c000100002000080010002080100002000600"
 
 assert hex_test_values[0].startswith(_fp1)
-        
 
-def run(s, source=PUBCHEM_SDF):
-    args = s.split()
-    if source is not None:
-        args = args + [source]
-    oeerrs.clear()
-    try:
-        errstr = oeerrs
-        sys.stdout = stdout = SIO()
-        oe2fps.main(args)
-    finally:
-        sys.stdout = real_stdout
-    _check_for_oe_errors()
-    result = stdout.getvalue().splitlines()
-    if result:
-        assert result[0] == "#FPS1"
-    return result
+class OERunner(support.Runner):
+    def pre_run(self):
+        oeerrs.clear()
+    def post_run(self):
+        _check_for_oe_errors()
 
-def run_stdin(s, source):
-    fd = os.open(source, os.O_RDONLY)
-    oechem.oein.openfd(fd, 0)
-    try:
-        return run(s, None)
-    finally:
-        oechem.oein.openfd(0, 0)
-        os.close(fd)
-
-def run_fps(s, expect_length=None, source=PUBCHEM_SDF):
-    result = run(s, source)
-    while result[0].startswith("#"):
-        del result[0]
-    if expect_length is not None:
-        assert len(result) == expect_length, (len(result), expect_length)
-    return result
-
-
-def run_exit(s, source=PUBCHEM_SDF):
-    sys.stderr = stderr = SIO()
-    try:
+    def run_stdin(self, cmdline, source):
+        fd = os.open(source, os.O_RDONLY)
+        oechem.oein.openfd(fd, 0)
         try:
-            run(s, source)
-        except SystemExit:
-            pass
-        else:
-            raise AssertionError("should have exited: %r" % (s,))
-    finally:
-        sys.stderr = real_stderr
-    return stderr.getvalue()
+            return self.run(cmdline, None)
+        finally:
+            oechem.oein.openfd(0, 0)
+            os.close(fd)
+            
+runner = OERunner(oe2fps.main)
+run = runner.run
+run_stdin = runner.run_stdin
+run_fps = runner.run_fps
+run_exit = runner.run_exit
 
 def headers(lines):
     assert lines[0] == "FPS1"
     del lines[0]
     return [line for line in lines if line.startswith("#")]
 
-def _set_bit(n):
-    assert n <= 16
-    bytes = [0, 0, 0]
-    bytes[n//8] = 1<<(n%8)
-    return "%02x%02x%02x" % tuple(bytes)
 
 class TestMACCS(unittest.TestCase):
     def test_bitorder(self):
         result = run_fps("--maccs166", 7, "maccs.smi")
         # The fingerprints are constructed to test the first few bytes.
-        self.assertEquals(result[0][:6], _set_bit(2))
-        self.assertEquals(result[1][:6], _set_bit(3))
-        self.assertEquals(result[2][:6], _set_bit(4))
-        self.assertEquals(result[3][:6], _set_bit(5))
-        self.assertEquals(result[4][:6], _set_bit(9))
-        self.assertEquals(result[5][:6], _set_bit(10))
-        self.assertEquals(result[6][:6], _set_bit(16))
+        self.assertEquals(result[0][:6], support.set_bit(2))
+        self.assertEquals(result[1][:6], support.set_bit(3))
+        self.assertEquals(result[2][:6], support.set_bit(4))
+        self.assertEquals(result[3][:6], support.set_bit(5))
+        self.assertEquals(result[4][:6], support.set_bit(9))
+        self.assertEquals(result[5][:6], support.set_bit(10))
+        self.assertEquals(result[6][:6], support.set_bit(16))
 
 class TestPath(unittest.TestCase):
     def test_default(self):
