@@ -1,5 +1,8 @@
 import sys
 import unittest
+import tempfile
+import shutil
+import os
 
 import support
 
@@ -130,7 +133,7 @@ class TestRDKFingerprints(unittest.TestCase):
 #  I don't have a good test case for this... XXX
 
 class TestIO(unittest.TestCase):
-    def test_compressed(self):
+    def test_input_format(self):
         def without_source_header(cmdline, source):
             return [line for line in runner.run(cmdline, source)
                         if not line.startswith("#source=") and
@@ -144,7 +147,23 @@ class TestIO(unittest.TestCase):
         
         result4 = without_source_header("--in sdf", support.PUBCHEM_ANOTHER_EXT)
         self.assertEquals(result1, result4)
-    
+
+    def test_output(self):
+        dirname = tempfile.mkdtemp(prefix="test_rdkit2fps")
+        output_filename = os.path.join(dirname, "blah.fps")
+        assert len(output_filename.split()) == 1
+        try:
+            result = runner.run("-o " + output_filename)
+            assert len(result) == 0
+            with open(output_filename) as f:
+                result = f.readlines()
+        finally:
+            shutil.rmtree(dirname)
+        self.assertEquals(result[0], "#FPS1\n")
+        while result and result[0].startswith("#"):
+            del result[0]
+        self.assertEquals(len(result), 19)
+        self.assertEquals(result[0], _fp1 + " 9425004\n")
 
 if __name__ == "__main__":
     unittest.main()
