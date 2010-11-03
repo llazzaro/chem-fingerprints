@@ -278,7 +278,7 @@ def _get_format_setter(format=None):
 
     if format_flag is None:
         # XXX better exception
-        raise Exception("Unknown format %r" % (format,))
+        raise KeyError("Unknown format %r" % (format,))
 
     def _apply_format(ifs):
         ifs.SetFormat(format_flag)

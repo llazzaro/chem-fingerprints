@@ -131,7 +131,7 @@ def main(args=None):
     # Ready the input reader/iterator
     try:
         reader = oe.read_structures(args.filename, args.format)
-    except IOError, err:
+    except (KeyError, IOError), err:
         sys.stderr.write(str(err))
         raise SystemExit(1)
 
