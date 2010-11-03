@@ -275,8 +275,8 @@ class TestIO(unittest.TestCase):
         run_stdin("--in sdf.gz", source=PUBCHEM_SDF_GZ)
 
     def test_unknown_format(self):
-        run("--in blah")
-        raise NotImplementedError
+        msg = run_exit("--in blah")
+        self.assertEquals("Unknown format 'blah'" in msg, True, msg)
 
     def test_file_does_not_exist(self):
         msg = run_exit("", source="/asdfaserwe.does.not.exist")
