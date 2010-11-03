@@ -70,7 +70,10 @@ def normalize_input(source=None, format=None, decompressor=None):
         if decompressor is None:
             decompressor = decompressors.detect_decompressor(format)
         base_format = decompressor.strip_extension(format)
-        return _formats[base_format], decompressor # KeyError means unknown format
+        try:
+            return _formats[base_format], decompressor
+        except KeyError:
+            raise TypeError("Unknown structure format {format!r}".format(format=base_format))
         
     elif source is not None:
         format_specified = False
