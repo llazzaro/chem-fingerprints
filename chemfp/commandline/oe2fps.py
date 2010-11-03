@@ -129,7 +129,11 @@ def main(args=None):
             btype=btype)
 
     # Ready the input reader/iterator
-    reader = oe.read_structures(args.filename, args.format)
+    try:
+        reader = oe.read_structures(args.filename, args.format)
+    except IOError, err:
+        sys.stderr.write(str(err))
+        raise SystemExit(1)
 
     shared.generate_fpsv1_output(dict(num_bits=num_bits,
                                       software=oe.SOFTWARE,

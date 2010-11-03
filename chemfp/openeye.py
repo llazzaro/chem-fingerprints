@@ -15,6 +15,7 @@ import errno
 import select
 import ctypes
 import warnings
+import errno
 
 from openeye.oechem import *
 from openeye.oegraphsim import *
@@ -289,8 +290,12 @@ def _open_ifs(filename, _apply_format):
     ifs = oemolistream()
     _apply_format(ifs)
     if not ifs.open(filename):
-        # XXX Better exception
-        raise Exception("Cannot open %r" % (filename,))
+        # Let Python try to do better error reporting.
+        open(filename).close()
+        # If that didn't work, give up and fake it.
+        # (Did manual coverage testing for this. The test cases I can
+        # think of, like tricky timing, are too tricky.)
+        raise IOError(errno.EIO, "OEChem cannot open the file", filename)
     return ifs
 
 # This code is a bit strange. It needs to do eager error checking but

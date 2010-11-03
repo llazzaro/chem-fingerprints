@@ -114,11 +114,11 @@ def run_fps(s, expect_length=None, source=PUBCHEM_SDF):
     return result
 
 
-def run_failure(s):
+def run_exit(s, source=PUBCHEM_SDF):
     sys.stderr = stderr = SIO()
     try:
         try:
-            run(s)
+            run(s, source)
         except SystemExit:
             pass
         else:
@@ -279,8 +279,9 @@ class TestIO(unittest.TestCase):
         raise NotImplementedError
 
     def test_file_does_not_exist(self):
-        run("", source="/asdfaserwe.does.not.exist")
-        raise NotImplementedError
+        msg = run_exit("", source="/asdfaserwe.does.not.exist")
+        self.assertEquals("No such file or directory" in msg, True, repr(msg))
+        self.assertEquals("asdfaserwe.does.not.exist" in msg, True, repr(msg))
 
 # XXX how to test that this generates a warning?
 #    def test_specify_input_format_with_dot(self):
@@ -288,7 +289,7 @@ class TestIO(unittest.TestCase):
 
 class TestArgErrors(unittest.TestCase):
     def _run(self, cmd, expect):
-        msg = run_failure(cmd)
+        msg = run_exit(cmd)
         self.assertEquals(expect in msg, True, msg)
 
     def test_two_fp_types(self):
