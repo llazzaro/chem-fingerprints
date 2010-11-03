@@ -343,6 +343,8 @@ class TestHeaderOutput(unittest.TestCase):
     def test_software(self):
         result = self._field("", "#software")
         self.assertEquals("#software=OEGraphSim/1.0.0 (20100809)" in result, True, result)
+        result = self._field("--maccs166", "#software")
+        self.assertEquals("#software=OEGraphSim/1.0.0 (20100809)" in result, True, result)
 
     def test_type(self):
         result = self._field("", "#type")
