@@ -372,8 +372,9 @@ class TestHeaderOutput(unittest.TestCase):
         self.assertEquals(" btype=BondOrder|Chiral " in result, True, result)
         
     
-    def test_various_args(self):
-        raise NotImplementedError
+    def test_maccs_header(self):
+        result = self._field("--maccs166", "#type")
+        self.assertEquals(result, "#type=OpenEye-MACCS166/1")
     
         
 if __name__ == "__main__":
