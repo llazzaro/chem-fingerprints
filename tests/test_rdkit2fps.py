@@ -165,5 +165,9 @@ class TestIO(unittest.TestCase):
         self.assertEquals(len(result), 19)
         self.assertEquals(result[0], _fp1 + " 9425004\n")
 
+    def test_bad_format(self):
+        result = runner.run_exit("--in spam")
+        self.assertEquals(result, "Unknown structure format 'spam'")
+
 if __name__ == "__main__":
     unittest.main()
