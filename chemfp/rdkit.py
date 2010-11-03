@@ -47,24 +47,45 @@ else:
 
 
 #########
+
+_formats = {
+    "sdf": "sdf",
+    "mol": "sdf",
+    "sd": "sdf",
+    "mdl": "sdf",
+
+    "smi": "smi",
+    "can": "smi",
+    "smiles": "smi",
+    "ism": "smi",
+}
+# allow also ".sdf", ".mol", etc
+for k in list(_formats):
+    _formats["."+k] = _formats[k]
+del k
+
             
-def normalize_input(source=None, format=None, decompressor="auto"):
-    decompressor = decompressors.get_named_decompressor(decompressor)
-    if format is None:
-        if source is None:
-            # read from stdin
-            return "smi", decompressor
-        # Guess from the extension
+def normalize_input(source=None, format=None, decompressor=None):
+    if format is not None:
+        if decompressor is None:
+            decompressor = decompressors.detect_decompressor(format)
+        base_format = decompressor.strip_extension(format)
+        return _formats[base_format], decompressor # KeyError means unknown format
+        
+    elif source is not None:
+        format_specified = False
+        if decompressor is None:
+            decompressor = decompressors.detect_decompressor(source)
         base_filename = decompressor.strip_extension(source)
-        base, ext = os.path.splitext(base_filename)
-        ext = ext.lower()
-        if ext in (".sdf", ".mol", "sd", ".mdl"):
-            return "sdf", decompressor
-        if ext in (".smi", ".can", ".smiles", ".ism"):
+        ext = os.path.splitext(base_filename)[1].lower()
+        try:
+            return _formats[ext], decompressor
+        except KeyError:
+            # Unknown extension, assume SMILES
             return "smi", decompressor
-        return "smi", decompressor
     else:
-        return format, decompressor
+        return "smi", decompressors.Uncompressed
+
 
 # While RDKit has a SMILES file parser, it doesn't handle reading from
 # stdin or from compressed file. I wanted to support those as well, so
@@ -124,32 +145,32 @@ def iter_sdf_molecules(infile, filename=None, bad_record=bad_record):
 # iterator protocol but turns it into simple readlines(). This will be
 # slower but since do it only if stdin is a tty, there shouldn't be a
 # problem.
-class _IterUsingReadline(object):
-    "Internal class for iterating a line at a time from tty input"
-    def __init__(self, fileobj):
-        self.fileobj = fileobj
-    def __iter__(self):
-        return iter(self.fileobj.readline, "")
+## class _IterUsingReadline(object):
+##     "Internal class for iterating a line at a time from tty input"
+##     def __init__(self, fileobj):
+##         self.fileobj = fileobj
+##     def __iter__(self):
+##         return iter(self.fileobj.readline, "")
 
-def _open(filename, compressed):
-    "Internal function to open the given filename, which might be compressed"
-    if filename is None:
-        if compressed:
-            return gzip.GzipFile(fileobj=sys.stdin, mode="r")
-        else:
-            # Python's iter reads a block.
-            # When someone types interactively, read only a line.
-            if sys.stdin.isatty():
-                return _IterUsingReadline(sys.stdin)
-            else:
-                return sys.stdin
+## def _open(filename, compressed):
+##     "Internal function to open the given filename, which might be compressed"
+##     if filename is None:
+##         if compressed:
+##             return gzip.GzipFile(fileobj=sys.stdin, mode="r")
+##         else:
+##             # Python's iter reads a block.
+##             # When someone types interactively, read only a line.
+##             if sys.stdin.isatty():
+##                 return _IterUsingReadline(sys.stdin)
+##             else:
+##                 return sys.stdin
 
-    if compressed:
-        return gzip.GzipFile(filename, "r")
-    return open(filename, "rU")
+##     if compressed:
+##         return gzip.GzipFile(filename, "r")
+##     return open(filename, "rU")
     
 
-def read_structures(source, format=None, decompressor="auto"):
+def read_structures(source, format=None, decompressor=None):
     """read_structures(source, format, decompressor) -> (title, rdkit.Chem.Mol) iterator 
     
     Iterate over each record in the source, yielding the structure's
