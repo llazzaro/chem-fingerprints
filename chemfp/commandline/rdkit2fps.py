@@ -1,5 +1,5 @@
 # Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
-
+import sys
 from chemfp import argparse, shared, rdkit
 
 ########### Configure the command-line parser
@@ -87,7 +87,11 @@ def main(args=None):
             num_bits=num_bits, min_path=min_path, max_path=max_path, 
             bits_per_hash = bits_per_hash, use_Hs = use_Hs)
 
-    reader = rdkit.read_structures(args.filename, args.format)
+    try:
+        reader = rdkit.read_structures(args.filename, args.format)
+    except (TypeError, IOError), err:
+        sys.stderr.write(str(err))
+        raise SystemExit(1)
 
     shared.generate_fpsv1_output(dict(num_bits=num_bits,
                                       software=rdkit.SOFTWARE,
