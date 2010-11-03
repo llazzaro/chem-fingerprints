@@ -127,6 +127,10 @@ def run_failure(s):
         sys.stderr = real_stderr
     return stderr.getvalue()
 
+def headers(lines):
+    assert lines[0] == "FPS1"
+    del lines[0]
+    return [line for line in lines if line.startswith("#")]
 
 def _set_bit(n):
     assert n <= 16
@@ -270,6 +274,14 @@ class TestIO(unittest.TestCase):
     def test_from_gziped_stdin(self):
         run_stdin("--in sdf.gz", source=PUBCHEM_SDF_GZ)
 
+    def test_unknown_format(self):
+        run("--in blah")
+        raise NotImplementedError
+
+    def test_file_does_not_exist(self):
+        run("", source="/asdfaserwe.does.not.exist")
+        raise NotImplementedError
+
 # XXX how to test that this generates a warning?
 #    def test_specify_input_format_with_dot(self):
 #        result = run_fps("--in .sdf", source=PUBCHEM_ANOTHER_EXT)
@@ -302,6 +314,44 @@ class TestArgErrors(unittest.TestCase):
         self._run("--min-bonds=4 --max-bonds=3",
                   "--max-bonds must not be smaller than --min-bonds")
 
+    def test_bad_atype(self):
+        self._run("--atype spam", "Unknown atom type 'spam'")
+
+    def test_bad_atype2(self):
+        self._run("--atype DefaultAtom|spam", "Unknown atom type 'spam'")
+
+    def test_bad_atype3(self):
+        self._run("--atype DefaultAtom|", "Missing atom flag")
+
+    def test_bad_btype(self):
+        self._run("--btype eggs", "Unknown bond type 'eggs'")
+
+    def test_bad_btype2(self):
+        self._run("--btype DefaultBond|eggs", "Unknown bond type 'eggs'")
+
+    def test_bad_btype3(self):
+        self._run("--btype DefaultBond|", "Missing bond flag")
+
+class TestHeaderOutput(unittest.TestCase):
+    def test_software(self):
+        result = run("")
+        for line in result:
+            if line.startswith("#software"):
+                break
+        else:
+            raise AssertionError(result)
+        self.assertEquals("#software=OEGraphSim/1.0.0 (20100809)" in line, True, line)
+        
+    # different flags. All flags? and order
+    def test_atype_flags(self):
+        raise NotImplementedError
+    def test_btype_flags(self):
+        raise NotImplementedError
+    def test_pipe_or_comma(self):
+        raise NotImplementedError
+    def test_various_args(self):
+        raise NotImplementedError
+    
         
 if __name__ == "__main__":
     unittest.main()
