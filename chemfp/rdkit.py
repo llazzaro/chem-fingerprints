@@ -14,10 +14,10 @@ from rdkit import Chem
 from rdkit.Chem.MACCSkeys import GenMACCSKeys
 
 
-from . import sdf_reader, decoders
+from . import sdf_reader, decoders, decompressors
 
 # These are the things I consider to be public
-__all__ = ["read_structures", "read_smiles_structures", "read_sdf_structures"]
+__all__ = ["read_structures", "iter_smiles_molecules", "iter_sdf_molecules"]
 
 ######## Some shenanigans to get a version field
 
@@ -47,51 +47,31 @@ else:
 
 
 #########
-
-def normalize_format(filename, format):
-    """normalize_format(filename, format) -> (normalized_format, is_compressed)
-
-    This is perhaps easiestly explained by example:
-        ("input.dat", "smi.gz") -> ("smi", 1)   (format takes precedence)
-        ("input.smi", "sdf") -> ("sdf", 0)
-        ("INPUT.SDF.GZ", None) -> ("sdf", 1)    (otherwise use the filename)
-        ("input.pdb", None) -> ("pdb", 0)
-        (None, None) -> ("smi", 0)              (otherwise it's uncompressed SMILES)
-
-    """
-    if format is not None:
-        compressed = 0
-        if format.endswith(".gz"):
-            compressed = 1
-            format = format[:-3]
-        return format, compressed
-
-    if filename is None:
-        # Reading from stdin, with no specified format
-        # Assume SMILES
-        return "smi", 0
-
-    base, ext = os.path.splitext(filename.lower())
-    compressed = 0
-    if ext == ".gz":
-        compressed = 1
-        base, ext = os.path.splitext(base)
-        
-    if ext in (".sdf", ".mol", ".sd", ".mdl"):
-        return "sdf", compressed
-
-    elif ext in (".smi", ".can", ".smiles", ".ism"):
-        return "smi", compressed
-
-    # When unknown, guess SMILES
-    return "smi", compressed
+            
+def normalize_input(source=None, format=None, decompressor="auto"):
+    decompressor = decompressors.get_named_decompressor(decompressor)
+    if format is None:
+        if source is None:
+            # read from stdin
+            return "smi", decompressor
+        # Guess from the extension
+        base_filename = decompressor.strip_extension(source)
+        base, ext = os.path.splitext(base_filename)
+        ext = ext.lower()
+        if ext in (".sdf", ".mol", "sd", ".mdl"):
+            return "sdf", decompressor
+        if ext in (".smi", ".can", ".smiles", ".ism"):
+            return "smi", decompressor
+        return "smi", decompressor
+    else:
+        return format, decompressor
 
 # While RDKit has a SMILES file parser, it doesn't handle reading from
 # stdin or from compressed file. I wanted to support those as well, so
 # ended up not using Chem.SmilesMolSupplier.
 
-def read_smiles_structures(infile):
-    """read_smiles_structures(infile) -> (title, Chem.Mol) iterator
+def iter_smiles_molecules(infile):
+    """iter_smiles_molecules(infile) -> (title, Chem.Mol) iterator
 
     Iterate through each record in the SMILES file, returning the
     2-ple of (title, rdkit.Chem.Mol). Each record is a single line of
@@ -116,25 +96,23 @@ def bad_record(message):
     #    message = message + "\n"
     #sys.stderr.write(message)
 
-def read_sdf_structures(infile, filename=None, bad_record=bad_record):
-    """read_sdf_structures(infile) -> (title, Chem.Mol) iterator
+def iter_sdf_molecules(infile, filename=None, bad_record=bad_record):
+    """iter_sdf_molecules(infile) -> (title, Chem.Mol) iterator
 
     Iterate through each record in the SD file, returning the 2-ple of
     (title, rdkit.Chem.Mol). The title comes from the "_Name" property
     of the molecule object.
     """
+    # If there's no explicit filename, see if 'infile' has one
     if filename is None:
         filename = getattr(infile, "name", None)
-    if filename is None:
-        errtxt = "Could not parse {what}"
-    else:
-        errtxt = "Could not parse {what} of {filename!r}"
-    for record_lines in sdf_reader.read_sdf_records(infile):
-        text = "".join(record_lines)
+    errtxt = "Could not parse {where}"
+    loc = sdf_reader.FileLocation(filename)
+    for text in sdf_reader.iter_sdf_records(infile, loc):
         mol = Chem.MolFromMolBlock(text)
         if mol is None:
             # This was not a molecule?
-            bad_record(errtxt.format(what=record_lines.what(), filename=filename))
+            bad_record(errtxt.format(where=loc.where()))
         else:
             yield mol.GetProp("_Name"), mol
 
@@ -171,24 +149,29 @@ def _open(filename, compressed):
     return open(filename, "rU")
     
 
-def read_structures(filename, format):
-    """read_structures(filename, format) -> (title, rdkit.Chem.Mol) iterator 
+def read_structures(source, format=None, decompressor="auto"):
+    """read_structures(source, format, decompressor) -> (title, rdkit.Chem.Mol) iterator 
     
-    Iterate over structures from filename, returning the structure
-    title and RDKit.Chem.Mol for each reacord. The structure is
-    assumed to be in normalized_format(filename, format) format and
-    compression. If filename is None then this reads from stdin
-    instead of the named file.
+    Iterate over each record in the source, yielding the structure's
+    title and corresponding RDKit.Chem.Mol
     """
-    format, compressed = normalize_format(filename, format)
+    format, decompressor = normalize_input(source, format, decompressor)
     if format == "sdf":
-        # I timed the native reader at 25.8 seconds (best of 25.8, 26.0, 25.8)
-        # and the Python reader at 26.0 seconds (best of 26.0, 26.0, 26.1)
-        # While the native reader was 1% faster, I prefer the consistancy
-        # of having only one reader.
-        #
-        #if (not compressed) and (filename is not None):
-        #    supplier = Chem.SDMolSupplier(filename)
+        # I have an old PubChem file Compound_09425001_09450000.sdf .
+        #   num. lines = 5,041,475   num. bytes = 159,404,037
+        # 
+        # Parse times for iter_sdf_records (parsing records in Python)
+        #   37.6s (best of 37.6, 38.3, 37.8)
+        # Parse times for the RDKit implementation (parsing records in C++)
+        #   40.2s (best of 41.7, 41.33, 40.2)
+        # 
+        # The native RDKit reader is slower than the Python one and does
+        # not have (that I can tell) support for compressed files, so
+        # I'll go with the Python one. For those interested, here's the
+        # RDKit version.
+        # 
+        #if (not compressed) and (source is not None):
+        #    supplier = Chem.SDMolSupplier(source)
         #    def native_sdf_reader():
         #        for mol in supplier:
         #            if mol is None:
@@ -198,23 +181,25 @@ def read_structures(filename, format):
         #                yield title, mol
         #    return native_sdf_reader()
 
-        return read_sdf_structures(_open(filename, compressed))
+        infile = decompressors.open_and_decompress_universal(source, decompressor)
+        return iter_sdf_molecules(infile)
 
     elif format == "smi":
         # I timed the native reader at 31.6 seconds (best of 31.6, 31.7, 31.7)
         # and the Python reader at 30.8 seconds (best of 30.8, 30.9, and 31.0)
         # Yes, the Python reader is faster and using it gives me better consistency
         #
-        #if (not compressed) and (filename is not None):
-        #    supplier = Chem.SmilesMolSupplier(filename, delimiter=" \t", titleLine=False)
+        #if (not compressed) and (source is not None):
+        #    supplier = Chem.SmilesMolSupplier(source, delimiter=" \t", titleLine=False)
         #    def native_smiles_reader():
         #        for mol in supplier:
         #            yield mol.GetProp("_Name"), mol
         #    return native_smiles_reader()
-        return read_smiles_structures(_open(filename, compressed))
+        infile = decompressors.open_and_decompress_universal(source, decompressor)
+        return iter_smiles_molecules(infile)
 
     else:
-        raise TypeError("Unknown format")
+        raise TypeError("Unsupported format {format!r}".format(format=format))
 
 ########### The topological fingerprinter
 
@@ -248,14 +233,16 @@ def make_rdk_fingerprinter(num_bits=NUM_BITS, min_path=MIN_PATH, max_path=MAX_PA
     return rdk_fingerprinter
 
 # Use this to make the parameters for the topological fingerprints
-RDK_PARAMS = ("RDKit-Fingerprint/1 minPath={min_path} maxPath={max_path} fpSize={num_bits} "
-              "nBitsPerHash={bits_per_hash} useHs={use_Hs}")
+RDK_TYPE = ("RDKit-Fingerprint/1 minPath={min_path} maxPath={max_path} fpSize={num_bits} "
+            "nBitsPerHash={bits_per_hash} useHs={use_Hs}")
 
-format_rdk_params = RDK_PARAMS.format
+format_rdk_type = RDK_TYPE.format
 
 ########### The MACCS fingerprinter
 
 def maccs166_fingerprinter(mol):
     fp = GenMACCSKeys(mol)
-    return decoder.from_binary_lsb(fp)
+    # In RDKit the first bit is always bit 1 .. bit 0 is empty (?!?!)
+    bitstring_with_167_bits = fp.ToBitString()
+    return decoders.from_binary_lsb(bitstring_with_167_bits[1:])[1]
 
