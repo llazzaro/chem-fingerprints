@@ -60,7 +60,7 @@ class Runner(object):
             except SystemExit:
                 pass
             else:
-                raise AssertionError("should have existed: %r" % (cmdline,))
+                raise AssertionError("should have exited: %r" % (cmdline,))
         finally:
             sys.stderr = real_stderr
         return stderr.getvalue()
