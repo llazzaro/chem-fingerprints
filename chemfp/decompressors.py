@@ -133,8 +133,6 @@ def get_named_decompressor(name_or_obj):
     """
     if isinstance(name_or_obj, basestring):
         return decompressor_names[name_or_obj]
-    elif name_or_obj is None:
-        name_or_obj = Uncompressed
     return name_or_obj
 
 def open_and_decompress_universal(source=None, decompressor=AutoDetectDecompression):
