@@ -174,7 +174,7 @@ _fingerprinter_table["MACCS"].calc_fp = calc_MACCS
 #########
 
 
-def _guess_format(filename):
+def _guess_format_from_filename(filename):
     "This is an internal function"
     # Guess the format based on the filename extension
     base, ext = os.path.splitext(filename.lower())
@@ -214,7 +214,7 @@ def normalize_format(filename, format):
       - If the filename has an extension, use that as the format.
       - Otherwise, it's in "smi" format.
     """
-    if format:
+    if format is not None:
         format = format.lower()
         # Ignore .gz - Babel handles those automatically
         if format.endswith(".gz"):
@@ -222,7 +222,7 @@ def normalize_format(filename, format):
         return format
 
     if filename is not None:
-        return _guess_format(filename)
+        return _guess_format_from_filename(filename)
 
     # Use SMILES by default for stdin
     return "smi"
@@ -244,8 +244,7 @@ def read_structures(filename=None, format=None):
 
     format = normalize_format(filename, format)
     if not obconversion.SetInFormat(format):
-        # XXX better exception
-        raise Exception("Unsupported format: %r" % (format,))
+        raise TypeError("Unknown structure format {format!r}".format(format=format))
     
     obmol = ob.OBMol()
 
@@ -253,7 +252,7 @@ def read_structures(filename=None, format=None):
         # OpenBabel's Python libary has no way to read from std::cin
         # Fake it through /dev/stdin for those OSes which support it.
         if not os.path.exists("/dev/stdin"):
-            raise Exception("Unable to read from stdin on this platform")
+            raise TypeError("Unable to read from stdin on this platform")
 
         return _stdin_reader(obconversion, obmol)
 
@@ -270,13 +269,13 @@ def read_structures(filename=None, format=None):
         try:
             open(filename).close()
         except IOError, err:
-            raise SystemExit("Unable to open structure file %r: %s" %
-                             (filename, err.strerror))
+            raise SystemExit("Unable to open structure file {filename!r}: {msg}".format(
+                filename=filename, msg=err.strerror))
 
         # Okay, don't know what's going on. Report OB's error
         errmsg = _get_ob_error(ob.obErrorLog)
-        raise SystemExit("Unable to get structures from %s:\n%s" %
-                         (filename, errmsg))
+        raise SystemExit("Unable to get structures from {filename!r|:\n{msg}".format(
+            filename=filename, msg=errmsg))
 
     ob.obErrorLog.SetOutputLevel(lvl) # Revert to normal logging
 
@@ -309,15 +308,11 @@ def _stdin_reader(obconversion, obmol):
 
     # There's data. Pass parsing control into OpenBabel.
     notatend = obconversion.ReadFile(obmol, "/dev/stdin")
-    while notatend:
-        yield obmol.GetTitle(), obmol
-        obmol.Clear()
-        notatend = obconversion.Read(obmol)
+    return _file_reader(obconversion, obmol, notatend)
 
 def _file_reader(obconversion, obmol, notatend):
     while notatend:
         yield obmol.GetTitle(), obmol
         obmol.Clear()
         notatend = obconversion.Read(obmol)
-
-
+        # How do I detect if the input contains a failure?
