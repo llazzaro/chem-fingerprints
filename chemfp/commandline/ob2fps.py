@@ -73,7 +73,7 @@ def main(args=None):
     elif args.MACCS:
         if not HAS_MACCS:
             parser.error(
-                "--MACCS is not supported in your version of OpenBabel ({version})".format(
+                "--MACCS is not supported in your OpenBabel installation ({version})".format(
                     version = ob.GetReleaseVersion()))
         fp_name = "MACCS"
     else:
