@@ -52,6 +52,28 @@ class Runner(object):
             assert len(result) == expect_length, (len(result), expect_length)
         return result
 
+    def run_split(self, cmdline, expect_length=None, source=PUBCHEM_SDF):
+        "split into dict of headers and list of values"
+        result = self.run(cmdline, source)
+        headers = {}
+        fps = []
+        result_iter = iter(result)
+        for line in result_iter:
+            if line == "#FPS1":
+                continue
+            if line.startswith("#"):
+                k, v = line.split("=", 1)
+                assert k not in headers
+                headers[k] = v
+                continue
+            fps.append(line)
+            break
+        fps.extend(result_iter)
+        if expect_length is not None:
+            assert len(fps) == expect_length, (len(fps), expect_length)
+        return headers, fps
+            
+
     def run_exit(self, cmdline, source=PUBCHEM_SDF):
         sys.stderr = stderr = SIO()
         try:
