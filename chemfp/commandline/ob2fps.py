@@ -39,6 +39,15 @@ group.add_argument("--FP3", action="store_true",
 group.add_argument("--FP4", action="store_true",
                     help=ob._fingerprinter_table["FP4"].description)
 
+HAS_MACCS = ("MACCS" in ob._fingerprinter_table)
+if HAS_MACCS:
+    # Added in OpenBabel 2.3
+    group.add_argument("--MACCS", action="store_true",
+                       help=ob._fingerprinter_table["MACCS"].description)
+else:
+    group.add_argument("--MACCS", action="store_true",
+                       help="(Not available using your version of OpenBabel)")
+
 parser.add_argument(
     "--in", metavar="FORMAT", dest="format",
     help="input structure format (default autodetects from the filename extension)")
@@ -61,6 +70,12 @@ def main(args=None):
         fp_name = "FP3"
     elif args.FP4:
         fp_name = "FP4"
+    elif args.MACCS:
+        if not HAS_MACCS:
+            parser.error(
+                "--MACCS is not supported in your version of OpenBabel ({version})".format(
+                    version = ob.GetReleaseVersion()))
+        fp_name = "MACCS"
     else:
         # Default
         fp_name = "FP2"
@@ -73,7 +88,7 @@ def main(args=None):
     shared.generate_fpsv1_output(dict(num_bits=fp_info.num_bits,
                                       software=ob.SOFTWARE,
                                       source=args.filename,
-                                      params=fp_info.fps_params),
+                                      type=fp_info.fps_type),
                                  reader,
                                  calc_fp,
                                  args.output)
