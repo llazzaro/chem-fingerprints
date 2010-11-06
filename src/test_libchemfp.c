@@ -5,7 +5,7 @@
 /* This is not a comprehensive test suite. That's done in Python code. */
 /* This tests that the libchemfp public API is usable from C code */
 
-#define CHECK(msg, expr, result)								 \
+#define CHECK(msg, expr, result)                                 \
   if ( (expr) != (result) ) {puts("FAIL: " msg); failed++;} \
   else {puts("PASS: " msg); passed++;}
 
@@ -30,7 +30,7 @@ int main() {
   CHECK("intersect popcount", chemfp_hex_intersect_popcount(6, "0F0123", "010b42"), 3);
   CHECK("Tanimoto empty", chemfp_hex_tanimoto(2, "00", "00"), 1.0);
   CHECK("Tanimoto", chemfp_hex_tanimoto(6, "123456", "012345"),
-		(0.0+0+1+0+1+1)/(1+2+2+3+2+3));
+        (0.0+0+1+0+1+1)/(1+2+2+3+2+3));
   CHECK("Tanimoto fail", chemfp_hex_tanimoto(6, "12345 ", "012345"), -1.0);
 
   CHECK("contains", chemfp_hex_contains(2, "12", "3a"), 1);
@@ -51,27 +51,27 @@ int main() {
   CHECK("valid with unknown hex len", chemfp_fps_line_validate(-1, 12, "abcdef spam\n"), 0);
   CHECK("valid with known hex len", chemfp_fps_line_validate(6, 12, "abcdef spam\n"), 0);
   CHECK("valid with bad hex len", chemfp_fps_line_validate(4, 12, "abcdef spam\n"),
-		CHEMFP_UNEXPECTED_FINGERPRINT_LENGTH);
+        CHEMFP_UNEXPECTED_FINGERPRINT_LENGTH);
   CHECK("valid with bad hex", chemfp_fps_line_validate(6, 12, "abcdeg spam\n"),
-		CHEMFP_BAD_FINGERPRINT);
+        CHEMFP_BAD_FINGERPRINT);
 
   puts("== N-largest ==");
   int indicies[2] = {0,0};
   double scores[2] = {0.0, 0.0};
   if (chemfp_nlargest_tanimoto_block(2,
-									 2, "A1",
-									 15, "her/hlvhSV#$(ZXVLzf*)4lkdf[]#@",
-									 0, -1,
-									 0.0,
-									 indicies, scores) < 0) {
-	puts("FAIL: chemfp_nlargest_tanimoto_block");
+                                     2, "A1",
+                                     15, "her/hlvhSV#$(ZXVLzf*)4lkdf[]#@",
+                                     0, -1,
+                                     0.0,
+                                     indicies, scores) < 0) {
+    puts("FAIL: chemfp_nlargest_tanimoto_block");
   } else {
-	puts("PASS: chemfp_nlargest_tanimoto_block");
-	//printf("[%d]=%f [%d]=%f\n", indicies[0], scores[0], indicies[1], scores[1]);
-	CHECK("  indicies[0]", indicies[0], 10);
-	CHECK("  indicies[1]", indicies[1], 13);
-	CHECK("  scores[0]", scores[0], 0.375);
-	CHECK("  scores[1]", scores[1], 0.363636363636363636);
+    puts("PASS: chemfp_nlargest_tanimoto_block");
+    //printf("[%d]=%f [%d]=%f\n", indicies[0], scores[0], indicies[1], scores[1]);
+    CHECK("  indicies[0]", indicies[0], 10);
+    CHECK("  indicies[1]", indicies[1], 13);
+    CHECK("  scores[0]", scores[0], 0.375);
+    CHECK("  scores[1]", scores[1], 0.363636363636363636);
   }
   
   scores[0] = scores[1] = -1;
@@ -79,8 +79,8 @@ int main() {
   int id_lens[2];
   int lineno;
   if (chemfp_hex_tanimoto_block(2,
-								4, "4131",
-								157,
+                                4, "4131",
+                                157,
 "6865 ID0\n"
 "722f ID1\n"
 "686c ID2\n"
@@ -96,17 +96,16 @@ int main() {
 "6466 ID12\n"
 "5b5d ID13 extra items\n"
 "2340 ID14\n",
-								0.0,
-								scores, start_ids, id_lens, &lineno) < 0) {
-	puts("FAIL: chemfp_hex_tanimoto_block");
+                                0.0,
+                                scores, start_ids, id_lens, &lineno) < 0) {
+    puts("FAIL: chemfp_hex_tanimoto_block");
   } else {
-	puts("PASS: chemfp_hex_tanimoto_block");
-	CHECK("  scores[0]", scores[0], 0.375);
-	CHECK("  scores[1]", scores[1], 0.363636363636363636);
-	CHECK("  id[0]", strncmp(start_ids[0], "ID10\n", id_lens[0]+1), 0);
-	CHECK("  id[1]", strncmp(start_ids[1], "ID13 ", id_lens[1]+1), 0);
+    puts("PASS: chemfp_hex_tanimoto_block");
+    CHECK("  scores[0]", scores[0], 0.375);
+    CHECK("  scores[1]", scores[1], 0.363636363636363636);
+    CHECK("  id[0]", strncmp(start_ids[0], "ID10\n", id_lens[0]+1), 0);
+    CHECK("  id[1]", strncmp(start_ids[1], "ID13 ", id_lens[1]+1), 0);
   }
-								 
 
   printf("Pass: %d   Fail: %d\n", passed, failed);
 }

@@ -20,4 +20,3 @@ const char *chemfp_strerror(int err) {
   default: return "Unknown error";
   }
 }
-	
