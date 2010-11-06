@@ -263,7 +263,7 @@ nlargest_tanimoto_block(PyObject *self, PyObject *args) {
 	return NULL;
   }
   if (storage_len < 1) {
-	PyErr_SetString(PyExc_TypeError, "storage_len must be negative");
+	PyErr_SetString(PyExc_TypeError, "storage_len must be positive");
 	return NULL;
   }
   if (! (0<= threshold && threshold <= 1.0)) {
@@ -341,9 +341,9 @@ hex_nlargest_tanimoto_block(PyObject *self, PyObject *args) {
 	return NULL;
 
   err = chemfp_hex_tanimoto_block(n, query_len, query_fp,
-								  endpos, target_block,
-								  threshold,
-								  scores, start_ids, id_lens, lineno);
+                                  endpos, target_block,
+                                  threshold,
+                                  scores, start_ids, id_lens, lineno);
   return PyInt_FromLong(err);
 
 }
