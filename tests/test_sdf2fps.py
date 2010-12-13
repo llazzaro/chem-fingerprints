@@ -1,5 +1,5 @@
 import sys
-import unittest
+import unittest2
 from cStringIO import StringIO as SIO
 
 from chemfp.commandline import sdf2fps
@@ -54,7 +54,7 @@ def run_fps(s, expect_length=None):
     return result
 
 
-class TestDecoderFlags(unittest.TestCase):
+class TestDecoderFlags(unittest2.TestCase):
     def test_cactvs(self):
         result = run_fps("--cactvs --fp-tag PUBCHEM_CACTVS_SUBSKEYS")
         self.assertEquals(result, ["07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000 9425004",
@@ -153,7 +153,7 @@ class TestDecoderFlags(unittest.TestCase):
         self.assertEquals("Could not base64 decode <binary17> value" in msg, True, msg)
         self.assertEquals("Skipping record" in msg, True, msg)
 
-class TestBitSizes(unittest.TestCase):
+class TestBitSizes(unittest2.TestCase):
     def test_exact_fingerprint_bits(self):
         result = run("--binary --fp-tag binary3")
         self.assertEquals("#num_bits=3" in result, True, result)
@@ -189,7 +189,7 @@ class TestBitSizes(unittest.TestCase):
         result = run_failure("--hex --fp-tag hex16 --num-bits 56")
         self.assertEquals("57 <= num-bits <= 64, not 56" in result, True, result)
 
-class TestTitleProcessing(unittest.TestCase):
+class TestTitleProcessing(unittest2.TestCase):
     def test_title_from_title_tag(self):
         result = run("--hex --fp-tag hex2 --title-tag binary3")
         self.assertEquals("ab 001" in result, True, result)
@@ -204,7 +204,7 @@ class TestTitleProcessing(unittest.TestCase):
         self.assertEquals("Missing title tag DOES_NOT_EXIST" in warning, True, warning)
         self.assertEquals("No input records contained fingerprints" in warning, True, warning)
 
-class TestShortcuts(unittest.TestCase):
+class TestShortcuts(unittest2.TestCase):
     def test_pubchem(self):
         result = run("--pubchem")
         self.assertEquals("#num_bits=881" in result, True, result)
@@ -213,7 +213,7 @@ class TestShortcuts(unittest.TestCase):
         self.assertEquals("07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000 9425004" in result, True)
         self.assertEquals("07de0d000000000000000000000000000080460300000c0000000000000000800f0000780038000000301083f920cc09695e0800d5c0e44e6e00492190844145dc1f841d261911164d039b8f29251026b9401313e0ec01007000000000000000000000000000000000000000000000 9425009" in result, True)
 
-class TestBadArgs(unittest.TestCase):
+class TestBadArgs(unittest2.TestCase):
     def test_missing_fp_tag(self):
         msg = run_failure("")
         self.assertEquals("argument --fp-tag is required" in msg, True, msg)
@@ -231,4 +231,4 @@ class TestBadArgs(unittest.TestCase):
         
         
 if __name__ == "__main__":
-    unittest.main()
+    unittest2.main()

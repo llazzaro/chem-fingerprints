@@ -356,6 +356,12 @@ class FPSReader(object):
         _chemfp.fps_heap_finish_tanimoto(heap)
         return [(identifiers[indicies[i]], scores[i]) for i in range(heap.size)]
 
+def iter_records(infile, initial_text=None):
+    pass
+def iter_fps_blocks(infile, initial_text=None, blocksize=BLOCKSIZE):
+    pass
+
+
 
 def test():
     reader = open("nci.fps")
@@ -456,8 +462,11 @@ def test():
 
     reader = open_in_memory("nci.fps")
 
-    # Times [16.9, 9.35, 3.78, 3.86]
-    #reader = open("nci.fps")
+    #Times [16.9, 9.35, 3.78, 3.86]
+    #Times [0.0, 0.0, 3.72, 0.0]
+    #Times [0.0, 0.0, 3.70, 0.0]
+    #Times [0.0, 0.0, 3.72, 0.0]
+    reader = open("nci.fps")
 
     # Times [0.0, 0.0, 1.9, 0.0] (if I use 2 threads)
     # Times [0.0, 0.0, 2.1, 0.0] (if I use 3 threads)
@@ -466,7 +475,7 @@ def test():
     #reader = MTSearch(reader._fps_io.fps_data, reader.header)
 
     times = [0.0, 0.0, 0.0, 0.0]
-    for i in range(100):
+    for i in range(1000):
         """
         reader.reset()
         t1 = time.time()
@@ -486,21 +495,21 @@ def test():
         dt = time.time() - t1
         times[1] += dt
         print "computed", n, "in", dt
-"""
         reader.reset()
         t1 = time.time()
         count = reader._chemfp_tanimoto_count(FP, 0.85)
         dt = time.time()-t1
         print "count", count, "in", dt
         times[2] += dt
+"""
+        
         reader.reset()
-
-        """
         t1 = time.time()
         x = reader._chemfp_tanimoto_knearest(FP, 10, 0.0)
         dt = time.time() - t1
         print "knearest", len(x), "results in", dt
         times[3] += dt
+        """
 """
 
     print "Times", times

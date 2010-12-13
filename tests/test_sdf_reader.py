@@ -1,5 +1,5 @@
 import sys
-import unittest
+import unittest2
 from cStringIO import StringIO as SIO
 
 # Make sure the module correctly implements __all__
@@ -35,7 +35,7 @@ class FakeDecompressor(object):
         assert filename == "spam.blah"
         return open(PUBCHEM_SDF, "rU")
 
-class TestReadRecords(unittest.TestCase):
+class TestReadRecords(unittest2.TestCase):
     def test_reads_the_only_record(self):
         n = sum(1 for x in open_sdf(TRYPTOPHAN_SDF))
         self.assertEquals(n, 1)
@@ -140,7 +140,7 @@ class ReadReturnsTwoRecords(object):
         assert len(rec) == n
         return rec
 
-class TestBoundaryConditions(unittest.TestCase):
+class TestBoundaryConditions(unittest2.TestCase):
     def test_missing_terminal_newline(self):
         f = SIO(tryptophan.rstrip("\n"))
         n = sum(1 for x in open_sdf(f))
@@ -158,7 +158,7 @@ class TestBoundaryConditions(unittest.TestCase):
         titles = [loc.title for x in open_sdf(ReadReturnsTwoRecords(), loc=loc)]
         self.assertEquals(titles, expected_identifiers)
 
-class TestReadErrors(unittest.TestCase):
+class TestReadErrors(unittest2.TestCase):
     def test_wrong_format(self):
         f = SIO("Spam\n")
         try:
@@ -229,7 +229,7 @@ expected_xlogp = ["2.8", "1.9", "1", "3.3", "1.5", "2.6", None, "-0.9",
 assert len(expected_complexity) == len(expected_hbond_donors) == len(expected_linenos)
 assert len(expected_xlogp) == len(expected_linenos)
 
-class TestIterTwoTags(unittest.TestCase):
+class TestIterTwoTags(unittest2.TestCase):
     def test_read_two_existing_tags(self):
         fields = list(iter_two_tags(open_sdf(PUBCHEM_SDF),
                             "PUBCHEM_CACTVS_HBOND_DONOR", "PUBCHEM_CACTVS_COMPLEXITY"))
@@ -272,7 +272,7 @@ class TestIterTwoTags(unittest.TestCase):
             self.assertRaises(TypeError, iter_two_tags([], tag, "fini"))
             self.assertRaises(TypeError, iter_two_tags([], "fini", tag))
     
-class TestReadTitleAndTag(unittest.TestCase):
+class TestReadTitleAndTag(unittest2.TestCase):
     def test_read_existing_tag(self):
         fields = list(iter_title_and_tag(open_sdf(PUBCHEM_SDF),
                                          "PUBCHEM_CACTVS_HBOND_DONOR"))
@@ -289,4 +289,4 @@ class TestReadTitleAndTag(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest2.main()

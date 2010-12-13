@@ -2,7 +2,7 @@ import os
 import shutil
 import sys
 import tempfile
-import unittest
+import unittest2
 
 from chemfp.commandline import ob2fps
 
@@ -15,7 +15,7 @@ run = runner.run
 run_fps = runner.run_fps
 run_split = runner.run_split
 
-class TestFingerprintTypes(unittest.TestCase):
+class TestFingerprintTypes(unittest2.TestCase):
     def test_FP2(self):
         headers, fps = run_split("--FP2", 19)
         self.assertEquals(headers["#type"], "OpenBabel-FP2/1")
@@ -33,7 +33,7 @@ class TestFingerprintTypes(unittest.TestCase):
         self.assertEquals(headers["#type"], "OpenBabel-MACCS/1")
         self.assertEquals(fps[0], "800400000002080019cc40eacdec980baea378ef1b 9425004")
 
-class TestIO(unittest.TestCase):
+class TestIO(unittest2.TestCase):
     def test_compressed_auto(self):
         header, fps = run_split("--FP3", 19, support.PUBCHEM_SDF_GZ)
         self.assertEquals(fps[0], "0400000000b001 9425004")
@@ -60,7 +60,7 @@ class TestIO(unittest.TestCase):
         self.assertEquals(fps[0], "0400000000b001 9425004\n")
         
 
-class TestMACCS(unittest.TestCase):
+class TestMACCS(unittest2.TestCase):
     def test_bitorder(self):
         result = runner.run_fps("--MACCS", 7, "maccs.smi")
         # The fingerprints are constructed to test the first few bytes.
@@ -77,4 +77,4 @@ class TestMACCS(unittest.TestCase):
         self.assertEquals(result[6][:6], support.set_bit(16))
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest2.main()

@@ -1,9 +1,9 @@
 # Test the layer directly on top of RDKit
 
-import unittest
+import unittest2
 from chemfp import rdkit, decompressors
 
-class TestNormalizeInput(unittest.TestCase):
+class TestNormalizeInput(unittest2.TestCase):
     def test_source_specified(self):
         E = self.assertEquals
         normalize_input = rdkit.normalize_input
@@ -65,4 +65,4 @@ class TestNormalizeInput(unittest.TestCase):
         self.assertRaises(TypeError, rdkit.normalize_input, "blah.smi", "mdl")
     
 if __name__ == "__main__":
-    unittest.main()
+    unittest2.main()

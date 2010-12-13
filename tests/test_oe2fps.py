@@ -1,4 +1,4 @@
-import unittest
+import unittest2
 import sys
 import os
 from cStringIO import StringIO as SIO
@@ -107,7 +107,7 @@ def headers(lines):
     return [line for line in lines if line.startswith("#")]
 
 
-class TestMACCS(unittest.TestCase):
+class TestMACCS(unittest2.TestCase):
     def test_bitorder(self):
         result = run_fps("--maccs166", 7, "maccs.smi")
         # The fingerprints are constructed to test the first few bytes.
@@ -119,7 +119,7 @@ class TestMACCS(unittest.TestCase):
         self.assertEquals(result[5][:6], support.set_bit(10))
         self.assertEquals(result[6][:6], support.set_bit(16))
 
-class TestPath(unittest.TestCase):
+class TestPath(unittest2.TestCase):
     def test_default(self):
         result = run_fps("", 19)
         hexfp, id = result[0].split()
@@ -219,7 +219,7 @@ class TestPath(unittest.TestCase):
         result = run_fps("--btype Chiral", 19)
         self.assertNotEquals(result, hex_test_values)
 
-class TestIO(unittest.TestCase):
+class TestIO(unittest2.TestCase):
     def test_compressed_input(self):
         result = run_fps("", source=PUBCHEM_SDF_GZ)
     def test_unknown_extension(self):
@@ -256,7 +256,7 @@ class TestIO(unittest.TestCase):
 #    def test_specify_input_format_with_dot(self):
 #        result = run_fps("--in .sdf", source=PUBCHEM_ANOTHER_EXT)
 
-class TestArgErrors(unittest.TestCase):
+class TestArgErrors(unittest2.TestCase):
     def _run(self, cmd, expect):
         msg = run_exit(cmd)
         self.assertEquals(expect in msg, True, msg)
@@ -302,7 +302,7 @@ class TestArgErrors(unittest.TestCase):
     def test_bad_btype3(self):
         self._run("--btype DefaultBond|", "Missing bond flag")
 
-class TestHeaderOutput(unittest.TestCase):
+class TestHeaderOutput(unittest2.TestCase):
     def _field(self, s, field):
         result = run(s)
         filtered = [line for line in result if line.startswith(field)]
@@ -349,4 +349,4 @@ class TestHeaderOutput(unittest.TestCase):
     
         
 if __name__ == "__main__":
-    unittest.main()
+    unittest2.main()

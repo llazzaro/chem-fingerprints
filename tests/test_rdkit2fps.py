@@ -1,5 +1,5 @@
 import sys
-import unittest
+import unittest2
 import tempfile
 import shutil
 import os
@@ -10,7 +10,7 @@ from chemfp.commandline import rdkit2fps
 
 runner = support.Runner(rdkit2fps.main)
         
-class TestMACCS(unittest.TestCase):
+class TestMACCS(unittest2.TestCase):
     def test_bitorder(self):
         result = runner.run_fps("--maccs166", 7, "maccs.smi")
         # The fingerprints are constructed to test the first few bytes.
@@ -45,7 +45,7 @@ def get_field_and_first(cmdline, field):
     return (field_value, first)
 
 
-class TestRDKFingerprints(unittest.TestCase):
+class TestRDKFingerprints(unittest2.TestCase):
     def assertIn(self, substr, str):
         self.assertEquals(substr in str, True, str)
         
@@ -138,7 +138,7 @@ class TestRDKFingerprints(unittest.TestCase):
 #    def test_ignore_Hs(self):
 #  I don't have a good test case for this... XXX
 
-class TestIO(unittest.TestCase):
+class TestIO(unittest2.TestCase):
     def test_input_format(self):
         def without_source_header(cmdline, source):
             return [line for line in runner.run(cmdline, source)
@@ -176,4 +176,4 @@ class TestIO(unittest.TestCase):
         self.assertEquals(result, "Unknown structure format 'spam'. Supported formats are: sdf, smi")
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest2.main()
