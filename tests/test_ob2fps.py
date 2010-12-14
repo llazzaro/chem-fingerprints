@@ -1,6 +1,5 @@
 import os
 import shutil
-import sys
 import tempfile
 import unittest2
 
@@ -8,14 +7,17 @@ from chemfp.commandline import ob2fps
 
 import support
 
-real_stdout = sys.stdout
-
 runner = support.Runner(ob2fps.main)
 run = runner.run
 run_fps = runner.run_fps
 run_split = runner.run_split
 
 class TestFingerprintTypes(unittest2.TestCase):
+    def test_unspecified(self):
+        # Should give the same results as FP2
+        headers, fps = run_split("", 19)
+        self.assertEquals(headers["#type"], "OpenBabel-FP2/1")
+        self.assertEquals(fps[0], "200206000000000402800e00040140010100014008206200000200c0082200080200500201c9804100270538000000402000a2040080c1240001c2c2004600200c200c04020800200410a0001490000200a803c018005400c80c00000000810100840000880064a0124010000000080102060142400110200a00000004800000 9425004")
     def test_FP2(self):
         headers, fps = run_split("--FP2", 19)
         self.assertEquals(headers["#type"], "OpenBabel-FP2/1")
