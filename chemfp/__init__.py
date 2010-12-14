@@ -28,6 +28,7 @@ import os
 import __builtin__
 
 from . import decompressors
+from .error_handlers import ChemFPError
 
 
 def open_fingerprints(source, decompressor = decompressors.AutoDetectDecompression):

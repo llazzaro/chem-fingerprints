@@ -11,6 +11,7 @@ assert len(after - before) == 4, ("wrong import * count", after-before)
 
 # Needed for access to the experimental FileLocation
 from chemfp import sdf_reader
+from chemfp.error_handlers import ChemFPParseError
 
 # At some point make this independent of where the tests are started
 TRYPTOPHAN_SDF = "tryptophan.sdf"
@@ -164,18 +165,18 @@ class TestReadErrors(unittest2.TestCase):
         try:
             for x in open_sdf(f):
                 raise AssertionError("Bad parse")
-        except TypeError, err:
+        except ChemFPParseError, err:
             self.assertEquals("Could not find a valid SD record" in str(err), True)
-            self.assertEquals("line 1" in str(err), True)
+            self.assertEquals("line 1" in str(err), True, str(err))
             
     def test_record_too_large(self):
         f = SIO( (tryptophan * ((200000 // len(tryptophan)) + 1)).replace("$$$$", "1234"))
         try:
             for x in open_sdf(f):
                 raise AssertionError("should not be able to read the first record")
-        except TypeError, err:
-            self.assertEquals("too large" in str(err), True)
-            self.assertEquals("at line 1" in str(err), True)
+        except ChemFPParseError, err:
+            self.assertEquals("too large" in str(err), True, str(err))
+            self.assertEquals("at line 1" in str(err), True, str(err))
 
     def test_has_extra_data(self):
         f = SIO(tryptophan + tryptophan + "blah")
@@ -183,7 +184,7 @@ class TestReadErrors(unittest2.TestCase):
             for i, x in enumerate(open_sdf(f)):
                 if i > 1:
                     raise AssertionError("bad record count")
-        except TypeError, err:
+        except ChemFPParseError, err:
             self.assertEquals("unexpected content" in str(err), True)
             expected_lineno = (tryptophan.count("\n")*2) + 1
             expected_lineno_msg = "at line %d" % expected_lineno
@@ -195,7 +196,7 @@ class TestReadErrors(unittest2.TestCase):
             for i, x in enumerate(open_sdf(f)):
                 if i > 0:
                     raise AssertionError("bad record count")
-        except TypeError, err:
+        except ChemFPParseError, err:
             self.assertEquals("incorrectly formatted record" in str(err), True, str(err))
             self.assertEquals("at line 70" in str(err), True, str(err))
 
@@ -209,7 +210,7 @@ class TestReadErrors(unittest2.TestCase):
         loc = sdf_reader.FileLocation()
         f = SIO(tryptophan + tryptophan.replace("V2000", "V4000") + tryptophan)
         titles = [loc.lineno for rec in open_sdf(f, loc=loc,
-                                                    reader_error=my_error_handler)]
+                                                    errors=my_error_handler)]
         self.assertEquals(titles, [1, 137])
         self.assertEquals(my_error_handler.errors, [("incorrectly formatted record",
                                                      {"filename": None,

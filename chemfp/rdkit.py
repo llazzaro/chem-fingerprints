@@ -14,7 +14,7 @@ from rdkit import Chem
 from rdkit.Chem.MACCSkeys import GenMACCSKeys
 
 
-from . import sdf_reader, decoders, decompressors
+from . import sdf_reader, decoders, decompressors, error_handlers
 
 # These are the things I consider to be public
 __all__ = ["read_structures", "iter_smiles_molecules", "iter_sdf_molecules"]
@@ -91,11 +91,22 @@ def normalize_input(source=None, format=None, decompressor=None):
         return "smi", decompressor
 
 
+class SmilesFileLocation(object):
+    def __init__(self, filename=None):
+        self.filenme = filename
+        self.lineno = 1
+    def where(self):
+        s = "at line {self.lineno}"
+        if self.filename is not None:
+            s += " of {self.filename}"
+        return s.format(self=self)
+    
+
 # While RDKit has a SMILES file parser, it doesn't handle reading from
-# stdin or from compressed file. I wanted to support those as well, so
+# stdin or from compressed files. I wanted to support those as well, so
 # ended up not using Chem.SmilesMolSupplier.
 
-def iter_smiles_molecules(infile):
+def iter_smiles_molecules(infile, source=None, errors="strict"):
     """iter_smiles_molecules(infile) -> (title, Chem.Mol) iterator
 
     Iterate through each record in the SMILES file, returning the
@@ -105,23 +116,31 @@ def iter_smiles_molecules(infile):
     is the title. If not present, the record number (starting with
     "1") is used as the title.
     """
+    if source is None:
+        source = getattr(infile, "name", None)
+    error_handler = error_handlers.get_parse_error_handler(errors)
+
+    loc = SmilesFileLocation(source)
     for lineno, line in enumerate(infile):
         words = line.split()
         if not words:
+            loc.lineno = lineno+1
+            error_handler("unexpected blank line", loc)
             continue
+
         mol = Chem.MolFromSmiles(words[0])
+        if mol is None:
+            loc.lineno = lineno+1
+            error_handler("Cannot parse the SMILES %r" % (words[0],), loc)
+            continue
+        
         if len(words) == 1:
             yield str(lineno+1), mol
         else:
             yield words[1], mol
 
-def bad_record(message):
-    raise TypeError(message)
-    #if message[-1:] != "\n":
-    #    message = message + "\n"
-    #sys.stderr.write(message)
 
-def iter_sdf_molecules(infile, filename=None, bad_record=bad_record):
+def iter_sdf_molecules(infile, filename=None, errors="strict"):
     """iter_sdf_molecules(infile) -> (title, Chem.Mol) iterator
 
     Iterate through each record in the SD file, returning the 2-ple of
@@ -131,13 +150,13 @@ def iter_sdf_molecules(infile, filename=None, bad_record=bad_record):
     # If there's no explicit filename, see if 'infile' has one
     if filename is None:
         filename = getattr(infile, "name", None)
-    errtxt = "Could not parse {where}"
+
     loc = sdf_reader.FileLocation(filename)
-    for text in sdf_reader.iter_sdf_records(infile, loc):
+    for text in sdf_reader.iter_sdf_records(infile, loc, errors):
         mol = Chem.MolFromMolBlock(text)
         if mol is None:
             # This was not a molecule?
-            bad_record(errtxt.format(where=loc.where()))
+            reader_error("Could not parse molecule block", loc)
         else:
             yield mol.GetProp("_Name"), mol
 
@@ -174,8 +193,8 @@ def iter_sdf_molecules(infile, filename=None, bad_record=bad_record):
 ##     return open(filename, "rU")
     
 
-def read_structures(source, format=None, decompressor=None):
-    """read_structures(source, format, decompressor) -> (title, rdkit.Chem.Mol) iterator 
+def read_structures(source, format=None, decompressor=None, errors="strict"):
+    """read_structures(source, format, decompressor, on_error) -> (title, rdkit.Chem.Mol) iterator 
     
     Iterate over each record in the source, yielding the structure's
     title and corresponding RDKit.Chem.Mol
@@ -207,7 +226,7 @@ def read_structures(source, format=None, decompressor=None):
         #    return native_sdf_reader()
 
         infile = decompressors.open_and_decompress_universal(source, decompressor)
-        return iter_sdf_molecules(infile)
+        return iter_sdf_molecules(infile, source, errors)
 
     elif format == "smi":
         # I timed the native reader at 31.6 seconds (best of 31.6, 31.7, 31.7)
@@ -221,7 +240,7 @@ def read_structures(source, format=None, decompressor=None):
         #            yield mol.GetProp("_Name"), mol
         #    return native_smiles_reader()
         infile = decompressors.open_and_decompress_universal(source, decompressor)
-        return iter_smiles_molecules(infile)
+        return iter_smiles_molecules(infile, source, errors)
 
     else:
         raise TypeError("Unsupported format {format!r}".format(format=format))

@@ -7,7 +7,7 @@
 
 
 from __future__ import absolute_import
-from . import decompressors
+from . import decompressors, error_handlers
 
 __all__ = ["open_sdf", "iter_sdf_records", "iter_two_tags", "iter_title_and_tag"]
 
@@ -54,7 +54,7 @@ class FileLocation(object):
         return self._record[:self._record.find("\n")].strip()
     
     def where(self):
-        s = "line {self.lineno}".format(self=self)
+        s = "at line {self.lineno}".format(self=self)
         if self.filename is not None:
             s += " of {self.filename!r}".format(self=self)
         title = self.title
@@ -65,12 +65,8 @@ class FileLocation(object):
     def info(self):
         return dict(filename=self.filename, lineno=self.lineno, title=self.title)
 
-def default_reader_error(msg, loc):
-    "This is the default error handler. It raises an informative TypeError"
-    raise TypeError(msg + " at " + loc.where())
-
 def open_sdf(source=None, decompressor=decompressors.AutoDetectDecompression,
-             loc=None, reader_error=default_reader_error):
+             loc=None, errors="strict"):
     """Open an SD file and return an iterator over the SD records, as blocks of text
 
     If 'source' is None, use sys.stdin. If 'source' is a string, then
@@ -87,13 +83,13 @@ def open_sdf(source=None, decompressor=decompressors.AutoDetectDecompression,
     which may be ignored. This feature is also experimental.
     """
     infile = decompressors.open_and_decompress_universal(source, decompressor)
-    return iter_sdf_records(infile, loc, reader_error)
+    return iter_sdf_records(infile, loc, errors)
 
 # My original implementation used a slow line-oriented parser.  That
 # was decently fast, but this version, which reads a block at a time
 # and works directly on those blocks, is over 3 times as fast.
 
-def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
+def iter_sdf_records(infile, loc=None, errors="strict"):
     """Iterate over records in an SD file, returning records as strings
 
     'infile' is an input stream. If the 'name' attribute exists then it's
@@ -108,6 +104,7 @@ def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
         loc = FileLocation()
     if loc.filename is None:
         loc.filename = getattr(infile, "name", None)
+    error = error_handlers.get_parse_error_handler(errors)
     pushback_buffer = ''
     records = None
     while 1:
@@ -126,9 +123,9 @@ def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
                         loc._record = None
                         if loc.lineno == 1:
                             # No records read. Wrong format.
-                            reader_error("Could not find a valid SD record", loc)
+                            error("Could not find a valid SD record", loc)
                         else:
-                            reader_error(
+                            error(
    "unexpected content at the end of the file (perhaps the last record is truncated?)",
                                 loc)
                         break
@@ -143,7 +140,7 @@ def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
             pushback_buffer = records.pop()  # either '' or a partial record
 
             # It is possible though unlikely that the merged blocks of
-            # text contains only an incompelte record, so this might
+            # text contains only an incomplete record, so this might
             # loop again. However, the joining and searching is an
             # O(n**2) operation, so I don't want to do that too often.
             # While it's possible to fix this, there should be no
@@ -153,7 +150,7 @@ def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
             # To prevent timing problems, don't allow huge records.
             if len(pushback_buffer) > 200000:
                 loc._record = None
-                reader_error("record is too large for this reader", loc)
+                error("record is too large for this reader", loc)
                 return
         else:
             # We have a set of records, one string per record. Pass them back.
@@ -161,7 +158,7 @@ def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
                 # A simple, quick check that it looks about right
                 if not _sdf_check_pat.match(record):
                     loc._record = record
-                    reader_error("incorrectly formatted record", loc)
+                    error("incorrectly formatted record", loc)
                     # If the reader_error callback returns then just skip the record
                 else:
                     record += "\n$$$$\n"  # restore the split text
@@ -171,7 +168,7 @@ def iter_sdf_records(infile, loc=None, reader_error=default_reader_error):
             records = None
 
 ### Is something like this needed? Perhaps when used as a co-process?
-# def iter_sdf_records_line_buffered(infile, loc=None, reader_error=default_reader_error):
+# def iter_sdf_records_line_buffered(infile, loc=None, errors="strict"):
     
 
 # I tried implementing this search with a regular expression but it
