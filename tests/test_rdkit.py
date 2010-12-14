@@ -1,6 +1,9 @@
-# Test the layer directly on top of RDKit
+# Test the I/O layer directly on top of RDKit
+# This does not test the RDKit fingerprints.
+# For that, see test_rdkit2fps.py
 
 import unittest2
+
 from chemfp import rdkit, decompressors
 
 class TestNormalizeInput(unittest2.TestCase):
