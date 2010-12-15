@@ -92,13 +92,13 @@ def normalize_input(source=None, format=None, decompressor=None):
 
 
 class SmilesFileLocation(object):
-    def __init__(self, filename=None):
-        self.filenme = filename
+    def __init__(self, name=None):
+        self.name = name
         self.lineno = 1
     def where(self):
         s = "at line {self.lineno}"
-        if self.filename is not None:
-            s += " of {self.filename}"
+        if self.name is not None:
+            s += " of {self.name}"
         return s.format(self=self)
     
 
@@ -106,22 +106,26 @@ class SmilesFileLocation(object):
 # stdin or from compressed files. I wanted to support those as well, so
 # ended up not using Chem.SmilesMolSupplier.
 
-def iter_smiles_molecules(infile, source=None, errors="strict"):
-    """iter_smiles_molecules(infile) -> (title, Chem.Mol) iterator
+def iter_smiles_molecules(fileobj, name=None, errors="strict"):
+    """Iterate over the SMILES file records, returning (title, RDKit.Chem.Mol) pairs
 
-    Iterate through each record in the SMILES file, returning the
-    2-ple of (title, rdkit.Chem.Mol). Each record is a single line of
-    fields, separated by whitespace. The first column is the SMILES
-    used to create the molecule. It must be present. The second column
-    is the title. If not present, the record number (starting with
-    "1") is used as the title.
+    'fileobj' is an input file or any line iterable
+    'name' is the name used to report errors (if not specified, use
+       fileobj.name if present)
+    'errors' is one of "strict" (default), "log", or "ignore" (other values are experimental)
+
+    Each line of the input must at least one whitespace separated
+    fields.  The first field is the SMILES. If there is a second field
+    then it is used as the title, otherwise the title is the current
+    record number, starting with "1".
+
     """
-    if source is None:
-        source = getattr(infile, "name", None)
+    if name is None:
+        name = getattr(fileobj, "name", None)
     error_handler = error_handlers.get_parse_error_handler(errors)
 
-    loc = SmilesFileLocation(source)
-    for lineno, line in enumerate(infile):
+    loc = SmilesFileLocation(name)
+    for lineno, line in enumerate(fileobj):
         words = line.split()
         if not words:
             loc.lineno = lineno+1
@@ -140,23 +144,23 @@ def iter_smiles_molecules(infile, source=None, errors="strict"):
             yield words[1], mol
 
 
-def iter_sdf_molecules(infile, filename=None, errors="strict"):
-    """iter_sdf_molecules(infile) -> (title, Chem.Mol) iterator
+def iter_sdf_molecules(fileobj, name=None, errors="strict"):
+    """Iterate over the SD file records, returning (title, Chem.Mol) pairs
 
-    Iterate through each record in the SD file, returning the 2-ple of
-    (title, rdkit.Chem.Mol). The title comes from the "_Name" property
-    of the molecule object.
+    fileobj - the input file object
+    name - the name to use to report errors. If None, use fileobj.name .
+    
     """
-    # If there's no explicit filename, see if 'infile' has one
-    if filename is None:
-        filename = getattr(infile, "name", None)
-
-    loc = sdf_reader.FileLocation(filename)
-    for text in sdf_reader.iter_sdf_records(infile, loc, errors):
+    # If there's no explicit filename, see if fileobj has one
+    if name is None:
+        name = getattr(fileobj, "name", None)
+    loc = sdf_reader.FileLocation(name)
+    error = error_handlers.get_parse_error_handler(errors)
+    for text in sdf_reader.iter_sdf_records(fileobj, errors, loc):
         mol = Chem.MolFromMolBlock(text)
         if mol is None:
             # This was not a molecule?
-            reader_error("Could not parse molecule block", loc)
+            error("Could not parse molecule block", loc)
         else:
             yield mol.GetProp("_Name"), mol
 
@@ -193,11 +197,14 @@ def iter_sdf_molecules(infile, filename=None, errors="strict"):
 ##     return open(filename, "rU")
     
 
-def read_structures(source, format=None, decompressor=None, errors="strict"):
-    """read_structures(source, format, decompressor, on_error) -> (title, rdkit.Chem.Mol) iterator 
-    
-    Iterate over each record in the source, yielding the structure's
-    title and corresponding RDKit.Chem.Mol
+def read_structures(source, format=None, errors="strict", decompressor=None):
+    """Iterate the records in the input source as (title, RDKit.Chem.Mol) pairs
+
+    'source' is a filename, a file object, or None for stdin
+    'format' is either "sdf" or "smi" with optional ".gz" or ".bz2" extensions.
+        If None then the format is inferred from the source extension
+    'errors' is one of "strict" (default), "log", or "ignore" (other values are experimental)
+    'decompressor' is an experimental interface
     """
     format, decompressor = normalize_input(source, format, decompressor)
     if format == "sdf":
@@ -225,8 +232,9 @@ def read_structures(source, format=None, decompressor=None, errors="strict"):
         #                yield title, mol
         #    return native_sdf_reader()
 
-        infile = decompressors.open_and_decompress_universal(source, decompressor)
-        return iter_sdf_molecules(infile, source, errors)
+        fileobj = decompressors.open_and_decompress_universal(source, decompressor)
+        # fileobj should always have the .name attribute set.
+        return iter_sdf_molecules(fileobj, None, errors)
 
     elif format == "smi":
         # I timed the native reader at 31.6 seconds (best of 31.6, 31.7, 31.7)
@@ -239,8 +247,8 @@ def read_structures(source, format=None, decompressor=None, errors="strict"):
         #        for mol in supplier:
         #            yield mol.GetProp("_Name"), mol
         #    return native_smiles_reader()
-        infile = decompressors.open_and_decompress_universal(source, decompressor)
-        return iter_smiles_molecules(infile, source, errors)
+        fileobj = decompressors.open_and_decompress_universal(source, decompressor)
+        return iter_smiles_molecules(fileobj, None, errors)
 
     else:
         raise TypeError("Unsupported format {format!r}".format(format=format))

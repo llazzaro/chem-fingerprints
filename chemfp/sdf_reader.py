@@ -42,8 +42,8 @@ class FileLocation(object):
     Passing in a non-FileLocation object may cause interoperability
     problems in the future.
     """
-    def __init__(self, filename=None):
-        self.filename = filename
+    def __init__(self, name=None):
+        self.name = name
         self.lineno = 1
         self._record = None  # internal variable; it only valid enough to get the title
     @property
@@ -55,61 +55,51 @@ class FileLocation(object):
     
     def where(self):
         s = "at line {self.lineno}".format(self=self)
-        if self.filename is not None:
-            s += " of {self.filename!r}".format(self=self)
+        if self.name is not None:
+            s += " of {self.name!r}".format(self=self)
         title = self.title
         if title is not None:
             s += " ({title})".format(title=title)
         return s
 
     def info(self):
-        return dict(filename=self.filename, lineno=self.lineno, title=self.title)
+        return dict(name=self.name, lineno=self.lineno, title=self.title)
 
-def open_sdf(source=None, decompressor=decompressors.AutoDetectDecompression,
-             loc=None, errors="strict"):
+def open_sdf(source=None, decompressor="auto", errors="strict", loc=None):
     """Open an SD file and return an iterator over the SD records, as blocks of text
 
-    If 'source' is None, use sys.stdin. If 'source' is a string, then
-    open it for reading in universal mode. Otherwise, 'source' must be
-    an input stream.
-
-    'decompressor' can be 'none', 'gzip', or 'bzip2' to indicate a specific
-    compression type. If 'auto' and the source is a filename then use the
-    extension to determine the compression type.
-
-    'loc' is for the experimental FileLocation tracker
-
-    'reader_error' is a callback used to report failures, some of
-    which may be ignored. This feature is also experimental.
+    source - input source. Can be None (for sys.stdin), the input filename
+        as a string, or a file object.
+    errors - one of "strict" (default), "log", or "ignore". Other values are experimental
+    decompressor - one of "auto" (default), "gzip", "bzip2", or "none".
+        Other values are experimental
+    loc - experimental location tracking.
     """
-    infile = decompressors.open_and_decompress_universal(source, decompressor)
-    return iter_sdf_records(infile, loc, errors)
+    fileobj = decompressors.open_and_decompress_universal(source, decompressor)
+    return iter_sdf_records(fileobj, errors, loc)
 
 # My original implementation used a slow line-oriented parser.  That
 # was decently fast, but this version, which reads a block at a time
-# and works directly on those blocks, is over 3 times as fast.
+# and works directly on those blocks, is over 3 times as fast. It's
+# also a lot more complicated
 
-def iter_sdf_records(infile, loc=None, errors="strict"):
-    """Iterate over records in an SD file, returning records as strings
+def iter_sdf_records(fileobj, errors="strict", loc=None):
+    """Iterate over records in an SD file, returning records as blocks of text
 
-    'infile' is an input stream. If the 'name' attribute exists then it's
-    used in the file location.
-
-    'loc' is for the experimental FileLocation tracker
-
-    'reader_error' is a callback used to report failures, some of
-    which may be ignored. This feature is also experimental.
+    fileobj - input stream. If fileobj.name exists then use it in error messages
+    errors - one of "strict" (default), "log", or "ignore". Other values are experimental
+    loc - experimental location tracking
     """
     if loc is None:
         loc = FileLocation()
-    if loc.filename is None:
-        loc.filename = getattr(infile, "name", None)
+    if loc.name is None:
+        loc.name = getattr(fileobj, "name", None)
     error = error_handlers.get_parse_error_handler(errors)
     pushback_buffer = ''
     records = None
     while 1:
         if not records:
-            read_data = infile.read(32768)
+            read_data = fileobj.read(32768)
             if not read_data:
                 # No more data from the file. If there is something in the
                 # pushback buffer then it's an incomplete record
@@ -159,7 +149,7 @@ def iter_sdf_records(infile, loc=None, errors="strict"):
                 if not _sdf_check_pat.match(record):
                     loc._record = record
                     error("incorrectly formatted record", loc)
-                    # If the reader_error callback returns then just skip the record
+                    # If the error callback returns then just skip the record
                 else:
                     record += "\n$$$$\n"  # restore the split text
                     loc._record = record
@@ -167,12 +157,9 @@ def iter_sdf_records(infile, loc=None, errors="strict"):
                 loc.lineno += record.count("\n")
             records = None
 
-### Is something like this needed? Perhaps when used as a co-process?
-# def iter_sdf_records_line_buffered(infile, loc=None, errors="strict"):
-    
 
-# I tried implementing this search with a regular expression but it
-# was about 30% slower than this more direct (and complicated) search.
+# This is complicated. I tried implementing this search with a regular
+# expression but it was about 30% slower than this more direct search.
 
 # Note: tag_substr must contain the "<" and ">"
 def _find_tag_data(rec, tag_substr):
@@ -210,17 +197,17 @@ def _find_tag_data(rec, tag_substr):
 _bad_char = re.compile(r"[<>\n\r\t]")
 
 def iter_two_tags(sdf_iter, tag1, tag2):
-    """Iterate over SD records to get the first data line of the two named tags
-    
-    The values are returned as a (tag1_value, tag2_value) 2-ple,
-    where the value comes from the first line after the given tag (if
-    present). If there is no line then return the empty string. If the
-    tag isn't present, return None. If the tag exists mutliple times
-    then only the first value is returned.
+    """Iterate over SD records to get the data lines for tag1 and tag2
 
-    infile - an input stream (its 'name' attribute should be the source filename)
+    sdf_iter - an iterator which returns SD records
     tag1 - the name of the first tag
     tag2 - the name of the second tag
+
+    Each record yields a (tag1_value, tag2_value) 2-ple. If a tag is
+    present then the value is from its first data line (or the empty
+    string if there is no line). If there are multiple fields with
+    the same name then use the first one. If a tag does not exist,
+    return None.
     """
     m = _bad_char.search(tag1)
     if m:
@@ -237,16 +224,14 @@ def iter_two_tags(sdf_iter, tag1, tag2):
 def iter_title_and_tag(sdf_iter, tag):
     """Iterate over SD records to get the title line and data line for the specified tag
 
-    (NOTE: the title line is the first line of the SD file, and not an SD tag.)
-
-    The values are returned as a (title, tag_value) 2-ple, where the
-    value comes from the first line after the specified tag (if
-    present). If there is no line then return the empty string. If the
-    tag isn't present, return None. If the tag exists multiple times
-    then only the first value is returned.
-
-    infile - an input stream (its 'name' attribute should be the source filename)
+    sdf_iter - an iterator over SD records, as text
     tag - the name of the tag value to return
+
+    Each record yields a (title, tag_value) 2-ple where the title is
+    the first line of the SD record (not a tag!) and the tag_value
+    comes from the first data line for the given tag. If the tag is
+    present multiple times, use the first match. If the data line is
+    missing, the value is"". If the tag does not exist, the value is None.
     """
     m = _bad_char.search(tag)
     if m:

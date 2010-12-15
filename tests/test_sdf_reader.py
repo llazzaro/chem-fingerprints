@@ -88,7 +88,7 @@ class TestReadRecords(unittest2.TestCase):
         loc = sdf_reader.FileLocation()
         results = []
         for x in open_sdf(PUBCHEM_SDF_GZ, loc=loc):
-            self.assertEquals(loc.filename, PUBCHEM_SDF_GZ)
+            self.assertEquals(loc.name, PUBCHEM_SDF_GZ)
             results.append(dict(title=loc.title,
                                 lineno=loc.lineno))
         self.assertEquals(results, expected_locs)
@@ -213,7 +213,7 @@ class TestReadErrors(unittest2.TestCase):
                                                     errors=my_error_handler)]
         self.assertEquals(titles, [1, 137])
         self.assertEquals(my_error_handler.errors, [("incorrectly formatted record",
-                                                     {"filename": None,
+                                                     {"name": None,
                                                       "lineno": 70,
                                                       "title": "tryptophan.pdb"})])
         
