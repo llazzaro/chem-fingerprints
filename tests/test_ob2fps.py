@@ -32,8 +32,12 @@ class TestFingerprintTypes(unittest2.TestCase):
         self.assertEquals(fps[0], "1100000000000000000080000000000000010000000c9800000000000000000000000640407800 9425004")
     def test_MACCS(self):
         headers, fps = run_split("--MACCS", 19)
-        self.assertEquals(headers["#type"], "OpenBabel-MACCS/1")
-        self.assertEquals(fps[0], "800400000002080019cc40eacdec980baea378ef1b 9425004")
+        if headers["#type"] == "OpenBabel-MACCS/1":
+            # Running on a buggy 2.3.0 release
+            self.assertEquals(fps[0], "800400000002080019cc40eacdec980baea378ef1b 9425004")
+        else:
+            # Running on a corrected post-2.3.0 release
+            self.assertEquals(fps[0], "000000000002080019cc44eacdec980baea378ef1f 9425004")
 
 class TestIO(unittest2.TestCase):
     def test_compressed_auto(self):
@@ -72,10 +76,10 @@ class TestMACCS(unittest2.TestCase):
         self.assertEquals(result[3][:6], support.set_bit(5))
         self.assertEquals(result[4][:6], support.set_bit(9))
         ## This appears to be a bug in the OpenBabel MACCS definition
-        #self.assertEquals(result[5][:6], support.set_bit(10))
+        self.assertEquals(result[5][:6], support.set_bit(10))
         # This is WRONG, since OB has an off-by-one error in the ring sizes
         # Once this is fixed you must update the MACCS keys version number
-        self.assertEquals(result[5][:6], "000020")
+        #self.assertEquals(result[5][:6], "000020")
         self.assertEquals(result[6][:6], support.set_bit(16))
 
 if __name__ == "__main__":

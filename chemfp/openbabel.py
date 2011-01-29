@@ -80,42 +80,6 @@ SOFTWARE = "OpenBabel/" + _ob_version
 
 # In the end, I hard-coded the supported fingerprints into the system.
 
-class FingerprinterInfo(object):
-    def __init__(self, name, description, ob_fingerprinter, num_bits):
-        self.name = name
-        self.description = description
-        self.ob_fingerprinter = ob_fingerprinter
-        self.num_bits = num_bits
-
-        self.fps_type = "OpenBabel-" + name + "/1"
-
-        # This is filled in later with the function which computes the
-        # fingerprint as a string of bytes.
-        self.calc_fp = None
-
-_fingerprinter_table = {}
-
-def _init():
-    for name, num_bits in ( ("FP2", 1021),
-                            ("FP3", 55),
-                            ("FP4", 307),
-                            ("MACCS", 166), # Added in OpenBabel 2.3
-                            ):
-        ob_fingerprinter = ob.OBFingerprint.FindFingerprint(name)
-        if ob_fingerprinter is None:
-            # Older version of OpenBabel; no support for this fingerprint type
-            continue
-        description = ob_fingerprinter.Description()
-
-        _fingerprinter_table[name] = FingerprinterInfo(
-            name, description, ob_fingerprinter, num_bits)
-
-    # Verify that OpenBabel was compiled with 32 bit integers
-    n = _fingerprinter_table["FP2"].ob_fingerprinter.Getbitsperint()
-    if n != 32:
-        raise AssertionError(
-            "The chemfp.ob module assumes OB fingerprints have 32 bits per integer")
-_init()
 
 
 ############
@@ -125,8 +89,19 @@ _init()
 
 # This needs 128 bytes, for 1024 bits
 # vectorUnsignedInt will contain 32 32-bit words = 1024 bits
+
+_ob_get_fingerprint = {}
+def _init():
+    for name in ("FP2", "FP3", "FP4", "MACCS"):
+        ob_fingerprinter = ob.OBFingerprint.FindFingerprint(name)
+        if ob_fingerprinter is None:
+            _ob_get_fingerprint[name] = (None, None)
+        else:
+            _ob_get_fingerprint[name] = (ob_fingerprinter, ob_fingerprinter.GetFingerprint)
+_init()
+
 def calc_FP2(mol, fp=None,
-             get_fingerprint=_fingerprinter_table["FP2"].ob_fingerprinter.GetFingerprint,
+             get_fingerprint=_ob_get_fingerprint["FP2"][1],
              _pack_1024 = struct.Struct("<" + "I"*32).pack):
     if fp is None:
         fp = ob.vectorUnsignedInt()
@@ -136,7 +111,7 @@ def calc_FP2(mol, fp=None,
 # This needs 7 bytes, for 56 bits.
 # vectorUnsignedInt will contain 2 32-bit words = 64 bits
 def calc_FP3(mol, fp=None,
-             get_fingerprint=_fingerprinter_table["FP3"].ob_fingerprinter.GetFingerprint,
+             get_fingerprint=_ob_get_fingerprint["FP3"][1],
              _pack_64 = struct.Struct("<II").pack):
     if fp is None:
         fp = ob.vectorUnsignedInt()
@@ -146,7 +121,7 @@ def calc_FP3(mol, fp=None,
 # This needs 39 bytes, for 312 bits
 # vectorUnsignedInt will contain 16 32-bit words = 512 bits
 def calc_FP4(mol, fp=None,
-             get_fingerprint=_fingerprinter_table["FP4"].ob_fingerprinter.GetFingerprint,
+             get_fingerprint=_ob_get_fingerprint["FP4"][1],
              _pack_512 = struct.Struct("<" + "I"*16).pack):
     if fp is None:
         fp = ob.vectorUnsignedInt()
@@ -158,7 +133,7 @@ def calc_FP4(mol, fp=None,
 # (Remember, although 6 words * 32-bits/word = 192, the OpenBabel
 # fingerprint size must be a power of 2, and the closest is 8*32.)
 def calc_MACCS(mol, fp=None,
-               get_fingerprint=_fingerprinter_table["MACCS"].ob_fingerprinter.GetFingerprint,
+               get_fingerprint=_ob_get_fingerprint["MACCS"][1],
                _pack_256 = struct.Struct("<" + "I"*8).pack):
     if fp is None:
         fp = ob.vectorUnsignedInt()
@@ -166,11 +141,75 @@ def calc_MACCS(mol, fp=None,
     return _pack_256(*fp)[:21]
 
 
-_fingerprinter_table["FP2"].calc_fp = calc_FP2
-_fingerprinter_table["FP3"].calc_fp = calc_FP3
-_fingerprinter_table["FP4"].calc_fp = calc_FP4
-_fingerprinter_table["MACCS"].calc_fp = calc_MACCS
+class BaseFingerprinterInfo(object):
+    def __init__(self, ob_fingerprinter):
+        self.ob_fingerprinter = ob_fingerprinter
 
+    @property
+    def description(self):
+        return self.ob_fingerprinter.Description()
+
+    @property
+    def fps_type(self):
+        return "OpenBabel-" + self.name + "/1"
+
+class FP2FingerprinterInfo(BaseFingerprinterInfo):
+    name = "FP2"
+    num_bits = 1021
+    calc_fp = staticmethod(calc_FP2)
+
+class FP3FingerprinterInfo(BaseFingerprinterInfo):
+    name = "FP3"
+    num_bits = 55
+    calc_fp = staticmethod(calc_FP3)
+
+class FP4FingerprinterInfo(BaseFingerprinterInfo):
+    name = "FP4"
+    num_bits = 307
+    calc_fp = staticmethod(calc_FP4)
+
+class MACCSFingerprinterInfo(BaseFingerprinterInfo):
+    name = "MACCS"
+    num_bits = 166
+    calc_fp = staticmethod(calc_MACCS)
+    _fps_type = None
+
+    @property
+    def fps_type(self):
+        _fps_type = self._fps_type
+        if _fps_type is None:
+            # OpenBabel 2.3.0 released the MACCS keys but with a bug in the SMARTS.
+            # While they are valid substructure keys, they are not really MACCS keys.
+            # This is a run-time detection to figure out which version was installed
+            obconversion = ob.OBConversion()
+            obconversion.SetInFormat("smi")
+            obmol = ob.OBMol()
+            obconversion.ReadString(obmol, "C1CCC1")
+            fp = calc_MACCS(obmol)
+            if fp[:6] == "000020":
+                _fps_type = "OpenBabel-MACCS/1" # the buggy version
+            else:
+                _fps_type = "OpenBabel-MACCS/2" # the corrected version
+            self._fps_type = _fps_type
+        return _fps_type
+
+_fingerprinter_table = {}
+
+def _init():
+    g = globals()
+    for fp_name, (ob_fingerprinter, get_fingerprint) in _ob_get_fingerprint.items():
+        klass = g[fp_name + "FingerprinterInfo"]
+        fingerprinter = klass(ob_fingerprinter)
+        _fingerprinter_table[fingerprinter.name] = fingerprinter
+            
+
+    # Verify that OpenBabel was compiled with 32 bit integers
+    n = _fingerprinter_table["FP2"].ob_fingerprinter.Getbitsperint()
+    if n != 32:
+        raise AssertionError(
+            "The chemfp.ob module assumes OB fingerprints have 32 bits per integer")
+
+_init()
 #########
 
 
