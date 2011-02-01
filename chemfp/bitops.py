@@ -13,10 +13,11 @@ from _chemfp import (byte_popcount, byte_intersect_popcount,
 
 from _chemfp import nlargest_tanimoto_block as _nlargest_tanimoto_block
 from _chemfp import hex_nlargest_tanimoto_block as _hex_nlargest_tanimoto_block
+from _chemfp import intersect_popcount_count as _intersect_popcount_count
 
 def _score_iterator(calculate_score, target_fps):
     for i, (target_fp, target_id) in enumerate(target_fps):
-        print "Calc for", repr(target_fp), target_fps
+        #print "Calc for", repr(target_fp), target_fps
         yield calculate_score(target_fp), -i, target_id
 
 
@@ -36,7 +37,15 @@ def byte_nlargest_tanimoto_block(n, query_fp, target_block, offset=0,
     scores = array.array('d', (0.0,)*n)
     k = _nlargest_tanimoto_block(n, query_fp, target_block, offset,
                                  storage_len, threshold, indicies, scores)
-    return [(indicies[i], scores[i]) for i in range(k)]
+    return [(indicies[i], scores[i]) for i in xrange(k)]
+
+def byte_intersect_popcount_count(query, arena, min_overlap, offset=0,
+                                  storage_len=None):
+    if storage_len is None:
+        storage_len = len(query)
+    response = _intersect_popcount_count(query, arena, offset, storage_len, min_overlap)
+    assert response >= 0
+    return response
 
 class TanimotoHeap(ctypes.Structure):
     _fields_ = [("size", ctypes.c_int),
