@@ -166,4 +166,9 @@ int chemfp_hex_tanimoto_block(
         double threshold,
         double *scores, unsigned char **start_ids, int *id_lens, int *lineno);
 
+int chemfp_byte_intersect_popcount_count(
+        int len, unsigned char *query_fp,
+        int num_targets, unsigned char *target_block, int offset, int storage_len,
+		int min_overlap);
+
 #endif /* CHEMFP_H */

@@ -271,7 +271,7 @@ nlargest_tanimoto_block(PyObject *self, PyObject *args) {
     return NULL;
   }
   if (n < 1) {
-    PyErr_SetString(PyExc_TypeError, "n must be negative");
+    PyErr_SetString(PyExc_TypeError, "n must be positive");
     return NULL;
   }
   if (query_len > storage_len) {
@@ -347,6 +347,59 @@ hex_nlargest_tanimoto_block(PyObject *self, PyObject *args) {
   return PyInt_FromLong(err);
 
 }
+static PyObject *
+intersect_popcount_count(PyObject *self, PyObject *args) {
+  unsigned char *query_fp, *target_block;
+  int query_len, target_block_len, offset, storage_len, min_overlap;
+  int num_targets;
+  if (!PyArg_ParseTuple(args, "s#s#iii",
+						&query_fp, &query_len,
+						&target_block, &target_block_len,
+						&offset, &storage_len,
+						&min_overlap))
+	return NULL;
+  if (offset < 0) {
+    PyErr_SetString(PyExc_TypeError, "offset cannot be negative");
+    return NULL;
+  }
+  if (storage_len < 1) {
+    PyErr_SetString(PyExc_TypeError, "storage_len must be positive");
+    return NULL;
+  }
+  if (min_overlap < 0) {
+	PyErr_SetString(PyExc_TypeError, "min_overlap must be non-negative");
+  }
+  if (query_len > storage_len) {
+    PyErr_SetString(PyExc_TypeError,
+                    "query fingerprint is longer than target fingerprint storage_len");
+    return NULL;
+  }
+  if (offset > target_block_len) {
+    PyErr_SetString(PyExc_TypeError,
+                    "offset is larger than the target_block buffer");
+    return NULL;
+  }
+  target_block_len -= offset;
+  target_block += offset;
+  offset = 0;
+  if (target_block_len == 0)
+    return PyInt_FromLong(0);
+
+  if ((target_block_len % storage_len) != 0) {
+    PyErr_SetString(PyExc_TypeError,
+                    "adjusted target_block length is not a multiple of the storage size");
+    return NULL;
+  }
+  num_targets = target_block_len / storage_len;
+
+  return PyInt_FromLong(
+		chemfp_byte_intersect_popcount_count(
+		  query_len, query_fp,
+          num_targets, target_block, offset, storage_len,
+		  min_overlap)
+					   );
+}
+
 
 
 static PyMethodDef chemfp_methods[] = {
@@ -394,6 +447,9 @@ static PyMethodDef chemfp_methods[] = {
 
   {"hex_nlargest_tanimoto_block", hex_nlargest_tanimoto_block, METH_VARARGS,
    "hex_nlargest_tanimoto_block (TODO: document)"},
+
+  {"intersect_popcount_count", intersect_popcount_count, METH_VARARGS,
+   "intersect_popcount_count (TODO: document)"},
 
   {NULL, NULL, 0, NULL}        /* Sentinel */
 

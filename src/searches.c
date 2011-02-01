@@ -230,3 +230,40 @@ int chemfp_hex_tanimoto_block(
                         (chemfp_heapq_swap) hex_score_swap);
   return n;
 }
+
+/* Count the number of byte fingerprints which, when intersected with the
+   query, have at least min_overlap bits in common */
+
+int chemfp_byte_intersect_popcount_count(
+        int len, unsigned char *query_fp,
+        int num_targets, unsigned char *target_block, int offset, int storage_len,
+		int min_overlap) {
+  int count = 0;
+  int fp_index;
+  int popcount;
+  if (len < 1) {
+	return -1;
+  }
+  if (storage_len == -1) {
+    storage_len = len;
+  } else if (len > storage_len) {
+    return -1;
+  }
+  if (num_targets < 0) {
+    return -1;
+  }
+  if (((long long) num_targets * storage_len) > INT_MAX) {
+    return -1;
+  }
+  target_block += offset;
+
+  /* Let's count! */
+  for (fp_index=0; fp_index < num_targets; fp_index++) {
+	popcount = chemfp_byte_intersect_popcount(len, query_fp, target_block);
+	if (popcount >= min_overlap) {
+	  count += 1;
+	}
+	target_block += storage_len;
+  }
+  return count;
+}
