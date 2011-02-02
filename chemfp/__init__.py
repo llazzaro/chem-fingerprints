@@ -31,43 +31,42 @@ from . import decompressors
 from .error_handlers import ChemFPError
 
 
-def open_fingerprints(source, decompressor = decompressors.AutoDetectDecompression):
-    """Open a fingerprint file for reading and searching, given its filename
+def open_reader(source):
+    from . import readers
+    return readers.open_fps(source)
 
-    'source' must be a filename or a file object which support seeks
-    'decompressor' must implement the decompressor API in chemfp.decompressors
-       or be one of 'autodetect', 'gzip', 'bzip2', or 'uncompressed'
-    """
-    decompressor = decompressors.get_named_decompressor(decompressor)
-    base_filename = decompressor.strip_extension(source)
-    ext = base_filename[-4:].lower()
+def open_in_memory(source):
+    ext = source[-4:].lower()
     if ext == ".fps":
-        from chemfp import fps_reader
-        return fps_reader.open(compression_type.open_filename_binary(source))
+        from chemfp import readers
+        return readers.fps_to_in_memory(readers.open_fps(source))
     elif ext == ".fpb":
         raise NotImplementedError("No support yet for .fpb files")
     # Should I open and sniff?
     raise NotImplementedError("Unknown fingerprint format extension %r" % (ext,))
+    
+    raise NotImplementedError
 
-def tanimoto_count(query, targets, threshold=0.0):
-    """Count the number of targets at least 'threshold' similar to the the query fingerprint
+def open_mmap(source):
+    raise NotImplementedError
 
-    The 'query' fingerprint string must be in binary representation, not hex.
-    If 'targets' implements '_chemfp_tanimoto_count' then the search is delegated to it
-      as targets._chemfp_tanimoto_count(query, threshold)
-    Otherwise, 'targets' must be iterable, returning binary fingerprint strings.
-    'threshold' is the minimum allowed Tanimoto score and must be between 0.0 and 1.0
-    """
+def tanimoto_count_batch(queries, targets, threshold=0.0):
     if not (0.0 <= threshold <= 1.0):
         raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
 
-    f = getattr(targets, "_chemfp_tanimoto_count", None)
+    f = getattr(targets, "_chemfp_tanimoto_count_batch", None)
     if f is not None:
-        return f(query, threshold)
+        return f(queries, threshold)
     
     from chemfp import search
-    return search.generic_tanimoto_count(query, targets, k, threshold)
+    return search.generic_tanimoto_count_batch(query, targets, threshold)
 
+def tanimoto_count(query, targets, threshold=0.0):
+    return tanimoto_count_batch([queries], targets, threshold=0.0)[0]
+
+# There is no non-batch mode because this requires indefinite memory
+# and I don't see a batch search will lead to any savings.
+# If I implement a batch mode, do I return a list of iterators?
 
 def tanimoto_search(query, targets, threshold=0.0):
     """Find all targets at least 'threshold' similar to the query fingerprint
@@ -90,29 +89,22 @@ def tanimoto_search(query, targets, threshold=0.0):
     from chemfp import search
     return search.generic_tanimoto(query, targets, k, threshold)
 
-def tanimoto_knearest_search(query, targets, k, threshold=0.0):
-    """Find the 'k' closest targets at least 'threshold' similar to the query fingerprint
-
-    The 'query' fingerprint string must be in binary representation, not hex.
-    If 'targets' implements '_chemfp_tanimoto_knearset_search' then the search is
-      delegated to it as targets._chemfp_tanimoto_knearest_search(query, threshold)
-    Otherwise, 'targets' must be iterable, returning binary fingerprint strings.
-    'k' must be a positive integer. k=3 would return the nearest 3 neighbors
-    'threshold' is the minimum allowed Tanimoto score and must be between 0.0 and 1.0 .
-
-    Ties are broken arbitrarily but consistently for a given data set.
-    """
-
+def tanimoto_knearest_search_batch(queries, targets, k, threshold=0.0):
     if not (k > 0):
         raise TypeError("k must be a postive integer")
     if not (0.0 <= threshold <= 1.0):
         raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
 
     # Allow the targets to override the default search code
-    f = getattr(targets, "_chemfp_tanimoto_knearest_search", None)
+    f = getattr(targets, "_chemfp_tanimoto_knearest_search_batch", None)
     if f is not None:
-        return f(query, k, threshold)
+        return f(queries, k, threshold)
 
+    results = []
     from chemfp import search
-    return search.generic_tanimoto_knearest(query, targets, k, threshold)
 
+    return search.generic_tanimoto_knearest_search_batch(query, targets, k, threshold)
+                       
+    
+def tanimoto_knearest_search(query, targets, k, threshold=0.0):
+    return tanimoto_knearest_search([query], targets, k, threshold)[0]
