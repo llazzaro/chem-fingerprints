@@ -30,23 +30,64 @@ import __builtin__
 from . import decompressors
 from .error_handlers import ChemFPError
 
+def read_structure_fingerprints(typeinfo, source=None, format=None):
+    from . import types
+    return types.read_structure_fingerprints(typeinfo, source, format)
+    
+# Low-memory, forward-iteration, or better
+def open(source, format=None, fp_type=None):    
+    if format is not None:
+        if format in ("fps", "fps.gz"):
+            from . import readers
+            return readers.open_fps(source)
+        if format in ("fpb",):
+            raise NotImplementedError
 
-def open_reader(source):
+        # Otherwise it's a structure input.
+        return get_structure_reader(source, format, fp_type)
+
+    # Format is None; base on the filename.
+    if isinstance(source, basestring):
+        filename = source
+    else:
+        filename = getattr(source, "name", ".fps")
+
+    compression = ""
+    if filename.endswith(".gz"):
+        filename = filename[-3:]
+        compression = ".gz"
+
+    if filename.endswith(".fps"):
+        from . import readers
+        return readers.open_fps(source, format="fps"+compression)
+
+    if filename.endswith(".fpb"):
+        raise NotImplementedError
+
+    # And lastly, it's a structure format
+    return read_structure_fingerprints(fp_type, source, format)
+    
+
+def open_fps(source):
     from . import readers
     return readers.open_fps(source)
 
-def open_in_memory(source):
-    ext = source[-4:].lower()
-    if ext == ".fps":
-        from chemfp import readers
-        return readers.fps_to_in_memory(readers.open_fps(source))
-    elif ext == ".fpb":
-        raise NotImplementedError("No support yet for .fpb files")
-    # Should I open and sniff?
-    raise NotImplementedError("Unknown fingerprint format extension %r" % (ext,))
-    
-    raise NotImplementedError
+def read_into_memory(source, format=None, fp_type=None):
+    if isinstance(source, basestring):
+        reader = open(source, format, fp_type)
+    else:
+        # Then the source must be a set of fingerprints
+        reader = source
+        
+    # See if it has its own way to generate an in-memory search
+    f = getattr(source, "_chemfp_in_memory_", None)
+    if f is not None:
+        return f()
 
+    # Nope. Use the basic forward-iteration algorithm
+    from chemfp import readers
+    return readers.fps_to_in_memory(source)
+    
 def open_mmap(source):
     raise NotImplementedError
 

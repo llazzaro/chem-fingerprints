@@ -73,6 +73,8 @@ parser.add_argument("-t" ,"--threshold", help="minimum similarity score threshol
 parser.add_argument("-q", "--queries", help="filename containing the query fingerprints")
 parser.add_argument("--query-hex", help="query in hex")
 
+parser.add_argument("--type", help="fingerprint type", default=None)
+
 parser.add_argument("-c", "--count", help="report counts", action="store_true")
 
 parser.add_argument("-b", "--batch-size", help="batch size",
@@ -123,11 +125,15 @@ def main(args=None):
         args.error("Cannot specify both --use-reader and --in-memory")
     
     batch_size = args.batch_size # args.batch_size
-    
+
+    targets = chemfp.open(target_filename, fp_type=args.type)
+    fp_type = targets.header.params # XXX params?
+
     if args.queries is not None:
-        queries = chemfp.open_reader(args.queries)
+        queries = chemfp.open(args.queries, fp_type=fp_type)
     else:
-        queries = chemfp.open_reader(sys.stdin)
+        queries = chemfp.open(None, fp_type=fp_type)
+    print "Queries", queries
     query_iter = iter(queries)
 
     # See if there's enough queries to justify reading the targets into memory
@@ -171,20 +177,18 @@ def main(args=None):
     # 6 input structures.
 
     if args.use_reader:
-        use_reader = True
+        use_in_memory = False
     elif args.in_memory:
-        use_reader = False
+        use_in_memoery = True
     elif (len(batch_ids) <= 6 and batch_size > 6):
-        use_reader = True
+        use_in_memory = False
     else:
-        use_reader = False
+        use_in_memory = True
 
-    if use_reader:
-        targets = chemfp.open_reader(target_filename)
-    else:
-        targets = chemfp.open_in_memory(target_filename)
+    if use_in_memory:
+        targets = chemfp.read_into_memory(targets)
 
-    print targets
+    print "Targets", targets
 
 #    if not compatible(queries, targets):
 #        raise SystemExit("Can not do search")

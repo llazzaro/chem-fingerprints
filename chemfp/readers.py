@@ -5,6 +5,7 @@ from __builtin__ import open as _builtin_open
 import binascii
 import _chemfp
 import re
+import sys
 import heapq
 
 from chemfp import bitops
@@ -46,7 +47,10 @@ def _open_filename_or_stream(source, mode):
 #def open_fps_mmap(source):
     
 
-def open_fps(source):
+def open_fps(source, format=None):
+    assert format in (None, "fps")
+    if source is None:
+        source = sys.stdin
     filename, infile = _open_filename_or_stream(source, "rU")
     header, lineno, block = read_header(infile, filename)
     
