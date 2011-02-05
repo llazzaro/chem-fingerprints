@@ -4,6 +4,7 @@ import textwrap
 
 from .. import argparse, shared
 from .. import openeye as oe
+from .. import types
 
 ##### Handle command-line argument parsing
 
@@ -90,9 +91,7 @@ def main(args=None):
         if args.path:
             parser.error("Cannot specify both --maccs166 and --path")
         # Create the MACCS keys fingerprinter
-        fingerprinter = oe.get_maccs_fingerprinter()
-        num_bits = 166
-        type = "OpenEye-MACCS166/1"
+        opener = types.OpenEyeMACCS166()
     else:
         if not (16 <= args.num_bits <= 65536):
             parser.error("--num-bits must be between 16 and 65536 bits")
@@ -110,38 +109,21 @@ def main(args=None):
         except TypeError, err:
             parser.error(str(err))
 
-        # Create the normalized string form
-        atype_string = oe.atom_value_to_description(atype)
-        btype_string = oe.bond_value_to_description(btype)
 
-
-        type = oe.format_path_type(min_bonds=args.min_bonds,
-                                   max_bonds=args.max_bonds,
-                                   atype=atype_string,
-                                   btype=btype_string)
-
-        # Create the path fingerprinter
-        fingerprinter = oe.get_path_fingerprinter(
-            num_bits=num_bits,
-            min_bonds=args.min_bonds,
-            max_bonds=args.max_bonds,
-            atype=atype,
-            btype=btype)
+        opener = types.OpenEyePath({"num_bits": num_bits,
+                                    "min_bonds": args.min_bonds,
+                                    "max_bonds": args.max_bonds,
+                                    "atype": atype,
+                                    "btype": btype})
 
     # Ready the input reader/iterator
     try:
-        reader = oe.read_structures(args.filename, args.format)
+        reader = opener.read_structure_fingerprints(args.filename, args.format)
     except (KeyError, IOError), err:
         sys.stderr.write(str(err))
         raise SystemExit(1)
 
-    shared.generate_fpsv1_output(dict(num_bits=num_bits,
-                                      software=oe.SOFTWARE,
-                                      source=args.filename,
-                                      type=type),
-                                 reader,
-                                 fingerprinter,
-                                 args.output)
+    shared.write_fpsv1_output(reader, args.output)
 
 if __name__ == "__main__":
     main()

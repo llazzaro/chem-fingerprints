@@ -292,9 +292,22 @@ format_rdk_type = RDK_TYPE.format
 
 ########### The MACCS fingerprinter
 
+
 def maccs166_fingerprinter(mol):
     fp = GenMACCSKeys(mol)
     # In RDKit the first bit is always bit 1 .. bit 0 is empty (?!?!)
     bitstring_with_167_bits = fp.ToBitString()
     return decoders.from_binary_lsb(bitstring_with_167_bits[1:])[1]
 
+
+def read_maccs_fingerprints_v1(typeinfo, source, format):
+    assert typeinfo.args == []
+    fingerprinter = maccs166_fingerprinter
+    structure_reader = read_structures(source, format)
+    return StructureFPReader(to_header(num_bits = fingerprinter.num_bits,
+                                       source = structure_reader.source,
+                                       software = SOFTWARE,
+                                       type = fingerprinter.get_type(),
+                                       date = None),
+                             structure_reader,
+                             fingerprinter)

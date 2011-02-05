@@ -18,7 +18,7 @@ FPSv1_HEADER = (
 def now_in_isoformat():
     "Current date and time in ISO format"
     # Exclude fractional seconds
-    return datetime.now().isoformat().split(".", 1)[0]
+    return datetime.utcnow().isoformat().split(".", 1)[0]
 
 def source_to_source_line(source):
     if source is None:
@@ -96,4 +96,26 @@ def generate_fpsv1_output(header_kwargs,
             outfile.close()
         except IOError:
             pass
-        
+
+def write_fpsv1_header(outfile, header):
+    s = format_fpsv1_header(header.num_bits,
+                            getattr(header, "software", None),
+                            getattr(header, "type", None),
+                            getattr(header, "source", None),  # XX what about multiple sources?
+                            getattr(header, "date", None),
+                            )
+    outfile.write(s)
+
+def write_fpsv1_output(reader, output_filename):
+    outfile = open_output(output_filename)
+    try:
+        write_fpsv1_header(outfile, reader.header)
+        for (fp, title) in reader:
+            outfile.write("%s %s\n" % (fp.encode("hex"), title))
+    except IOError, err:
+        if err.errno != errno.EPIPE:
+            raise
+        try:
+            outfile.close()
+        except IOError:
+            pass

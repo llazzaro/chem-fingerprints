@@ -277,10 +277,6 @@ def get_fingerprinter(fp_type):
             return fp_info.calc_fp
     raise TypeError("Unsupported fingerprint type: %r" % (fp_type,))
     
-def read_structure_fingerprints(fp_type, filename=None, format=None):
-    fingerprinter = get_fingerprinter(fp_type)
-    return ReadStructureFingerprints(fingerprinter.header, fingerprinter, read_structures(filename, format))
-                                      
 
 def read_structures(filename=None, format=None):
     """read_structures(filename, format) -> (title, OBMol) iterator 

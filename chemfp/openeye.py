@@ -342,80 +342,32 @@ def _stdin_check(_apply_format):
 
 ############# Methods to get the right structure readers
 
-def read_maccs_fingerprints_v1(typeinfo, source=None, format=None):
+def read_maccs_fingerprints_v1(source=None, format=None, kwargs={}):
+    assert not kwargs
     # The OEChem interface only handles stdin and filenames
     if not (isinstance(source, basestring) or source is None):
         raise NotImplementedError
 
     fingerprinter = get_maccs_fingerprinter()
     structure_reader = read_structures(source, format)
-    return StructureFPReader({"num_bits": 166,
-                              "source": source,
-                              "software": SOFTWARE,
-                              "type": typeinfo.type,
-                              "date": None
-                              },
-                             structure_reader,
-                             fingerprinter)
 
-_path_parameter_converters = {
-    "num_bits": int,
-    "min_bonds": int,
-    "max_bonds": int,
-    "atype": atom_description_to_value,
-    "btype": bond_description_to_value,
-    }
+    def read_oechem_maccs_structure_fingerprints():
+        for (title, mol) in structure_reader:
+            yield fingerprinter(mol), title
+    return read_oechem_maccs_structure_fingerprints
 
-def read_path_fingerprints_v1(typeinfo, source=None, format=None):
+def read_path_fingerprints_v1(source=None, format=None, kwargs={}):
     # The OEChem interface only handles stdin and filenames
     if not (isinstance(source, basestring) or source is None):
         raise NotImplementedError
     
-    kwargs = {"num_bits": 4096}
-    for k, v in typeinfo.parameters.items():
-        converter = _path_parameter_converters[k]
-        kwargs[k] = converter(v)
-
-    # XXX Check that all the args are available
     fingerprinter = get_path_fingerprinter(**kwargs)
     structure_reader = read_structures(source, format)
-    return StructureFPReader(to_header(num_bits = kwargs["num_bits"],
-                                       source = source,
-                                       software = SOFTWARE,
-                                       type=format_path_type(**kwargs),
-                                       date=None),
-                             structure_reader,
-                             fingerprinter)
-
-class Header(object):
-    pass
-
-from datetime import datetime
-def to_header(**kwargs):
-    header = Header()
-    for name in ("num_bits", "software", "type", "source"):
-        value = kwargs.pop(name)
-        setattr(header, name, value)
-    date = kwargs.pop("date")
-    if date is None:
-        date = datetime.utcnow().isoformat().split(".", 1)[0]
-    setattr(header, "date", date)
-    return header
-
-class StructureFPReader(object):
-    def __init__(self, header, structure_reader, fingerprinter):
-        self.header = header
-        self.structure_reader = structure_reader
-        self.fingerprinter = fingerprinter
-
-    def iter_fingerprints(self):
-        for (title, mol) in self.structure_reader:
-            yield self.fingerprinter(mol), title, 
-
-    def __iter__(self):
-        return self.iter_fingerprints()
-
     
+    def read_oechem_path_structure_fingerprints():
+        for (title, mol) in structure_reader:
+            yield fingerprinter(mol), title
+    return read_oechem_path_structure_fingerprints()
 
 ############# Used when generate the FPS header
 
@@ -424,4 +376,4 @@ SOFTWARE = "OEGraphSim/{release} ({version})".format(
     version = OEGraphSimGetVersion())
 
 format_path_type = (
-    "OpenEye-Path/1 min_bonds={min_bonds} max_bonds={max_bonds} atype={atype} btype={btype}".format)
+    "OpenEye-Path/1 num_bits={num_bits} min_bonds={min_bonds} max_bonds={max_bonds} atype={atype} btype={btype}".format)
