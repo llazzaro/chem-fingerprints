@@ -318,7 +318,7 @@ class TestHeaderOutput(unittest2.TestCase):
     def test_type(self):
         result = self._field("", "#type")
         self.assertEquals(result,
-  "#type=OpenEye-Path/1 min_bonds=0 max_bonds=5 "
+  "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 "
   "atype=Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization "
   "btype=BondOrder|Chiral")
 

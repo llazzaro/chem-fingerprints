@@ -342,7 +342,7 @@ def _stdin_check(_apply_format):
 
 ############# Methods to get the right structure readers
 
-def read_maccs_fingerprints_v1(source=None, format=None, kwargs={}):
+def read_maccs166_fingerprints_v1(source=None, format=None, kwargs={}):
     assert not kwargs
     # The OEChem interface only handles stdin and filenames
     if not (isinstance(source, basestring) or source is None):
@@ -354,7 +354,7 @@ def read_maccs_fingerprints_v1(source=None, format=None, kwargs={}):
     def read_oechem_maccs_structure_fingerprints():
         for (title, mol) in structure_reader:
             yield fingerprinter(mol), title
-    return read_oechem_maccs_structure_fingerprints
+    return read_oechem_maccs_structure_fingerprints()
 
 def read_path_fingerprints_v1(source=None, format=None, kwargs={}):
     # The OEChem interface only handles stdin and filenames

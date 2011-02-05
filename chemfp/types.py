@@ -62,7 +62,7 @@ class OpenEyeMACCS166_v1(_NoParameters):
 
     def read_structure_fingerprints(self, source=None, format=None):
         from chemfp.openeye import read_maccs166_fingerprints_v1, SOFTWARE
-        reader = read_maccs_fingerprints_v1(source, format, kwargs)
+        reader = read_maccs166_fingerprints_v1(source, format)
         return self._open(SOFTWARE, source, reader)
 
 OpenEyeMACCS166 = OpenEyeMACCS166_v1
