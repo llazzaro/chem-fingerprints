@@ -173,7 +173,7 @@ class TestIO(unittest2.TestCase):
 
     def test_bad_format(self):
         result = runner.run_exit("--in spam")
-        self.assertEquals(result, "Unknown structure format 'spam'. Supported formats are: sdf, smi")
+        self.assertEquals(result, "Unknown structure format 'spam'. Supported formats are: sdf, smi\n")
 
 if __name__ == "__main__":
     unittest2.main()

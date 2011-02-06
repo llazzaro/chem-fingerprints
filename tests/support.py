@@ -1,5 +1,19 @@
 import sys
-from cStringIO import StringIO as SIO
+from cStringIO import StringIO
+
+# Ignore the close. io.write_fps1_output() auto-closes its output.
+class SIO(object):
+    def __init__(self):
+        self.sio = StringIO()
+    def write(self, s):
+        return self.sio.write(s)
+    def writelines(self, lines):
+        return self.sio.writelines(lines)
+    def close(self):
+        # Ignore this
+        pass
+    def getvalue(self):
+        return self.sio.getvalue()
 
 PUBCHEM_SDF = "pubchem.sdf"
 PUBCHEM_SDF_GZ = "pubchem.sdf.gz"

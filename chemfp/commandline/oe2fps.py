@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import sys
 import textwrap
 
-from .. import argparse, types. io
+from .. import argparse, types, io
 from .. import openeye as oe
 
 ##### Handle command-line argument parsing

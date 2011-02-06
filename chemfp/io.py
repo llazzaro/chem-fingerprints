@@ -135,19 +135,19 @@ def write_fps1_header(outfile, header):
 
     if header.software is not None:
         assert "\n" not in header.software
-        lines.append("#software=" + header.software.encode("utf8"))
+        lines.append("#software=" + header.software.encode("utf8")+"\n")
 
     if header.type is not None:
         assert "\n" not in header.type
-        lines.append("#type=" + header.type.encode("ascii")) # type cannot contain non-ASCII characters
+        lines.append("#type=" + header.type.encode("ascii")+"\n") # type cannot contain non-ASCII characters
 
     if header.source is not None:
         # Ignore newlines in the source filename, if present
         source = header.source.replace("\n", "")
-        lines.append("#source=" + source.encode("utf8"))
+        lines.append("#source=" + source.encode("utf8")+"\n")
 
     if header.date is not None:
-        lines.append(header.date.encode("ascii")) # date cannot contain non-ASCII characters
+        lines.append("#date=" + header.date.encode("ascii")+"\n") # date cannot contain non-ASCII characters
         
     outfile.writelines(lines)
 
@@ -168,11 +168,12 @@ class _IgnorePipeErrors(object):
 ignore_pipe_errors = _IgnorePipeErrors()
 
 
-def write_fingerprint(outfile, fp, title):
+def write_fps1_fingerprint(outfile, fp, title):
     outfile.write("%s %s\n" % (binascii.hexlify(fp), title))
 
 def write_fps1_output(reader, destination):
     hexlify = binascii.hexlify
+    outfile = open_output(destination)
     with contextlib.closing(open_output(destination)) as outfile:
         with ignore_pipe_errors:
             write_fps1_magic(outfile)

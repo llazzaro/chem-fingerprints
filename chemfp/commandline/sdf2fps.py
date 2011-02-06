@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 import re
 
-from .. import argparse, decoders, sdf_reader
+from .. import argparse, decoders, sdf_reader, io
 
 
 def _check_num_bits(num_bits,  # from the user
@@ -207,7 +207,6 @@ def main(args=None):
             with io.ignore_pipe_errors:
                 io.write_fps1_magic(outfile)
                 io.write_fps1_header(outfile, header)
-                io.write_fps1_fingerprint(outfile, fp, title)
 
         else:
             if (fp_num_bits != expected_fp_num_bits or
