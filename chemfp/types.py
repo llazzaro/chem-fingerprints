@@ -230,6 +230,6 @@ def parse_type(type):
     return cls.from_parameters(parameters)
 
 
-def read_structure_fingerprints(typeinfo, source=None, format=None):
+def read_structure_fingerprints(type, source=None, format=None):
     structure_fingerprinter = parse_type(type)
     return structure_fingerprinter.read_structure_fingerprints(source, format)
