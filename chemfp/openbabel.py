@@ -12,6 +12,9 @@ import warnings
 
 import openbabel as ob
 
+from . import io
+
+
 # OpenBabel really wants these two variables. I get a segfault if
 # BABEL_LIBDIR isn't defined, and from the mailing list, some of the
 # code doesn't work correctly without BABEL_DATADIR. I've had problems
@@ -174,61 +177,6 @@ _check_for_maccs()
 
 #########
 
-
-def _guess_format_from_filename(filename):
-    "This is an internal function"
-    # Guess the format based on the filename extension
-    base, ext = os.path.splitext(filename.lower())
-    if ext in ("", "."):
-        # No extension? Assume smiles
-        return "smi"
-
-    if ext != ".gz":
-        # Not compressed? Use whatever was given.
-        return ext[1:] # remove leading "."
-
-    # Compressed? Get the next extension
-    base, ext = os.path.splitext(base)
-    if ext in ("", "."):
-        # No extension? Assume smiles
-        return "smi"
-
-    # Use the 2nd level extension
-    return ext[1:] # remove leading "."
-
-def normalize_format(filename, format):
-    """normalize_format(filename, format) -> normalized format name
-
-    This is perhaps easiestly explained by example:
-        ("input.dat", "smi.gz") -> "smi"   (format takes precedence)
-        ("input.smi", "sdf") -> "sdf"
-        ("INPUT.SDF", None) -> "sdf"       (otherwise use the filename)
-        ("input.pdb.gz", None) -> "pdb"
-        (None, None) -> "smi"              (otherwise it's SMILES)
-
-    In words, get an OpenBabel format name given an input filename and
-    format. The rules are:
-      - Convert input strings to lower-case.
-      - Remove the ".gz" suffix from each, if present.
-      - If the format is not None, return it as the normalized format.
-      - If the filename is not None, return the suffix.
-      - If the filename has an extension, use that as the format.
-      - Otherwise, it's in "smi" format.
-    """
-    if format is not None:
-        format = format.lower()
-        # Ignore .gz - Babel handles those automatically
-        if format.endswith(".gz"):
-            format = format[:-3]
-        return format
-
-    if filename is not None:
-        return _guess_format_from_filename(filename)
-
-    # Use SMILES by default for stdin
-    return "smi"
-
-
 def _get_ob_error(log):
     msgs = log.GetMessagesOfLevel(ob.obError)
     return "".join(msgs)
@@ -241,11 +189,19 @@ def read_structures(filename=None, format=None):
     in normalized_format(filename, format) format. If filename is None
     then this reads from stdin instead of the named file.
     """
+    if not (filename is None or isinstance(filename, basestring)):
+        raise TypeError("'filename' must be None or a string")
+    
     obconversion = ob.OBConversion()
+    format_name, compression = io.normalize_format(filename, format,
+                                                   default=("smi", ""))
+    if compression not in ("", ".gz"):
+        raise TypeError("Unsupported compression type for %r" % (filename,))
 
-    format = normalize_format(filename, format)
-    if not obconversion.SetInFormat(format):
-        raise TypeError("Unknown structure format {format!r}".format(format=format))
+    # OpenBabel auto-detects gzip compression.
+
+    if not obconversion.SetInFormat(format_name):
+        raise TypeError("Unknown structure format {format!r}".format(format=format_name))
     
     obmol = ob.OBMol()
 
