@@ -17,7 +17,7 @@ def generic_tanimoto_search(query, targets, threshold):
         if score == -1:
             raise AssertionError("should not happen")
         if score >= threshold:
-            yield id, score
+            yield score, id
     
 def generic_tanimoto_count_batch(queries, targets, threshold):
     results = []
