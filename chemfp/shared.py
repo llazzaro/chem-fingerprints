@@ -27,7 +27,8 @@ def source_to_source_line(source):
     # Encode in utf-8 then remove any newlines.
     if isinstance(source, unicode):
         source = source.encode("utf8")
-    source = "".join(source.splitlines())
+    if "\n" in source:
+        source = source.replace("\n", "")  # Support newlines by ignoring them
     return "#source=" + source + "\n"
 
 def format_fpsv1_header(num_bits, software=None, type=None, source=None, date=None):
@@ -35,13 +36,17 @@ def format_fpsv1_header(num_bits, software=None, type=None, source=None, date=No
         date = now_in_isoformat()
 
     source_line = source_to_source_line(source)
+
     if software is None:
         software_line = ""
     else:
+        assert "\n" not in software
         software_line = "#software="+software+"\n"
+
     if type is None:
         type_line = ""
     else:
+        assert "\n" not in type
         type_line = "#type="+type+"\n"
 
     return FPSv1_HEADER.format(
