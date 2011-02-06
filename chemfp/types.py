@@ -231,5 +231,5 @@ def parse_type(type):
 
 
 def read_structure_fingerprints(typeinfo, source=None, format=None):
-    structure_fingerprinter = parse_type(typeinfo)
+    structure_fingerprinter = parse_type(type)
     return structure_fingerprinter.read_structure_fingerprints(source, format)

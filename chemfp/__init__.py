@@ -30,12 +30,12 @@ import __builtin__
 from . import decompressors
 from .error_handlers import ChemFPError
 
-def read_structure_fingerprints(typeinfo, source=None, format=None):
+def read_structure_fingerprints(type, source=None, format=None):
     from . import types
-    return types.read_structure_fingerprints(typeinfo, source, format)
+    return types.read_structure_fingerprints(type, source, format)
     
 # Low-memory, forward-iteration, or better
-def open(source, format=None, fp_type=None):
+def open(source, format=None, type=None):
     format_name, compression = io.normalize_format(source, format)
 
     if format_name == "fps":
@@ -46,20 +46,17 @@ def open(source, format=None, fp_type=None):
         raise NotImplementedError
 
     # Otherwise it's a structure input.
-    if fp_type is None:
+    if type is None:
         raise TypeError("'type' is required to read structure fingerprints")
-    return read_structure_fingerprints(fp_type, source, format_name+compression)
+    return read_structure_fingerprints(type, source, format_name+compression)
 
 def open_fps(source):
     from . import readers
     return readers.open_fps(source)
 
-def read_into_memory(reader, format=None, fp_type=None):
-    if isinstance(reader, basestring):
-        reader = open(reader, format, fp_type)
-        
+def read_into_memory(reader):
     # See if it has its own way to generate an in-memory search
-    chemfp_in_memory = getattr(source, "_chemfp_in_memory_", None)
+    chemfp_in_memory = getattr(reader, "_chemfp_in_memory_", None)
     if chemfp_in_memory is not None:
         return chemfp_in_memory()
 
