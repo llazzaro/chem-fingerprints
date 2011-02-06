@@ -23,6 +23,11 @@ from openeye.oegraphsim import *
 __all__ = ["read_structures", "get_path_fingerprinter", "get_maccs_fingerprinter"]
 
 
+class UnknownFormat(KeyError):
+    def __str__(self):
+        return "Unknown format %r" % (self.args[0],)
+
+
 ##### Handle the atom and bond type flags for path fingerprints
 
 # The atom and bond type flags can be specified on the command-line
@@ -277,8 +282,7 @@ def _get_format_setter(format=None):
                 format=format, better=format[1:]), DeprecationWarning)
 
     if format_flag is None:
-        # XXX better exception
-        raise KeyError("Unknown format %r" % (format,))
+        raise UnknownFormat(format)
 
     def _apply_format(ifs):
         ifs.SetFormat(format_flag)
