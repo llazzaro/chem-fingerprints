@@ -1,31 +1,11 @@
 # Information about fingerprint types
 
-class Header(object):
-    pass
+from . import io
 
 from datetime import datetime
-def to_header(**kwargs):
-    header = Header()
-    for name in ("num_bits", "software", "type", "source"):
-        value = kwargs.pop(name)
-        if value is not None:
-            setattr(header, name, value)
-    date = kwargs.pop("date")
-    if date is None:
-        date = datetime.utcnow().isoformat().split(".", 1)[0]
-    setattr(header, "date", date)
-    return header
 
-class StructureFPReader(object):
-    def __init__(self, header, fingerprint_reader):
-        self.header = header
-        self.fingerprint_reader = fingerprint_reader
-
-    def iter_fingerprints(self):
-        return self.fingerprint_reader
-
-    def __iter__(self):
-        return self.fingerprint_reader
+def utcnow():
+    return datetime.utcnow().isoformat().split(".", 1)[0]
 
 def _convert_parameters(parameters, converters):
     kwargs = {}
@@ -35,18 +15,19 @@ def _convert_parameters(parameters, converters):
     return kwargs
 
 class _Opener(object):
-    def _open(self, software, source, reader):
+    def _open(self, software, source, iterator):
         if source is not None:
             if not isinstance(source, basestring):
                 # Then it's a Python file object
                 source = getattr(source, "name", None)
-        
-        return StructureFPReader(to_header(num_bits = self.num_bits,
-                                           source = source,
-                                           software = software,
-                                           type = self.get_type(),
-                                           date = None),
-                                 reader)
+
+        return io.FPIterator(io.Header(num_bits = self.num_bits,
+                                       source = source,
+                                       software = software,
+                                       type = self.get_type(),
+                                       date = utcnow()),
+                             iterator)
+    
 class _NoParameters(_Opener):
     @classmethod
     def from_parameters(cls, parameters):
