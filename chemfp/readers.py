@@ -11,24 +11,9 @@ import heapq
 from chemfp import bitops
 import ctypes
 
-from . import search
+from . import search, io
 
 BLOCKSIZE = 20000
-
-class FPHeader(object):
-    def __init__(self, num_bits=None, software=None, params=None,
-                 source=None, date=None):
-        self.num_bits = num_bits
-        self.software = software
-        self.params = params
-        self.source = source
-        self.date = date
-
-    def _get_num_bytes_per_fp(self):
-        if self.num_bits is None:
-            return None
-        return (self.num_bits+7)//8
-    num_bytes_per_fp = property(_get_num_bytes_per_fp)
 
 
 
@@ -168,7 +153,7 @@ def warn_to_stderr(filename, lineno, message):
 
 _whitespace = re.compile(r"[ \t\n]")
 def read_header(f, filename, warn=warn_to_stderr):
-    header = FPHeader()
+    header = io.Header()
 
     lineno = 0
     for block in _read_blocks(f):
@@ -230,8 +215,10 @@ def read_header(f, filename, warn=warn_to_stderr):
             elif key == "software":
                 header.software = value
             elif key == "type":
-                #header.params = normalize_params(value)
-                header.params = value
+                # Should I have an auto-normalization step here which
+                # removes excess whitespace?
+                #header.type = normalize_type(value)
+                header.type = value
             elif key == "source":
                 header.source = value
             elif key == "date":
