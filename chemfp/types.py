@@ -2,11 +2,6 @@
 
 from . import io
 
-from datetime import datetime
-
-def utcnow():
-    return datetime.utcnow().isoformat().split(".", 1)[0]
-
 def _convert_parameters(parameters, converters):
     kwargs = {}
     for (name, value) in parameters:
@@ -25,7 +20,7 @@ class _Opener(object):
                                        source = source,
                                        software = software,
                                        type = self.get_type(),
-                                       date = utcnow()),
+                                       date = io.utcnow()),
                              iterator)
     
 class _NoParameters(_Opener):

@@ -1,6 +1,6 @@
 # Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 import sys
-from chemfp import argparse, shared, rdkit, types
+from chemfp import argparse, io, rdkit, types
 
 ########### Configure the command-line parser
 
@@ -88,10 +88,10 @@ def main(args=None):
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
     except (TypeError, IOError), err:
-        sys.stderr.write(str(err))
+        sys.stderr.write("Cannot read structure fingerprints: %s\n" % err)
         raise SystemExit(1)
 
-    shared.write_fpsv1_output(reader, args.output)
+    io.write_fps1_output(reader, args.output)
 
 if __name__ == "__main__":
     main()

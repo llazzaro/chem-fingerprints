@@ -1,6 +1,6 @@
 import sys
 from chemfp import openbabel as ob
-from chemfp import argparse, shared, types
+from chemfp import argparse, io, types
 
 
 ############ Command-line parser definition
@@ -87,10 +87,10 @@ def main(args=None):
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
     except (KeyError, IOError), err:
-        sys.stderr.write(str(err))
+        sys.stderr.write("Cannot read structure fingerprints: %s" % err)
         raise SystemExit(1)
 
-    shared.write_fpsv1_output(reader, args.output)
+    io.write_fps1_output(reader, args.output)
     
 if __name__ == "__main__":
     main()

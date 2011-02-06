@@ -2,9 +2,8 @@ from __future__ import absolute_import
 import sys
 import textwrap
 
-from .. import argparse, shared
+from .. import argparse, types. io
 from .. import openeye as oe
-from .. import types
 
 ##### Handle command-line argument parsing
 
@@ -122,7 +121,7 @@ def main(args=None):
         sys.stderr.write("Cannot read structure fingerprints: %s\n" % err)
         raise SystemExit(1)
 
-    shared.write_fpsv1_output(reader, args.output)
+    io.write_fps1_output(reader, args.output)
 
 if __name__ == "__main__":
     main()

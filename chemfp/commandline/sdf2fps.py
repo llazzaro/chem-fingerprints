@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import sys
 import re
 
-from .. import argparse, decoders, sdf_reader, shared
+from .. import argparse, decoders, sdf_reader
 
 
 def _check_num_bits(num_bits,  # from the user
@@ -195,15 +195,19 @@ def main(args=None):
             expected_fp_num_bits = fp_num_bits
             expected_num_bytes = num_bytes
 
+            header = io.Header(num_bits = num_bits,
+                               software = args.software,
+                               type = args.type,
+                               source = args.filename,
+                               date = io.utcnow())
+            
             # Now I know num_bits and num_bytes
             # Time to create output!
-            outfile = shared.open_output(args.output)
-            shared.write_to_pipe(outfile,
-                                 shared.format_fpsv1_header(
-                    num_bits=num_bits,
-                    software=args.software,
-                    type=args.type,
-                    source=args.filename))
+            outfile = io.open_output(args.output)
+            with io.ignore_pipe_errors:
+                io.write_fps1_magic(outfile)
+                io.write_fps1_header(outfile, header)
+                io.write_fps1_fingerprint(outfile, fp, title)
 
         else:
             if (fp_num_bits != expected_fp_num_bits or
@@ -212,9 +216,10 @@ def main(args=None):
                     ("ERROR: The {message}, tag {tag} has an inconsistent "
                      "fingerprint length".format(
                             message=location.message(), tag=args.fp_tag)))
+
+        with io.ignore_pipe_errors:
+            io.write_fps1_fingerprint(outfile, fp, title)
             
-        shared.write_to_pipe(outfile,
-                             "%s %s\n" % (fp.encode("hex"), title))
     if first_time:
         # Looks like I didn't find anything.
         sys.stderr.write("WARNING: No input records contained fingerprints. "

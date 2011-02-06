@@ -1,5 +1,13 @@
 import re
 import os
+import sys
+import binascii
+import contextlib
+
+from datetime import datetime
+
+def utcnow():
+    return datetime.utcnow().isoformat().split(".", 1)[0]
 
 class Header(object):
     def __init__(self, num_bits=None, software=None, type=None,
@@ -28,7 +36,8 @@ class FPIterator(object):
     def __iter__(self):
         return self.iterator
     
-
+####
+    
 _compression_extensions = {
     ".gz": ".gz",
     ".gzip": ".gz",
@@ -88,7 +97,7 @@ def normalize_format(source, format, default=("fps", None)):
         return (ext[1:], "")
 
     # Found a compression, now look for the format
-    compression = ext
+    compression = _compression_extensions[ext]
 
     base, ext = os.path.splitext(base)
     if ext == "":
@@ -99,3 +108,75 @@ def normalize_format(source, format, default=("fps", None)):
     format_name = ext[1:].lower()
     
     return (format_name, compression)
+
+####
+
+def open_output(destination):
+    if destination is None:
+        return sys.stdout
+    base, ext = os.path.splitext(destination)
+    ext = ext.lower()
+    if ext not in _compression_extensions:
+        return open(destination, "w")
+    ext = _compression_extensions[ext]
+    if ext == ".gz":
+        import gzip
+        return gzip.open(destination, "w")
+    
+    
+
+def write_fps1_magic(outfile):
+    outfile.write("#FPS1\n")
+
+def write_fps1_header(outfile, header):
+    lines = []
+    if header.num_bits is not None:
+        lines.append("#num_bits=%d\n" % header.num_bits)
+
+    if header.software is not None:
+        assert "\n" not in header.software
+        lines.append("#software=" + header.software.encode("utf8"))
+
+    if header.type is not None:
+        assert "\n" not in header.type
+        lines.append("#type=" + header.type.encode("ascii")) # type cannot contain non-ASCII characters
+
+    if header.source is not None:
+        # Ignore newlines in the source filename, if present
+        source = header.source.replace("\n", "")
+        lines.append("#source=" + source.encode("utf8"))
+
+    if header.date is not None:
+        lines.append(header.date.encode("ascii")) # date cannot contain non-ASCII characters
+        
+    outfile.writelines(lines)
+
+class _IgnorePipeErrors(object):
+    def __enter__(self):
+        return None
+    
+    def __exit__(self, type, value, tb):
+        if type is None:
+            return False
+        import errno
+        # Catch any pipe errors, like when piping the output to "head -10"
+        if issubclass(type, IOError) and value[0] == errno.EPIPE:
+            return True
+
+        return False
+
+ignore_pipe_errors = _IgnorePipeErrors()
+
+
+def write_fingerprint(outfile, fp, title):
+    outfile.write("%s %s\n" % (binascii.hexlify(fp), title))
+
+def write_fps1_output(reader, destination):
+    hexlify = binascii.hexlify
+    with contextlib.closing(open_output(destination)) as outfile:
+        with ignore_pipe_errors:
+            write_fps1_magic(outfile)
+            write_fps1_header(outfile, reader.header)
+
+            for (fp, title) in reader:
+                outfile.write("%s %s\n" % (hexlify(fp), title))
