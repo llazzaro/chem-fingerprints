@@ -38,7 +38,7 @@ _compression_extensions = {
     }
 _compression_regex = "|".join(re.escape(ext) for ext in _compression_extensions)
 
-_format_pat = re.compile("^([a-zA-Z0-9]+)(" + _compression_regex + ")$")
+_format_pat = re.compile("^([a-zA-Z0-9]+)(" + _compression_regex + ")?$")
 
 def normalize_format(source, format, default=("fps", None)):
     if source is None:
@@ -53,12 +53,7 @@ def normalize_format(source, format, default=("fps", None)):
     else:
         raise TypeError("Unknown source type %r" % (source,))
     
-    if filename is None:
-        # Reading from stdin or an unnamed file-like object
-        if format is None:
-            # Unknown format; use the default
-            return default
-
+    if format is not None:
         # This must be of the form <name> [. <compression> ]
         m = _format_pat.match(format)
         if m is None:
@@ -72,7 +67,13 @@ def normalize_format(source, format, default=("fps", None)):
 
         format_name = m.group(1)
         return (format_name, compression)
-        
+
+    if filename is None:
+        # Reading from stdin or an unnamed file-like object with no
+        # specified format Not going to sniff the input. Instead, just
+        return default
+
+    
 
     # The filename could have 0, 1 or 2 extensions
     base, ext = os.path.splitext(filename)
