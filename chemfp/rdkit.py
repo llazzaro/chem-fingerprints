@@ -14,7 +14,7 @@ from rdkit import Chem
 from rdkit.Chem.MACCSkeys import GenMACCSKeys
 
 
-from . import sdf_reader, decoders, decompressors, error_handlers
+from . import sdf_reader, decoders, error_handlers, io
 
 # These are the things I consider to be public
 __all__ = ["read_structures", "iter_smiles_molecules", "iter_sdf_molecules"]
@@ -59,36 +59,6 @@ _format_extensions = {
     ".smiles": "smi",
     ".ism": "smi",
 }
-            
-def normalize_input(source=None, format=None, decompressor=None):
-    if decompressor is not None:
-        decompressor = decompressors.get_named_decompressor(decompressor)
-        
-    if format is not None:
-        if decompressor is None:
-            decompressor = decompressors.detect_decompressor(format)
-        base_format = decompressor.strip_extension(format)
-        if base_format not in _allowed_formats:
-            msg = "Unknown structure format {format!r}. Supported formats are: {all}".format(
-                format=base_format, all=", ".join(_allowed_formats))
-            raise TypeError(msg)
-        return base_format, decompressor
-        
-    elif source is not None:
-        format_specified = False
-        if decompressor is None:
-            decompressor = decompressors.detect_decompressor(source)
-        base_filename = decompressor.strip_extension(source)
-        ext = os.path.splitext(base_filename)[1].lower()
-        try:
-            return _format_extensions[ext], decompressor
-        except KeyError:
-            # Unknown extension, assume SMILES
-            return "smi", decompressor
-    else:
-        if decompressor is None:
-            decompressor = decompressors.Uncompressed
-        return "smi", decompressor
 
 
 class SmilesFileLocation(object):
@@ -197,16 +167,16 @@ def iter_sdf_molecules(fileobj, name=None, errors="strict"):
 ##     return open(filename, "rU")
     
 
-def read_structures(source, format=None, errors="strict", decompressor=None):
+def read_structures(source, format=None, errors="strict"):
     """Iterate the records in the input source as (title, RDKit.Chem.Mol) pairs
 
     'source' is a filename, a file object, or None for stdin
     'format' is either "sdf" or "smi" with optional ".gz" or ".bz2" extensions.
         If None then the format is inferred from the source extension
     'errors' is one of "strict" (default), "log", or "ignore" (other values are experimental)
-    'decompressor' is an experimental interface
     """
-    format, decompressor = normalize_input(source, format, decompressor)
+    format_name, compression = io.normalize_format(source, format)
+    format_name = _format_extensions.get(format_name, format_name)
     if format == "sdf":
         # I have an old PubChem file Compound_09425001_09450000.sdf .
         #   num. lines = 5,041,475   num. bytes = 159,404,037
@@ -232,7 +202,7 @@ def read_structures(source, format=None, errors="strict", decompressor=None):
         #                yield title, mol
         #    return native_sdf_reader()
 
-        fileobj = decompressors.open_and_decompress_universal(source, decompressor)
+        fileobj = io.open_decompress(source, compression)
         # fileobj should always have the .name attribute set.
         return iter_sdf_molecules(fileobj, None, errors)
 
@@ -247,7 +217,7 @@ def read_structures(source, format=None, errors="strict", decompressor=None):
         #        for mol in supplier:
         #            yield mol.GetProp("_Name"), mol
         #    return native_smiles_reader()
-        fileobj = decompressors.open_and_decompress_universal(source, decompressor)
+        fileobj = io.open_decompress(source, compression)
         return iter_smiles_molecules(fileobj, None, errors)
 
     else:

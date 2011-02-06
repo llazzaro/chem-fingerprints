@@ -44,6 +44,7 @@ _compression_extensions = {
     ".bz2": ".bz2",
     ".bzip": ".bz2",
     ".bzip2": ".bz2",
+    ".xz": ".xz",
     }
 _compression_regex = "|".join(re.escape(ext) for ext in _compression_extensions)
 
@@ -114,16 +115,68 @@ def normalize_format(source, format, default=("fps", None)):
 def open_output(destination):
     if destination is None:
         return sys.stdout
+    if not isinstance(destination, basestring):
+        return destination
     base, ext = os.path.splitext(destination)
     ext = ext.lower()
     if ext not in _compression_extensions:
         return open(destination, "w")
-    ext = _compression_extensions[ext]
-    if ext == ".gz":
+    else:
+        return open_compressed_output(destination, ext)
+    
+def open_compressed_output(destination, compression):
+    if not compression:
+        if destination is None:
+            return sys.stdout
+        elif isinstance(source, basestring):
+            return open(source, "w")
+        else:
+            return destination
+
+    if compression == ".gz":
         import gzip
-        return gzip.open(destination, "w")
-    
-    
+        if destination is None:
+            return gzip.GzipFile(mode="w", fileobj=sys.stdout)
+        elif isinstance(source, basestring):
+            return gzip.open(source, "w")
+        else:
+            return gzip.GzipFile(mode="w", fileobj=destination)
+
+    if compression == ".bz2":
+        raise NotImplementedError("bzip2 compression not supported")
+
+    if compression == ".xz":
+        raise NotImplementedError("xz compression not supported")
+
+    raise TypeError("unknown compression type %r" % (compression,))
+
+def open_compressed_input_universal(source, compression):
+    if not compression:
+        if source is None:
+            return sys.stdin
+        elif isinstance(source, basestring):
+            return open(source, "rU")
+        else:
+            return source
+
+    if compression == ".gz":
+        import gzip
+        if source is None:
+            return gzip.GzipFile(fileobj=sys.stdin)
+        elif isinstance(source, basestring):
+            return gzip.open(source, "r")
+        else:
+            return source
+
+    if compression == ".bz2":
+        raise NotImplementedError("bzip2 decompression not supported")
+
+    if compression == ".xz":
+        raise NotImplementedError("xz decompression not supported")
+
+    raise TypeError("unknown compression typ %r" % (compression,))
+
+
 
 def write_fps1_magic(outfile):
     outfile.write("#FPS1\n")

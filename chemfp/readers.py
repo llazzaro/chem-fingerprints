@@ -33,27 +33,19 @@ def _open_filename_or_stream(source, mode):
     
 
 def open_fps(source, format=None):
-    assert format in (None, "fps")
-    if source is None:
-        source = sys.stdin
-    filename, infile = _open_filename_or_stream(source, "rU")
+    format_name, compression = io.normalize_format(source, format)
+    if format_name != "fps":
+        raise TypeError("Unknown format %r" % (format_name,))
+
+    infile = io.open_compressed_input_universal(source, compression)
+    if isinstance(source, basestring):
+        filename = source
+    else:
+        filename = getattr(f, "name", None)
+
     header, lineno, block = read_header(infile, filename)
-    
     return FPSReader(infile, header, lineno, block)
 
-def open_fpb(source):
-    name, infile = _open_filename_or_stream(source, "rB")
-    return FPBReader(infile)
-
-def open(filename):
-    s = filename.lower()
-    if s[-3:] == ".gz":
-        s = s[:-3]
-    if s[-4:] == ".fps":
-        return open_fps(filename)
-    if s[-4:] == ".fpb":
-        return open_fpb(filename)
-    raise TypeError("Unknown extension")
 
 # This never buffers
 def _read_blocks(infile):
