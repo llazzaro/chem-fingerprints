@@ -72,6 +72,8 @@ parser.add_argument("-t" ,"--threshold", help="minimum similarity score threshol
                     default=0.0, type=float)
 parser.add_argument("-q", "--queries", help="filename containing the query fingerprints")
 parser.add_argument("--query-hex", help="query in hex")
+parser.add_argument("--in", metavar="FORMAT", dest="query_format",
+                    help="input query format (default uses the file extension, else 'fps')")
 
 parser.add_argument("--type", help="fingerprint type", default=None)
 
@@ -80,7 +82,7 @@ parser.add_argument("-c", "--count", help="report counts", action="store_true")
 parser.add_argument("-b", "--batch-size", help="batch size",
                     default=100, type=int)
 
-parser.add_argument("--use-reader", help="search directly from the input FPS file",
+parser.add_argument("--file-scan", help="search directly from the input FPS file",
                     action="store_true")
 parser.add_argument("--in-memory", help="use an in-memory fingerprint search",
                     action="store_true")
@@ -90,16 +92,6 @@ parser.add_argument("target_filename", nargs=1, help="target filename", default=
 ## Something to enable multi-threading
 #parser.add_argument("-j", "--jobs", help="number of jobs ",
 #                    default=10, type=int)
-
-'''
-#FPSimilarity/1
-#software=chemfp/1.0
-#query-source=q.fps
-#target-source=blah.smi
-#type=tanimoto k-nearest=3 threshold=0.8
-#date=2011-01-29T13:22:30
-blah 0.9 hit1 0.8 hit2
-'''
 
 def read_batch(batch_size, queries):
     if batch_size <= 0:
@@ -121,18 +113,20 @@ def main(args=None):
     target_filename = args.target_filename[0]
     threshold = args.threshold
 
-    if args.use_reader and args.in_memory:
-        args.error("Cannot specify both --use-reader and --in-memory")
+    if args.file_scan and args.in_memory:
+        args.error("Cannot specify both --file-scan and --in-memory")
     
     batch_size = args.batch_size # args.batch_size
+
+    # Open the file. This reads just enough to get the header.
 
     targets = chemfp.open(target_filename, fp_type=args.type)
     fp_type = targets.header.params # XXX params?
 
     if args.queries is not None:
-        queries = chemfp.open(args.queries, fp_type=fp_type)
+        queries = chemfp.open(args.queries, format=args.query_format, fp_type=fp_type)
     else:
-        queries = chemfp.open(None, fp_type=fp_type)
+        queries = chemfp.open(None, format=args.query_format, fp_type=fp_type)
     print "Queries", queries
     query_iter = iter(queries)
 
@@ -176,10 +170,10 @@ def main(args=None):
     # in-memory search for 1 structure. The breakeven point is around
     # 6 input structures.
 
-    if args.use_reader:
+    if args.file_scan:
         use_in_memory = False
     elif args.in_memory:
-        use_in_memoery = True
+        use_in_memory = True
     elif (len(batch_ids) <= 6 and batch_size > 6):
         use_in_memory = False
     else:
