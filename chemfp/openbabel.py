@@ -233,13 +233,6 @@ def _get_ob_error(log):
     msgs = log.GetMessagesOfLevel(ob.obError)
     return "".join(msgs)
 
-def get_fingerprinter(fp_type):
-    for (fp_name, fp_info) in _fingerprinter_table.items():
-        if fp_info.fp_type == fp_type:
-            return fp_info.calc_fp
-    raise TypeError("Unsupported fingerprint type: %r" % (fp_type,))
-    
-
 def read_structures(filename=None, format=None):
     """read_structures(filename, format) -> (title, OBMol) iterator 
     
