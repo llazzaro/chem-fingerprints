@@ -26,20 +26,20 @@ rdk_group = parser.add_argument_group("RDKit topological fingerprints")
 rdk_group.add_argument("--RDK", action="store_true",
                        help="generate RDK fingerprints (default)")
 rdk_group.add_argument(
-    "--num-bits", type=int, metavar="INT", default=rdkit.NUM_BITS,
+    "--fpSize", type=int, metavar="INT", default=rdkit.NUM_BITS,
     help="number of bits in the fingerprint (default=%d)" % rdkit.NUM_BITS)
 rdk_group.add_argument(
-    "--min-path", type=int, metavar="INT", default=rdkit.MIN_PATH,
+    "--minPath", type=int, metavar="INT", default=rdkit.MIN_PATH,
     help="minimum number of bonds to include in the subgraphs (default=%d)" % rdkit.MIN_PATH)
 rdk_group.add_argument(
-    "--max-path", type=int, metavar="INT", default=rdkit.MAX_PATH,
+    "--maxPath", type=int, metavar="INT", default=rdkit.MAX_PATH,
     help="maximum number of bonds to include in the subgraphs (default=%d)" % rdkit.MAX_PATH)
 rdk_group.add_argument(
-    "--bits-per-hash", type=int, metavar="INT", default=rdkit.BITS_PER_HASH,
+    "--nBitsPerHash", type=int, metavar="INT", default=rdkit.BITS_PER_HASH,
     help="number of bits to set per path (default=%d)" % rdkit.BITS_PER_HASH)
 rdk_group.add_argument(
-    "--ignore-Hs", action="store_true",
-    help="do not include information about the number of hydrogens on each atom")
+    "--useHs", type=int, default=1,
+    help="information about the number of hydrogens on each atom")
 
 maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
@@ -63,31 +63,28 @@ def main(args=None):
             parser.error("Cannot specify both --maccs166 and --RDK")
         opener = types.RDKitMACCS166()
     else:
-        num_bits = args.num_bits
-        min_path = args.min_path
-        max_path = args.max_path
-        bits_per_hash = args.bits_per_hash
-        if num_bits < 1:
-            parser.error("--num-bits must be positive")
-        if bits_per_hash < 1:
-            parser.error("--bits-per-hash must be a positive value")
-        if min_path < 1:
-            parser.error("--min-path must be a positive value")
-        if max_path < min_path:
-            parser.error("--min-path must not be greater than --max-path")
+        fpSize = args.fpSize
+        minPath = args.minPath
+        maxPath = args.maxPath
+        nBitsPerHash = args.nBitsPerHash
+        if fpSize < 1:
+            parser.error("--fpSize must be positive")
+        if nBitsPerHash < 1:
+            parser.error("--nBitsPerHash must be a positive value")
+        if minPath < 1:
+            parser.error("--minPath must be a positive value")
+        if maxPath < minPath:
+            parser.error("--minPath must not be greater than --maxPath")
 
-        use_Hs = not args.ignore_Hs
+        useHs = args.useHs
+        if useHs not in (0, 1):
+            parser.error("--useHs parameter must be 0 or 1")
 
-        opener = types.RDKitFingerprint({"min_path": min_path,
-                                         "max_path": max_path,
-                                         "num_bits": num_bits,
-                                         "bits_per_hash": bits_per_hash,
-                                         "use_Hs": use_Hs})
-##        opener = types.RDKitFingerprint({"minPath": min_path,
-##                                         "maxPath": max_path,
-##                                         "fpSize": num_bits,
-##                                         "nBitsPerHash": bits_per_hash,
-##                                         "useHs": use_Hs})
+        opener = types.RDKitFingerprint({"minPath": minPath,
+                                         "maxPath": maxPath,
+                                         "fpSize": fpSize,
+                                         "nBitsPerHash": nBitsPerHash,
+                                         "useHs": useHs})
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
     except (TypeError, IOError), err:

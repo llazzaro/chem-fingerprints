@@ -159,26 +159,26 @@ def bond_value_to_description(value):
 # If you need to use these in multiple threads, then make multiple
 # fingerprinters.
 
-def get_path_fingerprinter(num_bits, min_bonds, max_bonds, atype, btype):
+def get_path_fingerprinter(numbits, minbonds, maxbonds, atype, btype):
     # Extra level of error checking since I expect people will think
     # of this as part of the public API.
-    if not (16 <= num_bits <= 65536):
-        raise TypeError("num_bits must be between 16 and 65536 (inclusive)")
-    if not (0 <= min_bonds):
-        raise TypeError("min_bonds must be 0 or greater")
-    if not (min_bonds <= max_bonds):
-        raise TypeError("max_bonds must not be smaller than min_bonds")
+    if not (16 <= numbits <= 65536):
+        raise TypeError("numbits must be between 16 and 65536 (inclusive)")
+    if not (0 <= minbonds):
+        raise TypeError("minbonds must be 0 or greater")
+    if not (minbonds <= maxbonds):
+        raise TypeError("maxbonds must not be smaller than minbonds")
 
     # XXX validate the atype and type values? Should just
     # be a simple bitwise-and and test for 0.
     
     fp = OEFingerPrint()
-    fp.SetSize(num_bits)
+    fp.SetSize(numbits)
     data_location = int(fp.GetData())
-    num_bytes = (num_bits+7)//8
+    num_bytes = (numbits+7)//8
 
     def path_fingerprinter(mol):
-        OEMakePathFP(fp, mol, num_bits, min_bonds, max_bonds, atype, btype)
+        OEMakePathFP(fp, mol, numbits, minbonds, maxbonds, atype, btype)
         return ctypes.string_at(data_location, num_bytes)
 
     return path_fingerprinter
@@ -375,5 +375,3 @@ SOFTWARE = "OEGraphSim/{release} ({version})".format(
     release = OEGraphSimGetRelease(),
     version = OEGraphSimGetVersion())
 
-format_path_type = (
-    "OpenEye-Path/1 num_bits={num_bits} min_bonds={min_bonds} max_bonds={max_bonds} atype={atype} btype={btype}".format)

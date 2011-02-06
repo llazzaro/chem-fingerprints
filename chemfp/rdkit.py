@@ -267,29 +267,24 @@ assert USE_HS == 1, "Don't make this 0 unless you know what you are doing"
 # Not supporting the tgtDensity and minSize options.
 # This program generates fixed-length fingerprints.
 
-def make_rdk_fingerprinter(num_bits=NUM_BITS, min_path=MIN_PATH, max_path=MAX_PATH,
-                           bits_per_hash=BITS_PER_HASH, use_Hs=USE_HS):
-    if not (num_bits > 0):
-        raise TypeError("num_bits must be positive")
-    if not (min_path > 0):
-        raise TypeError("min_path must be positive")
-    if not (max_path >= min_path):
-        raise TypeError("max_path cannot be smaller than min_path")
-    if not (bits_per_hash > 0):
-        raise TypeError("bits_per_hash must be positive")
+def make_rdk_fingerprinter(minPath=MIN_PATH, maxPath=MAX_PATH, fpSize=NUM_BITS,
+                           nBitsPerHash=BITS_PER_HASH, useHs=USE_HS):
+    if not (fpSize > 0):
+        raise TypeError("fpSize must be positive")
+    if not (minPath > 0):
+        raise TypeError("minPath must be positive")
+    if not (maxPath >= minPath):
+        raise TypeError("maxPath cannot be smaller than minPath")
+    if not (nBitsPerHash > 0):
+        raise TypeError("nBitsPerHash must be positive")
 
     def rdk_fingerprinter(mol):
         fp = Chem.RDKFingerprint(
-            mol, minPath=min_path, maxPath=max_path, fpSize=num_bits,
-            nBitsPerHash=bits_per_hash, useHs=use_Hs)
+            mol, minPath=minPath, maxPath=maxPath, fpSize=fpSize,
+            nBitsPerHash=nBitsPerHash, useHs=useHs)
         return decoders.from_binary_lsb(fp.ToBitString())[1]
     return rdk_fingerprinter
 
-# Use this to make the parameters for the topological fingerprints
-RDK_TYPE = ("RDKit-Fingerprint/1 minPath={min_path} maxPath={max_path} fpSize={num_bits} "
-            "nBitsPerHash={bits_per_hash} useHs={use_Hs}")
-
-format_rdk_type = RDK_TYPE.format
 
 ########### The MACCS fingerprinter
 

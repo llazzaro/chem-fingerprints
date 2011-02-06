@@ -54,13 +54,13 @@ path_group = parser.add_argument_group("path fingerprints")
 path_group.add_argument(
     "--path", action="store_true", help="generate path fingerprints (default)")
 path_group.add_argument(
-    "--num-bits", type=int, metavar="INT",
+    "--numbits", type=int, metavar="INT",
     help="number of bits in the path fingerprint (default=4096)", default=4096)
 path_group.add_argument(
-    "--min-bonds", type=int, metavar="INT",
+    "--minbonds", type=int, metavar="INT",
     help="minimum number of bonds in path (default=0)", default=0)
 path_group.add_argument(
-    "--max-bonds", type=int, metavar="INT",
+    "--maxbonds", type=int, metavar="INT",
     help="maximum number of bonds in path (default=5)", default=5)
 path_group.add_argument(
     "--atype", help="atom type (default=DefaultAtom)", default="DefaultAtom")
@@ -93,14 +93,13 @@ def main(args=None):
         # Create the MACCS keys fingerprinter
         opener = types.OpenEyeMACCS166()
     else:
-        if not (16 <= args.num_bits <= 65536):
-            parser.error("--num-bits must be between 16 and 65536 bits")
-        num_bits = args.num_bits
+        if not (16 <= args.numbits <= 65536):
+            parser.error("--numbits must be between 16 and 65536 bits")
 
-        if not (0 <= args.min_bonds):
-            parser.error("--min-bonds must be 0 or greater")
-        if not (args.min_bonds <= args.max_bonds):
-            parser.error("--max-bonds must not be smaller than --min-bonds")
+        if not (0 <= args.minbonds):
+            parser.error("--minbonds must be 0 or greater")
+        if not (args.minbonds <= args.maxbonds):
+            parser.error("--maxbonds must not be smaller than --minbonds")
 
         # Parse the arguments
         try:
@@ -110,18 +109,17 @@ def main(args=None):
             parser.error(str(err))
 
 
-        opener = types.OpenEyePath({"num_bits": num_bits,
-                                    "min_bonds": args.min_bonds,
-                                    "max_bonds": args.max_bonds,
+        opener = types.OpenEyePath({"numbits": args.numbits,
+                                    "minbonds": args.minbonds,
+                                    "maxbonds": args.maxbonds,
                                     "atype": atype,
                                     "btype": btype})
 
     # Ready the input reader/iterator
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
-    except (KeyError, IOError), err:
-        sys.stderr.write(str(err))
-        raise SystemExit(1)
+    except IOError as err:
+        raise SystemExit("Cannot read structure fingerprints: %s" % err)
 
     shared.write_fpsv1_output(reader, args.output)
 

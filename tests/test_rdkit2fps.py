@@ -64,75 +64,75 @@ class TestRDKFingerprints(unittest2.TestCase):
         self.assertEquals(len(set(map(len, result))), 1, set(map(len, result)))
 
     def test_num_bits_default(self):
-        result = runner.run_fps("--num-bits 2048", 19)
+        result = runner.run_fps("--fpSize 2048", 19)
         self.assertEquals(result[0], _fp1 + " 9425004")
         self.assertNotEquals(result[1].split()[0], _fp1)
 
     def test_num_bits_64(self):
-        field, first = get_field_and_first("--num-bits 16", "#num_bits=")
+        field, first = get_field_and_first("--fpSize 16", "#num_bits=")
         self.assertEquals(field, "#num_bits=16")
         self.assertEquals(first, "ffff 9425004")
 
     def test_num_bits_1(self):
-        field, first = get_field_and_first("--num-bits 1", "#num_bits=")
+        field, first = get_field_and_first("--fpSize 1", "#num_bits=")
         self.assertEquals(field, "#num_bits=1")
         self.assertEquals(first, "01 9425004")
 
     def test_num_bits_2(self):
-        field, first = get_field_and_first("--num-bits 2", "#num_bits=")
+        field, first = get_field_and_first("--fpSize 2", "#num_bits=")
         self.assertEquals(field, "#num_bits=2")
         self.assertEquals(first, "03 9425004")
 
     def test_num_bits_too_small(self):
-        result = runner.run_exit("--num-bits 0")
-        self.assertIn("--num-bits must be positive", result)
+        result = runner.run_exit("--fpSize 0")
+        self.assertIn("--fpSize must be positive", result)
 
     def test_bits_per_hash_default(self):
-        field, first = get_field_and_first("--bits-per-hash 4", "#type=")
+        field, first = get_field_and_first("--nBitsPerHash 4", "#type=")
         self.assertEquals(field,
-  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=7 fpSize=2048 nBitsPerHash=4 useHs=True")
+  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=7 fpSize=2048 nBitsPerHash=4 useHs=1")
         self.assertEquals(first.split()[0], _fp1)
 
     def test_bits_per_hash(self):
-        field, first = get_field_and_first("--bits-per-hash 1", "#type")
+        field, first = get_field_and_first("--nBitsPerHash 1", "#type")
         self.assertEquals(field,
-  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=7 fpSize=2048 nBitsPerHash=1 useHs=True")
+  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=7 fpSize=2048 nBitsPerHash=1 useHs=1")
         self.assertNotEquals(first.split()[0], _fp1)
 
     def test_bits_per_hash_too_small(self):
-        result = runner.run_exit("--bits-per-hash 0")
-        self.assertIn("--bits-per-hash must be a positive value", result)
+        result = runner.run_exit("--nBitsPerHash 0")
+        self.assertIn("--nBitsPerHash must be a positive value", result)
 
     def test_min_path_default(self):
-        field, first = get_field_and_first("--min-path 1", "#type")
+        field, first = get_field_and_first("--minPath 1", "#type")
         self.assertEquals(field,
-  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=7 fpSize=2048 nBitsPerHash=4 useHs=True")
+  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=7 fpSize=2048 nBitsPerHash=4 useHs=1")
         self.assertEquals(first.split()[0], _fp1)
 
     def test_min_path_2(self):
-        field, first = get_field_and_first("--min-path 2", "#type")
+        field, first = get_field_and_first("--minPath 2", "#type")
         self.assertEquals(field,
-  "#type=RDKit-Fingerprint/1 minPath=2 maxPath=7 fpSize=2048 nBitsPerHash=4 useHs=True")
+  "#type=RDKit-Fingerprint/1 minPath=2 maxPath=7 fpSize=2048 nBitsPerHash=4 useHs=1")
         self.assertNotEquals(first.split()[0], _fp1)
 
     def test_min_path_too_small(self):
-        result = runner.run_exit("--min-path 0")
-        self.assertIn("--min-path must be a positive value", result)
+        result = runner.run_exit("--minPath 0")
+        self.assertIn("--minPath must be a positive value", result)
 
     def test_min_path_too_large(self):
-        result = runner.run_exit("--min-path 5 --max-path 4")
-        self.assertIn("--min-path must not be greater than --max-path", result)
+        result = runner.run_exit("--minPath 5 --maxPath 4")
+        self.assertIn("--minPath must not be greater than --maxPath", result)
 
     def test_max_path_default(self):
-        field, first = get_field_and_first("--max-path 7", "#type")
+        field, first = get_field_and_first("--maxPath 7", "#type")
         self.assertEquals(field,
-  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=7 fpSize=2048 nBitsPerHash=4 useHs=True")
+  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=7 fpSize=2048 nBitsPerHash=4 useHs=1")
         self.assertEquals(first.split()[0], _fp1)
 
     def test_max_path_6(self):
-        field, first = get_field_and_first("--max-path 6", "#type")
+        field, first = get_field_and_first("--maxPath 6", "#type")
         self.assertEquals(field,
-  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=6 fpSize=2048 nBitsPerHash=4 useHs=True")
+  "#type=RDKit-Fingerprint/1 minPath=1 maxPath=6 fpSize=2048 nBitsPerHash=4 useHs=1")
         self.assertNotEquals(first.split()[0], _fp1)
 
 #    def test_ignore_Hs(self):

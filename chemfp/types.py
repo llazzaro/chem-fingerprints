@@ -30,8 +30,8 @@ class StructureFPReader(object):
 def _convert_parameters(parameters, converters):
     kwargs = {}
     for (name, value) in parameters:
-        to_name, convert = converters[name]
-        kwargs[to_name] = convert(value)
+        convert = converters[name]
+        kwargs[name] = convert(value)
     return kwargs
 
 class _Opener(object):
@@ -69,24 +69,24 @@ OpenEyeMACCS166 = OpenEyeMACCS166_v1
 
 class OpenEyePath_v1(_Opener):
     name = "OpenEye-Path/1"
-    format_string = "OpenEye-Path/1 numbits={num_bits} minbonds={min_bonds} maxbonds={max_bonds} atype={atype} btype={btype}"
+    format_string = "OpenEye-Path/1 numbits={numbits} minbonds={minbonds} maxbonds={maxbonds} atype={atype} btype={btype}"
     
-    converters = {"numbits": ("num_bits", int),
-                  "minbonds": ("min_bonds", int),
-                  "maxbonds": ("max_bonds", int)}
+    converters = {"numbits": int,
+                  "minbonds": int,
+                  "maxbonds": int}
 
     def __init__(self, kwargs):
         assert len(kwargs) == 5, kwargs
         self.kwargs = kwargs
-        self.num_bits = kwargs["num_bits"]
+        self.num_bits = kwargs["numbits"]
     
     @staticmethod
     def from_parameters(parameters):
         converters = OpenEyePath_v1.converters
         if len(converters) == 3:
             from chemfp.openeye import atom_description_to_value, bond_description_to_value
-            converters["atype"] = ("atype", atom_description_to_value)
-            converters["btype"] = ("btype", bond_description_to_value)
+            converters["atype"] = atom_description_to_value
+            converters["btype"] = bond_description_to_value
         
         return OpenEyePath_v1(_convert_parameters(parameters, converters))
     
@@ -94,9 +94,9 @@ class OpenEyePath_v1(_Opener):
     def get_type(self):
         from chemfp.openeye import atom_value_to_description, bond_value_to_description
         kw = self.kwargs
-        return self.format_string.format(num_bits = kw["num_bits"],
-                                         min_bonds = kw["min_bonds"],
-                                         max_bonds = kw["max_bonds"],
+        return self.format_string.format(numbits = kw["numbits"],
+                                         minbonds = kw["minbonds"],
+                                         maxbonds = kw["maxbonds"],
                                          atype = atom_value_to_description(kw["atype"]),
                                          btype = bond_value_to_description(kw["btype"]))
                                              
@@ -121,17 +121,17 @@ RDKitMACCS166 = RDKitMACCS166_v1
 
 class RDKitFingerprint_v1(_Opener):
     name = "RDKit-Fingerprint/1"
-    format_string = ("RDKit-Fingerprint/1 minPath={min_path} maxPath={max_path} fpSize={num_bits} "
-                     "nBitsPerHash={bits_per_hash} useHs={use_Hs}")
+    format_string = ("RDKit-Fingerprint/1 minPath={minPath} maxPath={maxPath} fpSize={fpSize} "
+                     "nBitsPerHash={nBitsPerHash} useHs={useHs}")
 
-    converters = {"minPath": ("min_path", int),
-                  "maxPath": ("max_path", int),
-                  "fpSize": ("num_bits", int),
-                  "nBitsPerHash": ("bits_per_hash", int),
-                  "useHs": ("use_Hs", int)}
+    converters = {"minPath": int,
+                  "maxPath": int,
+                  "fpSize": int,
+                  "nBitsPerHash": int,
+                  "useHs": int}
     def __init__(self, kwargs):
         assert len(kwargs) == 5
-        self.num_bits = kwargs["num_bits"]
+        self.num_bits = kwargs["fpSize"]
         self.kwargs = kwargs
 
     @staticmethod
