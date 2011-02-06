@@ -35,58 +35,37 @@ def read_structure_fingerprints(typeinfo, source=None, format=None):
     return types.read_structure_fingerprints(typeinfo, source, format)
     
 # Low-memory, forward-iteration, or better
-def open(source, format=None, fp_type=None):    
-    if format is not None:
-        if format in ("fps", "fps.gz"):
-            from . import readers
-            return readers.open_fps(source)
-        if format in ("fpb",):
-            raise NotImplementedError
+def open(source, format=None, fp_type=None):
+    format_name, compression = io.normalize_format(source, format)
 
-        # Otherwise it's a structure input.
-        return get_structure_reader(source, format, fp_type)
-
-    # Format is None; base on the filename.
-    if isinstance(source, basestring):
-        filename = source
-    else:
-        filename = getattr(source, "name", ".fps")
-
-    compression = ""
-    if filename.endswith(".gz"):
-        filename = filename[-3:]
-        compression = ".gz"
-
-    if filename.endswith(".fps"):
+    if format_name == "fps":
         from . import readers
-        return readers.open_fps(source, format="fps"+compression)
+        return readers.open_fps(source, format_name+compression)
 
-    if filename.endswith(".fpb"):
+    if format_name == "fpb":
         raise NotImplementedError
 
-    # And lastly, it's a structure format
-    return read_structure_fingerprints(fp_type, source, format)
-    
+    # Otherwise it's a structure input.
+    if fp_type is None:
+        raise TypeError("'type' is required to read structure fingerprints")
+    return read_structure_fingerprints(fp_type, source, format_name+compression)
 
 def open_fps(source):
     from . import readers
     return readers.open_fps(source)
 
-def read_into_memory(source, format=None, fp_type=None):
-    if isinstance(source, basestring):
-        reader = open(source, format, fp_type)
-    else:
-        # Then the source must be a set of fingerprints
-        reader = source
+def read_into_memory(reader, format=None, fp_type=None):
+    if isinstance(reader, basestring):
+        reader = open(reader, format, fp_type)
         
     # See if it has its own way to generate an in-memory search
-    f = getattr(source, "_chemfp_in_memory_", None)
-    if f is not None:
-        return f()
+    chemfp_in_memory = getattr(source, "_chemfp_in_memory_", None)
+    if chemfp_in_memory is not None:
+        return chemfp_in_memory()
 
     # Nope. Use the basic forward-iteration algorithm
     from chemfp import readers
-    return readers.fps_to_in_memory(source)
+    return readers.fps_to_in_memory(reader)
     
 def open_mmap(source):
     raise NotImplementedError
