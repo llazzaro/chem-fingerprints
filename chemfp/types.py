@@ -221,7 +221,6 @@ def parse_type(type):
         seen.add(left)
         parameters.append((left, right))
 
-    print "Call with", parameters
     return cls.from_parameters(parameters)
 
 
