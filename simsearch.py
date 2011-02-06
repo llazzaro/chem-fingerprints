@@ -120,13 +120,13 @@ def main(args=None):
 
     # Open the file. This reads just enough to get the header.
 
-    targets = chemfp.open(target_filename, fp_type=args.type)
-    fp_type = targets.header.params # XXX params?
+    targets = chemfp.open(target_filename, type=args.type)
+    type = targets.header.type
 
     if args.queries is not None:
-        queries = chemfp.open(args.queries, format=args.query_format, fp_type=fp_type)
+        queries = chemfp.open(args.queries, format=args.query_format, type=type)
     else:
-        queries = chemfp.open(None, format=args.query_format, fp_type=fp_type)
+        queries = chemfp.open(None, format=args.query_format, type=type)
     print "Queries", queries
     query_iter = iter(queries)
 
