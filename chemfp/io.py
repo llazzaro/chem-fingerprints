@@ -83,7 +83,8 @@ def normalize_format(source, format, default=("fps", None)):
 
     # If it's not a compression extension then it's a format indicator
     if ext not in _compression_extensions:
-        return (ext, "")
+        # the [1:] is to remove the leading "."
+        return (ext[1:], "")
 
     # Found a compression, now look for the format
     compression = ext
