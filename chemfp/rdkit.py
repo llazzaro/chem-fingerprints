@@ -269,13 +269,14 @@ assert USE_HS == 1, "Don't make this 0 unless you know what you are doing"
 
 def make_rdk_fingerprinter(num_bits=NUM_BITS, min_path=MIN_PATH, max_path=MAX_PATH,
                            bits_per_hash=BITS_PER_HASH, use_Hs=USE_HS):
-    # I've already done checks for this, but I'm assuming that people
-    # will use this as part of the public API.
-    if not (num_bits > 0): raise TypeError("num_bits must be positive")
-    if not (min_path > 0): raise TypeError("min_path must be positive")
+    if not (num_bits > 0):
+        raise TypeError("num_bits must be positive")
+    if not (min_path > 0):
+        raise TypeError("min_path must be positive")
     if not (max_path >= min_path):
         raise TypeError("max_path cannot be smaller than min_path")
-    if not (bits_per_hash > 0): raise TypeError("bits_per_hash must be positive")
+    if not (bits_per_hash > 0):
+        raise TypeError("bits_per_hash must be positive")
 
     def rdk_fingerprinter(mol):
         fp = Chem.RDKFingerprint(
@@ -300,14 +301,21 @@ def maccs166_fingerprinter(mol):
     return decoders.from_binary_lsb(bitstring_with_167_bits[1:])[1]
 
 
-def read_maccs_fingerprints_v1(typeinfo, source, format):
-    assert typeinfo.args == []
+def read_maccs166_fingerprints_v1(source=None, format=None, kwargs={}):
+    assert not kwargs
     fingerprinter = maccs166_fingerprinter
-    structure_reader = read_structures(source, format)
-    return StructureFPReader(to_header(num_bits = fingerprinter.num_bits,
-                                       source = structure_reader.source,
-                                       software = SOFTWARE,
-                                       type = fingerprinter.get_type(),
-                                       date = None),
-                             structure_reader,
-                             fingerprinter)
+    reader = read_structures(source, format)
+    def read_rdkit_maccs166_fingerprints():
+        for (title, mol) in reader:
+            yield (fingerprinter(mol), title)
+
+    return read_rdkit_maccs166_fingerprints()
+
+def read_rdkit_fingerprints_v1(source=None, format=None, kwargs={}):
+    fingerprinter = make_rdk_fingerprinter(**kwargs)
+    reader = read_structures(source, format)
+    def read_rdkit_fingerprints():
+        for (title, mol) in reader:
+            yield (fingerprinter(mol), title)
+
+    return read_rdkit_fingerprints()

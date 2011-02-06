@@ -1,6 +1,6 @@
 # Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 import sys
-from chemfp import argparse, shared, rdkit
+from chemfp import argparse, shared, rdkit, types
 
 ########### Configure the command-line parser
 
@@ -61,9 +61,7 @@ def main(args=None):
     if args.maccs166:
         if args.RDK:
             parser.error("Cannot specify both --maccs166 and --RDK")
-        fingerprinter = rdkit.maccs166_fingerprinter
-        num_bits = 166
-        fptype = "RDKit-MACCS166/1"
+        opener = types.RDKitMACCS166()
     else:
         num_bits = args.num_bits
         min_path = args.min_path
@@ -80,26 +78,23 @@ def main(args=None):
 
         use_Hs = not args.ignore_Hs
 
-        fingerprinter = rdkit.make_rdk_fingerprinter(
-            num_bits=num_bits, min_path=min_path, max_path=max_path, 
-            bits_per_hash = bits_per_hash, use_Hs = use_Hs)
-        fptype = rdkit.format_rdk_type(
-            num_bits=num_bits, min_path=min_path, max_path=max_path, 
-            bits_per_hash = bits_per_hash, use_Hs = use_Hs)
-
+        opener = types.RDKitFingerprint({"min_path": min_path,
+                                         "max_path": max_path,
+                                         "num_bits": num_bits,
+                                         "bits_per_hash": bits_per_hash,
+                                         "use_Hs": use_Hs})
+##        opener = types.RDKitFingerprint({"minPath": min_path,
+##                                         "maxPath": max_path,
+##                                         "fpSize": num_bits,
+##                                         "nBitsPerHash": bits_per_hash,
+##                                         "useHs": use_Hs})
     try:
-        reader = rdkit.read_structures(args.filename, args.format)
+        reader = opener.read_structure_fingerprints(args.filename, args.format)
     except (TypeError, IOError), err:
         sys.stderr.write(str(err))
         raise SystemExit(1)
 
-    shared.generate_fpsv1_output(dict(num_bits=num_bits,
-                                      software=rdkit.SOFTWARE,
-                                      source=args.filename,
-                                      type=fptype),
-                                 reader,
-                                 fingerprinter,
-                                 args.output)
+    shared.write_fpsv1_output(reader, args.output)
 
 if __name__ == "__main__":
     main()

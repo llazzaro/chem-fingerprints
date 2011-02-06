@@ -1,6 +1,6 @@
 import sys
 from chemfp import openbabel as ob
-from chemfp import argparse, shared
+from chemfp import argparse, shared, types
 
 
 ############ Command-line parser definition
@@ -33,17 +33,20 @@ parser = argparse.ArgumentParser(
     )
 group = parser.add_mutually_exclusive_group()
 group.add_argument("--FP2", action="store_true",
-                    help=ob._fingerprinter_table["FP2"].description + "(default)")
+#                    help=ob._fingerprinter_table["FP2"].description + "(default)"
+                   )
 group.add_argument("--FP3", action="store_true",
-                    help=ob._fingerprinter_table["FP3"].description)
+#                    help=ob._fingerprinter_table["FP3"].description
+                   )
 group.add_argument("--FP4", action="store_true",
-                    help=ob._fingerprinter_table["FP4"].description)
+#                    help=ob._fingerprinter_table["FP4"].description
+                   )
 
-HAS_MACCS = ("MACCS" in ob._fingerprinter_table)
-if HAS_MACCS:
+if ob.HAS_MACCS:
     # Added in OpenBabel 2.3
     group.add_argument("--MACCS", action="store_true",
-                       help=ob._fingerprinter_table["MACCS"].description)
+#                       help=ob._fingerprinter_table["MACCS"].description
+                       )
 else:
     group.add_argument("--MACCS", action="store_true",
                        help="(Not available using your version of OpenBabel)")
@@ -65,33 +68,29 @@ def main(args=None):
     outfile = sys.stdout
 
     if args.FP2:
-        fp_name = "FP2"
+        opener = types.OpenBabelFP2()
     elif args.FP3:
-        fp_name = "FP3"
+        opener = types.OpenBabelFP3()
     elif args.FP4:
-        fp_name = "FP4"
+        opener = types.OpenBabelFP4()
     elif args.MACCS:
-        if not HAS_MACCS:
+        if not ob.HAS_MACCS:
             parser.error(
                 "--MACCS is not supported in your OpenBabel installation ({version})".format(
                     version = ob.GetReleaseVersion()))
-        fp_name = "MACCS"
+        opener = types.OpenBabelMACCS166()
     else:
         # Default
-        fp_name = "FP2"
+        opener = types.OpenBabelFP2()
 
-    fp_info = ob._fingerprinter_table[fp_name]
-    calc_fp = fp_info.calc_fp
+    # Ready the input reader/iterator
+    try:
+        reader = opener.read_structure_fingerprints(args.filename, args.format)
+    except (KeyError, IOError), err:
+        sys.stderr.write(str(err))
+        raise SystemExit(1)
 
-    reader = ob.read_structures(args.filename, args.format)
-
-    shared.generate_fpsv1_output(dict(num_bits=fp_info.num_bits,
-                                      software=ob.SOFTWARE,
-                                      source=args.filename,
-                                      type=fp_info.fps_type),
-                                 reader,
-                                 calc_fp,
-                                 args.output)
+    shared.write_fpsv1_output(reader, args.output)
     
 if __name__ == "__main__":
     main()

@@ -113,8 +113,8 @@ class RDKitMACCS166_v1(_NoParameters):
     num_bits = 167
 
     def read_structure_fingerprints(self, source=None, format=None):
-        from chemfp.rdkt import read_maccs166_fingerprints_v1, SOFTWARE
-        reader = read_maccs_fingerprints_v1(source, format, kwargs)
+        from chemfp.rdkit import read_maccs166_fingerprints_v1, SOFTWARE
+        reader = read_maccs166_fingerprints_v1(source, format)
         return self._open(SOFTWARE, source, reader)
 
 RDKitMACCS166 = RDKitMACCS166_v1
@@ -131,7 +131,8 @@ class RDKitFingerprint_v1(_Opener):
                   "useHs": ("use_Hs", int)}
     def __init__(self, kwargs):
         assert len(kwargs) == 5
-        self.num_bits = kwargs["fpSize"]
+        self.num_bits = kwargs["num_bits"]
+        self.kwargs = kwargs
 
     @staticmethod
     def from_parameters(parameters):
@@ -180,32 +181,33 @@ class OpenBabelFP4_v1(_NoParameters):
 
 OpenBabelFP4 = OpenBabelFP4_v1
 
-class OpenBabelMACCS_v1(_NoParameters):
+class OpenBabelMACCS166_v1(_NoParameters):
     name = "OpenBabel-MACCS/1"
     num_bits = 166
 
     def read_structure_fingerprints(self, source=None, format=None):
-        from chemfp.openbabel import read_maccs_fingerprints_v1, SOFTWARE
-        reader = read_maccs_fingerprints_v1(source, format)
+        from chemfp.openbabel import read_maccs166_fingerprints_v1, SOFTWARE
+        reader = read_maccs166_fingerprints_v1(source, format)
         return self._open(SOFTWARE, source, reader)
 
 
-class OpenBabelMACCS_v2(_NoParameters):
+class OpenBabelMACCS166_v2(_NoParameters):
     name = "OpenBabel-MACCS/2"
     num_bits = 166
 
     def read_structure_fingerprints(self, source=None, format=None):
-        from chemfp.openbabel import read_maccs_fingerprints_v2, SOFTWARE
-        reader = read_maccs_fingerprints_v2(source, format)
+        from chemfp.openbabel import read_maccs166_fingerprints_v2, SOFTWARE
+        reader = read_maccs166_fingerprints_v2(source, format)
         return self._open(SOFTWARE, source, reader)
 
-def OpenBabelMACCS(kwargs):
-    from chemfp.openbabel import _fingerprinter_table as ft
-    type = ft["MACCS"].fps_type()
-    if type.endswith("/1"):
-        return OpenBabelMACCS_v1(kwargs)
-    else:
-        return OpenBabelMACCS_v2(kwargs)
+def OpenBabelMACCS166():
+    from chemfp.openbabel import HAS_MACCS, MACCS_VERSION
+    assert HAS_MACCS
+    if MACCS_VERSION == 1:
+        return OpenBabelMACCS166_v1()
+    elif MACCS_VERSION == 2:
+        return OpenBabelMACCS166_v2()
+    raise AssertionError
 
 _fingerprint_classes = [
     OpenEyeMACCS166_v1,
@@ -217,8 +219,8 @@ _fingerprint_classes = [
     OpenBabelFP2_v1,
     OpenBabelFP3_v1,
     OpenBabelFP4_v1,
-    OpenBabelMACCS_v1,
-    OpenBabelMACCS_v2,
+    OpenBabelMACCS166_v1,
+    OpenBabelMACCS166_v2,
     ]
             
 def parse_type(type):

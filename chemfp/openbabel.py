@@ -98,6 +98,12 @@ def _init():
             _ob_get_fingerprint[name] = (None, None)
         else:
             _ob_get_fingerprint[name] = (ob_fingerprinter, ob_fingerprinter.GetFingerprint)
+
+    n = _ob_get_fingerprint["FP2"][0].Getbitsperint()
+    if n != 32:
+        raise AssertionError(
+            "The chemfp.ob module assumes OB fingerprints have 32 bits per integer")
+            
 _init()
 
 def calc_FP2(mol, fp=None,
@@ -141,75 +147,31 @@ def calc_MACCS(mol, fp=None,
     return _pack_256(*fp)[:21]
 
 
-class BaseFingerprinterInfo(object):
-    def __init__(self, ob_fingerprinter):
-        self.ob_fingerprinter = ob_fingerprinter
+HAS_MACCS = False
+MACCS_VERSION = 0
 
-    @property
-    def description(self):
-        return self.ob_fingerprinter.Description()
+def _check_for_maccs():
+    global HAS_MACCS, MACCS_VERSION
+    if _ob_get_fingerprint.get("MACCS", None) is None:
+        return
+    HAS_MACCS = 1
 
-    @property
-    def fps_type(self):
-        return "OpenBabel-" + self.name + "/1"
+    # OpenBabel 2.3.0 released the MACCS keys but with a bug in the SMARTS.
+    # While they are valid substructure keys, they are not really MACCS keys.
+    # This is a run-time detection to figure out which version was installed
+    obconversion = ob.OBConversion()
+    obconversion.SetInFormat("smi")
+    obmol = ob.OBMol()
+    obconversion.ReadString(obmol, "C1CCC1")
+    fp = calc_MACCS(obmol)
+    if fp[:6] == "000020":
+        MACCS_VERSION = 1
+    else:
+        MACCS_VERSION = 2
 
-class FP2FingerprinterInfo(BaseFingerprinterInfo):
-    name = "FP2"
-    num_bits = 1021
-    calc_fp = staticmethod(calc_FP2)
+_check_for_maccs()
 
-class FP3FingerprinterInfo(BaseFingerprinterInfo):
-    name = "FP3"
-    num_bits = 55
-    calc_fp = staticmethod(calc_FP3)
 
-class FP4FingerprinterInfo(BaseFingerprinterInfo):
-    name = "FP4"
-    num_bits = 307
-    calc_fp = staticmethod(calc_FP4)
-
-class MACCSFingerprinterInfo(BaseFingerprinterInfo):
-    name = "MACCS"
-    num_bits = 166
-    calc_fp = staticmethod(calc_MACCS)
-    _fps_type = None
-
-    @property
-    def fps_type(self):
-        _fps_type = self._fps_type
-        if _fps_type is None:
-            # OpenBabel 2.3.0 released the MACCS keys but with a bug in the SMARTS.
-            # While they are valid substructure keys, they are not really MACCS keys.
-            # This is a run-time detection to figure out which version was installed
-            obconversion = ob.OBConversion()
-            obconversion.SetInFormat("smi")
-            obmol = ob.OBMol()
-            obconversion.ReadString(obmol, "C1CCC1")
-            fp = calc_MACCS(obmol)
-            if fp[:6] == "000020":
-                _fps_type = "OpenBabel-MACCS/1" # the buggy version
-            else:
-                _fps_type = "OpenBabel-MACCS/2" # the corrected version
-            self._fps_type = _fps_type
-        return _fps_type
-
-_fingerprinter_table = {}
-
-def _init():
-    g = globals()
-    for fp_name, (ob_fingerprinter, get_fingerprint) in _ob_get_fingerprint.items():
-        klass = g[fp_name + "FingerprinterInfo"]
-        fingerprinter = klass(ob_fingerprinter)
-        _fingerprinter_table[fingerprinter.name] = fingerprinter
-            
-
-    # Verify that OpenBabel was compiled with 32 bit integers
-    n = _fingerprinter_table["FP2"].ob_fingerprinter.Getbitsperint()
-    if n != 32:
-        raise AssertionError(
-            "The chemfp.ob module assumes OB fingerprints have 32 bits per integer")
-
-_init()
 #########
 
 
@@ -362,3 +324,65 @@ def _file_reader(obconversion, obmol, notatend):
         obmol.Clear()
         notatend = obconversion.Read(obmol)
         # How do I detect if the input contains a failure?
+
+########
+def read_fp2_fingerprints_v1(source, format, kwargs={}):
+    assert not kwargs
+    fingerprinter = calc_FP2
+    reader = read_structures(source, format)
+
+    def read_openbabel_fp2_structure_fingerprints():
+        for (title, mol) in reader:
+            yield (fingerprinter(mol), title)
+
+    return read_openbabel_fp2_structure_fingerprints()
+
+def read_fp3_fingerprints_v1(source, format, kwargs={}):
+    assert not kwargs
+    fingerprinter = calc_FP3
+    reader = read_structures(source, format)
+
+    def read_openbabel_fp3_structure_fingerprints():
+        for (title, mol) in reader:
+            yield (fingerprinter(mol), title)
+
+    return read_openbabel_fp3_structure_fingerprints()
+
+def read_fp4_fingerprints_v1(source, format, kwargs={}):
+    assert not kwargs
+    fingerprinter = calc_FP4
+    reader = read_structures(source, format)
+
+    def read_openbabel_fp4_structure_fingerprints():
+        for (title, mol) in reader:
+            yield (fingerprinter(mol), title)
+
+    return read_openbabel_fp4_structure_fingerprints()
+
+def read_maccs166_fingerprints_v1(source, format, kwargs={}):
+    assert HAS_MACCS
+    assert MACCS_VERSION == 1
+        
+    assert not kwargs
+    fingerprinter = calc_MACCS
+    reader = read_structures(source, format)
+
+    def read_openbabel_maccs166_structure_fingerprints():
+        for (title, mol) in reader:
+            yield (fingerprinter(mol), title)
+
+    return read_openbabel_maccs166_structure_fingerprints()
+
+def read_maccs166_fingerprints_v2(source, format, kwargs={}):
+    assert HAS_MACCS
+    assert MACCS_VERSION == 2
+        
+    assert not kwargs
+    fingerprinter = calc_MACCS
+    reader = read_structures(source, format)
+
+    def read_openbabel_maccs166_structure_fingerprints():
+        for (title, mol) in reader:
+            yield (fingerprinter(mol), title)
+
+    return read_openbabel_maccs166_structure_fingerprints()
