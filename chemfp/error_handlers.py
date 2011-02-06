@@ -1,3 +1,5 @@
+"internal module; not for general use"
+# This is experimental. I think I will be removing it.
 import logging
 
 logger = logging.getLogger("chemfp")
