@@ -27,7 +27,7 @@ class _NoParameters(_Opener):
     @classmethod
     def from_parameters(cls, parameters):
         assert len(parameters) == 0
-        return cls
+        return cls()
 
     def get_type(self):
         return self.name
