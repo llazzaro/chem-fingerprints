@@ -1,3 +1,4 @@
+from __future__ import with_statement
 import chemfp
 import math
 from chemfp import argparse, readers, io, SOFTWARE
