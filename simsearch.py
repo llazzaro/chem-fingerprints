@@ -1,21 +1,31 @@
 import chemfp
 import math
-from chemfp import argparse, readers
+from chemfp import argparse, readers, io
 import sys
 
+def write_simsearch_magic(outfile):
+    outfile.write("#Simsearch/1\n")
+
+def write_count_magic(outfile):
+    outfile.write("#Count/1\n")
+
+def write_simsearch_header(outfile, d):
+    lines = []
+    for name in ("num_bits", "software", "type", "query_source", "target_source"):
+        value = d.get(name, None)
+        if value is not None:
+            lines.append("#%s=%s\n" % (name, value))
+    outfile.writelines(lines)
 
 
-def report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_formatter):
+def report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_formatter, outfile):
+    format_string = float_formatter + " %s"
     k = args.k_nearest
     threshold = args.threshold
     batch_size = args.batch_size
     
-    print "Simsearch"
-#    write_similarity_header(args, queries, targets)
-
     first_time = True
     while 1:
-        print "Processing", len(batch_fps)
         if not first_time:
             targets.reset()
         else:
@@ -24,26 +34,22 @@ def report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_forma
         results = chemfp.tanimoto_knearest_search_batch(batch_fps, targets, k, threshold)
             
         for query_id, closest_targets in zip(batch_ids, results):
-            fields = [query_id]
+            fields = ["%d %s" % (len(closest_targets), query_id)]
             for (target_name, score) in closest_targets:
-                fields.append(float_formatter % score)
-                fields.append(target_name)
-            print " ".join(fields)
+                fields.append(format_string % (score, target_name))
+            outfile.write(" ".join(fields))
+            outfile.write("\n") # XX flush
 
         batch_ids, batch_fps = read_batch(batch_size, query_iter)
         if not batch_ids:
             break
 
-def report_counts(query_iter, batch_ids, batch_fps, targets, args):
+def report_counts(query_iter, batch_ids, batch_fps, targets, args, outfile):
     threshold = args.threshold
     batch_size = args.batch_size
 
-    print "Counts"
-# write_counts_header(args, queries, targets)
-
     first_time = True
     while 1:
-        print "Processing", len(batch_fps)
         if not first_time:
             targets.reset()
         else:
@@ -51,8 +57,8 @@ def report_counts(query_iter, batch_ids, batch_fps, targets, args):
             
         results = chemfp.tanimoto_count_batch(batch_fps, targets, threshold)
             
-        for query_id, count in zip(batch_ids, results):
-            print query_id, count
+        for count, query_id in zip(results, batch_ids):
+            outfile.write("%d %s\n" % (count, query_id))
 
         batch_ids, batch_fps = read_batch(batch_size, query_iter)
         if not batch_ids:
@@ -74,7 +80,8 @@ parser.add_argument("-q", "--queries", help="filename containing the query finge
 parser.add_argument("--query-hex", help="query in hex")
 parser.add_argument("--in", metavar="FORMAT", dest="query_format",
                     help="input query format (default uses the file extension, else 'fps')")
-
+parser.add_argument("-o", "--output", metavar="FILENAME",
+                    help="output filename (default is stdout)")
 parser.add_argument("--type", help="fingerprint type", default=None)
 
 parser.add_argument("-c", "--count", help="report counts", action="store_true")
@@ -127,7 +134,6 @@ def main(args=None):
         queries = chemfp.open(args.queries, format=args.query_format, type=type)
     else:
         queries = chemfp.open(None, format=args.query_format, type=type)
-    print "Queries", queries
     query_iter = iter(queries)
 
     # See if there's enough queries to justify reading the targets into memory
@@ -182,16 +188,43 @@ def main(args=None):
     if use_in_memory:
         targets = chemfp.read_into_memory(targets)
 
-    print "Targets", targets
-
-#    if not compatible(queries, targets):
-#        raise SystemExit("Can not do search")
+    if queries.header.num_bits is not None and targets.header.num_bits is not None:
+        if queries.header.num_bits != targets.header.num_bits:
+            sys.stderr.write("WARNING: query has %d bits and target has %d\n" %
+                             (queries.header.num_bits, target.header.num_bits))
+    if queries.header.type and targets.header.type:
+        if queries.header.type != targets.header.type:
+            sys.stderr.write("WARNING: fingerprints have incompatible headers\n")
+            sys.stderr.write("  query: %s\n" % (queries.header.type,))
+            sys.stderr.write(" target: %s\n" % (targets.header.type,))
 
     t2 = time.time()
-    if args.count:
-        report_counts(query_iter, batch_ids, batch_fps, targets, args)
-    else:
-        report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_formatter)
+    outfile = io.open_output(args.output)
+    with io.ignore_pipe_errors:
+        if args.count:
+            type = "Count min_score={min_score} max_score={max_score}".format(
+                min_score=args.threshold, max_score=1.0)
+            write_count_magic(outfile)
+            write_simsearch_header(outfile, {
+                "num_bits": targets.header.num_bits,
+                "software": "chemfp/0.95", # XXX
+                "type": type,
+                "query_source": queries.header.source,
+                "target_source": targets.header.source})
+                
+            report_counts(query_iter, batch_ids, batch_fps, targets, args, outfile)
+        else:
+            type = "Tanimoto k={k} min_score={min_score} max_score={max_score}".format(
+                k=args.k_nearest, min_score=args.threshold, max_score=1.0)
+            write_simsearch_magic(outfile)
+            write_simsearch_header(outfile, {
+                "num_bits": targets.header.num_bits,
+                "software": "chemfp/0.95", # XXX
+                "type": type,
+                "query_source": queries.header.source,
+                "target_source": targets.header.source})
+                
+            report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_formatter, outfile)
 
     t3 = time.time()
     print "total", t3-t1
