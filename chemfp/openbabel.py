@@ -268,8 +268,13 @@ def _stdin_reader(obconversion, obmol):
     return _file_reader(obconversion, obmol, notatend)
 
 def _file_reader(obconversion, obmol, notatend):
+    i = 1
     while notatend:
-        yield obmol.GetTitle(), obmol
+        title = obmol.GetTitle()
+        if not title:
+            title = "Record" + str(i)
+        yield title, obmol
+        i += 1
         obmol.Clear()
         notatend = obconversion.Read(obmol)
         # How do I detect if the input contains a failure?
