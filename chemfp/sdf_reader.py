@@ -65,7 +65,7 @@ class FileLocation(object):
     def info(self):
         return dict(name=self.name, lineno=self.lineno, title=self.title)
 
-def open_sdf(source=None, errors="strict", loc=None):
+def open_sdf(source=None, decompressor="auto", errors="strict", loc=None):
     """Open an SD file and return an iterator over the SD records, as blocks of text
 
     source - input source. Can be None (for sys.stdin), the input filename
@@ -73,7 +73,18 @@ def open_sdf(source=None, errors="strict", loc=None):
     errors - one of "strict" (default), "log", or "ignore". Other values are experimental
     loc - experimental location tracking.
     """
-    format_name, compression = io.normalize_format(source, None)
+    # XXX Adapater until I remove the old decompressor code
+    if decompressor == "auto":
+        format = None
+    elif decompressor == "gzip":
+        format = "sdf.gz"
+    elif decompressor == "bz2":
+        format = "sdf.bz2"
+    elif decompressor == "none":
+        format = "sdf"
+    else:
+        raise AssertionError(decompressor)
+    format_name, compression = io.normalize_format(source, format)
     fileobj = io.open_compressed_input_universal(source, compression)
     return iter_sdf_records(fileobj, errors, loc)
 
