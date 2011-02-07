@@ -3,7 +3,7 @@
 from distutils.core import setup, Extension
 
 setup(name = "chemfp",
-      version = "0.9",
+      version = "0.9.1",
       description = "Cheminformatics fingerprint tools",
       author = "Andrew Dalke",
       author_email = 'dalke@dalkescientific.com',
