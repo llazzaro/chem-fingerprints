@@ -31,7 +31,6 @@ SOFTWARE = "chemfp/" + __version__
 import os
 import __builtin__
 
-from . import decompressors
 from .error_handlers import ChemFPError
 
 def read_structure_fingerprints(type, source=None, format=None):
