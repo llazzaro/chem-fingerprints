@@ -25,6 +25,7 @@ and count fingerprints.
 
 OpenEye, for a non-commercial license to their tools.
 
-Phil Evans for pointing out problems in the 0.9 release.
+Phil Evans for pointing out problems in the 0.9 release,
+including compatibility issues with Python 2.5.
 
 To you, for reading this list and using the code.
