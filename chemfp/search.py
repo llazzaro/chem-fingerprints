@@ -147,7 +147,12 @@ def arena_tanimoto_count_batch(queries, arenas, threshold):
         count = 0
 
         # XXX I should have something which rounds up
-        for target_popcount in xrange(int(query_popcount*threshold), int(query_popcount/threshold)+1):
+        if threshold == 0.0:
+            range_ = xrange(0, len(arenas))
+        else:
+            range_ = xrange(int(query_popcount*threshold), int(query_popcount/threshold)+1)
+
+        for target_popcount in range_:
             in_common = threshold * (query_popcount+target_popcount)/(1+threshold)
             min_equal_bits = int(in_common)
             if min_equal_bits != in_common:
