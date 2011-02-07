@@ -79,7 +79,9 @@ class TestReadRecords(unittest2.TestCase):
         loc = sdf_reader.FileLocation()
         results = []
         for x in open_sdf(PUBCHEM_SDF_GZ, loc=loc):
-            self.assertEquals(loc.name, PUBCHEM_SDF_GZ)
+            if sys.version_info[:3] > (2, 5, 4):
+                # gzip didn't propgate the .name in earlier Python versions
+                self.assertEquals(loc.name, PUBCHEM_SDF_GZ)
             results.append(dict(title=loc.title,
                                 lineno=loc.lineno))
         self.assertEquals(results, expected_locs)
