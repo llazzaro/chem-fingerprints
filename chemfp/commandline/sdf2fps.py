@@ -144,13 +144,13 @@ def main(args=None):
     if args.title_tag is not None:
         reader = sdf_reader.iter_two_tags(records, args.title_tag, args.fp_tag)
         MISSING_TITLE = "Missing title tag %s, " % (args.title_tag,)
-        MISSING_TITLE += "in the record starting at line %d. Skipping.\n"
+        MISSING_TITLE += "in the record starting at line %s. Skipping.\n"
         
     else:
         reader = sdf_reader.iter_title_and_tag(records, args.fp_tag)
         MISSING_TITLE = "Empty record title at line %s. Skipping.\n"
 
-    MISSING_FP = ("Missing fingerprint tag %(tag)s in record %(title)r line %(lineno)d. "
+    MISSING_FP = ("Missing fingerprint tag %(tag)s in record %(title)r line %(lineno)s. "
                   "Skipping.\n")
 
     # This is either None or a user-specified integer
@@ -171,7 +171,7 @@ def main(args=None):
 
     for title, encoded_fp in reader:
         if not title:
-            sys.stderr.write(MISSING_TITLE % (location,))
+            sys.stderr.write(MISSING_TITLE % (location.lineno,))
             skip()
             continue
         if not encoded_fp:
