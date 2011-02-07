@@ -1,6 +1,6 @@
 import chemfp
 import math
-from chemfp import argparse, readers, io
+from chemfp import argparse, readers, io, SOFTWARE
 import sys
 
 def write_simsearch_magic(outfile):
@@ -92,6 +92,9 @@ parser.add_argument("-b", "--batch-size", help="batch size",
 parser.add_argument("--file-scan", help="search directly from the input FPS file",
                     action="store_true")
 parser.add_argument("--in-memory", help="use an in-memory fingerprint search",
+                    action="store_true")
+
+parser.add_argument("--times", help="report load and execution times to stderr",
                     action="store_true")
 
 parser.add_argument("target_filename", nargs=1, help="target filename", default=None)
@@ -206,7 +209,7 @@ def main(args=None):
             write_count_magic(outfile)
             write_simsearch_header(outfile, {
                 "num_bits": targets.header.num_bits,
-                "software": "chemfp/0.95", # XXX
+                "software": SOFTWARE,
                 "type": type,
                 "query_source": queries.header.source,
                 "target_source": targets.header.source})
@@ -218,7 +221,7 @@ def main(args=None):
             write_simsearch_magic(outfile)
             write_simsearch_header(outfile, {
                 "num_bits": targets.header.num_bits,
-                "software": "chemfp/0.95", # XXX
+                "software": SOFTWARE,
                 "type": type,
                 "query_source": queries.header.source,
                 "target_source": targets.header.source})
@@ -226,9 +229,8 @@ def main(args=None):
             report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_formatter, outfile)
 
     t3 = time.time()
-    print "total", t3-t1
-    print "load", t2-t1
-    print "search", t3-t2
+    if args.times:
+        sys.stderr.write("open %s search %s total %s\n" % (t2-t1, t3-t2, t3-t1))
 
 if __name__ == "__main__":
     main()
