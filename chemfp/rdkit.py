@@ -175,9 +175,9 @@ def read_structures(source, format=None, errors="strict"):
         If None then the format is inferred from the source extension
     'errors' is one of "strict" (default), "log", or "ignore" (other values are experimental)
     """
-    format_name, compression = io.normalize_format(source, format)
+    format_name, compression = io.normalize_format(source, format, default=("smi", None))
     format_name = _format_extensions.get(format_name, format_name)
-    if format == "sdf":
+    if format_name == "sdf":
         # I have an old PubChem file Compound_09425001_09450000.sdf .
         #   num. lines = 5,041,475   num. bytes = 159,404,037
         # 
@@ -202,11 +202,11 @@ def read_structures(source, format=None, errors="strict"):
         #                yield title, mol
         #    return native_sdf_reader()
 
-        fileobj = io.open_decompress(source, compression)
+        fileobj = io.open_compressed_input_universal(source, compression)
         # fileobj should always have the .name attribute set.
         return iter_sdf_molecules(fileobj, None, errors)
 
-    elif format == "smi":
+    elif format_name == "smi":
         # I timed the native reader at 31.6 seconds (best of 31.6, 31.7, 31.7)
         # and the Python reader at 30.8 seconds (best of 30.8, 30.9, and 31.0)
         # Yes, the Python reader is faster and using it gives me better consistency
@@ -217,7 +217,7 @@ def read_structures(source, format=None, errors="strict"):
         #        for mol in supplier:
         #            yield mol.GetProp("_Name"), mol
         #    return native_smiles_reader()
-        fileobj = io.open_decompress(source, compression)
+        fileobj = io.open_compressed_input_universal(source, compression)
         return iter_smiles_molecules(fileobj, None, errors)
 
     else:
