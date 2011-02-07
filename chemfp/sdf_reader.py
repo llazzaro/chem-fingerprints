@@ -7,7 +7,7 @@
 
 
 from __future__ import absolute_import
-from . import decompressors, error_handlers
+from . import error_handlers, io
 
 __all__ = ["open_sdf", "iter_sdf_records", "iter_two_tags", "iter_title_and_tag"]
 
@@ -65,17 +65,16 @@ class FileLocation(object):
     def info(self):
         return dict(name=self.name, lineno=self.lineno, title=self.title)
 
-def open_sdf(source=None, decompressor="auto", errors="strict", loc=None):
+def open_sdf(source=None, errors="strict", loc=None):
     """Open an SD file and return an iterator over the SD records, as blocks of text
 
     source - input source. Can be None (for sys.stdin), the input filename
         as a string, or a file object.
     errors - one of "strict" (default), "log", or "ignore". Other values are experimental
-    decompressor - one of "auto" (default), "gzip", "bzip2", or "none".
-        Other values are experimental
     loc - experimental location tracking.
     """
-    fileobj = decompressors.open_and_decompress_universal(source, decompressor)
+    format_name, compression = io.normalize_format(source, None)
+    fileobj = io.open_compressed_input_universal(source, compression)
     return iter_sdf_records(fileobj, errors, loc)
 
 # My original implementation used a slow line-oriented parser.  That
