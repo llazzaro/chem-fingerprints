@@ -2,7 +2,7 @@
 
 # All chem-fingerprint software is distributed with the following license:
 
-# Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
+# Copyright (c) 2010-2011 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -23,6 +23,10 @@
 # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+__version__ = "0.9"
+__version_info = (0, 9, 0)
+SOFTWARE = "chemfp/" + __version__
 
 import os
 import __builtin__
@@ -64,9 +68,6 @@ def read_into_memory(reader):
     from chemfp import readers
     return readers.fps_to_in_memory(reader)
     
-def open_mmap(source):
-    raise NotImplementedError
-
 def tanimoto_count_batch(queries, targets, threshold=0.0):
     if not (0.0 <= threshold <= 1.0):
         raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
