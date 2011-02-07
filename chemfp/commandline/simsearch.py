@@ -130,7 +130,12 @@ def main(args=None):
 
     # Open the file. This reads just enough to get the header.
 
-    targets = chemfp.open(target_filename, type=args.type)
+    try:
+        targets = chemfp.open(target_filename, type=args.type)
+    except TypeError as err:
+        if "'type' is required" in str(err):
+            parser.error("--type is required to convert structure in the targets file to fingerprints")
+            
     type = targets.header.type
 
     if args.queries is not None:
