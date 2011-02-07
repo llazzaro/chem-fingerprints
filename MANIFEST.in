@@ -1,0 +1,7 @@
+recursive-include chemfp *.py
+recursive-include tests *.py
+include *2fps
+
+include TODO
+include THANKS
+include COPYING
