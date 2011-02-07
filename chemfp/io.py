@@ -50,7 +50,7 @@ _compression_regex = "|".join(re.escape(ext) for ext in _compression_extensions)
 
 _format_pat = re.compile("^([a-zA-Z0-9]+)(" + _compression_regex + ")?$")
 
-def normalize_format(source, format, default=("fps", None)):
+def normalize_format(source, format, default=("fps", "")):
     if source is None:
         # Read from stdin
         filename = None
@@ -110,6 +110,14 @@ def normalize_format(source, format, default=("fps", None)):
     
     return (format_name, compression)
 
+def get_filename(source):
+    if source is None:
+        return None
+    elif isinstance(source, basestring):
+        return source
+    else:
+        return getattr(infile, "name", None)
+
 ####
 
 def open_output(destination):
@@ -137,13 +145,21 @@ def open_compressed_output(destination, compression):
         import gzip
         if destination is None:
             return gzip.GzipFile(mode="w", fileobj=sys.stdout)
-        elif isinstance(source, basestring):
-            return gzip.open(source, "w")
+        elif isinstance(destination, basestring):
+            return gzip.open(destination, "w")
         else:
             return gzip.GzipFile(mode="w", fileobj=destination)
 
     if compression == ".bz2":
-        raise NotImplementedError("bzip2 compression not supported")
+        import bz2
+        if destination is None:
+            if not exists("/dev/stdout"):
+                raise NotImplementedError("Cannot write bz2 compressed data to stdout on this platform")
+            return bz2.BZ2File("/dev/stdout", "w")
+        elif isinstance(destination, basestring):
+            return bz2.BZ2File(destination, "w")
+        else:
+            raise NotImplementedError("bzip2 compression not supported")
 
     if compression == ".xz":
         raise NotImplementedError("xz compression not supported")
@@ -162,6 +178,7 @@ def open_compressed_input_universal(source, compression):
     if compression == ".gz":
         import gzip
         if source is None:
+            # GzipFile doesn't have a "U"/universal file mode?
             return gzip.GzipFile(fileobj=sys.stdin)
         elif isinstance(source, basestring):
             return gzip.open(source, "r")
@@ -169,7 +186,18 @@ def open_compressed_input_universal(source, compression):
             return source
 
     if compression == ".bz2":
-        raise NotImplementedError("bzip2 decompression not supported")
+        import bz2
+        if source is None:
+            # bz2 doesn't support Python objects. On some platforms
+            # I can work around the problem
+            if not os.path.exists("/dev/stdin"):
+                raise NotImplementedError("Cannot read bz2 compressed data from stdin on this platform")
+            return bz2.BZ2File("/dev/stdin", "rU")
+        elif isinstance(source, basestring):
+            return bz2.BZ2File(source, "rU")
+        else:
+            # Well, I could emulate it, but I'm not going to
+            raise NotImplementedError("Cannot read bz2 compress data from a Python stream")
 
     if compression == ".xz":
         raise NotImplementedError("xz decompression not supported")
