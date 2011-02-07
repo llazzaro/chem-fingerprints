@@ -31,11 +31,6 @@ assert len(expected_identifiers) == len(expected_linenos)
 expected_locs = [dict(title=title, lineno=lineno) for (title, lineno) in
                      zip(expected_identifiers, expected_linenos)]
 
-class FakeDecompressor(object):
-    def open_filename_universal(self, filename):
-        assert filename == "spam.blah"
-        return open(PUBCHEM_SDF, "rU")
-
 class TestReadRecords(unittest2.TestCase):
     def test_reads_the_only_record(self):
         n = sum(1 for x in open_sdf(TRYPTOPHAN_SDF))
@@ -78,10 +73,6 @@ class TestReadRecords(unittest2.TestCase):
     def test_reads_from_gzip_fileobj(self):
         f = open(PUBCHEM_SDF_GZ, "rb")
         n = sum(1 for x in open_sdf(f, "gzip"))
-        self.assertEquals(n, 19)
-
-    def test_handles_alternate_decompressor(self):
-        n = sum(1 for x in open_sdf("spam.blah", FakeDecompressor()))
         self.assertEquals(n, 19)
 
     def test_handles_loc(self):
