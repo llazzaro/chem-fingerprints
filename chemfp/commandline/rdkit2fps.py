@@ -88,7 +88,7 @@ def main(args=None):
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
     except (TypeError, IOError), err:
-        sys.stderr.write("%s\n" % err)
+        sys.stderr.write("Cannot read structure fingerprints: %s\n" % err)
         raise SystemExit(1)
 
     io.write_fps1_output(reader, args.output)
