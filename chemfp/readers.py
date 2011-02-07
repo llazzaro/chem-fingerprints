@@ -17,31 +17,13 @@ BLOCKSIZE = 20000
 
 
 
-def _open_filename_or_stream(source, mode):
-    if isinstance(source, basestring):
-        if source[-3:].lower() == ".gz":
-            import gzip
-            filename = source[:-3]
-            return source, gzip.open(source)
-
-        return source, _builtin_open(source, mode)
-
-    name = getattr(source, "name", "<unknown>")
-    return name, source
-
-#def open_fps_mmap(source):
-    
-
 def open_fps(source, format=None):
     format_name, compression = io.normalize_format(source, format)
     if format_name != "fps":
         raise TypeError("Unknown format %r" % (format_name,))
 
     infile = io.open_compressed_input_universal(source, compression)
-    if isinstance(source, basestring):
-        filename = source
-    else:
-        filename = getattr(f, "name", None)
+    filename = io.get_filename(source)
 
     header, lineno, block = read_header(infile, filename)
     return FPSReader(infile, header, lineno, block)
