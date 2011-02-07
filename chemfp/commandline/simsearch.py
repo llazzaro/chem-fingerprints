@@ -211,7 +211,7 @@ def main(args=None):
     outfile = io.open_output(args.output)
     with io.ignore_pipe_errors:
         if args.count:
-            type = "Count threshold={threshold}".format(threshold=args.threshold)
+            type = "Count threshold=%(threshold)s" % (args.threshold,)
             write_count_magic(outfile)
             write_simsearch_header(outfile, {
                 "num_bits": targets.header.num_bits,
@@ -222,7 +222,7 @@ def main(args=None):
                 
             report_counts(query_iter, batch_ids, batch_fps, targets, args, outfile)
         else:
-            type = "Tanimoto k={k} threshold={threshold}".format(
+            type = "Tanimoto k={k} threshold=%(threshold)s" % dict(
                 k=args.k_nearest, threshold=threshold, max_score=1.0)
             write_simsearch_magic(outfile)
             write_simsearch_header(outfile, {

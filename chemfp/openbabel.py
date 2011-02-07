@@ -201,7 +201,7 @@ def read_structures(filename=None, format=None):
     # OpenBabel auto-detects gzip compression.
 
     if not obconversion.SetInFormat(format_name):
-        raise TypeError("Unknown structure format {format!r}".format(format=format_name))
+        raise TypeError("Unknown structure format %r" % (format_name,))
     
     obmol = ob.OBMol()
 
@@ -226,13 +226,13 @@ def read_structures(filename=None, format=None):
         try:
             open(filename).close()
         except IOError, err:
-            raise SystemExit("Unable to open structure file {filename!r}: {msg}".format(
-                filename=filename, msg=err.strerror))
+            raise SystemExit("Unable to open structure file %(filename)r: %(msg)s" %
+                             dict(filename=filename, msg=err.strerror))
 
         # Okay, don't know what's going on. Report OB's error
         errmsg = _get_ob_error(ob.obErrorLog)
-        raise SystemExit("Unable to get structures from {filename!r|:\n{msg}".format(
-            filename=filename, msg=errmsg))
+        raise SystemExit("Unable to get structures from %(filename)r:\n%(msg)s" %
+                         dict(filename=filename, msg=errmsg))
 
     ob.obErrorLog.SetOutputLevel(lvl) # Revert to normal logging
 

@@ -278,8 +278,8 @@ def _get_format_setter(format=None):
         # acceptable "sdf".
         format_flag = _formats.get(fmt[1:], None)
         if format_flag is not None:
-            warnings.warn("format name {format!r} should be written {better!r}".format(
-                format=format, better=format[1:]), DeprecationWarning)
+            warnings.warn("format name %(format)r should be written %(better)r" %
+                          dict(format=format, better=format[1:]), DeprecationWarning)
 
     if format_flag is None:
         raise UnknownFormat(format)
@@ -375,7 +375,7 @@ def read_path_fingerprints_v1(source=None, format=None, kwargs={}):
 
 ############# Used when generate the FPS header
 
-SOFTWARE = "OEGraphSim/{release} ({version})".format(
+SOFTWARE = "OEGraphSim/%(release)s (%(version)s)" % dict(
     release = OEGraphSimGetRelease(),
     version = OEGraphSimGetVersion())
 
