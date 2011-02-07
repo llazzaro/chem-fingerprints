@@ -183,7 +183,7 @@ def open_compressed_input_universal(source, compression):
         elif isinstance(source, basestring):
             return gzip.open(source, "r")
         else:
-            return source
+            return gzip.GzipFile(fileobj=source)
 
     if compression == ".bz2":
         import bz2
