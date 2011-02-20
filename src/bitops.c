@@ -176,10 +176,11 @@ double chemfp_hex_tanimoto(int len, const unsigned char *fp1,
   if (union_w >= BIG) {
     return -1.0;
   }
-  /* Special case define that 0/0 = 1.0. This agrees with OpenEye and after
-     looking and asking around seems to be the generally accepted choice. */
+  /* Special case define that 0/0 = 0.0. It's hard to decide what to 
+	 use here, for example, OpenEye uses 1.0. It seems that 0.0
+     is the least surprising choice. */
   if (union_popcount == 0) {
-    return 1.0;
+    return 0.0;
   }
   return (intersect_popcount + 0.0) / union_popcount;  /* +0.0 to coerce to double */
 }
