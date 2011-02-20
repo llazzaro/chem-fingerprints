@@ -133,7 +133,7 @@ def main(args=None):
 
     try:
         targets = chemfp.open(target_filename, type=args.type)
-    except TypeError as err:
+    except TypeError, err:
         if "'type' is required" in str(err):
             parser.error("--type is required to convert structure in the targets file to fingerprints")
             
