@@ -1,0 +1,9 @@
+What's new in 0.9.1:
+
+Support for Python 2.5.
+
+What's new in 0.9:
+
+Major update from 0.5. Changes to the API, code
+cleanup, new search API, and more. Since there are
+no earlier users, I won't go into the details. :)
