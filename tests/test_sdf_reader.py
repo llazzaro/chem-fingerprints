@@ -85,7 +85,7 @@ class TestReadRecords(unittest2.TestCase):
                 # keep track of the .name attribute
                 self.assertEquals(loc.name, PUBCHEM_SDF_GZ)
             else:
-                self.assertEquals(hasattr(loc, "name"), False)
+                self.assertEquals(getattr(loc, "name"), None)
             results.append(dict(title=loc.title,
                                 lineno=loc.lineno))
         self.assertEquals(results, expected_locs)
