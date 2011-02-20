@@ -5,7 +5,7 @@ from cStringIO import StringIO as SIO
 
 import support
 
-from openeye import oechem
+from openeye import oechem  # OEChem must be installed in order to run these tests
 
 from chemfp.commandline import oe2fps
 import chemfp.openeye
