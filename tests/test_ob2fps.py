@@ -1,9 +1,11 @@
+from __future__ import with_statement
 import os
 import shutil
 import tempfile
 import unittest2
 
 from chemfp.commandline import ob2fps
+import chemfp.openbabel
 
 import support
 
@@ -11,6 +13,7 @@ runner = support.Runner(ob2fps.main)
 run = runner.run
 run_fps = runner.run_fps
 run_split = runner.run_split
+run_exit = runner.run_exit
 
 class TestFingerprintTypes(unittest2.TestCase):
     def test_unspecified(self):
@@ -30,14 +33,21 @@ class TestFingerprintTypes(unittest2.TestCase):
         headers, fps = run_split("--FP4", 19)
         self.assertEquals(headers["#type"], "OpenBabel-FP4/1")
         self.assertEquals(fps[0], "1100000000000000000080000000000000010000000c9800000000000000000000000640407800 9425004")
+
+    @unittest2.skipIf(not chemfp.openbabel.HAS_MACCS, "need MACCS support")
     def test_MACCS(self):
         headers, fps = run_split("--MACCS", 19)
         if headers["#type"] == "OpenBabel-MACCS/1":
             # Running on a buggy 2.3.0 release
             self.assertEquals(fps[0], "800400000002080019cc40eacdec980baea378ef1b 9425004")
         else:
+            self.assertEquals(headers["#type"], "OpenBabel/MACCS/2")
             # Running on a corrected post-2.3.0 release
             self.assertEquals(fps[0], "000000000002080019cc44eacdec980baea378ef1f 9425004")
+
+    @unittest2.skipIf(chemfp.openbabel.HAS_MACCS, "check for missing MACCS support")
+    def test_MACCS_does_not_exist(self):
+        run_exit("--MACCS")
 
 class TestIO(unittest2.TestCase):
     def test_compressed_auto(self):
@@ -67,6 +77,7 @@ class TestIO(unittest2.TestCase):
         
 
 class TestMACCS(unittest2.TestCase):
+    @unittest2.skipIf(not chemfp.openbabel.HAS_MACCS, "need MACCS support")
     def test_bitorder(self):
         result = runner.run_fps("--MACCS", 7, "maccs.smi")
         # The fingerprints are constructed to test the first few bytes.
