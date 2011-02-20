@@ -75,7 +75,12 @@ class TestIO(unittest2.TestCase):
         self.assertEquals(len(fps), 19)
         self.assertEquals(fps[0], "0400000000b001 9425004\n")
         
-
+    def test_missing_filename(self):
+        errmsg = run_exit("--FP2", "does_not_exist.smi")
+        self.assertIn("Cannot read structures", errmsg)
+        self.assertIn("No such file", errmsg)
+        self.assertIn("does_not_exist.smi", errmsg)
+        
 class TestMACCS(unittest2.TestCase):
     @unittest2.skipIf(not chemfp.openbabel.HAS_MACCS, "need MACCS support")
     def test_bitorder(self):
