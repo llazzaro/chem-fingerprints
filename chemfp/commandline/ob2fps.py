@@ -86,9 +86,15 @@ def main(args=None):
     # Ready the input reader/iterator
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
-    except (KeyError, IOError), err:
-        sys.stderr.write("Cannot read structure fingerprints: %s" % err)
+    except IOError, err:
+        sys.stderr.write("Cannot read structures: %s" % (err,))
         raise SystemExit(1)
+    except TypeError, err:
+        msg = str(err)
+        if "Unknown structure format" in msg:
+            sys.stderr.write(msg)
+            raise SystemExit(1)
+        raise
 
     io.write_fps1_output(reader, args.output)
     

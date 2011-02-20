@@ -81,6 +81,12 @@ class TestIO(unittest2.TestCase):
         self.assertIn("No such file", errmsg)
         self.assertIn("does_not_exist.smi", errmsg)
         
+    def test_bad_extension(self):
+        errmsg = run_exit("--FP2 --in xyzzy")
+        self.assertIn("Unknown structure format", errmsg)
+        self.assertIn("xyzzy", errmsg)
+        
+
 class TestMACCS(unittest2.TestCase):
     @unittest2.skipIf(not chemfp.openbabel.HAS_MACCS, "need MACCS support")
     def test_bitorder(self):
