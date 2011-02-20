@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import with_statement
 
 import sys
 import re
@@ -26,8 +27,8 @@ def _check_num_bits(num_bits,  # from the user
         # If the user gave a value, make sure it matches
         if num_bits != fp_num_bits:
             parser.error(
-                ("the first fingerprint has {fp_num_bits} bits which "
-                 "is not the same as the --num-bits value of {num_bits}").format(
+                ("the first fingerprint has %(fp_num_bits)s bits which "
+                 "is not the same as the --num-bits value of %(num_bits)s") % dict(
                     num_bits=num_bits, fp_num_bits=fp_num_bits))
             raise AssertionError("should not get here")
         return fp_num_bits
@@ -42,8 +43,8 @@ def _check_num_bits(num_bits,  # from the user
     # but only up to 7 bits larger.
     if (num_bits+7)//8 != num_bytes:
         parser.error(
-            ("The byte length of the first fingerprint is {num_bytes} so --num-bits "
-             "must be {min} <= num-bits <= {max}, not {num_bits}").format(
+            ("The byte length of the first fingerprint is %(num_bytes)s so --num-bits "
+             "must be %(min)s <= num-bits <= %(max)s, not %(num_bits)s") % dict(
                 num_bytes=num_bytes, min=num_bytes*8-7, max=num_bytes*8,
                 num_bits=num_bits))
         raise AssertError("should not get here")
@@ -135,21 +136,21 @@ def main(args=None):
         m = _illegal_value_pat.search(description)
         if m is None:
             continue
-        parser.error("--{attr} description may not contain the character {c!r}".format(
+        parser.error("--%(attr)s description may not contain the character %(c)r" % dict(
                 attr=attr, c = m.group(0)))
 
     # Get the title and fingerprints from the records, and set up the
     # error messages for missing title and fingerprints.
     if args.title_tag is not None:
         reader = sdf_reader.iter_two_tags(records, args.title_tag, args.fp_tag)
-        MISSING_TITLE = "Missing title tag {tag}, ".format(tag=args.title_tag)
-        MISSING_TITLE += "in the record starting at line {loc.lineno}. Skipping.\n"
+        MISSING_TITLE = "Missing title tag %s, " % (args.title_tag,)
+        MISSING_TITLE += "in the record starting at line %s. Skipping.\n"
         
     else:
         reader = sdf_reader.iter_title_and_tag(records, args.fp_tag)
-        MISSING_TITLE = "Empty record title at line {loc.lineno}. Skipping.\n"
+        MISSING_TITLE = "Empty record title at line %s. Skipping.\n"
 
-    MISSING_FP = ("Missing fingerprint tag {tag} in record {loc.title!r} line {loc.lineno}. "
+    MISSING_FP = ("Missing fingerprint tag %(tag)s in record %(title)r line %(lineno)s. "
                   "Skipping.\n")
 
     # This is either None or a user-specified integer
@@ -170,19 +171,20 @@ def main(args=None):
 
     for title, encoded_fp in reader:
         if not title:
-            sys.stderr.write(MISSING_TITLE.format(loc=location))
+            sys.stderr.write(MISSING_TITLE % (location.lineno,))
             skip()
             continue
         if not encoded_fp:
-            sys.stderr.write(MISSING_FP.format(tag=args.fp_tag, loc=location))
+            sys.stderr.write(MISSING_FP % dict(
+                tag=args.fp_tag, title=location.title, lineno=location.lineno))
             skip()
             continue
         try:
             fp_num_bits, fp = fp_decoder(encoded_fp)
         except TypeError, err:
             sys.stderr.write(
-                ("Could not {decoder_name} decode <{tag}> value {encoded_fp!r}: {err}\n"
-                 "  Skipping record {message}\n").format(
+                ("Could not %(decoder_name)s decode <%(tag)s> value %(encoded_fp)r: %(err)s\n"
+                 "  Skipping record %(message)s\n") % dict(
                     decoder_name=fp_decoder_name, tag=args.fp_tag,
                     message=location.where(), err=err, encoded_fp=encoded_fp))
             skip()
@@ -212,9 +214,9 @@ def main(args=None):
             if (fp_num_bits != expected_fp_num_bits or
                 len(fp) != expected_num_bytes):
                 raise SystemExit(
-                    ("ERROR: The {message}, tag {tag} has an inconsistent "
-                     "fingerprint length".format(
-                            message=location.message(), tag=args.fp_tag)))
+                    ("ERROR: The %(message)s, tag %(tag)s has an inconsistent "
+                     "fingerprint length" % dict(
+                         message=location.message(), tag=args.fp_tag)))
 
         with io.ignore_pipe_errors:
             io.write_fps1_fingerprint(outfile, fp, title)

@@ -25,4 +25,8 @@ and count fingerprints.
 
 OpenEye, for a non-commercial license to their tools.
 
+Phil Evans, for being the first external person to
+test the code and give feedback about installation
+and Python 2.5 compatibility problems.
+
 To you, for reading this list and using the code.

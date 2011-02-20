@@ -66,10 +66,10 @@ class SmilesFileLocation(object):
         self.name = name
         self.lineno = 1
     def where(self):
-        s = "at line {self.lineno}"
+        s = "at line %(lineno)s"
         if self.name is not None:
-            s += " of {self.name}"
-        return s.format(self=self)
+            s += " of %(name)s"
+        return s % self.__dict__
     
 
 # While RDKit has a SMILES file parser, it doesn't handle reading from
@@ -221,7 +221,7 @@ def read_structures(source, format=None, errors="strict"):
         return iter_smiles_molecules(fileobj, None, errors)
 
     else:
-        raise TypeError("Unsupported format {format!r}".format(format=format))
+        raise TypeError("Unsupported format %r" % (format,))
 
 ########### The topological fingerprinter
 

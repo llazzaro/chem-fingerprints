@@ -54,12 +54,12 @@ class FileLocation(object):
         return self._record[:self._record.find("\n")].strip()
     
     def where(self):
-        s = "at line {self.lineno}".format(self=self)
+        s = "at line %s" % (self.lineno,)
         if self.name is not None:
-            s += " of {self.name!r}".format(self=self)
+            s += " of %r" % (self.name,)
         title = self.title
         if title is not None:
-            s += " ({title})".format(title=title)
+            s += " (%s)" % (title,)
         return s
 
     def info(self):
@@ -183,7 +183,7 @@ def _find_tag_data(rec, tag_substr):
         # rfind cannot return -1 because _sdf_check_pat verified there
         # are at least 3 newlines. The +1 is safe because there's at
         # least the "<" and ">" from the tag.
-        tag_line_start = rec.rfind("\n", None, tag_start) + 1
+        tag_line_start = rec.rfind("\n", 0, tag_start) + 1
         if rec[tag_line_start] != ">":
             # This tag is not on a data tag line. It might be the value for
             # some of the text field.

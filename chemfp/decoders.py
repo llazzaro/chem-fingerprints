@@ -254,7 +254,7 @@ def import_decoder(path):
     if not terms:
         raise TypeError("missing import name")
     if "" in terms:
-        raise TypeError("Empty module name in {path!r}".format(path=path))
+        raise TypeError("Empty module name in %r" % (path,))
 
     # It's impossible to tell if the dotted terms corresponds to
     # module or class/instance attribute lookups, so I don't know
@@ -276,8 +276,8 @@ def import_decoder(path):
        obj = getattr(obj, subattr, None)
        if obj is None:
            raise TypeError(("Unable to import a decoder: "
-                            "stopped at {attr!r} in {path!r}").format(
-                   attr=subattr, path=path))
+                            "stopped at %(attr)r in %(path)r") %
+                           dict(attr=subattr, path=path))
 
     return obj
 
@@ -320,8 +320,8 @@ def _extract_decoder(parser, namespace):
     for arg in _decoder_table:
         if getattr(namespace, arg):
             if decoder_name is not None:
-                parser.error("Cannot decode with both --{old_arg} and --{arg}".format(
-                        old_arg=decoder_name, arg=arg))
+                parser.error("Cannot decode with both --%(old_arg)s and --%(arg)s" % 
+                             dict(old_arg=decoder_name, arg=arg))
             decoder_name = arg
     # When in doubt, assume a hex decoder
     if decoder_name is None:

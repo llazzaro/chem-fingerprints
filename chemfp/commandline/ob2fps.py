@@ -76,8 +76,8 @@ def main(args=None):
     elif args.MACCS:
         if not ob.HAS_MACCS:
             parser.error(
-                "--MACCS is not supported in your OpenBabel installation ({version})".format(
-                    version = ob.GetReleaseVersion()))
+                "--MACCS is not supported in your OpenBabel installation (%s)" % (
+                    ob.GetReleaseVersion(),))
         opener = types.OpenBabelMACCS166()
     else:
         # Default

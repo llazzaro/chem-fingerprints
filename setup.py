@@ -3,12 +3,12 @@
 from distutils.core import setup, Extension
 
 setup(name = "chemfp",
-      version = "0.9",
+      version = "0.9.1",
       description = "Cheminformatics fingerprint tools",
       author = "Andrew Dalke",
       author_email = 'dalke@dalkescientific.com',
       url = "http://code.google.com/p/chem-fingerprints/",
-      packages = ["chemfp"],
+      packages = ["chemfp", "chemfp.commandline"],
       scripts = ["ob2fps", "oe2fps", "rdkit2fps", "sdf2fps", "simsearch"],
 
       ext_modules = [Extension("_chemfp",

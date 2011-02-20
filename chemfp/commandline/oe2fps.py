@@ -15,13 +15,13 @@ btype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(oe._btypes))))
 epilog = """\
 
 ATYPE is one or more of the following, separated by commas
-  {atype_options}
+  %(atype_options)s
 Examples:
   --atype DefaultAtom
   --atype AtomicNumber,HvyDegree
 
 BTYPE is one or more of the following, separated by commas
-  {btype_options}
+  %(btype_options)s
 Examples:
   --btype DefaultBond,Chiral
   --btype BondOrder
@@ -41,7 +41,7 @@ Use "--in FORMAT" to select an alternative, where FORMAT is one of:
    MacroModel    mmod, mmod.gz
    OEBinary v2   oeb, oeb.gz
    old OEBinary  bin
-""".format(atype_options=atype_options,
+""" % dict(atype_options=atype_options,
            btype_options=btype_options)
 
 parser = argparse.ArgumentParser(

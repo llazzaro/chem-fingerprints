@@ -45,7 +45,8 @@ OpenEyeMACCS166 = OpenEyeMACCS166_v1
 
 class OpenEyePath_v1(_Opener):
     name = "OpenEye-Path/1"
-    format_string = "OpenEye-Path/1 numbits={numbits} minbonds={minbonds} maxbonds={maxbonds} atype={atype} btype={btype}"
+    format_string = ("OpenEye-Path/1 numbits=%(numbits)s minbonds=%(minbonds)s "
+                     "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s")
     
     converters = {"numbits": int,
                   "minbonds": int,
@@ -70,7 +71,7 @@ class OpenEyePath_v1(_Opener):
     def get_type(self):
         from chemfp.openeye import atom_value_to_description, bond_value_to_description
         kw = self.kwargs
-        return self.format_string.format(numbits = kw["numbits"],
+        return self.format_string % dict(numbits = kw["numbits"],
                                          minbonds = kw["minbonds"],
                                          maxbonds = kw["maxbonds"],
                                          atype = atom_value_to_description(kw["atype"]),
@@ -97,8 +98,8 @@ RDKitMACCS166 = RDKitMACCS166_v1
 
 class RDKitFingerprint_v1(_Opener):
     name = "RDKit-Fingerprint/1"
-    format_string = ("RDKit-Fingerprint/1 minPath={minPath} maxPath={maxPath} fpSize={fpSize} "
-                     "nBitsPerHash={nBitsPerHash} useHs={useHs}")
+    format_string = ("RDKit-Fingerprint/1 minPath=%(minPath)s maxPath=%(maxPath)s fpSize=%(fpSize)s "
+                     "nBitsPerHash=%(nBitsPerHash)s useHs=%(useHs)s")
 
     converters = {"minPath": int,
                   "maxPath": int,
@@ -115,7 +116,7 @@ class RDKitFingerprint_v1(_Opener):
         return RDKitFingerprint_v1(_convert_parameters(parameters, RDKitFingerprint_v1.converters))
 
     def get_type(self):
-        return self.format_string.format(**self.kwargs)
+        return self.format_string % self.kwargs
 
     def read_structure_fingerprints(self, source=None, format=None):
         from chemfp.rdkit import read_rdkit_fingerprints_v1, SOFTWARE
