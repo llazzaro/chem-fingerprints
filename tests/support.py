@@ -72,9 +72,10 @@ class Runner(object):
         headers = {}
         fps = []
         result_iter = iter(result)
+        # I know the first line is correct (it was tested in verify_result)
+        # Plus, this lets the SimsearchRunner use run_split
+        result_iter.next()
         for line in result_iter:
-            if line == "#FPS1":
-                continue
             if line.startswith("#"):
                 k, v = line.split("=", 1)
                 assert k not in headers
