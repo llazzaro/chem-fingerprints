@@ -78,7 +78,7 @@ parser.add_argument("-k" ,"--k-nearest", help="select the k nearest neighbors",
 parser.add_argument("-t" ,"--threshold", help="minimum similarity score threshold",
                     default=0.0, type=float)
 parser.add_argument("-q", "--queries", help="filename containing the query fingerprints")
-parser.add_argument("--query-hex", help="query in hex")
+parser.add_argument("--hex-query", help="query in hex")
 parser.add_argument("--in", metavar="FORMAT", dest="query_format",
                     help="input query format (default uses the file extension, else 'fps')")
 parser.add_argument("-o", "--output", metavar="FILENAME",
@@ -127,6 +127,9 @@ def main(args=None):
     if args.file_scan and args.in_memory:
         args.error("Cannot specify both --file-scan and --in-memory")
     
+    if args.hex_query and args.queries:
+        args.error("Cannot specify both --hex-query and --queries")
+
     batch_size = args.batch_size # args.batch_size
 
     # Open the file. This reads just enough to get the header.
@@ -136,13 +139,23 @@ def main(args=None):
     except TypeError, err:
         if "'type' is required" in str(err):
             parser.error("--type is required to convert structure in the targets file to fingerprints")
+        raise
             
     type = targets.header.type
 
-    if args.queries is not None:
+    if args.hex_query is not None:
+        try:
+            query = args.hex_query.decode("hex")
+        except ValueError, err:
+            args.error("--hex-query is not a hex string: %s" % (err,))
+        query_iter = iter( [(query, "Query1")] )
+        queries = io.FPIterator(io.Header(num_bits = len(query) * 8), query_iter)
+
+    elif args.queries is not None:
         queries = chemfp.open(args.queries, format=args.query_format, type=type)
     else:
         queries = chemfp.open(None, format=args.query_format, type=type)
+
     query_iter = iter(queries)
 
     # See if there's enough queries to justify reading the targets into memory
@@ -222,7 +235,7 @@ def main(args=None):
                 
             report_counts(query_iter, batch_ids, batch_fps, targets, args, outfile)
         else:
-            type = "Tanimoto k={k} threshold=%(threshold)s" % dict(
+            type = "Tanimoto k=%(k)s threshold=%(threshold)s" % dict(
                 k=args.k_nearest, threshold=threshold, max_score=1.0)
             write_simsearch_magic(outfile)
             write_simsearch_header(outfile, {
