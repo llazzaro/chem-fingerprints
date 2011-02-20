@@ -1,0 +1,18 @@
+recursive-include chemfp *.py
+recursive-include tests *.py
+prune tests/chemfp
+
+recursive-include src *.c
+recursive-include src *.h
+
+include src/CMakeLists.txt
+include tests/unit2
+include tests/testall
+
+
+include *2fps
+
+include TODO
+include THANKS
+include COPYING
+

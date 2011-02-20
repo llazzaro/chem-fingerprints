@@ -1,0 +1,10 @@
+Add support for a "max_score"
+
+Include Indigo and CDK support
+
+Add support for Tversky and other search algorithms
+
+Optimize the multi-query searches (there should be
+no need to rescan the arena for each search)
+
+
