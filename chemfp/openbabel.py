@@ -21,16 +21,15 @@ from . import io
 # where I forget to set these variables, so check for them now and
 # warn about possible problems.
 
-if "BABEL_LIBDIR" not in os.environ:
-    warnings.warn("BABEL_LIBDIR is not set; this process may soon crash")
+#if "BABEL_LIBDIR" not in os.environ:
+#    warnings.warn("BABEL_LIBDIR is not set")
+
 #else:
 #  ... check that SMILES and a few other things are on the path ...
 #  but note that BABEL_LIBDIR is a colon (or newline or control-return?)
 #  separated field whose behaviour isn't well defined in the docs.
 #  I'm not going to do additional checking without a stronger need.
 
-if "BABEL_DATADIR" not in os.environ:
-    warnings.warn("Missing BABEL_DATADIR definition")
 
 # This is the only thing which I consider to be public
 __all__ = ["read_structures"]
@@ -40,6 +39,9 @@ __all__ = ["read_structures"]
 if struct.calcsize("<I") != 4:
     raise AssertionError("The chemfp.ob module assumes 32 bit integers")
 
+
+# OpenBabel 2.2 doesn't expose "obErrorLog" to Python
+HAS_ERROR_LOG = hasattr(ob, "obErrorLog")
 
 # OpenBabel before 2.3 didn't have a function to return the version.
 # I've brought this up on the list, and it's in 2.3. I can fake
@@ -150,13 +152,25 @@ def calc_MACCS(mol, fp=None,
     return _pack_256(*fp)[:21]
 
 
+# Pre 2.3 versions of OpenBabel did not have MACCS.
+# Version 2.3.0 contained a buggy MACCS implementation.
+# That was soon fixed in version control.
+# MACCS might also be missing if BABEL_DATADIR doesn't exist.
 HAS_MACCS = False
 MACCS_VERSION = 0
 
 def _check_for_maccs():
     global HAS_MACCS, MACCS_VERSION
-    if _ob_get_fingerprint.get("MACCS", None) is None:
+    if _ob_get_fingerprint["MACCS"] == (None, None):
+        if _ob_version.startswith("2.2."):
+            return
+        # MACCS should be here. Report the most likely reason
+        if "BABEL_DATADIR" not in os.environ:
+            warnings.warn("MACCS fingerprint missing; perhaps due to missing BABEL_DATADIR?")
+        else:
+            warnings.warn("MACCS fingerprint missing; perhaps due to BABEL_DATADIR?")
         return
+
     HAS_MACCS = 1
 
     # OpenBabel 2.3.0 released the MACCS keys but with a bug in the SMARTS.
@@ -214,30 +228,32 @@ def read_structures(filename=None, format=None):
         return _stdin_reader(obconversion, obmol)
 
     # Deal with OpenBabel's logging
-    ob.obErrorLog.ClearLog()
-    lvl = ob.obErrorLog.GetOutputLevel()
-    ob.obErrorLog.SetOutputLevel(-1) # Suppress messages to stderr
+    if HAS_ERROR_LOG:
+        ob.obErrorLog.ClearLog()
+        lvl = ob.obErrorLog.GetOutputLevel()
+        ob.obErrorLog.SetOutputLevel(-1) # Suppress messages to stderr
 
-    notatend = obconversion.ReadFile(obmol, filename)
+    success = obconversion.ReadFile(obmol, filename)
 
-    if ob.obErrorLog.GetErrorMessageCount():
-        # The OB error messages are not that helpful. Do
-        # some probing of my own before going to OB's message.
-        try:
-            open(filename).close()
-        except IOError, err:
-            raise SystemExit("Unable to open structure file %(filename)r: %(msg)s" %
-                             dict(filename=filename, msg=err.strerror))
+    errmsg = None
+    if HAS_ERROR_LOG:
+        ob.obErrorLog.SetOutputLevel(lvl) # Restore message level
+        if ob.obErrorLog.GetErrorMessageCount():
+            errmsg = _get_ob_error(ob.obErrorLog)
 
-        # Okay, don't know what's going on. Report OB's error
-        errmsg = _get_ob_error(ob.obErrorLog)
-        raise SystemExit("Unable to get structures from %(filename)r:\n%(msg)s" %
-                         dict(filename=filename, msg=errmsg))
+    if not success:
+        # Either there was an error or there were no structures.
+        open(filename).close() # Make sure the file can be opened for reading
 
-    ob.obErrorLog.SetOutputLevel(lvl) # Revert to normal logging
+        # If I get here then the file exists and is readable.
+
+        # If there was an error message then use it.
+        if errmsg is not None:
+            # Okay, don't know what's going on. Report OB's error
+            raise IOError(5, errmsg, filename)
 
     # We've opened the file. Switch to the iterator.
-    return _file_reader(obconversion, obmol, notatend)
+    return _file_reader(obconversion, obmol, success)
 
 def _stdin_reader(obconversion, obmol):
     "This is an internal function"
