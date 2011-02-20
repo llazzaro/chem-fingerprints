@@ -138,11 +138,20 @@ def block_tanimoto_count_batch(queries, targets, threshold):
 # C = T*(A+B) / (1+T)
 
 def arena_tanimoto_count_batch(queries, arenas, threshold):
+    if threshold <= 0.0:
+        # Everything is close enough
+        n = sum(len(arena) // len(query) for arena in arenas)
+        return [n for query in queries]
+
     results = []
     for query in queries:
         query_popcount = bitops.byte_popcount(query)
         if query_popcount == 0:
-            return 0
+            # By definition, everything has a similarity of 0.0 to this query
+            # (including other cases with no bits set). Since I handled
+            # the threshold <= 0.0 case earlier, the answer here must be 0.
+            results.append(0)
+            continue
             
         count = 0
 
