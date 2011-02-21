@@ -9,10 +9,16 @@ import support
 class SimsearchRunner(support.Runner):
     def verify_result(self, result):
         assert result[0] == "#Simsearch/1", result[0]
+class CountRunner(support.Runner):
+    def verify_result(self, result):
+        assert result[0] == "#Count/1", result[0]
 
 runner = SimsearchRunner(simsearch.main)
 run = runner.run
 run_split = runner.run_split
+
+count_runner = CountRunner(simsearch.main)
+count_run_split = count_runner.run_split
 
 
 def run_split_stdin(input, cmdline, expect_length=None, source="simple.fps"):
@@ -153,8 +159,9 @@ class _AgainstSelf:
                            "3 Deaf_Beef 1.000 Deaf_Beef 0.960 deadbeef 0.808 DEADdead"])
 
     def test_with_count_and_threshold(self):
-        header, lines = run_split("--queries simple.fps --threshold 0.8 --count" + self.extra_arg,
-                                  7, "simple.fps")
+        header, lines = count_run_split(
+            "--queries simple.fps --threshold 0.8 --count" + self.extra_arg,
+            7, "simple.fps")
         self.assertEquals(lines,
                           ["0 zeros",
                            "1 bit1",
