@@ -188,23 +188,11 @@ def OpenBabelMACCS166():
 
 ### Substructure fingerprints
 
-def check_hydrogens(name):
-    if name not in ("none", "implicit", "all"):
-        raise TypeError
-    return name
-
-_substructure_converters = {
-    "hydrogens": check_hydrogens
-    }
 
 class _Substruct_v1(_Opener):
     num_bits = 881
-    def __init__(self, kwargs):
-        assert len(kwargs) == 1, kwargs
-        self.kwargs = kwargs
-
     def get_type(self):
-        return self.format_string % self.kwargs
+        return self.name
 
     @classmethod
     def from_parameters(cls, parameters):
@@ -214,7 +202,6 @@ class _Substruct_v1(_Opener):
 class ChemFPSubstructOE_v1(_Substruct_v1):
     name = "ChemFPSubstruct-OE/1"
     num_bits = 881
-    format_string = "ChemFP-OESubstruct/1 hydrogens=%(hydrogens)s"
     
     def read_structure_fingerprints(self, source=None, format=None):
         from chemfp.openeye_patterns import read_substruct_fingerprints_v1, SOFTWARE
@@ -227,7 +214,6 @@ ChemFPSubstructOE = ChemFPSubstructOE_v1
 class ChemFPRDMACCSOE_v1(_Substruct_v1):
     name = "ChemFP-RDMaccs-OE/1"
     num_bits = 166
-    format_string = "ChemFP-OESubstruct/1"
     
     def read_structure_fingerprints(self, source=None, format=None):
         from chemfp.openeye_patterns import read_rdmaccs_fingerprints_v1, SOFTWARE
@@ -236,6 +222,32 @@ class ChemFPRDMACCSOE_v1(_Substruct_v1):
 
 ChemFPRDMACCSOE = ChemFPRDMACCSOE_v1
 
+### RDKit patterns
+
+class ChemFPSubstructRDKit_v1(_Substruct_v1):
+    name = "ChemFP-Substruct-RDKit/1"
+    num_bits = 881
+    
+    def read_structure_fingerprints(self, source=None, format=None):
+        from chemfp.rdkit_patterns import read_substruct_fingerprints_v1, SOFTWARE
+        reader = read_substruct_fingerprints_v1(source, format)
+        return self._open(SOFTWARE, source, reader)
+
+ChemFPSubstructRDKit = ChemFPSubstructRDKit_v1
+
+# This class name is just about incomprehensible
+class ChemFPRDMACCSRDKit_v1(_Substruct_v1):
+    name = "ChemFP-RDMaccs-RDKit/1"
+    num_bits = 166
+    
+    def read_structure_fingerprints(self, source=None, format=None):
+        from chemfp.rdkit_patterns import read_rdmaccs_fingerprints_v1, SOFTWARE
+        reader = read_rdmaccs_fingerprints_v1(source, format)
+        return self._open(SOFTWARE, source, reader)
+
+ChemFPRDMACCSRDKit = ChemFPRDMACCSRDKit_v1
+
+###
 
 _fingerprint_classes = [
     OpenEyeMACCS166_v1,
@@ -252,6 +264,9 @@ _fingerprint_classes = [
 
     ChemFPSubstructOE_v1,
     ChemFPRDMACCSOE_v1,
+
+    ChemFPSubstructRDKit_v1,
+    ChemFPRDMACCSRDKit_v1,
     ]
             
 def parse_type(type):

@@ -73,11 +73,8 @@ maccs_group.add_argument(
 substruct_group = parser.add_argument_group("881 bit substructure keys")
 substruct_group.add_argument(
     "--substruct", action="store_true", help="generate ChemFP substructure fingerprints")
-substruct_group.add_argument(
-    "--hydrogens", action="store", help="one of 'none', 'no-implicit', 'all'",
-    default="all")
 
-rdmaccs_group = parser.add_argument_group("RDKit version of the 166 bit MACCS keys")
+rdmaccs_group = parser.add_argument_group("ChemFP version of the 166 bit RDKit/MACCS keys")
 substruct_group.add_argument(
     "--rdmaccs", action="store_true", help="generate ChemFP RDKit/MACCS")
     
@@ -97,13 +94,7 @@ def main(args=None):
     args = parser.parse_args(args)
     outfile = sys.stdout
 
-    groups = ("maccs166", "path", "substruct", "rdmaccs")
-    for i, g1 in enumerate(groups[:-1]):
-        if not getattr(args, g1):
-            continue
-        for g2 in groups[i+1:]:
-            if getattr(args, g1):
-                parser.error("Cannot specify both --%s and --%s" % (g1, g2))
+    cmdsupport.mutual_exclusion(parser, args, ("maccs166", "path", "substruct", "rdmaccs"))
 
     if args.maccs166:
         # Create the MACCS keys fingerprinter
@@ -131,15 +122,10 @@ def main(args=None):
                                     "atype": atype,
                                     "btype": btype})
     elif args.substruct:
-        try:
-            types.check_hydrogens(args.hydrogens)
-        except TypeError:
-            parser.error("--hydrogens must be one of 'none', 'no-implicit' or 'all'; not %r" %
-                         (args.hydrogens,))
-        opener = types.ChemFPOESubstruct({"hydrogens": args.hydrogens})
+        opener = types.ChemFPSubstructOE()
 
     elif args.rdmaccs:
-        opener = types.ChemFPRDMACCSOE({"hydrogens": "all"})
+        opener = types.ChemFPRDMACCSOE()
         
     else:
         parser.error("???")
