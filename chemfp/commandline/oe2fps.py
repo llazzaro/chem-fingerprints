@@ -70,6 +70,17 @@ maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
     "--maccs166", action="store_true", help="generate MACCS fingerprints")
 
+substruct_group = parser.add_argument_group("881 bit substructure keys")
+substruct_group.add_argument(
+    "--substruct", action="store_true", help="generate ChemFP substructure fingerprints")
+substruct_group.add_argument(
+    "--hydrogens", action="store", help="one of 'none', 'no-implicit', 'all'",
+    default="all")
+
+rdmaccs_group = parser.add_argument_group("RDKit version of the 166 bit MACCS keys")
+substruct_group.add_argument(
+    "--rdmaccs", action="store_true", help="generate ChemFP RDKit/MACCS")
+    
 parser.add_argument(
     "--in", metavar="FORMAT", dest="format",
     help="input structure format (default guesses from filename)")
@@ -86,12 +97,18 @@ def main(args=None):
     args = parser.parse_args(args)
     outfile = sys.stdout
 
+    groups = ("maccs166", "path", "substruct", "rdmaccs")
+    for i, g1 in enumerate(groups[:-1]):
+        if not getattr(args, g1):
+            continue
+        for g2 in groups[i+1:]:
+            if getattr(args, g1):
+                parser.error("Cannot specify both --%s and --%s" % (g1, g2))
+
     if args.maccs166:
-        if args.path:
-            parser.error("Cannot specify both --maccs166 and --path")
         # Create the MACCS keys fingerprinter
         opener = types.OpenEyeMACCS166()
-    else:
+    elif args.path:
         if not (16 <= args.numbits <= 65536):
             parser.error("--numbits must be between 16 and 65536 bits")
 
@@ -113,6 +130,19 @@ def main(args=None):
                                     "maxbonds": args.maxbonds,
                                     "atype": atype,
                                     "btype": btype})
+    elif args.substruct:
+        try:
+            types.check_hydrogens(args.hydrogens)
+        except TypeError:
+            parser.error("--hydrogens must be one of 'none', 'no-implicit' or 'all'; not %r" %
+                         (args.hydrogens,))
+        opener = types.ChemFPOESubstruct({"hydrogens": args.hydrogens})
+
+    elif args.rdmaccs:
+        opener = types.ChemFPRDMACCSOE({"hydrogens": "all"})
+        
+    else:
+        parser.error("???")
 
     # Ready the input reader/iterator
     try:
