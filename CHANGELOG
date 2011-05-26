@@ -1,8 +1,18 @@
-What's new in 0.9.1:
+What's new in 0.95
+==================
+
+Cross-platform pattern-based fingerprint generation, and specific
+implementations of a CACTVS/PubChem-like substructure fingerprint and
+of RDKit's MACCS patterns.
+
+
+What's new in 0.9.1
+===================
 
 Support for Python 2.5.
 
-What's new in 0.9:
+What's new in 0.9
+=================
 
 Major update from 0.5. Changes to the API, code
 cleanup, new search API, and more. Since there are
