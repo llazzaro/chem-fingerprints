@@ -1,10 +1,16 @@
-Add support for a "max_score"
-
 Include Indigo and CDK support
+
+I think people will want a way to specify a pattern file as
+input. Perhaps "--patterns"? One concern is mapping
+"ChemFP-Substruct/1" to "ChemFP-Substruct-OpenEye/1", and so on.
 
 Add support for Tversky, Euclidean and other search algorithms
 
 Optimize the multi-query searches (there should be
 no need to rescan the arena for each search)
 
+Add support for a "max_score" in doing searches. (This comes from
+looking at Pipeline Pilot, which has a default upper limit of
+0.999. But frankly, I'm not sure that's useful. I think the point is
+to ignore identical hits, so perhaps that's the real requirement.)
 
