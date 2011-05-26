@@ -8,22 +8,100 @@ from . import rdkit
 SOFTWARE = rdkit.SOFTWARE
 
 class HydrogenMatcher(object):
-    pass
+    def has_match(self, mol):
+        for atom in mol.GetAtoms():
+            if atom.GetAtomicNum() == 1:
+                return 1
+            if atom.GetTotalNumHs():
+                return 1
+        return 0
 
+    def num_matches(self, mol, largest_count):
+        num_hydrogens = 0
+        for atom in mol.GetAtoms():
+            if atom.GetAtomicNum() == 1:
+                num_hydrogens += 1
+            num_hydrogens += atom.GetTotalNumHs()
+            if num_hydrogens >= largest_count:
+                return num_hydrogens
+        return num_hydrogens
+        
+            
+
+class AromaticRings(object):
+    def __init__(self):
+        # The single ring case is easy; if there's an aromatic atom then there's a ring
+        self._single_matcher = Chem.MolFromSmarts("a")
+
+    def has_match(self, mol):
+        return mol.HasSubstructMatch(self._single_matcher)
+
+    def num_matches(self, mol, largest_count):
+        nArom = 0
+        for ring in mol.GetRingInfo().BondRings():
+            if all(mol.GetBondWithIdx(bondIdx).GetIsAromatic() for bondIdx in ring):
+                nArom += 1
+                if nArom == largest_count:
+                    return nArom
+        return nArom
+
+def _is_hetereo_aromatic_atom(atom):
+    return atom.GetIsAromatic()
+
+class HeteroAromaticRings(object):
+    def __init__(self):
+        # In the single match case, if there's an aromatic non-carbon atom
+        # then it's a hetereo ring
+        self._single_matcher = Chem.MolFromSmarts("[a;!#6]")
+
+    def has_match(self, mol):
+        return mol.HasSubstructMatch(self._single_matcher)
+
+    def num_matches(self, mol, largest_count):
+        nArom = 0
+        for ring in mol.GetRingInfo().AtomRings():
+            if all(_is_hetereo_aromatic_atom(mol.GetAtomWithIdx(atomIdx))
+                                 for atomIdx in ring):
+                nArom += 1
+                if nArom == largest_count:
+                    return nArom
+        return nArom
+
+
+class NumFragments(object):
+    def has_match(self, mol):
+        return mol.GetNumAtoms() > 0
+    def num_matches(self, mol, largest_count):
+        return len(Chem.GetMolFrags(mol))
+
+# RDKit matches "molecule.HasSubstructMatch(match_pattern)"
+# while every other toolkit does something like "match_pattern.HasSubstructMatch(molecule)"
+# Since SMARTS doesn't handle all the pattern cases, I prefer the second ordering.
+# This class inverts the order so I can do that.
 class InvertedMatcher(object):
     def __init__(self, matcher):
         self.matcher = matcher
     def has_match(self, mol):
         return mol.HasSubstructMatch(self.matcher)
-    def num_matches(self, mol):
+    def num_matches(self, mol, max_count):
         return len(mol.GetSubstructMatches(self.matcher))
 
 def rdkit_compile_pattern(pattern, max_count):
     if pattern == "<H>":
         return HydrogenMatcher()
 
+    elif pattern == "<aromatic-rings>":
+        return AromaticRings()
+
+    elif pattern == "<hetero-aromatic-rings>":
+        return HeteroAromaticRings()
+
+    elif pattern == "<fragments>":
+        return NumFragments()
+    
     elif pattern.startswith("<"):
-        return NotImplemented
+        raise NotImplementedError(pattern)
+        #return NotImplemented
 
     matcher = Chem.MolFromSmarts(pattern)
     if matcher is None:
@@ -44,7 +122,7 @@ class RDKitPatternFingerprinter(pattern_fingerprinter.PatternFingerprinter):
                     count_info = count_info_tuple[0]
                     bytes[count_info.byteno] |= count_info.bitmask
             else:
-                actual_count = matcher.num_matches(mol)
+                actual_count = matcher.num_matches(mol, largest_count)
                 if actual_count:
                     for count_info in count_info_tuple:
                         if actual_count >= count_info.count:
