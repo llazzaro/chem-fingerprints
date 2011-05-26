@@ -109,7 +109,6 @@ def bond_description_to_value(description):
     """
     return _get_type_value("bond", _btypes, description)
 
-
 ## Go from an integer value into a canonical description
 
 # I could make the final string sorter by using DefaultAtom/
@@ -150,6 +149,36 @@ def bond_value_to_description(value):
     OEGetFPBontType and are in canonical order.
     """
     return _get_type_description("bond", _btype_flags, value)
+
+
+_maccs_decoders = {"numbits": int,
+                   "minbonds": int,
+                   "maxbonds": int,
+                   "atype": atom_description_to_value,
+                   "btype": bond_description_to_value}
+
+def decode_maccs166_parameters(parameters):
+    assert len(parameters) == len(_maccs_decoders)
+    kwargs = {}
+    for name, decoder in _maccs_decoders.items():
+        value = parameters[name]
+        kwargs[name] = decoder(value)
+    return kwargs
+
+_maccs_encoders = {"numbits": str,
+                   "minbonds": str,
+                   "maxbonds": str,
+                   "atype": atom_value_to_description,
+                   "btype": bond_value_to_description}
+
+def encode_maccs166_parameters(kwargs):
+    assert len(kwargs) == len(_maccs_encoders)
+    parameters = {}
+    for name, encoder in _maccs_encoders.items():
+        value = kwargs[name]
+        parameters[name] = encoder(value)
+    return parameters
+
 
 ##### Create a function which generate fingerprints
 
@@ -347,7 +376,7 @@ def _stdin_check(_apply_format):
 ############# Methods to get the right structure readers
 
 def read_maccs166_fingerprints_v1(source=None, format=None, kwargs={}):
-    assert not kwargs
+    assert not kwargs, kwargs
     # The OEChem interface only handles stdin and filenames
     if not (isinstance(source, basestring) or source is None):
         raise NotImplementedError
