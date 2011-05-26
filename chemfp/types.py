@@ -10,7 +10,7 @@ def check_openbabel_maccs166():
     if MACCS_VERSION == 1:
         return "OpenBabel-MACCS/1"
     elif MACCS_VERSION == 2:
-        return "OpenBabel-MACCS/1"
+        return "OpenBabel-MACCS/2"
     raise AssertionError
 
 
@@ -183,7 +183,7 @@ def _initialize_families():
         _family_by_name[name] = _family_by_name[unversioned_name] = FingerprintFamily(config)
 
     # Don't include a (likely non-versioned) name if there's a selector function
-    for name in alternates:
+    for name in _alternates:
         if name in _family_by_name:
             del _family_by_name[name]
 
@@ -194,7 +194,7 @@ def get_fingerprint_family(name):
     try:
         return _family_by_name[name]
     except KeyError:
-        if name not in alternates:
+        if name not in _alternates:
             raise
     alternate = _alternates[name]()
     return _family_by_name[alternate]
