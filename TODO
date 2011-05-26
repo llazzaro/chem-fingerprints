@@ -4,6 +4,14 @@ I think people will want a way to specify a pattern file as
 input. Perhaps "--patterns"? One concern is mapping
 "ChemFP-Substruct/1" to "ChemFP-Substruct-OpenEye/1", and so on.
 
+There should be some way to get a description of each set bit in the
+pattern fingerprints.
+
+What about a way to list all of the match atoms which go into a
+different bit? That will take a lot of new code, and many of the
+fingerprinters don't support it. Perhaps limit it to the pattern
+fingerprints?
+
 Add support for Tversky, Euclidean and other search algorithms
 
 Optimize the multi-query searches (there should be
