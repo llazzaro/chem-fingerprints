@@ -17,8 +17,9 @@
 #   <aromatic-rings> the number of aromatic rings
 #   <hetero-aromatic-rings>  the number of hetero-aromatic rings
 
-
-# hydrogens 0 1 2 3 263 272 283 299 308 318 320 323 325 329 335 338 339 343 344 345 346 347 348 349 361 365 366 367 368 369 370 371 372 373 374 392 393 394 398 399 400 406 408 413 428 434 435 436 445 446 447 448 463 478 488 491 496 502 503 510 511 512 513 516 521 522 525 527 528 532 539 540 542 546 557 559 571 576 587 590 599 617 631 635 643 646 663 667 672 
+# In the future I'll probably support metadata like the following
+#num_bits=881
+#type=ChemFP-Substruct/1
 
 # Section 1: Hierarchic Element Counts - These bits test for the
 # presence or count of individual chemical atoms represented by their
