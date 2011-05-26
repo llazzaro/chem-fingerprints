@@ -4,6 +4,7 @@ import textwrap
 
 from .. import argparse, types, io
 from .. import openeye as oe
+from . import cmdsupport
 
 ##### Handle command-line argument parsing
 
@@ -94,11 +95,12 @@ def main(args=None):
     args = parser.parse_args(args)
     outfile = sys.stdout
 
-    cmdsupport.mutual_exclusion(parser, args, ("maccs166", "path", "substruct", "rdmaccs"))
+    cmdsupport.mutual_exclusion(parser, args, "path",
+                                ("maccs166", "path", "substruct", "rdmaccs"))
 
     if args.maccs166:
         # Create the MACCS keys fingerprinter
-        opener = types.OpenEyeMACCS166()
+        opener = types.get_fingerprint_family("OpenEye-MACCS166")()
     elif args.path:
         if not (16 <= args.numbits <= 65536):
             parser.error("--numbits must be between 16 and 65536 bits")
@@ -116,16 +118,16 @@ def main(args=None):
             parser.error(str(err))
 
 
-        opener = types.OpenEyePath({"numbits": args.numbits,
-                                    "minbonds": args.minbonds,
-                                    "maxbonds": args.maxbonds,
-                                    "atype": atype,
-                                    "btype": btype})
+        opener = types.get_fingerprint_family("OpenEye-Path")(
+            numbits = args.numbits,
+            minbonds = args.minbonds,
+            maxbonds = args.maxbonds,
+            atype = atype,
+            btype = btype)
     elif args.substruct:
-        opener = types.ChemFPSubstructOE()
-
+        opener = types.get_fingerprint_family("ChemFP-Substruct-OpenEye")()
     elif args.rdmaccs:
-        opener = types.ChemFPRDMACCSOE()
+        opener = types.get_fingerprint_family("ChemFP-RDMACCS-OpenEye")()
         
     else:
         parser.error("???")
