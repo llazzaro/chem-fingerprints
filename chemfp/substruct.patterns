@@ -308,7 +308,8 @@
 254 1 [A;!#6]~1~A~A~A~A~A~A~A~A~A1 >= 1 non-aromatic heteroatom-containing ring size 10
 
 255 1 [aR] >= 1 aromatic ring
-256 1 [aR!#6] >= 1 hetero-aromatic ring
+# Interesting. RDkit doesn't support [aR!#6]. Is that a legal SMARTS?
+256 1 [aR;!#6] >= 1 hetero-aromatic ring
 257 2 <aromatic-rings> >= 2 aromatic rings
 258 2 <hetero-aromatic-rings> >= 2 hetero-aromatic rings
 259 3 <aromatic-rings> >= 3 aromatic rings
