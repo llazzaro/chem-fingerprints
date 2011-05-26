@@ -177,9 +177,15 @@ _family_by_name = {}
 
 def _initialize_families():
     for config in _fingerprints:
+        # Set both the versioned and non-versioned names
         name = config["name"]
         unversioned_name = name.split("/")[0]
         _family_by_name[name] = _family_by_name[unversioned_name] = FingerprintFamily(config)
+
+    # Don't include a (likely non-versioned) name if there's a selector function
+    for name in alternates:
+        if name in _family_by_name:
+            del _family_by_name[name]
 
 _initialize_families()
 
