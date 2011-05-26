@@ -116,7 +116,8 @@
 42 1 [!C;!c;!#1;!H0]~*~[!C;!c;!#1;!H0]  QHAQH
 
 # I have no idea (APD)
-43 1 <rdmaccs-bit-43>  OTHER
+#43 1 <rdmaccs-bit-43>  OTHER
+43 1 <0>  OTHER
 
 44 1 [#6]=[#6]~[#7]  C=CN
 45 1 Br  BR
@@ -257,4 +258,4 @@
 164 1 [R]   Ring
 
 # this can't be done in SMARTS
-165 1 <fragments>  more than one fragment
+165 2 <fragments>  more than one fragment
