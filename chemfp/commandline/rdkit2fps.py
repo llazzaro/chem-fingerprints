@@ -71,7 +71,7 @@ def main(args=None):
                                 ("maccs166", "RDK", "substruct", "rdmaccs"))
 
     if args.maccs166:
-        opener = types.RDKitMACCS166()
+        opener = types.get_fingerprint_family("RDKit-MACCS166")()
     elif args.RDK:
         fpSize = args.fpSize
         minPath = args.minPath
@@ -90,16 +90,17 @@ def main(args=None):
         if useHs not in (0, 1):
             parser.error("--useHs parameter must be 0 or 1")
 
-        opener = types.RDKitFingerprint({"minPath": minPath,
-                                         "maxPath": maxPath,
-                                         "fpSize": fpSize,
-                                         "nBitsPerHash": nBitsPerHash,
-                                         "useHs": useHs})
+        opener = types.get_fingerprint_family("RDKit-Fingerprint")(
+            minPath=minPath,
+            maxPath=maxPath,
+            fpSize=fpSize,
+            nBitsPerHash=nBitsPerHash,
+            useHs=useHs)
 
     elif args.substruct:
-        opener = types.ChemFPSubstructRDKit()
+        opener = types.get_fingerprint_family("ChemFP-Substruct-RDKit")()
     elif args.rdmaccs:
-        opener = types.ChemFPRDMACCSRDKit()
+        opener = types.get_fingerprint_family("ChemFP-RDMACCS-RDKit")()
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
     except (TypeError, IOError), err:
