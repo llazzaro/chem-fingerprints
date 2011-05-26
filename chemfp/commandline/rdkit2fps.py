@@ -1,6 +1,7 @@
 # Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 import sys
 from chemfp import argparse, io, rdkit, types
+from . import cmdsupport
 
 ########### Configure the command-line parser
 
@@ -45,6 +46,14 @@ maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
     "--maccs166", action="store_true", help="generate MACCS fingerprints")
 
+substruct_group = parser.add_argument_group("881 bit substructure keys")
+substruct_group.add_argument(
+    "--substruct", action="store_true", help="generate ChemFP substructure fingerprints")
+
+rdmaccs_group = parser.add_argument_group("ChemFP version of the 166 bit RDKit/MACCS keys")
+rdmaccs_group.add_argument(
+    "--rdmaccs", action="store_true", help="generate ChemFP RDKit/MACCS")
+
 parser.add_argument(
     "--in", metavar="FORMAT", dest="format",
     help="input structure format (default guesses from filename)")
@@ -58,11 +67,12 @@ parser.add_argument(
 def main(args=None):
     args = parser.parse_args(args)
 
+    cmdsupport.mutual_exclusion(parser, args, "RDK",
+                                ("maccs166", "RDK", "substruct", "rdmaccs"))
+
     if args.maccs166:
-        if args.RDK:
-            parser.error("Cannot specify both --maccs166 and --RDK")
-        opener = types.RDKitMACCS166()
-    else:
+        opener = types.get_fingerprint_family("RDKit-MACCS166")()
+    elif args.RDK:
         fpSize = args.fpSize
         minPath = args.minPath
         maxPath = args.maxPath
@@ -80,11 +90,17 @@ def main(args=None):
         if useHs not in (0, 1):
             parser.error("--useHs parameter must be 0 or 1")
 
-        opener = types.RDKitFingerprint({"minPath": minPath,
-                                         "maxPath": maxPath,
-                                         "fpSize": fpSize,
-                                         "nBitsPerHash": nBitsPerHash,
-                                         "useHs": useHs})
+        opener = types.get_fingerprint_family("RDKit-Fingerprint")(
+            minPath=minPath,
+            maxPath=maxPath,
+            fpSize=fpSize,
+            nBitsPerHash=nBitsPerHash,
+            useHs=useHs)
+
+    elif args.substruct:
+        opener = types.get_fingerprint_family("ChemFP-Substruct-RDKit")()
+    elif args.rdmaccs:
+        opener = types.get_fingerprint_family("ChemFP-RDMACCS-RDKit")()
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
     except (TypeError, IOError), err:

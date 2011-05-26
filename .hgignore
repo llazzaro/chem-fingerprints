@@ -1,0 +1,8 @@
+syntax: glob
+
+*.pyc
+tests/htmlcov/*
+src/CMakeFiles/*
+build/*
+*.fps
+

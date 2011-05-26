@@ -256,6 +256,21 @@ def make_rdk_fingerprinter(minPath=MIN_PATH, maxPath=MAX_PATH, fpSize=NUM_BITS,
     return rdk_fingerprinter
 
 
+_fingerprint_decoders = {"minPath": int,
+                         "maxPath": int,
+                         "fpSize": int,
+                         "nBitsPerHash": int,
+                         "useHs": int}
+
+def decode_fingerprint_parameters(parameters):
+    assert len(parameters) == len(_fingerprint_decoders)
+    kwargs = {}
+    for name, decoder in _maccs_decoders.items():
+        value = parameters[name]
+        kwargs[name] = decoder(value)
+    return kwargs
+
+
 ########### The MACCS fingerprinter
 
 

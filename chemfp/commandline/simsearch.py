@@ -226,6 +226,7 @@ def main(args=None):
         type = "Tanimoto k=%(k)s threshold=%(threshold)s" % dict(
             k=args.k_nearest, threshold=threshold, max_score=1.0)
         if args.count:
+            type = "Count threshold=%(threshold)s" % (args.threshold,)
             write_count_magic(outfile)
         else:
             write_simsearch_magic(outfile)
@@ -239,6 +240,16 @@ def main(args=None):
         if args.count:
             report_counts(query_iter, batch_ids, batch_fps, targets, args, outfile)
         else:
+            type = "Tanimoto k={k} threshold=%(threshold)s" % dict(
+                k=args.k_nearest, threshold=threshold, max_score=1.0)
+            write_simsearch_magic(outfile)
+            write_simsearch_header(outfile, {
+                "num_bits": targets.header.num_bits,
+                "software": SOFTWARE,
+                "type": type,
+                "query_source": queries.header.source,
+                "target_source": targets.header.source})
+                
             report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_formatter, outfile)
 
     t3 = time.time()

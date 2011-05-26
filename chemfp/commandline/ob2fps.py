@@ -2,6 +2,8 @@ import sys
 from chemfp import openbabel as ob
 from chemfp import argparse, io, types
 
+from . import cmdsupport
+
 
 ############ Command-line parser definition
 
@@ -51,6 +53,13 @@ else:
     group.add_argument("--MACCS", action="store_true",
                        help="(Not available using your version of OpenBabel)")
 
+group.add_argument(
+    "--substruct", action="store_true", help="generate ChemFP substructure fingerprints")
+
+group.add_argument(
+    "--rdmaccs", action="store_true", help="generate ChemFP 166 bit RDKit/MACCS fingerprints")
+
+
 parser.add_argument(
     "--in", metavar="FORMAT", dest="format",
     help="input structure format (default autodetects from the filename extension)")
@@ -67,21 +76,27 @@ def main(args=None):
     args = parser.parse_args(args)
     outfile = sys.stdout
 
+    cmdsupport.mutual_exclusion(parser, args, "FP2",
+                                ("FP2", "FP3", "FP4", "MACCS", "substruct", "rdmaccs"))
+
     if args.FP2:
-        opener = types.OpenBabelFP2()
+        opener = types.get_fingerprint_family("OpenBabel-FP2")()
     elif args.FP3:
-        opener = types.OpenBabelFP3()
+        opener = types.get_fingerprint_family("OpenBabel-FP3")()
     elif args.FP4:
-        opener = types.OpenBabelFP4()
+        opener = types.get_fingerprint_family("OpenBabel-FP4")()
     elif args.MACCS:
         if not ob.HAS_MACCS:
             parser.error(
                 "--MACCS is not supported in your OpenBabel installation (%s)" % (
                     ob.GetReleaseVersion(),))
-        opener = types.OpenBabelMACCS166()
+        opener = types.get_fingerprint_family("OpenBabel-MACCS")()
+    elif args.substruct:
+        opener = types.get_fingerprint_family("ChemFP-Substruct-OpenBabel")()
+    elif args.rdmaccs:
+        opener = types.get_fingerprint_family("ChemFP-Substruct-OpenBabel")()
     else:
-        # Default
-        opener = types.OpenBabelFP2()
+        parser.error("should not get here")
 
     # Ready the input reader/iterator
     try:

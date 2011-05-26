@@ -4,6 +4,7 @@ import textwrap
 
 from .. import argparse, types, io
 from .. import openeye as oe
+from . import cmdsupport
 
 ##### Handle command-line argument parsing
 
@@ -70,6 +71,14 @@ maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
     "--maccs166", action="store_true", help="generate MACCS fingerprints")
 
+substruct_group = parser.add_argument_group("881 bit substructure keys")
+substruct_group.add_argument(
+    "--substruct", action="store_true", help="generate ChemFP substructure fingerprints")
+
+rdmaccs_group = parser.add_argument_group("ChemFP version of the 166 bit RDKit/MACCS keys")
+substruct_group.add_argument(
+    "--rdmaccs", action="store_true", help="generate ChemFP RDKit/MACCS")
+    
 parser.add_argument(
     "--in", metavar="FORMAT", dest="format",
     help="input structure format (default guesses from filename)")
@@ -86,12 +95,13 @@ def main(args=None):
     args = parser.parse_args(args)
     outfile = sys.stdout
 
+    cmdsupport.mutual_exclusion(parser, args, "path",
+                                ("maccs166", "path", "substruct", "rdmaccs"))
+
     if args.maccs166:
-        if args.path:
-            parser.error("Cannot specify both --maccs166 and --path")
         # Create the MACCS keys fingerprinter
-        opener = types.OpenEyeMACCS166()
-    else:
+        opener = types.get_fingerprint_family("OpenEye-MACCS166")()
+    elif args.path:
         if not (16 <= args.numbits <= 65536):
             parser.error("--numbits must be between 16 and 65536 bits")
 
@@ -108,16 +118,24 @@ def main(args=None):
             parser.error(str(err))
 
 
-        opener = types.OpenEyePath({"numbits": args.numbits,
-                                    "minbonds": args.minbonds,
-                                    "maxbonds": args.maxbonds,
-                                    "atype": atype,
-                                    "btype": btype})
+        opener = types.get_fingerprint_family("OpenEye-Path")(
+            numbits = args.numbits,
+            minbonds = args.minbonds,
+            maxbonds = args.maxbonds,
+            atype = atype,
+            btype = btype)
+    elif args.substruct:
+        opener = types.get_fingerprint_family("ChemFP-Substruct-OpenEye")()
+    elif args.rdmaccs:
+        opener = types.get_fingerprint_family("ChemFP-RDMACCS-OpenEye")()
+        
+    else:
+        parser.error("???")
 
     # Ready the input reader/iterator
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
-    except (IOError, oe.UnknownFormat) as err:
+    except (IOError, oe.UnknownFormat), err:
         sys.stderr.write("Cannot read structure fingerprints: %s\n" % err)
         raise SystemExit(1)
 

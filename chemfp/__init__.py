@@ -39,6 +39,7 @@ def read_structure_fingerprints(type, source=None, format=None):
     
 # Low-memory, forward-iteration, or better
 def open(source, format=None, type=None):
+    from . import io
     format_name, compression = io.normalize_format(source, format)
 
     if format_name == "fps":

@@ -8,6 +8,10 @@ recursive-include src *.h
 include src/CMakeLists.txt
 include tests/unit2
 include tests/testall
+include tests/*.sdf
+include tests/*.smi
+include tests/pubchem.*sdf*
+
 
 
 include *2fps
@@ -15,4 +19,4 @@ include *2fps
 include TODO
 include THANKS
 include COPYING
-
+include CHANGELOG
