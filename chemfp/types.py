@@ -114,26 +114,42 @@ _alternates = {
     }
 
 
+# What about knowing which type has the problem?
+def _no_parameters(d):
+    if d:
+        raise TypeError("Parameters are not allowed")
 
 _load_fields = ("reader", "decode_parameters", "encode_parameters", "software")
 class ConfigLoader(object):
-    def __init__(self, config):
-        self.config = config
-        self.loaded = {}
-        for k,v in config.items():
-            if k not in _load_fields:
-                self.loaded[k] = v
+    def __init__(self, name, num_bits, reader, software,
+                 decode_parameters=None, encode_parameters=None, format_string=None):
+
+        self.config = dict(
+            name = name,
+            num_bits = num_bits,
+            format_string = format_string)
+
+        if decode_parameters is None:
+            self.config["decode_parameters"] = _no_parameters
+        if encode_parameters is None:
+            self.config["encode_parameters"] = _no_parameters
+        
+        self.paths = dict(
+            reader = reader,
+            decode_parameters = decode_parameters,
+            encode_parameters = encode_parameters,
+            software = software
+            )
 
     def __getitem__(self, name):
         try:
-            return self.loaded[name]
+            return self.config[name]
         except KeyError:
-            if name not in _load_fields:
-                raise
+            pass
 
-        path = self.config[name]
+        path = self.paths[name]
         obj = import_decoder(path)
-        self.loaded[name] = obj
+        self.config[name] = obj
         return obj
 
     def get(self, name, default=None):
@@ -142,9 +158,17 @@ class ConfigLoader(object):
         except KeyError:
             return default
 
+    def __repr__(self):
+        d = self.config.copy()
+        for k,v in self.paths.items():
+            if k not in d:
+                d[k] = v + " (not loaded)"
+        return repr(d)
+        
+
 class FingerprintFamily(object):
     def __init__(self, config):
-        self.config = ConfigLoader(config)
+        self.config = ConfigLoader(**config)
 
     def _decode_parameters(self, parameters):
         decode_parameters = self.config.get("decode_parameters", None)
@@ -207,10 +231,9 @@ class FingerprintType(object):
         self.kwargs = kwargs
 
     def _encode_parameters(self, kwargs):
-        print "Want", self.config
         encode_parameters = self.config.get("encode_parameters", None)
         if encode_parameters is None:
-            assert not kwargs, kwargs
+            assert not kwargs, (self.config, kwargs)
             return {}
         return encode_parameters(kwargs)
     

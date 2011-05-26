@@ -41,7 +41,7 @@ class TestFingerprintTypes(unittest2.TestCase):
             # Running on a buggy 2.3.0 release
             self.assertEquals(fps[0], "800400000002080019cc40eacdec980baea378ef1b 9425004")
         else:
-            self.assertEquals(headers["#type"], "OpenBabel/MACCS/2")
+            self.assertEquals(headers["#type"], "OpenBabel-MACCS/2")
             # Running on a corrected post-2.3.0 release
             self.assertEquals(fps[0], "000000000002080019cc44eacdec980baea378ef1f 9425004")
 
