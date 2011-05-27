@@ -94,7 +94,7 @@ def main(args=None):
     elif args.substruct:
         opener = types.get_fingerprint_family("ChemFP-Substruct-OpenBabel")()
     elif args.rdmaccs:
-        opener = types.get_fingerprint_family("ChemFP-Substruct-OpenBabel")()
+        opener = types.get_fingerprint_family("ChemFP-RDMACCS-OpenBabel")()
     else:
         parser.error("should not get here")
 
