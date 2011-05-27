@@ -79,7 +79,7 @@ _fingerprints = [
          reader="chemfp.openeye_patterns.read_substruct_fingerprints_v1",
          software="chemfp.openeye_patterns.SOFTWARE"),
 
-    dict(name="ChemFP-RDMACCS-OpenEye/1",
+    dict(name="RDMACCS-OpenEye/1",
          num_bits=166,
          reader="chemfp.openeye_patterns.read_rdmaccs_fingerprints_v1",
          software="chemfp.openeye_patterns.SOFTWARE"),
@@ -90,7 +90,7 @@ _fingerprints = [
          reader="chemfp.rdkit_patterns.read_substruct_fingerprints_v1",
          software="chemfp.openeye_patterns.SOFTWARE"),
 
-    dict(name="ChemFP-RDMACCS-RDKit/1",
+    dict(name="RDMACCS-RDKit/1",
          num_bits=166,
          reader="chemfp.rdkit_patterns.read_rdmaccs_fingerprints_v1",
          software="chemfp.openeye_patterns.SOFTWARE"),
@@ -101,7 +101,7 @@ _fingerprints = [
          reader="chemfp.openbabel_patterns.read_substruct_fingerprints_v1",
          software="chemfp.openbabel_patterns.SOFTWARE"),
 
-    dict(name="ChemFP-RDMACCS-OpenBabel/1",
+    dict(name="RDMACCS-OpenBabel/1",
          num_bits=166,
          reader="chemfp.openbabel_patterns.read_rdmaccs_fingerprints_v1",
          software="chemfp.openbabel_patterns.SOFTWARE"),

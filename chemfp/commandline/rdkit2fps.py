@@ -98,9 +98,9 @@ def main(args=None):
             useHs=useHs)
 
     elif args.substruct:
-        opener = types.get_fingerprint_family("ChemFP-Substruct-RDKit")()
+        opener = types.get_fingerprint_family("Substruct-RDKit")()
     elif args.rdmaccs:
-        opener = types.get_fingerprint_family("ChemFP-RDMACCS-RDKit")()
+        opener = types.get_fingerprint_family("RDMACCS-RDKit")()
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format)
     except (TypeError, IOError), err:
