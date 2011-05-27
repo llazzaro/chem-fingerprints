@@ -46,7 +46,7 @@ class AromaticRings(object):
         return nArom
 
 def _is_hetereo_aromatic_atom(atom):
-    return atom.GetIsAromatic()
+    return atom.GetIsAromatic() and atom.GetAtomicNum() not in (1, 6)
 
 class HeteroAromaticRings(object):
     def __init__(self):
@@ -86,22 +86,23 @@ class InvertedMatcher(object):
     def num_matches(self, mol, max_count):
         return len(mol.GetSubstructMatches(self.matcher))
 
+_pattern_classes = {
+    "<H>": HydrogenMatcher,
+    "<aromatic-rings>": AromaticRings,
+    "<hetero-aromatic-rings>": HeteroAromaticRings,
+    "<fragments>": NumFragments,
+    }
+    
+
 def rdkit_compile_pattern(pattern, max_count):
-    if pattern == "<H>":
-        return HydrogenMatcher()
-
-    elif pattern == "<aromatic-rings>":
-        return AromaticRings()
-
-    elif pattern == "<hetero-aromatic-rings>":
-        return HeteroAromaticRings()
-
-    elif pattern == "<fragments>":
-        return NumFragments()
+    if pattern in _pattern_classes:
+        return _pattern_classes[pattern]()
     
     elif pattern.startswith("<"):
         raise NotImplementedError(pattern)
         #return NotImplemented
+
+    # Everything else must be a SMARTS pattern
 
     matcher = Chem.MolFromSmarts(pattern)
     if matcher is None:
