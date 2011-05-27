@@ -1,3 +1,6 @@
+Allow multiple filenames when generating fingerprints. (Need to allow
+multiple source filename fields in the header.)
+
 Include Indigo and CDK support
 
 I think people will want a way to specify a pattern file as
