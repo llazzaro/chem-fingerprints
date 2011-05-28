@@ -194,7 +194,7 @@ class _PatternFingerprinter(types.Fingerprinter):
         return self._fingerprinter(mol)
 
     def describe(self, bitno):
-        self._fingerprint.describe(bitno)
+        return self._fingerprinter.describe(bitno)
 
 class SubstructOpenBabelFingerprinter_v1(_PatternFingerprinter):
     name = "ChemFP-Substruct-OpenBabel/1"
@@ -204,7 +204,7 @@ class SubstructOpenBabelFingerprinter_v1(_PatternFingerprinter):
 
     _get_reader = staticmethod(read_substruct_fingerprints_v1)
 
-class RDMACCSOpenBabelFingerprinter_v1(types.Fingerprinter):
+class RDMACCSOpenBabelFingerprinter_v1(_PatternFingerprinter):
     name = "RDMACCS-OpenBabel/1"
     num_bits = 166
     _pattern_name = "rdmaccs"

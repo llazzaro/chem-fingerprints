@@ -175,7 +175,8 @@ def make_matchers(patterns, compile_pattern):
 
 class PatternFingerprinter(object):
     def __init__(self, patterns, compile_pattern):
-        self.pattern = patterns
+        self.patterns = patterns
+
         self.num_bytes = (patterns.max_bit // 8) + 1
         self.not_implemented, self.matcher_definitions = (
             make_matchers(patterns, compile_pattern)   )

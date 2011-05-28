@@ -171,14 +171,13 @@ class _PatternFingerprinter(types.Fingerprinter):
     software = SOFTWARE
     def __init__(self, kwargs):
         self._fingerprinter = _cached_fingerprinters[self._pattern_name]
-        
         super(_PatternFingerprinter, self).__init__(kwargs)
 
     def fingerprint(self, mol):
         return self._fingerprinter(mol)
 
     def describe(self, bitno):
-        self._fingerprint.describe(bitno)
+        return self._fingerprinter.describe(bitno)
 
 class SubstructRDKitFingerprinter_v1(_PatternFingerprinter):
     name = "ChemFP-Substruct-RDKit/1"
@@ -188,7 +187,7 @@ class SubstructRDKitFingerprinter_v1(_PatternFingerprinter):
 
     _get_reader = staticmethod(read_substruct_fingerprints_v1)
 
-class RDMACCSRDKitFingerprinter_v1(types.Fingerprinter):
+class RDMACCSRDKitFingerprinter_v1(_PatternFingerprinter):
     name = "RDMACCS-RDKit/1"
     num_bits = 166
     _pattern_name = "rdmaccs"

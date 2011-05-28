@@ -249,7 +249,7 @@ class _PatternFingerprinter(types.Fingerprinter):
         return self._fingerprinter(mol)
 
     def describe(self, bitno):
-        self._fingerprint.describe(bitno)
+        return self._fingerprinter.describe(bitno)
 
 class SubstructOpenEyeFingerprinter_v1(_PatternFingerprinter):
     name = "ChemFP-Substruct-OpenEye/1"
