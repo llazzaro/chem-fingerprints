@@ -98,7 +98,7 @@ def main(args=None):
             useHs=useHs)
 
     elif args.substruct:
-        opener = types.get_fingerprint_family("Substruct-RDKit")()
+        opener = types.get_fingerprint_family("ChemFP-Substruct-RDKit")()
     elif args.rdmaccs:
         opener = types.get_fingerprint_family("RDMACCS-RDKit")()
     try:
