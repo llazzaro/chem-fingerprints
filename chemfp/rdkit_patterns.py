@@ -163,16 +163,33 @@ def read_substruct_fingerprints_v1(source=None, format=None, kwargs={}):
 def read_rdmaccs_fingerprints_v1(source=None, format=None, kwargs={}):
     return _read_fingerprints("rdmaccs", source, format, kwargs)
 
-class SubstructRDKitFingerprinter_v1(types.Fingerprinter):
+
+# XXX Why are there two "Fingerprinter" classes?
+# XX Shouldn't they be merged?
+
+class _PatternFingerprinter(types.Fingerprinter):
+    software = SOFTWARE
+    def __init__(self, kwargs):
+        self._fingerprinter = _cached_fingerprinters[self._pattern_name]
+        
+        super(_PatternFingerprinter, self).__init__(kwargs)
+
+    def fingerprint(self, mol):
+        return self._fingerprinter(mol)
+
+    def describe(self, bitno):
+        self._fingerprint.describe(bitno)
+
+class SubstructRDKitFingerprinter_v1(_PatternFingerprinter):
     name = "ChemFP-Substruct-RDKit/1"
     num_bits = 881
-    software = SOFTWARE
+    _pattern_name = "substruct"
 
     _get_reader = staticmethod(read_substruct_fingerprints_v1)
 
 class RDMACCSRDKitFingerprinter_v1(types.Fingerprinter):
     name = "RDMACCS-RDKit/1"
     num_bits = 166
-    software = SOFTWARE
+    _pattern_name = "rdmaccs"
 
     _get_reader = staticmethod(read_rdmaccs_fingerprints_v1)

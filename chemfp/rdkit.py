@@ -312,7 +312,7 @@ class RDKitMACCSFingerprinter_v1(types.Fingerprinter):
 class RDKitFingerprinter_v1(types.Fingerprinter):
     name = "RDKit-Fingerprint/1"
     format_string = (
-             "RDKit-Fingerprint/1 minPath=%(minPath)s maxPath=%(maxPath)s fpSize=%(fpSize)s "
+             "minPath=%(minPath)s maxPath=%(maxPath)s fpSize=%(fpSize)s "
              "nBitsPerHash=%(nBitsPerHash)s useHs=%(useHs)s")
     software = SOFTWARE
     def __init__(self, kwargs):

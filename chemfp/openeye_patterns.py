@@ -8,6 +8,7 @@ from openeye.oechem import (
 
 from . import openeye
 from . import pattern_fingerprinter
+from . import types
         
 class HydrogenMatcher(object):
     def __init__(self, max_count):
@@ -128,13 +129,27 @@ class NumFragments(object):
         # Turn them into a set to get the unique set of component numbers
         # Sets are iterable, so I don't need to do more for the API
         return set(parts)
-        
-        
+
+# Grrr. The substructure keys want up to 4 aromatic rings. The above
+# code only works for up to 2. The API doesn't let me say "I can
+# handle up to 2; please set the remainder to 0."
+#
+# XXX Well, I can change that.
+
+def aromatic_rings(max_count):
+    if max_count > 2:
+        return NotImplemented
+    return AromaticRings(2)
+
+def hetero_aromatic_rings(max_count):
+    if max_count > 2:
+        return NotImplemented
+    return HeteroAromaticRings(max_count)
 
 _pattern_classes = {
     "<H>": HydrogenMatcher,
-    "<aromatic-rings>": AromaticRings,
-    "<hetero-aromatic-rings>": HeteroAromaticRings,
+    "<aromatic-rings>": aromatic_rings,
+    "<hetero-aromatic-rings>": hetero_aromatic_rings,
     "<fragments>": NumFragments,
     }
     
@@ -219,16 +234,33 @@ SOFTWARE = "OEChem/%(release)s (%(version)s)" % dict(
     release = OEChemGetRelease(),
     version = OEChemGetVersion())
 
-class SubstructRDKitFingerprinter_v1(object):
+
+# XXX Why are there two "Fingerprinter" classes?
+# XX Shouldn't they be merged?
+
+class _PatternFingerprinter(types.Fingerprinter):
+    software = SOFTWARE
+    def __init__(self, kwargs):
+        self._fingerprinter = _cached_fingerprinters[self._pattern_name]
+        
+        super(_PatternFingerprinter, self).__init__(kwargs)
+
+    def fingerprint(self, mol):
+        return self._fingerprinter(mol)
+
+    def describe(self, bitno):
+        self._fingerprint.describe(bitno)
+
+class SubstructOpenEyeFingerprinter_v1(_PatternFingerprinter):
     name = "ChemFP-Substruct-OpenEye/1"
     num_bits = 881
-    software = SOFTWARE
+    _pattern_name = "substruct"
 
     _get_reader = staticmethod(read_substruct_fingerprints_v1)
 
-class RDMACCSRDKitFingerprinter_v1(object):
+class RDMACCSOpenEyeFingerprinter_v1(_PatternFingerprinter):
     name = "RDMACCS-OpenEye/1"
     num_bits = 166
-    software = SOFTWARE
+    _pattern_name = "rdmaccs"
 
     _get_reader = staticmethod(read_rdmaccs_fingerprints_v1)
