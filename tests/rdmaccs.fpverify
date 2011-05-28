@@ -1,0 +1,424 @@
+#type=RDMACCS-{TOOLKIT}/1
+
+
+[H] X
+[He] X
+[Li] 34
+[Be] 9
+[B] 17
+[C] X
+[N] 160
+[O] 163
+[F] 41,133
+[Ne] X
+[Na] 34
+[Mg] 9
+[Al] 17
+[Si] 19
+[P] 28
+[S] 87
+[Cl] 102,133
+[Ar] X
+[K] 34
+[Ca] 9
+[Sc] 4
+[Ti] 4
+[V] 6
+[Cr] 6
+[Mn] 6
+[Fe] 8
+[Co] 8
+[Ni] 8
+[Cu] 11
+[Zn] 11
+[Ga] 17
+[Ge] 2
+[As] 2
+[Se] 2
+[Br] 45,133
+[Kr] X
+[Rb] 34
+[Sr] 9
+[Y] 4
+[Zr] 4
+[Nb] 6
+[Mo] 6
+[Tc] 6
+[Ru] 8
+[Rh] 8
+[Pd] 8
+[Ag] 11
+[Cd] 11
+[In] 17
+[Sn] 2
+[Sb] 2
+[Te] 2
+[I] 26,133
+[Xe] X
+[Cs] 34
+[Ba] 9
+[La] 5
+[Ce] 5
+[Pr] 5
+[Nd] 5
+[Pm] 5
+[Sm] 5
+[Eu] 5
+[Gd] 5
+[Tb] 5
+[Dy] 5
+[Ho] 5
+[Er] 5
+[Tm] 5
+[Yb] 5
+[Lu] 5
+[Hf] 4
+[Ta] 6
+[W] 6
+[Re] 6
+[Os] 8
+[Ir] 8
+[Pt] 8
+[Au] 11
+[Hg] 11
+
+# XXX FIXME; this should not be in both 2 and 17
+[Tl] 2,17
+[Pb] 2
+[Bi] 2
+[Po] X
+[At] X
+[Rn] X
+[Fr] 34
+[Ra] 9
+[Ac] 3
+[Th] 3
+[Pa] 3
+[U] 3
+[Np] 3
+[Pu] 3
+[Am] 3
+[Cm] 3
+[Bk] 3
+[Cf] 3
+[Es] 3
+[Fm] 3
+[Md] 3
+[No] 3
+[Lr] 3,1
+
+## XXX Need to update the rdmaccs patterns to include more elements
+## XXX This might be toolkit dependent!
+#[Rf] 1
+#[Db] 1
+#[Sg] 1
+#[Bh] 1
+#[Hs] 1
+#[Mt] 1
+#[Ds] 1
+#[Rg] 1
+
+##### Test all the aromatic forms
+
+# The Daylight SMILES documentation says:
+#
+#  Please note that only atoms on the following list can be considered
+#  aromatic: C, N, O, P, S, As, Se, and * (wildcard). In addition,
+#  exocyclic double bonds do not break aromaticity.
+#       http://www.daylight.com/dayhtml/doc/theory/theory.smiles.html
+
+# Different toolkits extend the Daylight definitions.
+# Because these are non-standard, toolkits must opt-in.
+
+
+# OpenEye supports aromatic tellurium. It also supports aromatic input
+# for all elements in group 13, 14, 15, and 16 but non-standard
+# lower-case elements are perceived as being aliphatic.
+#  [b,al,ga,in,tl] - group 13; allowed input, perceived aliphatic
+#  [c] - group 14; aromatic
+#  [si,ge,sn,pb] - group 14; allowed input, perceived aliphatic
+#  [n,p,as] - group 15; aromatic
+#  [sb,bi] - group 15; allowed input, perceived aliphatic
+#  [o,s,se,te] - group 16; aromatic
+#  [po] - group 16; allowed input, perceived aliphatic
+
+
+### boron group / group 13
+
+
+# Indigo and CACTVS perceive aromatic boron
+# OpenEye allows it on input, but converts it to aliphatic form during perception
+# OpenBabel supports it (but it was fixed after 2.3.0)
+# RDKit is willing to support aromatic boron
+=only OpenEye OpenBabel
+=skip OpenBabel/2.3.0
+[b]1ccccc1 17,97,136,162,164!98,161
+
+=only OpenEye
+[al]1ccccc1 17,97,136,162,164!98,161
+
+=only OpenEye
+[ga]1ccccc1 17,97,136,162,164!98,161
+
+=only OpenEye
+[in]1ccccc1 17,97,136,162,164!98,161
+
+# XXX the 2 is a bug in the original RDKit SMARTS
+=only OpenEye
+[tl]1ccccc1 17,97,136,162,164!2,98,161
+
+### carbon group / group 14
+
+# There is no bit set by just carbon, so this isn't useful
+c1ccccc1 161,162,164
+# XXX TODO - support OpenEye
+=skip OpenEye
+c1ccccc1.c1ccccc1 124,144,161,162,164,165
+
+#   silbenzene - http://en.wikipedia.org/wiki/Silabenzene
+=only OpenBabel OpenEye
+=skip OpenBabel/2.3.0
+[si]1ccccc1 19,97,136,162,164!98,161
+
+=only OpenEye OpenBabel 
+=skip OpenBabel/2.3.0
+[ge]1ccccc1 2,97,136,162,164!98,161
+
+=only OpenEye OpenBabel
+=skip OpenBabel/2.3.0
+[sn]1ccccc1 2,97,136,162,164!98,161
+
+=only OpenEye OpenBabel
+=skip OpenBabel/2.3.0
+[pb]1ccccc1 2,97,136,162,164!98,161
+
+### nitrogen group / group 15
+
+#c1ccccn1 64,97,120,136,160,161,162,164
+
+# Strange: OpenBabel doesn't treat this as aromatic
+# even though OEChem and RDKit allow it.
+=skip OpenBabel/2.3.0
+c1ccccp1 28,97,136,161,162,164
+
+# This is PubChem CID 626333; a 3-membered arsenic!
+# RDKit doesn't handle "as", but it should. XXX I think I reported this.
+=skip RDKit/2009Q3_1
+CC12C[as]3[as]([as]3C1)C2 2,15,21,136,162,164?
+# OpenEye keeps this as aromatic
+=only OpenEye
+CC12C[as]3[as]([as]3C1)C2 161?
+
+
+=only OpenEye OpenBabel
+=skip OpenBabel/2.3.0
+[sb]1ccccc1 2,97,136,162,164!98,161
+
+=only OpenEye OpenBabel 
+=skip OpenBabel/2.3.0
+[bi]1ccccc1 2,97,136,162,164!98,161
+
+
+### oxygen group / group 16
+
+c1ccco1 56,82,95,163,136,161,164
+c1cccs1 35,82,87,95,136,161,164
+[se]1cccc1 2,82,95,136,161,164
+
+=only OpenEye
+[te]1cccc1 2,82,95,136,161,164
+
+=only OpenEye
+[po]1cccc1 82,95,136,164!98,161
+
+
+C1CCC1 10,117,146,164
+N1NNN1 7,10,42,51,53,67,68,69,76,78,93,119,120,123,129,130,136,141,150,160,164
+
+ON(C)C 12,23,68,70,73,85,92,93,101,121,123,138,147,148,157,159,160,163
+On1cncccc1 12,18,23,44,68,70,74,76,77,93,94,98,101,118,119,120,121,123,126,136,138,141,142,147,157,160,163,164
+c1ccon(C)c1 12,23,44,56,70,74,92,93,97,98,101,119,120,121,123,136,147,156,157,159,160,162,163,164
+c1cccon2c13.c2cc3 12,18,23,56,64,70,82,93,95,98,100,101,104,112,119,120,121,123,136,143,147,155,156,160,161,163,164
+O=[N+](C)C 12,48,62,70,73,85,92,93,101,118,121,123,147,148,157,159,160,163
+O[N+](=C)C 12,23,33,48,68,70,77,92,93,101,118,121,123,138,147,157,159,160,163
+
+# check for S-S ; S=S and s:s should not pass
+SS 13,66,67,68,87,123,130
+c1(nc(=N)ss1)N 0x000000000840100005b08d800002c0095421402813
+S=S X 14,42,105,122,130,138,145,156,158,163
+
+# bit 14 [#8]~[#6](~[#8])~[#8]
+OC(O)O 14,42,105,122,130,138,145,156,158,163
+O=C(O)O 14,42,105,122,130,138,145,153,156,158,163
+OC(=O)O 14,42,105,122,130,138,145,153,156,158,163
+OC(O)=O 14,42,105,122,130,138,145,153,156,158,163
+c1coc(=O)o1 14,56,71,82,95,105,112,119,122,126,136,142,145,153,158,161,163,164
+
+# bit 15 [!#6;!#1]1~*~*~1  QAA@1
+C1CO1 15,21,56,85,108,136,146,152,156,163,164
+C1CC1 21,117,146,164
+
+# bit 16 [#6]#[#6]
+C=C 33,98
+C#C 16
+
+# bit 18: 7 member ring
+C1CCCCCC1 18,117,127,128,146,164
+CCCCCCC 107,113,114,115,117,127,128,146,148,154,159
+
+# bit 20: [#6]=[#6](~[!#6;!#1])~[!#6;!#1]
+C=C(N)O 20,33,42,44,75,83,91,98,109,116,130,138,150,155,156,157,160,163
+C=C(c1ccccc1)Br 33,45,75,98,106,133,161,162,164
+
+# bit 22: [#7]~[#6](~[#8])~[#8]
+NC(O)O 22,42,83,105,109,116,122,130,138,150,155,156,157,158,160,163
+NC(=O)O 22,42,83,105,109,116,122,130,138,150,153,155,156,157,158,160,163
+N=C(O)O 22,42,77,105,109,116,118,122,130,138,150,155,156,158,160,163
+
+CCOc1nnc(o1)C 22,51,56,64,79,82,91,93,94,95,96,105,108,109,112,113,116,119,120,122,123,125,126,136,141,142,148,152,154,155,156,158,159,160,161,163,164
+
+
+# bit 23 [#7]-[#8]  (just check that these don't match)
+N=O X 23
+c1cnoc1 X 23
+
+# bit 24 [#7]~[#6](~[#7])~[#7]
+NC(N)N 24,42,76,83,105,130,141,150,155,157,160
+
+# bit 25 [#6]=;@[#6](@*)@*
+C1CC2=CC(C1C2)O 25,49,75,89,90,95,98,104,117,126,128,138,142,146,151,156,162,163,164
+C=[C]([H])C X 25
+P[C@]([H])(O)C X 25
+
+# bit 27 [!#6;!#1]~[CH2]~[!#6;!#1]
+CCC X 27
+CCN X 27
+[H]CN X 27
+NCN           27,42,76,81,83,99,130,141,150,152,154,157,160
+NC([H])N      27,42,76,81,83,99,130,141,150,152,154,157,160
+NC([H])([H])N 27,42,76,81,83,99,130,141,150,152,154,157,160
+
+# bit 29 [#6]~[!#6;!#1](~[#6])(~[#6])~[!#1]
+C[Si](C)(C)C 19,29,73,85,92,111,140,147,148,159
+C[Si](C)(C)[H] X 29
+CC(C)(C)[H] X 29
+
+# bit 30 [!#6;!#1]~[F,Cl,Br,I]
+NF 30,41,68,83,93,123,133,150,160
+c1cccn1F 30?
+CF X 30
+
+# bit 31 [#6]~[#16]~[#7]
+CSN 31,32,66,68,83,87,92,93,123,150,159,160
+c1ccccc1Sn1cccc1 31?
+
+# bit 32 [#7]~[#16]
+NS 32,66,67,68,83,87,93,123,130,150,160
+N=S 32,66,68,72,87,93,118,123,150,160
+c1cccn1S 32?
+c1ccs1N 32?
+
+# bit 33 [CH2]=*
+C=C 33,98
+[H]C([H])=C([H])[H] 33,98
+C=N 33,77,118,150,160
+C#C X 33
+[CH]=N 77,118,150,160
+[CH]=N 77,118,150,160
+
+
+# bit 35 [#16R]
+S1CCCC1 35,82,85,87,95,117,128,136,137,146,152,164
+S1C([H])C([H])C([H])C1 35,82,85,87,95,117,128,136,137,146,152,164
+S1CCCC1[H]    35,82,85,87,95,117,128,136,137,146,152,164
+s1cccc1 35,82,87,95,136,161,164
+
+# bit 36 [#7]~[#6](~[#8])~[#7]
+NC(O)N 36,42,76,83,105,109,116,130,138,141,150,155,156,157,160,163
+N=C(O)N 36,42,76,77,83,105,109,116,118,130,138,141,150,155,156,157,160,163
+NC(=O)N 36,42,76,83,105,109,116,130,141,150,153,155,157,160,163
+# Strange. OpenBabel makes an explicit H here, with stereochemistry
+c1(nc(=O)[nH]s1)N 31,32,35,36,46,52,53,64,66,68,76,78,79,80,82,83,87,93,95,96,105,109,112,116,119,120,123,126,130,132,134,136,141,142,150,153,155,157,160,161,163,164
+
+# bit 37 [#7]~[#6](~[#6])~[#7]
+NC(C)N 37,42,76,83,130,141,150,155,157,159,160
+N=C(C)N 37,42,76,77,83,118,130,141,150,155,157,159,160
+NC(=C)N 20,33,37,42,44,75,76,83,98,130,141,150,155,157,160
+c1c(nns1)N 31,32,35,37,46,51,64,66,69,76,78,79,82,83,87,93,95,119,120,123,129,132,134,136,141,150,155,157,160,161,164
+Cc1[nH]nc(n1)C=O 37,51,64,68,76,78,79,82,93,94,95,96,119,120,123,136,141,150,153,155,159,160,161,163,164
+
+# bit 38 [#8]~[#16](~[#8])~[#8]
+# How bizarre. OpenBabel doesn't match bit 67.
+OS(O)O 38,39,42,47,54,57,60,66,68,87,101,105,123,129,130,138,145,147,158,163!67
+=skip OpenBabel/2.3.0
+OS(O)O 67?
+OS(=O)(=O)[O-] 38,39,47,48,54,57,59,60,66,68,72,87,101,105,111,123,129,135,138,139,145,147,158,163
+OS(=O)[O] 38,39,47,54,57,59,60,66,68,72,87,101,105,123,129,138,145,147,158,163
+C(CS(=O)(=O)O)S 38,39,47,50,52,54,57,59,60,66,68,72,81,87,89,101,103,105,111,117,123,129,130,131,135,137,138,145,146,147,152,154,158,163
+
+
+# bit 39 [#16]-[#8]
+S-O       39,66,67,68,87,101,123,130,138,163
+[H]S-O[H] 39,66,67,68,87,101,123,130,138,163
+S=O X 39
+
+# bit 40 [#6]#[#7]
+C#N 40,160
+C=N            33,77,118,150,160
+[H]C=N[H]      33,77,118,150,160
+[H]C([H])=N[H] 33,77,118,150,160
+
+
+# bit 42 [!C;!c;!#1;!H0]~*~[!C;!c;!#1;!H0]
+NCO           27,42,81,83,99,108,109,116,130,138,150,152,154,156,157,160,163
+[H][NH]CO     27,42,81,83,99,108,109,116,130,138,150,152,154,156,157,160,163
+[H][N]([H])CO 27,42,81,83,99,108,109,116,130,138,150,152,154,156,157,160,163
+[N]CO X 42
+
+
+# bit 44: [#6]=[#6]~[#7]  C=CN
+C=CN 33,44,83,98,150,157,160
+C=C=N 33,44,77,98,118,150,160
+CCN X 44
+## OpenBabel and RDKit don't think tere are two aromatic rings here
+## Cc1ccc2nc3=CCC=c3c(=O)n2c1 25,37,44,49,64,75,76,79,84,91,95,96,97,98,100,104,109,112,116,119,120,121,126,136,141,142,143,144,147,153,155,159,160,161,162,163,164
+
+# bit 46: [#16]~*~[#7]  SAN
+SCN 27,42,46,81,83,87,99,130,150,152,154,157,160
+SON 23,39,42,46,66,68,70,83,87,93,101,123,125,129,130,150,160,163
+S=CN 46,72,83,87,150,157,160
+SC=N 42,46,77,87,118,130,150,160
+S=C=N 46,72,77,87,118,150,160
+c1ccc[sH]1On1cccc1 12,23,35,39,46,50,60,64,66,68,70,74,82,87,93,95,98,101,112,119,120,121,123,125,126,129,136,142,147,160,161,163,164
+
+# bit 47: [#8]~[!#6;!#1](~[#8])(~[#8])  OQ(O)O
+# bit 48: [!+0]  CHARGE
+[Na+] 48?
+[Cl-] 48?
+[Na] X 48
+Cl[Rh+2] 8,30,48,102,123,133
+[O-2] 48,163
+[35S-2] 48,87
+[Pt+2] 8,48
+
+# bit 49: [#6]=[#6](~[#6])~[#6]  C=C(C)C
+C=C(C)C 33,49,73,75,98,148,159
+C=C(C)c1ccccc1 33,49,75,98,159,161,162,164
+C=C(c1ccccc1)c1ccccc1 33,49,75,98,144,161,162,164!124
+=skip OpenEye
+C=C(c1ccccc1)c1ccccc1 124?
+CC(C)C X 49
+
+# bit 50: [#6]~[#16]~[#8]  CSO
+CSO 39,50,66,68,87,92,101,123,138,159,163
+c1ccccc1SO 39,50,58,63,66,68,80,87,101,123,138,161,162,163,164
+
+# bit 51: [#7]~[#7]  NN
+NN                 51,67,68,83,93,123,130,141,150,160
+[H]NN[H]           51,67,68,83,93,123,130,141,150,160
+[H]N([H])N([H])[H] 51,67,68,83,93,123,130,141,150,160
+N=N        51,67,68,93,118,123,130,141,150,160
+N=N[H]     51,67,68,93,118,123,130,141,150,160
+[H]N=N[H]  51,67,68,93,118,123,130,141,150,160
+N#N 51,93,123,141,160
+c1cnncc1 51,64,93,97,119,120,123,136,141,160,161,162,164
