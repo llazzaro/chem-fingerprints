@@ -200,6 +200,7 @@ class SubstructOpenBabelFingerprinter_v1(_PatternFingerprinter):
     name = "ChemFP-Substruct-OpenBabel/1"
     num_bits = 881
     _pattern_name = "substruct"
+    software = SOFTWARE
 
     _get_reader = staticmethod(read_substruct_fingerprints_v1)
 
@@ -207,6 +208,7 @@ class RDMACCSOpenBabelFingerprinter_v1(types.Fingerprinter):
     name = "RDMACCS-OpenBabel/1"
     num_bits = 166
     _pattern_name = "rdmaccs"
+    software = SOFTWARE
 
     _get_reader = staticmethod(read_rdmaccs_fingerprints_v1)
 

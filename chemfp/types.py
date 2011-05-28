@@ -96,6 +96,17 @@ class Fingerprinter(object):
     software = None
     def __init__(self, kwargs):
         self.kwargs = kwargs
+        # Some self-test code to make sure preconditions are met
+        # This means they must be set before calling super().__init__
+        if getattr(self, "name", None) is None:
+            raise AssertionError("num_bits not defined (%r)" % (self.__class__,))
+        if getattr(self, "num_bits", None) is None:
+            raise AssertionError("num_bits not defined (%r)" % (self.name,))
+        if getattr(self, "num_bits", None) is None:
+            raise AssertionError("num_bits not defined (%r)" % (self.name,))
+        if getattr(self, "software", None) is None:
+            raise AssertionError("software not defined (%r)" % (self.name,))
+        
 
     @classmethod
     def from_parameters(cls, parameters):
