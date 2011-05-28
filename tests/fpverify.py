@@ -112,6 +112,8 @@ def evaluate_test_cases(fingerprinter, test_cases):
 
 
         for bitno, val in iter_bits(fp):
+            if bitno >= fingerprinter.num_bits:
+                break
             if bitno in ignore_bits:
                 continue
             if bitno in true_bits:
@@ -130,7 +132,8 @@ def evaluate_test_cases(fingerprinter, test_cases):
             print " bit#  got  expected"
             print " ----  ---  --------"
             for (bitno, got, expected) in errors:
-                print " %3d    %d      %d" % (bitno, got, expected)
+                description = fingerprinter.describe(bitno)
+                print " %3d    %d      %d  %s" % (bitno, got, expected, description)
             print "bit pattern", ",".join(str(bitno) for (bitno, val) in iter_bits(fp) if val)
             print "hex pattern", fp.encode("hex")
             raise SystemExit()
