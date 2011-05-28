@@ -1,17 +1,29 @@
 from __future__ import absolute_import
 
-from openeye.oechem import OESubSearch, OEChemGetRelease, OEChemGetVersion
+from openeye.oechem import (
+    OESubSearch, OEChemGetRelease, OEChemGetVersion, OEGraphMol, OEAndAtom,
+    OENotAtom, OEIsAromaticAtom, OEIsCarbon, OEIsAromaticBond, OEHasBondIdx,
+    OEFindRingAtomsAndBonds, OEDetermineAromaticRingSystems)
+                            
+                            
+
 
 from . import openeye
 from . import pattern_fingerprinter
         
 class HydrogenMatcher(object):
-    pattern = "<H>"
-    def __init__(self):
-        self.SetMaxMatches(1024)
-    def SetMaxMatches(self, max_count):
+    def __init__(self, max_count):
         self.max_count = max_count
-    def Match(self, mol, flg):
+
+    def SingleMatch(self, mol):
+        for atom in mol.GetAtoms():
+            if atom.GetAtomicNum() == 1:
+                return 1
+            if atom.GetImplicitHCount():
+                return 1
+        return 0
+
+    def Matches(self, mol, flg=True):
         max_count = self.max_count
         count = 0
         for atom in mol.GetAtoms():
@@ -22,34 +34,116 @@ class HydrogenMatcher(object):
                 break
         return [0] * count
 
-    def SingleMatch(self, mol):
-        for atom in mol.GetAtoms():
-            if atom.GetAtomicNum() == 1:
-                return 1
-            if atom.GetImplicitHCount():
-                return 1
-        return 0
+# OpenEye famously does not include SSSR functionality in OEChem.
+# Search for "Smallest Set of Smallest Rings (SSSR) Considered Harmful"
+# After much thought, I agree. But it makes this sort of code harder.
 
-class TrueMatcher(object):
-    def __init__(self):
-        self.SetMaxMatches(1024)
-    def SetMaxMatches(self, max_count):
-        self.max_count = max_count
-        self._matches = [0] * max_count
-    def Match(self, mol, flg):
-        self._matches
+# That's why I only support up to max_count = 2. Then again, I know
+# that this code does the right thing, while I'm not sure about the
+# SSSR-based implementations.
+
+class AromaticRings(object):
+    def __init__(self, max_count):
+        if max_count > 2:
+            raise NotImplementedError("No support for >=3 aromatic rings")
+        self._single_aromatic = OESubSearch("[a]")
+        # In OpenEye SMARTS, [a;!R2] will find aromatic atoms in at least two rings
+        # The following finds atoms which are members of at least two aromatic rings
+        self._multiring_aromatic = OESubSearch("[a;!R2](:a)(:a):a")
+        
     def SingleMatch(self, mol):
-        return 1
+        # This is easy; if there's one aromatic atom then there's one
+        # aromatic ring.
+        return self._single_aromatic.SingleMatch(mol)
+        
+    def Matches(self, mol, flg=True):
+        # We're trying to find if there are two aromatic rings.
+        if self._multiring_aromatic.SingleMatch(mol):
+            # then obviously there are two aromatic rings
+            return (1,2)
+
+        # Since no aromatic atom is in two aromatic rings that means
+        # the aromatic ring systems are disjoint, so this gives me the
+        # number of ring systems
+        num_aromatic_systems, parts = OEDetermineAromaticRingSystems(mol)
+        if num_aromatic_systems == 0:
+            return ()
+        if num_aromatic_systems == 1:
+            return (1,)
+        return (1,2)
+
+_is_hetereo_aromatic = OEAndAtom(OEIsAromaticAtom(), OENotAtom(OEIsCarbon()))
+class HeteroAromaticRings(object):
+    def __init__(self, max_count):
+        if max_count > 2:
+            raise NotImplementedError("No support for >=3 hetero-aromatic rings")
+        self._single_hetero_aromatic = OESubSearch("[a;!#6]")
+        self._single_hetero_aromatic.SetMaxMatches(1)
+
+    def SingleMatch(self, mol):
+        return self._single_hetero_aromatic.SingleMatch(mol)
+
+    def Matches(self, mol, flg=True):
+        # Find all the hetero-aromatic atoms
+        hetero_atoms = [atom for atom in mol.GetAtoms(_is_hetereo_aromatic)]
+        if len(hetero_atoms) < 2:
+            # I just need an iterable
+            return hetero_atoms
+
+        # There are at least two hetero-aromatic atoms.
+        # Are there multiple ring systems?
+        num_aromatic_systems, parts = OEDetermineAromaticRingSystems(mol)
+        assert num_aromatic_systems >= 1
+        # Are there hetero-atoms in different systems?
+        atom_components = set(parts[atom.GetIdx()] for atom in hetero_atoms)
+        if len(atom_components) > 1:
+            return (1,2)
+
+        # The answer now is "at least one". But are there two?
+
+        # All of the hetero-aromatic atoms are in the same ring system
+        # This is the best answer I could think of, and it only works
+        # with the OEChem toolkit: remove one of the bonds, re-find
+        # the rings, and see if there's still an aromatic hetero-atom.
+        hetero_atom = hetero_atoms[0]
+
+        for bond in hetero_atom.GetBonds(OEIsAromaticBond()):
+            newmol = OEGraphMol(mol)
+            newmol_bond = newmol.GetBond(OEHasBondIdx(bond.GetIdx()))
+            newmol.DeleteBond(newmol_bond)
+            OEFindRingAtomsAndBonds(newmol)
+
+            if self._single_hetero_aromatic.SingleMatch(newmol):
+                return (1,2)
+
+        return (1,)
+
+class NumFragments(object):
+    def __init__(self, max_count):
+        pass
+    def SingleMatch(self, mol):
+        count, parts = OEDetermineComponents(mol)
+        return count > 0
+    def Matches(self, mol, flg=True):
+        count, parts = OEDetermineComponents(mol)
+        return parts[1:]
+        
+        
+
+_pattern_classes = {
+    "<H>": HydrogenMatcher,
+    "<aromatic-rings>": AromaticRings,
+    "<hetero-aromatic-rings>": HeteroAromaticRings,
+    "<fragments>": NumFragments,
+    }
+    
 
 def oechem_compile_pattern(pattern, max_count):
-    if pattern == "<H>":
-        return HydrogenMatcher()
-    if pattern == "<1>":
-        return TrueMatcher(max_count)
-    if pattern == "<0>":
-        return 0
+    if pattern in _pattern_classes:
+        return _pattern_classes[pattern](max_count)
+
     elif pattern.startswith("<"):
-        return NotImplemented # No other special patterns are supported; set to 0
+        raise NotImplementedError(pattern) # No other special patterns are supported
     else:
         pat = OESubSearch()
         if not pat.Init(pattern):
