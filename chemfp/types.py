@@ -88,12 +88,12 @@ _fingerprints = [
     dict(name="ChemFP-Substruct-RDKit/1",
          num_bits=881,
          reader="chemfp.rdkit_patterns.read_substruct_fingerprints_v1",
-         software="chemfp.openeye_patterns.SOFTWARE"),
+         software="chemfp.rdkit.SOFTWARE"),
 
     dict(name="RDMACCS-RDKit/1",
          num_bits=166,
          reader="chemfp.rdkit_patterns.read_rdmaccs_fingerprints_v1",
-         software="chemfp.openeye_patterns.SOFTWARE"),
+         software="chemfp.rdkit.SOFTWARE"),
 
 
     dict(name="ChemFP-Substruct-OpenBabel/1",
@@ -229,6 +229,7 @@ class FingerprintType(object):
         self.num_bits = num_bits
         self.config = config
         self.kwargs = kwargs
+        self.software = config["software"]
 
     def _encode_parameters(self, kwargs):
         encode_parameters = self.config.get("encode_parameters", None)
@@ -251,6 +252,7 @@ class FingerprintType(object):
         source_filename = io.get_filename(source)
         return io.FPIterator(io.Header(num_bits = self.num_bits,
                                        source = source_filename,
+                                       software = self.software,
                                        type = self.get_type(),
                                        date = io.utcnow()),
                              reader)
