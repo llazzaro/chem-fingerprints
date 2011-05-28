@@ -22,10 +22,18 @@ from openeye.oegraphsim import *
 
 __all__ = ["read_structures", "get_path_fingerprinter", "get_maccs_fingerprinter"]
 
+from . import types
 
 class UnknownFormat(KeyError):
     def __str__(self):
         return "Unknown format %r" % (self.args[0],)
+
+############# Used when generate the FPS header
+
+SOFTWARE = "OEGraphSim/%(release)s (%(version)s)" % dict(
+    release = OEGraphSimGetRelease(),
+    version = OEGraphSimGetVersion())
+
 
 
 ##### Handle the atom and bond type flags for path fingerprints
@@ -157,7 +165,7 @@ _maccs_decoders = {"numbits": int,
                    "atype": atom_description_to_value,
                    "btype": bond_description_to_value}
 
-def decode_maccs166_parameters(parameters):
+def decode_path_parameters(parameters):
     assert len(parameters) == len(_maccs_decoders)
     kwargs = {}
     for name, decoder in _maccs_decoders.items():
@@ -171,7 +179,7 @@ _maccs_encoders = {"numbits": str,
                    "atype": atom_value_to_description,
                    "btype": bond_value_to_description}
 
-def encode_maccs166_parameters(kwargs):
+def encode_path_parameters(kwargs):
     assert len(kwargs) == len(_maccs_encoders)
     parameters = {}
     for name, encoder in _maccs_encoders.items():
@@ -403,8 +411,28 @@ def read_path_fingerprints_v1(source=None, format=None, kwargs={}):
     return read_oechem_path_structure_fingerprints()
 
 ############# Used when generate the FPS header
+class OpenEyePathFingerprinter_v1(types.Fingerprinter):
+    name = "OpenEye-Path/1"
+    format_string = ("numbits=%(numbits)s minbonds=%(minbonds)s "
+                     "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s")
+    software = SOFTWARE
+    def __init__(self, kwargs):
+        self.num_bits = kwargs["numbits"]
+        super(OpenEyePathFingerprinter_v1, self).__init__(kwargs)
 
-SOFTWARE = "OEGraphSim/%(release)s (%(version)s)" % dict(
-    release = OEGraphSimGetRelease(),
-    version = OEGraphSimGetVersion())
+    @classmethod
+    def from_parameters(cls, parameters):
+        return cls(decode_path_parameters(parameters))
 
+    def _encode_parameters(self):
+        return encode_path_parameters(self.kwargs)
+
+    _get_reader = staticmethod(read_path_fingerprints_v1)
+
+    
+class OpenEyeMACCSFingerprinter_v1(types.Fingerprinter):
+    name = "OpenEye-MACCS166/1"
+    num_bits = 166
+    software = SOFTWARE
+
+    _get_reader = staticmethod(read_maccs166_fingerprints_v1)

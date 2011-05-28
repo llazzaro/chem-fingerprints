@@ -13,6 +13,7 @@ import warnings
 import openbabel as ob
 
 from . import io
+from . import types
 
 
 # OpenBabel really wants these two variables. I get a segfault if
@@ -356,3 +357,34 @@ def read_maccs166_fingerprints_v2(source, format, kwargs={}):
             yield (fingerprinter(mol), title)
 
     return read_openbabel_maccs166_structure_fingerprints()
+
+#####
+
+class _OpenBabelFingerprinter(types.Fingerprinter):
+    software = SOFTWARE
+
+class OpenBabelFP2Fingerprinter_v1(_OpenBabelFingerprinter):
+    name = "OpenBabel-FP2/1"
+    num_bits = 1021
+    _get_reader = staticmethod(read_fp2_fingerprints_v1)
+
+class OpenBabelFP3Fingerprinter_v1(_OpenBabelFingerprinter):
+    name = "OpenBabel-FP3/1"
+    num_bits = 55
+    _get_reader = staticmethod(read_fp3_fingerprints_v1)
+
+class OpenBabelFP4Fingerprinter_v1(_OpenBabelFingerprinter):
+    name = "OpenBabel-FP4/1"
+    num_bits = 307
+    _get_reader = staticmethod(read_fp4_fingerprints_v1)
+
+
+class OpenBabelMACCSFingerprinter_v1(_OpenBabelFingerprinter):
+    name = "OpenBabel-MACCS/1"
+    num_bits = 166
+    _get_reader = staticmethod(read_maccs166_fingerprints_v1)
+    
+class OpenBabelMACCSFingerprinter_v2(_OpenBabelFingerprinter):
+    name = "OpenBabel-MACCS/2"
+    num_bits = 166
+    _get_reader = staticmethod(read_maccs166_fingerprints_v2)

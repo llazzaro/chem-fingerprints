@@ -14,7 +14,7 @@ from rdkit import Chem
 from rdkit.Chem.MACCSkeys import GenMACCSKeys
 
 
-from . import sdf_reader, decoders, error_handlers, io
+from . import sdf_reader, decoders, error_handlers, io, types
 
 # These are the things I consider to be public
 __all__ = ["read_structures", "iter_smiles_molecules", "iter_sdf_molecules"]
@@ -299,3 +299,29 @@ def read_rdkit_fingerprints_v1(source=None, format=None, kwargs={}):
             yield (fingerprinter(mol), title)
 
     return read_rdkit_fingerprints()
+
+####################
+
+class RDKitMACCSFingerprinter_v1(types.Fingerprinter):
+    name = "RDKit-MACCS166/1"
+    num_bits = 166
+    software = SOFTWARE
+    
+    _get_reader = staticmethod(read_maccs166_fingerprints_v1)
+
+class RDKitFingerprinter_v1(types.Fingerprinter):
+    name = "RDKit-Fingerprint/1"
+    format_string = (
+             "RDKit-Fingerprint/1 minPath=%(minPath)s maxPath=%(maxPath)s fpSize=%(fpSize)s "
+             "nBitsPerHash=%(nBitsPerHash)s useHs=%(useHs)s")
+    software = SOFTWARE
+    def __init__(self, kwargs):
+        self.num_bits = kwargs["fpSize"]
+        super(RDKitFingerprinter_v1, self).__init__(kwargs)
+
+    @classmethod
+    def from_parameters(cls, parameters):
+        kwargs = decode_fingerprint_parameters(parameters)
+        return cls(kwargs)
+
+    _get_reader = staticmethod(read_rdkit_fingerprints_v1)

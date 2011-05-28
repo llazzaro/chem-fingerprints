@@ -4,6 +4,7 @@ from rdkit import Chem
 
 from . import pattern_fingerprinter
 from . import rdkit
+from . import types
 
 SOFTWARE = rdkit.SOFTWARE
 
@@ -162,3 +163,16 @@ def read_substruct_fingerprints_v1(source=None, format=None, kwargs={}):
 def read_rdmaccs_fingerprints_v1(source=None, format=None, kwargs={}):
     return _read_fingerprints("rdmaccs", source, format, kwargs)
 
+class SubstructRDKitFingerprinter_v1(types.Fingerprinter):
+    name = "ChemFP-Substruct-RDKit/1"
+    num_bits = 881
+    software = SOFTWARE
+
+    _get_reader = staticmethod(read_substruct_fingerprints_v1)
+
+class RDMACCSRDKitFingerprinter_v1(types.Fingerprinter):
+    name = "RDMACCS-RDKit/1"
+    num_bits = 166
+    software = SOFTWARE
+
+    _get_reader = staticmethod(read_rdmaccs_fingerprints_v1)

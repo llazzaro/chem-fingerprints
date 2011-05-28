@@ -13,100 +13,51 @@ def check_openbabel_maccs166():
         return "OpenBabel-MACCS/2"
     raise AssertionError
 
+class FingerprintFamily(object):
+    def __init__(self, family_name, path):
+        self.family_name = family_name
+        self.path = path
 
-_fingerprints = [
-    dict(name="OpenEye-MACCS166/1", 
-         num_bits=166,
-         reader="chemfp.openeye.read_maccs166_fingerprints_v1",
-         software="chemfp.openeye.SOFTWARE",
-         ),
+    def __call__(self, **kwargs):
+        cls = import_decoder(self.path)
+        assert cls.name == self.family_name
+        return cls(kwargs)
 
-    dict(name="OpenEye-Path/1",
-         reader="chemfp.openeye.read_path_fingerprints_v1",
-         software="chemfp.openeye.SOFTWARE",
-         num_bits=lambda kwargs: kwargs["numbits"],
-         decode_parameters="chemfp.openeye.decode_maccs166_parameters",
-         encode_parameters="chemfp.openeye.encode_maccs166_parameters",
-         format_string=("numbits=%(numbits)s minbonds=%(minbonds)s "
-                        "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s")),
+    def from_parameters(self, parameters):
+        cls = import_decoder(self.path)
+        assert cls.name == self.family_name
+        return cls.from_parameters(parameters)
 
-    dict(name="RDKit-MACCS166/1",
-         num_bits=166, # XXX 166? 167?
-         reader="chemfp.rdkit.read_maccs166_fingerprints_v1",
-         software="chemfp.rdkit.SOFTWARE"),
-
-    dict(name="RDKit-Fingerprint/1",
-         reader="chemfp.rdkit.read_rdkit_fingerprints_v1",
-         software="chemfp.rdkit.SOFTWARE",
-         num_bits=lambda kwargs: kwargs["fpSize"],
-         decode_parameters="chemfp.rdkit.decode_fingerprint_parameters",
-         # Don't need encoders; the format_string is just fine
-         format_string = (
-             "RDKit-Fingerprint/1 minPath=%(minPath)s maxPath=%(maxPath)s fpSize=%(fpSize)s "
-             "nBitsPerHash=%(nBitsPerHash)s useHs=%(useHs)s") ),
-
-
-    dict(name="OpenBabel-FP2/1",
-         num_bits = 1021,
-         reader="chemfp.openbabel.read_fp2_fingerprints_v1",
-         software="chemfp.openbabel.SOFTWARE"),
-
-    dict(name="OpenBabel-FP3/1",
-         num_bits = 55,
-         reader="chemfp.openbabel.read_fp3_fingerprints_v1",
-         software="chemfp.openbabel.SOFTWARE"),
-
-    dict(name="OpenBabel-FP4/1",
-         num_bits = 307,
-         reader="chemfp.openbabel.read_fp4_fingerprints_v1",
-         software="chemfp.openbabel.SOFTWARE"),
-
-    dict(name="OpenBabel-MACCS/1",
-         num_bits = 166,
-         reader="chemfp.openbabel.read_maccs166_fingerprints_v1",
-         software="chemfp.openbabel.SOFTWARE"),
-
-    dict(name="OpenBabel-MACCS/2",
-         num_bits = 166,
-         reader="chemfp.openbabel.read_maccs166_fingerprints_v2",
-         software="chemfp.openbabel.SOFTWARE"),
-
-
-    ## pattern-based fingerprints
-
-    dict(name="ChemFP-Substruct-OpenEye/1",
-         num_bits=881,
-         reader="chemfp.openeye_patterns.read_substruct_fingerprints_v1",
-         software="chemfp.openeye_patterns.SOFTWARE"),
-
-    dict(name="RDMACCS-OpenEye/1",
-         num_bits=166,
-         reader="chemfp.openeye_patterns.read_rdmaccs_fingerprints_v1",
-         software="chemfp.openeye_patterns.SOFTWARE"),
-
-
-    dict(name="ChemFP-Substruct-RDKit/1",
-         num_bits=881,
-         reader="chemfp.rdkit_patterns.read_substruct_fingerprints_v1",
-         software="chemfp.rdkit.SOFTWARE"),
-
-    dict(name="RDMACCS-RDKit/1",
-         num_bits=166,
-         reader="chemfp.rdkit_patterns.read_rdmaccs_fingerprints_v1",
-         software="chemfp.rdkit.SOFTWARE"),
-
-
-    dict(name="ChemFP-Substruct-OpenBabel/1",
-         num_bits=881,
-         reader="chemfp.openbabel_patterns.read_substruct_fingerprints_v1",
-         software="chemfp.openbabel_patterns.SOFTWARE"),
-
-    dict(name="RDMACCS-OpenBabel/1",
-         num_bits=166,
-         reader="chemfp.openbabel_patterns.read_rdmaccs_fingerprints_v1",
-         software="chemfp.openbabel_patterns.SOFTWARE"),
+_families = [
+    FingerprintFamily("OpenEye-MACCS166/1", "chemfp.openeye.OpenEyeMACCSFingerprinter_v1"),
+    FingerprintFamily("OpenEye-Path/1", "chemfp.openeye.OpenEyePathFingerprinter_v1"),
     
+    FingerprintFamily("RDKit-MACCS166/1", "chemfp.rdkit.RDKitMACCSFingerprinter_v1"),
+    FingerprintFamily("RDKit-Fingerprint/1", "chemfp.rdkit.RDKitFingerprinter_v1"),
+    
+    FingerprintFamily("OpenBabel-FP2/1", "chemfp.openbabel.OpenBabelFP2Fingerprinter_v1"),
+    FingerprintFamily("OpenBabel-FP3/1", "chemfp.openbabel.OpenBabelFP3Fingerprinter_v1"),
+    FingerprintFamily("OpenBabel-FP4/1", "chemfp.openbabel.OpenBabelFP4Fingerprinter_v1"),
+    FingerprintFamily("OpenBabel-MACCS/1", "chemfp.openbabel.OpenBabelMACCSFingerprinter_v1"),
+    FingerprintFamily("OpenBabel-MACCS/2", "chemfp.openbabel.OpenBabelMACCSFingerprinter_v2"),
 
+    # In the future this will likely change to use a parameterized class
+    # which can dynamically load fingerprint definitions
+
+    FingerprintFamily("ChemFP-Substruct-OpenEye/1",
+                      "chemfp.openeye_patterns.SubstructOpenEyeFingerprinter_v1"),
+    FingerprintFamily("RDMACCS-OpenEye/1",
+                      "chemfp.openeye_patterns.RDMACCSOpenEyeFingerprinter_v1"),
+
+    FingerprintFamily("ChemFP-Substruct-RDKit/1",
+                      "chemfp.rdkit_patterns.SubstructRDKitFingerprinter_v1"),
+    FingerprintFamily("RDMACCS-RDKit/1",
+                      "chemfp.rdkit_patterns.RDMACCSRDKitFingerprinter_v1"),
+
+    FingerprintFamily("ChemFP-Substruct-OpenBabel/1",
+                      "chemfp.openbabel_patterns.SubstructOpenBabelFingerprinter_v1"),
+    FingerprintFamily("RDMACCS-OpenBabel/1",
+                      "chemfp.openbabel_patterns.RDMACCSOpenBabelFingerprinter_v1"),
 ]
 
 _alternates = {
@@ -114,97 +65,14 @@ _alternates = {
     }
 
 
-# What about knowing which type has the problem?
-def _no_parameters(d):
-    if d:
-        raise TypeError("Parameters are not allowed")
-
-_load_fields = ("reader", "decode_parameters", "encode_parameters", "software")
-class ConfigLoader(object):
-    def __init__(self, name, num_bits, reader, software,
-                 decode_parameters=None, encode_parameters=None, format_string=None):
-
-        self.config = dict(
-            name = name,
-            num_bits = num_bits,
-            format_string = format_string)
-
-        if decode_parameters is None:
-            self.config["decode_parameters"] = _no_parameters
-        if encode_parameters is None:
-            self.config["encode_parameters"] = _no_parameters
-        
-        self.paths = dict(
-            reader = reader,
-            decode_parameters = decode_parameters,
-            encode_parameters = encode_parameters,
-            software = software
-            )
-
-    def __getitem__(self, name):
-        try:
-            return self.config[name]
-        except KeyError:
-            pass
-
-        path = self.paths[name]
-        obj = import_decoder(path)
-        self.config[name] = obj
-        return obj
-
-    def get(self, name, default=None):
-        try:
-            return self[name]
-        except KeyError:
-            return default
-
-    def __repr__(self):
-        d = self.config.copy()
-        for k,v in self.paths.items():
-            if k not in d:
-                d[k] = v + " (not loaded)"
-        return repr(d)
-        
-
-class FingerprintFamily(object):
-    def __init__(self, config):
-        self.config = ConfigLoader(**config)
-
-    def _decode_parameters(self, parameters):
-        decode_parameters = self.config.get("decode_parameters", None)
-        if decode_parameters is None:
-            assert not parameters
-            return {}
-        if isinstance(decode_parameters, basestring):
-            decode_parameters = import_decoder(decode_parameters)
-            # Replace for future use
-            self.config["decode_parameters"] = decode_parameters
-        return decode_parameters(parameters)
-
-    def __call__(self, **kwargs):
-        return self.from_kwargs(kwargs)
-
-    def from_parameters(self, parameters):
-        kwargs = self._decode_parameters(parameters)
-        return self.from_kwargs(kwargs)
-
-    def from_kwargs(self, kwargs=None):
-        if kwargs is None:
-            kwargs = {}
-        num_bits = self.config["num_bits"]
-        if not isinstance(num_bits, int):
-            num_bits = num_bits(kwargs)
-        return FingerprintType(num_bits, self.config, kwargs)
-
-    
 _family_by_name = {}
 
 def _initialize_families():
-    for config in _fingerprints:
+    for family in _families:
         # Set both the versioned and non-versioned names
-        name = config["name"]
+        name = family.family_name
         unversioned_name = name.split("/")[0]
-        _family_by_name[name] = _family_by_name[unversioned_name] = FingerprintFamily(config)
+        _family_by_name[name] = _family_by_name[unversioned_name] = family
 
     # Don't include a (likely non-versioned) name if there's a selector function
     for name in _alternates:
@@ -223,31 +91,38 @@ def get_fingerprint_family(name):
     alternate = _alternates[name]()
     return _family_by_name[alternate]
 
-
-class FingerprintType(object):
-    def __init__(self, num_bits, config, kwargs):
-        self.num_bits = num_bits
-        self.config = config
+class Fingerprinter(object):
+    format_string = None
+    software = None
+    def __init__(self, kwargs):
         self.kwargs = kwargs
-        self.software = config["software"]
 
-    def _encode_parameters(self, kwargs):
-        encode_parameters = self.config.get("encode_parameters", None)
-        if encode_parameters is None:
-            assert not kwargs, (self.config, kwargs)
-            return {}
-        return encode_parameters(kwargs)
-    
+    @classmethod
+    def from_parameters(cls, parameters):
+        if parameters:
+            raise AssertionError
+        return cls({})
+
+
+    # Subclasses may hook into this
+    def _encode_parameters(self):
+        # Assume they can be interpreted directly in the format_string
+        return self.kwargs
+
     def get_type(self):
-        format_string = self.config.get("format_string", None)
-        if format_string is None:
-            assert not self.kwargs
-            return self.config["name"]
-        encoded = format_string % self._encode_parameters(self.kwargs)
-        return self.config["name"] + " " + encoded
+        if self.format_string is None:
+            if self.kwargs:
+                assert not kwargs, self
+            return self.name
+        encoded = self.format_string % self._encode_parameters()
+        return self.name + " " + encoded
 
+    # Subclasses must hook into this
+    def _get_reader(self, source, format, kwargs):
+        raise NotImplementedError
+    
     def read_structure_fingerprints(self, source, format=None):
-        reader = self.config["reader"](source, format, self.kwargs)
+        reader = self._get_reader(source, format, self.kwargs)
 
         source_filename = io.get_filename(source)
         return io.FPIterator(io.Header(num_bits = self.num_bits,
@@ -256,8 +131,12 @@ class FingerprintType(object):
                                        type = self.get_type(),
                                        date = io.utcnow()),
                              reader)
+    def describe(self, bitno):
+        if 0 <= bitno < self.num_bits:
+            return "bit %d (unknown)" % (bitno,)
+        raise KeyError(bitno)
+        
 
-            
 def parse_type(type):
     terms = type.split()
     if not terms:

@@ -3,9 +3,7 @@ from __future__ import absolute_import
 from openeye.oechem import (
     OESubSearch, OEChemGetRelease, OEChemGetVersion, OEGraphMol, OEAndAtom,
     OENotAtom, OEIsAromaticAtom, OEIsCarbon, OEIsAromaticBond, OEHasBondIdx,
-    OEFindRingAtomsAndBonds, OEDetermineAromaticRingSystems)
-                            
-                            
+    OEFindRingAtomsAndBonds, OEDetermineAromaticRingSystems, OEDetermineComponents)
 
 
 from . import openeye
@@ -23,7 +21,7 @@ class HydrogenMatcher(object):
                 return 1
         return 0
 
-    def Matches(self, mol, flg=True):
+    def Match(self, mol, flg=True):
         max_count = self.max_count
         count = 0
         for atom in mol.GetAtoms():
@@ -56,7 +54,7 @@ class AromaticRings(object):
         # aromatic ring.
         return self._single_aromatic.SingleMatch(mol)
         
-    def Matches(self, mol, flg=True):
+    def Match(self, mol, flg=True):
         # We're trying to find if there are two aromatic rings.
         if self._multiring_aromatic.SingleMatch(mol):
             # then obviously there are two aromatic rings
@@ -77,17 +75,17 @@ class HeteroAromaticRings(object):
     def __init__(self, max_count):
         if max_count > 2:
             raise NotImplementedError("No support for >=3 hetero-aromatic rings")
-        self._single_hetero_aromatic = OESubSearch("[a;!#6]")
-        self._single_hetero_aromatic.SetMaxMatches(1)
 
     def SingleMatch(self, mol):
-        return self._single_hetero_aromatic.SingleMatch(mol)
+        for atom in mol.GetAtoms(_is_hetereo_aromatic):
+            return True
+        return False
 
-    def Matches(self, mol, flg=True):
+    def Match(self, mol, flg=True):
         # Find all the hetero-aromatic atoms
         hetero_atoms = [atom for atom in mol.GetAtoms(_is_hetereo_aromatic)]
         if len(hetero_atoms) < 2:
-            # I just need an iterable
+            # The caller just needs an iterable
             return hetero_atoms
 
         # There are at least two hetero-aromatic atoms.
@@ -113,7 +111,7 @@ class HeteroAromaticRings(object):
             newmol.DeleteBond(newmol_bond)
             OEFindRingAtomsAndBonds(newmol)
 
-            if self._single_hetero_aromatic.SingleMatch(newmol):
+            for atom in mol.GetAtoms(_is_hetereo_aromatic):
                 return (1,2)
 
         return (1,)
@@ -124,9 +122,12 @@ class NumFragments(object):
     def SingleMatch(self, mol):
         count, parts = OEDetermineComponents(mol)
         return count > 0
-    def Matches(self, mol, flg=True):
+    def Match(self, mol, flg=True):
         count, parts = OEDetermineComponents(mol)
-        return parts[1:]
+        # parts is a list of component numbers.
+        # Turn them into a set to get the unique set of component numbers
+        # Sets are iterable, so I don't need to do more for the API
+        return set(parts)
         
         
 
@@ -217,3 +218,17 @@ def read_rdmaccs_fingerprints_v1(source=None, format=None, kwargs={}):
 SOFTWARE = "OEChem/%(release)s (%(version)s)" % dict(
     release = OEChemGetRelease(),
     version = OEChemGetVersion())
+
+class SubstructRDKitFingerprinter_v1(object):
+    name = "ChemFP-Substruct-OpenEye/1"
+    num_bits = 881
+    software = SOFTWARE
+
+    _get_reader = staticmethod(read_substruct_fingerprints_v1)
+
+class RDMACCSRDKitFingerprinter_v1(object):
+    name = "RDMACCS-OpenEye/1"
+    num_bits = 166
+    software = SOFTWARE
+
+    _get_reader = staticmethod(read_rdmaccs_fingerprints_v1)
