@@ -57,7 +57,7 @@ group.add_argument(
     "--substruct", action="store_true", help="generate ChemFP substructure fingerprints")
 
 group.add_argument(
-    "--rdmaccs", action="store_true", help="generate ChemFP 166 bit RDKit/MACCS fingerprints")
+    "--rdmaccs", action="store_true", help="generate 166 bit RDKit/MACCS fingerprints")
 
 
 parser.add_argument(
@@ -94,7 +94,7 @@ def main(args=None):
     elif args.substruct:
         opener = types.get_fingerprint_family("ChemFP-Substruct-OpenBabel")()
     elif args.rdmaccs:
-        opener = types.get_fingerprint_family("ChemFP-RDMACCS-OpenBabel")()
+        opener = types.get_fingerprint_family("RDMACCS-OpenBabel")()
     else:
         parser.error("should not get here")
 
