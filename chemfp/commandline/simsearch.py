@@ -213,7 +213,7 @@ def main(args=None):
     if queries.header.num_bits is not None and targets.header.num_bits is not None:
         if queries.header.num_bits != targets.header.num_bits:
             sys.stderr.write("WARNING: query has %d bits and target has %d\n" %
-                             (queries.header.num_bits, target.header.num_bits))
+                             (queries.header.num_bits, targets.header.num_bits))
     if queries.header.type and targets.header.type:
         if queries.header.type != targets.header.type:
             sys.stderr.write("WARNING: fingerprints have incompatible headers\n")
@@ -225,11 +225,14 @@ def main(args=None):
     with io.ignore_pipe_errors:
         type = "Tanimoto k=%(k)s threshold=%(threshold)s" % dict(
             k=args.k_nearest, threshold=threshold, max_score=1.0)
+
         if args.count:
-            type = "Count threshold=%(threshold)s" % (args.threshold,)
+            type = "Count threshold=%(threshold)s" % dict(
+                threshold=args.threshold)
             write_count_magic(outfile)
         else:
             write_simsearch_magic(outfile)
+            
         write_simsearch_header(outfile, {
             "num_bits": targets.header.num_bits,
             "software": SOFTWARE,
@@ -240,16 +243,6 @@ def main(args=None):
         if args.count:
             report_counts(query_iter, batch_ids, batch_fps, targets, args, outfile)
         else:
-            type = "Tanimoto k={k} threshold=%(threshold)s" % dict(
-                k=args.k_nearest, threshold=threshold, max_score=1.0)
-            write_simsearch_magic(outfile)
-            write_simsearch_header(outfile, {
-                "num_bits": targets.header.num_bits,
-                "software": SOFTWARE,
-                "type": type,
-                "query_source": queries.header.source,
-                "target_source": targets.header.source})
-                
             report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_formatter, outfile)
 
     t3 = time.time()

@@ -36,6 +36,10 @@ def generic_tanimoto_knearest_search(queries, targets, k, threshold):
 # Support code for fast FPS searches
 # 
 
+# XXX What is this?
+def _error(errno, lineno):
+    raise AssertionError( (errno, _chemfp.strerror(errno), lineno) )
+
 import ctypes
 
 class TanimotoHeap(ctypes.Structure):
@@ -73,7 +77,8 @@ class BlockTanimotoSearcher(object):
     def feed(self, target_block):
         err = _chemfp.fps_heap_update_tanimoto(self.heap, self.hex_query, target_block)
         if err < 0:
-            raise _error(err, self._f, lineno_ptr.value)
+            # XXX lineno_ptr.value ?
+            raise _error(err, 0)
 
         id_starts = self.id_starts
         id_lens  = self.id_lens
@@ -115,7 +120,7 @@ class BlockTanimotoCounter(object):
         err = _chemfp.fps_tanimoto_count(self.hex_query, block, self.threshold,
                                          self.count_ptr, self.lineno_ptr)
         if err < 0:
-            raise _error(err, self._f, self.lineno_ptr.value)
+            raise _error(err, self.lineno_ptr.value)
 
     def finish(self):
         return self.count_ptr.value
