@@ -129,6 +129,7 @@ def evaluate_test_cases(fingerprinter, test_cases):
 
         if errors:
             print "ERROR: Fingerprint failure:", smiles
+            print "Fingerprint", fingerprinter.get_type()
             print " bit#  got  expected"
             print " ----  ---  --------"
             for (bitno, got, expected) in errors:
