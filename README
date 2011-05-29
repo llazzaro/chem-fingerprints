@@ -1,9 +1,50 @@
-A Python library and set of tools for working with
-cheminformatics fingerprint data.
+A Python library and set of tools for working with cheminformatics
+fingerprint data.
 
 Copyright under "the MIT license." See COPYING for details.
 
-See THANKS for the people who have contributed in
-some fashion.
+See THANKS for the people who have contributed in some fashion.
 
+To install:
+
+  python setup.py build
+  python setup.py install
+
+You will need a C compiler to build the _chemfp extension.
+
+Documentation? Not yet. Try:
+
+  rdkit2fps --help
+  ob2fps --help
+  oe2fps --help
+  sdf2fps --help
+
+and if you are really adventerous (it's the least tested code)
+
+  simsearch --help
+
+
+There are tests.
+
+  cd tests
+  python unit2 discover
+
+There's also a tool to validate against the RDMACCS data set. The tool
+is undocumented and the code is of developer quality only (meaning, it
+has lousy error messages and you have to read the code to figure out
+what it's saying).
+
+To run it, if you have OpenBabel, RDKit, and OpenEye installed
+
+  python fpverify.py
+
+otherwise, run the individual tool like this:
+
+  python fpverify.py RDKit
+  python fpverify.py OpenEye
+  python fpverify.py OpenBabel
+
+
+Oh, and it creates "tmp.smi" in the local directory and doesn't clean
+it up when done.
 
