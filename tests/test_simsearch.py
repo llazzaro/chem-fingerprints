@@ -1,7 +1,10 @@
 import unittest2
 import sys
 
+import chemfp
 from chemfp.commandline import simsearch
+
+SOFTWARE = "chemfp/" + chemfp.__version__
 
 from cStringIO import StringIO
 import support
@@ -44,7 +47,7 @@ class TestOptions(unittest2.TestCase):
         header, lines = run_split("--hex-query deadbeef", 1, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=3 threshold=0.0"})
         self.assertEquals(lines,
                           ["3 Query1 1.000 deadbeef 0.960 Deaf_Beef 0.840 DEADdead"])
@@ -53,7 +56,7 @@ class TestOptions(unittest2.TestCase):
         header, lines = run_split("--hex-query deadbeef -k 3", 1, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=3 threshold=0.0"})
         self.assertEquals(lines,
                           ["3 Query1 1.000 deadbeef 0.960 Deaf_Beef 0.840 DEADdead"])
@@ -62,7 +65,7 @@ class TestOptions(unittest2.TestCase):
         header, lines = run_split("--hex-query deadbeef -k 2", 1, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=2 threshold=0.0"})
         self.assertEquals(lines,
                           ["2 Query1 1.000 deadbeef 0.960 Deaf_Beef"])
@@ -71,7 +74,7 @@ class TestOptions(unittest2.TestCase):
         header, lines = run_split("--hex-query deadbeef -k 1", 1, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=1 threshold=0.0"})
         self.assertEquals(lines,
                           ["1 Query1 1.000 deadbeef"])
@@ -80,7 +83,7 @@ class TestOptions(unittest2.TestCase):
         header, lines = run_split("--hex-query deadbeef --k-nearest 1", 1, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=1 threshold=0.0"})
         self.assertEquals(lines,
                           ["1 Query1 1.000 deadbeef"])
@@ -90,7 +93,7 @@ class TestOptions(unittest2.TestCase):
         header, lines = run_split("--hex-query deadbeef -k 10", 1, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=10 threshold=0.0"})
         self.assertEquals(lines,
                           ["7 Query1 1.000 deadbeef 0.960 Deaf_Beef 0.840 DEADdead "
@@ -100,7 +103,7 @@ class TestOptions(unittest2.TestCase):
         header, lines = run_split("--hex-query deadbeef --threshold 0.9", 1, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=3 threshold=0.9"})
         self.assertEquals(lines,
                           ["2 Query1 1.000 deadbeef 0.960 Deaf_Beef"])
@@ -109,7 +112,7 @@ class TestOptions(unittest2.TestCase):
         header, lines = run_split("--hex-query deadbeef -t 0.9 -k 1", 1, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=1 threshold=0.9"})
         self.assertEquals(lines,
                           ["1 Query1 0.960 Deaf_Beef"])
@@ -118,7 +121,7 @@ class TestOptions(unittest2.TestCase):
         header, lines = run_split_stdin("deadbeef spam\n", "", 1, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=3 threshold=0.0"})
         self.assertEquals(lines,
                           ["3 spam 1.000 deadbeef 0.960 Deaf_Beef 0.840 DEADdead"])
@@ -128,7 +131,7 @@ class TestOptions(unittest2.TestCase):
                                         "", 2, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=3 threshold=0.0"})
         self.assertEquals(lines,
                           ["3 spam 1.000 deadbeef 0.960 Deaf_Beef 0.840 DEADdead",
@@ -139,7 +142,7 @@ class TestOptions(unittest2.TestCase):
                                         "--threshold 0.9", 2, "simple.fps")
         self.assertEquals(header,
                           {"#num_bits": "32",
-                           "#software": "chemfp/0.9.1",
+                           "#software": SOFTWARE,
                            "#type": "Tanimoto k=3 threshold=0.9"})
         self.assertEquals(lines,
                           ["2 spam 1.000 deadbeef 0.960 Deaf_Beef",
