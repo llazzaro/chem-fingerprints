@@ -24,8 +24,8 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-__version__ = "0.9.1"
-__version_info = (0, 9, 1)
+__version__ = "1.0a1"
+__version_info = (1, 0, 0)
 SOFTWARE = "chemfp/" + __version__
 
 import os
