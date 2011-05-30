@@ -71,12 +71,12 @@ maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
     "--maccs166", action="store_true", help="generate MACCS fingerprints")
 
-substruct_group = parser.add_argument_group("881 bit substructure keys")
+substruct_group = parser.add_argument_group("881 bit ChemFP substructure keys")
 substruct_group.add_argument(
     "--substruct", action="store_true", help="generate ChemFP substructure fingerprints")
 
 rdmaccs_group = parser.add_argument_group("ChemFP version of the 166 bit RDKit/MACCS keys")
-substruct_group.add_argument(
+rdmaccs_group.add_argument(
     "--rdmaccs", action="store_true", help="generate 166 bit RDKit/MACCS fingerprints")
     
 parser.add_argument(
