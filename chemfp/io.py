@@ -4,7 +4,6 @@ import re
 import os
 import sys
 import binascii
-import contextlib
 
 from datetime import datetime
 
@@ -254,13 +253,28 @@ ignore_pipe_errors = _IgnorePipeErrors()
 def write_fps1_fingerprint(outfile, fp, title):
     outfile.write("%s %s\n" % (binascii.hexlify(fp), title))
 
+
+# This is a bit of a hack. If I open a file then I want to close it,
+# but if I use stdout then I don't want to close it.
+
+class _closing_output(object):
+    def __init__(self, destination):
+        self.output = open_output(destination)
+    def __enter__(self):
+        return self.output
+    def __exit__(self, *exec_info):
+        if self.output is not sys.stdout:
+            self.output.close()
+
 def write_fps1_output(reader, destination):
     hexlify = binascii.hexlify
-    outfile = open_output(destination)
-    with contextlib.closing(open_output(destination)) as outfile:
+    with _closing_output(destination) as outfile:
         with ignore_pipe_errors:
             write_fps1_magic(outfile)
             write_fps1_header(outfile, reader.header)
 
-            for (fp, title) in reader:
+        
+            for i, (fp, title) in enumerate(reader):
                 outfile.write("%s %s\n" % (hexlify(fp), title))
+                if i == 100:
+                    return
