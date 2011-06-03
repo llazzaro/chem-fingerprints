@@ -258,6 +258,7 @@ class SubstructOpenEyeFingerprinter_v1(_PatternFingerprinter):
 
     _get_reader = staticmethod(read_substruct_fingerprints_v1)
 
+
 class RDMACCSOpenEyeFingerprinter_v1(_PatternFingerprinter):
     name = "RDMACCS-OpenEye/1"
     num_bits = 166

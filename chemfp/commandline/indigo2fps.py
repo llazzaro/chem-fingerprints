@@ -40,11 +40,11 @@ group.add_argument("--sub-tau", action="store_true",
 group.add_argument("--full", action="store_true",
                    help="full fingerprints")
 
-#group.add_argument(
-#    "--substruct", action="store_true", help="generate ChemFP substructure fingerprints")
-#
-#group.add_argument(
-#    "--rdmaccs", action="store_true", help="generate 166 bit RDKit/MACCS fingerprints")
+group.add_argument(
+    "--substruct", action="store_true", help="generate ChemFP substructure fingerprints")
+
+group.add_argument(
+    "--rdmaccs", action="store_true", help="generate 166 bit RDKit/MACCS fingerprints")
 
 
 parser.add_argument(
@@ -64,8 +64,8 @@ def main(args=None):
     outfile = sys.stdout
 
     cmdsupport.mutual_exclusion(parser, args, "sim",
-                                ("sim", "sub", "sub_res", "sub_tau", "full"
-                                 # , "substruct", "rdmaccs"
+                                ("sim", "sub", "sub_res", "sub_tau", "full",
+                                 "substruct", "rdmaccs"
                                  ))
     if args.sim:
         opener = types.get_fingerprint_family("Indigo-Similarity")()
@@ -77,10 +77,10 @@ def main(args=None):
         opener = types.get_fingerprint_family("Indigo-TautomerSubstructure")()
     elif args.full:
         opener = types.get_fingerprint_family("Indigo-Full")()
-#    elif args.substruct:
-#        opener = types.get_fingerprint_family("ChemFP-Substruct-Indigo")()
-#    elif args.rdmaccs:
-#        opener = types.get_fingerprint_family("RDMACCS-Indigo")()
+    elif args.substruct:
+        opener = types.get_fingerprint_family("ChemFP-Substruct-Indigo")()
+    elif args.rdmaccs:
+        opener = types.get_fingerprint_family("RDMACCS-Indigo")()
     else:
         parser.error("should not get here")
 

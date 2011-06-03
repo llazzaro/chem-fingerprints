@@ -151,7 +151,7 @@ def main():
         toolkit = sys.argv[1]
         main2(toolkit)
     else:
-        for toolkit in ("OpenEye", "RDKit", "OpenBabel"):
+        for toolkit in ("OpenEye", "RDKit", "OpenBabel", "Indigo"):
             main2(toolkit)
 
 def main2(toolkit):

@@ -200,7 +200,7 @@ def read_structures(filename=None, format=None):
     """read_structures(filename, format) -> (title, OBMol) iterator 
     
     Iterate over structures from filename, returning the structure
-    title and OBMol for each reacord. The structure is assumed to be
+    title and OBMol for each record. The structure is assumed to be
     in normalized_format(filename, format) format. If filename is None
     then this reads from stdin instead of the named file.
     """

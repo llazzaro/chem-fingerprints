@@ -10,7 +10,7 @@ from . import types
 from indigo import Indigo
 _indigo = Indigo()
 
-SOFTWARE = "Indigo/unknown"
+SOFTWARE = "Indigo/" + _indigo.version()
 
 _expected_sizes = {
     "sim": 3736,

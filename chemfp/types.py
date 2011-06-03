@@ -41,6 +41,15 @@ _families = [
     FingerprintFamily("OpenBabel-MACCS/1", "chemfp.openbabel.OpenBabelMACCSFingerprinter_v1"),
     FingerprintFamily("OpenBabel-MACCS/2", "chemfp.openbabel.OpenBabelMACCSFingerprinter_v2"),
 
+    FingerprintFamily("Indigo-Similarity/1", "chemfp.indigo.IndigoSimilarityFingerprinter_v1"),
+    FingerprintFamily("Indigo-Substructure/1",
+                      "chemfp.indigo.IndigoSubstructureFingerprinter_v1"),
+    FingerprintFamily("Indigo-ResonanceSubstructure/1",
+                      "chemfp.indigo.IndigoResonanceSubstructureFingerprinter_v1"),
+    FingerprintFamily("Indigo-TautomerSubstructure/1",
+                      "chemfp.indigo.IndigoTautomerSubstructureFingerprinter_v1"),
+    FingerprintFamily("Indigo-Full/1", "chemfp.indigo.IndigoFullFingerprinter_v1"),
+
     # In the future this will likely change to use a parameterized class
     # which can dynamically load fingerprint definitions
 
@@ -58,6 +67,11 @@ _families = [
                       "chemfp.openbabel_patterns.SubstructOpenBabelFingerprinter_v1"),
     FingerprintFamily("RDMACCS-OpenBabel/1",
                       "chemfp.openbabel_patterns.RDMACCSOpenBabelFingerprinter_v1"),
+
+    FingerprintFamily("ChemFP-Substruct-Indigo/1",
+                      "chemfp.indigo_patterns.SubstructIndigoFingerprinter_v1"),
+    FingerprintFamily("RDMACCS-Indigo/1",
+                      "chemfp.indigo_patterns.RDMACCSIndigoFingerprinter_v1"),
 ]
 
 _alternates = {
@@ -111,7 +125,7 @@ class Fingerprinter(object):
     @classmethod
     def from_parameters(cls, parameters):
         if parameters:
-            raise AssertionError
+            raise AssertionError  # should be implemented in the client
         return cls({})
 
 
