@@ -202,7 +202,7 @@ c1ccccp1 28,97,136,161,162,164
 
 # This is PubChem CID 626333; a 3-membered arsenic!
 # RDKit doesn't handle "as", but it should. XXX I think I reported this.
-=skip RDKit/2009Q3_1 Indigo/1.0-beta12
+=skip RDKit/2009Q3_1 Indigo/1.0-beta13
 CC12C[as]3[as]([as]3C1)C2 2,15,21,136,162,164?
 # OpenEye keeps this as aromatic
 =only OpenEye
