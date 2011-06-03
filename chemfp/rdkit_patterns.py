@@ -31,8 +31,9 @@ class HydrogenMatcher(object):
 
 class AromaticRings(object):
     def __init__(self):
-        # The single ring case is easy; if there's an aromatic atom then there's a ring
-        self._single_matcher = Chem.MolFromSmarts("a")
+        # The single ring case is easy; if there's an aromatic atom in a ring
+        # then there's a ring
+        self._single_matcher = Chem.MolFromSmarts("[aR]")
 
     def has_match(self, mol):
         return mol.HasSubstructMatch(self._single_matcher)
@@ -53,7 +54,7 @@ class HeteroAromaticRings(object):
     def __init__(self):
         # In the single match case, if there's an aromatic non-carbon atom
         # then it's a hetereo ring
-        self._single_matcher = Chem.MolFromSmarts("[a;!#6]")
+        self._single_matcher = Chem.MolFromSmarts("[aR;!#6]")
 
     def has_match(self, mol):
         return mol.HasSubstructMatch(self._single_matcher)

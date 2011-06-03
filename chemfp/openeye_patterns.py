@@ -45,7 +45,7 @@ class AromaticRings(object):
     def __init__(self, max_count):
         if max_count > 2:
             raise NotImplementedError("No support for >=3 aromatic rings")
-        self._single_aromatic = OESubSearch("[a]")
+        self._single_aromatic = OESubSearch("[aR]")
         # In OpenEye SMARTS, [a;!R2] will find aromatic atoms in at least two rings
         # The following finds atoms which are members of at least two aromatic rings
         self._multiring_aromatic = OESubSearch("[a;!R2](:a)(:a):a")

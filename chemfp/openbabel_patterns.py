@@ -43,9 +43,10 @@ class HydrogenMatcher(object):
 class AromaticRings(object):
     def __init__(self, max_count):
         self.max_count = max_count
-        # The single ring case is easy; if there's an aromatic atom then there's a ring
+        # The single ring case is easy; if there's an aromatic atom in a ring
+        # then there's an aromatic ring.
         self._single_matcher = OBSmartsPattern()
-        assert self._single_matcher.Init("a")
+        assert self._single_matcher.Init("[aR]")
         
     def HasMatch(self, mol):
         return self._single_matcher.HasMatch(mol)
@@ -68,9 +69,10 @@ def _is_hetero_aromatic_atom(atom):
 class HeteroAromaticRings(object):
     def __init__(self, max_count):
         self.max_count = max_count
-        # The single ring case is easy; if there's an aromatic atom then there's a ring
+        # The single ring case is easy; if there's an non-carbon aromatic atom
+        # in a ring then there's a hetero-aromatic ring
         self._single_matcher = OBSmartsPattern()
-        assert self._single_matcher.Init("[a;!#6]")
+        assert self._single_matcher.Init("[aR;!#6]")
         
     def HasMatch(self, mol):
         return self._single_matcher.HasMatch(mol)
