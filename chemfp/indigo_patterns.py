@@ -4,8 +4,10 @@ from indigo import Indigo, IndigoException
 
 from . import indigo
 
-# Yech! It looks like I have to use the same Indigo() instance
-# used to make the structure in the first place.
+# You may not share objects between different Indigo sessions. Rather
+# than doing the work to isolate the objects so the Indigo() instance
+# here can take molecules from another Indigo() instance, I assume
+# that all molecules come from chemfp.indigo._indigo and just use that.
 _indigo = indigo._indigo
 
 from . import indigo
@@ -13,6 +15,18 @@ from . import pattern_fingerprinter
 from . import types
 
 SOFTWARE = indigo.SOFTWARE
+
+
+# Indigo uses a "matcher" (derived from the molecule) and the "query"
+# as part of its API. In use it's something like:
+#    matcher = indigo.matcher(molecule)
+#    for match in matcher.iterateMatches(query):
+#        count += 1
+# The matcher can hold (opaque) configuration about the
+# molecule which is shared with the queries.
+
+# Some queries, like "number of hydrogens", can't be done in SMARTS. I
+# ended up making a new matching API for both kinds of cases.
 
 class Matcher(object):
     def __init__(self, query):
@@ -25,27 +39,32 @@ class Matcher(object):
     def num_matches(self, indigo_matcher, mol, max_count):
         return indigo_matcher.countMatches(self.query)
 
+# Get the hydrogen count
+
 class HydrogenMatcher(object):
     def has_match(self, indigo_matcher, mol):
-        for atom in mol.iterateAtoms():
-            if atom.countImplicitHydrogens():
-                return True
-            if atom.atomicNumber() == 1:
-                return True
-        return False
+        count = mol.countImplicitHydrogens()
+        if count:
+            return True
+        return any(atom.atomicNumber() == 1 for atom in mol.iterateAtoms())
     def num_matches(self, indigo_matcher, mol, max_count):
-        count = 0
+        # This should all be fast, at the C level
+        count = mol.countImplicitHydrogens()
+        if count >= max_count:
+            return count
+        # Perhaps there's a few more hanging around?
         for atom in mol.iterateAtoms():
-            count += atom.countImplicitHydrogens()
             if atom.atomicNumber() == 1:
                 count += 1
-            if count >= max_count:
-                return count
+                if count >= max_count:
+                    return count
         return count
+
+# Use SSSR to count the number of aromatic rings
 
 class AromaticRings(object):
     def __init__(self):
-        self._single_query = _indigo.loadSmarts("a")
+        self._single_query = _indigo.loadSmarts("[aR]")
     def has_match(self, indigo_matcher, mol):
         for match in indigo_matcher.match(self._single_query):
             return True
@@ -59,6 +78,8 @@ class AromaticRings(object):
                     return count
         return count
 
+# Use SSSR to count the number of hetero-aromatic rings
+
 class HeteroAromaticRings(object):
     def __init__(self):
         self._single_query = _indigo.loadSmarts("[a;!#6]")
@@ -69,22 +90,25 @@ class HeteroAromaticRings(object):
     def num_matches(self, indigo_matcher, mol, max_count):
         count = 0
         for ring in mol.iterateSSSR():
+            # bond-order == 4 means "aromatic"; all rings bonds must be aromatic
             if all(bond.bondOrder() == 4 for bond in ring.iterateBonds()):
+                # Check that there's at least one non-carbon atom in the ring
                 if any(1 for atom in ring.iterateAtoms() if atom.atomicNumber() != 6):
                     count += 1
                     if count == max_count:
                         return count
         return count
 
+
+# Get the number of components/fragments in the molecule
+
 class NumFragments(object):
     def has_match(self, indigo_matcher, mol):
         return mol.countAtoms() > 0
     def num_matches(self, indigo_matcher, mol, max_count):
-        # Looks like I need to do this the hard way
-        if mol.countAtoms() == 0:
-            return 0
-        return mol.smiles().count(".") + 1
-        
+        return mol.countComponents()
+
+######
 
 _pattern_classes = {
     "<H>": HydrogenMatcher,
@@ -140,10 +164,14 @@ class _CachedFingerprinters(dict):
         return fingerprinter
 _cached_fingerprinters = _CachedFingerprinters()
 
+# There's a bug in Indigo 1.0-beta13 where the __del__ doesn't work
+# correctly during module shutdown. I've reported this and it will be
+# in the next release. Until then, force a cleanup.
 import atexit
 def _remove():
     _cached_fingerprinters.clear()
 atexit.register(_remove)
+
 
 # XXX Why are there two "Fingerprinter" classes?
 # XX Shouldn't they be merged?
