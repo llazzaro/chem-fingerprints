@@ -33,7 +33,8 @@ understanding the PubChem/CACTVS substructure keys.
 Rajarshi Guha for implementing the PubChem/CACTVS substructure keys in
 CDK (and the anonymous person at the NIH Chemical Genomics Center who
 developed the precursor version). The CDK's independent implementation
-helped me cross-check my implementation.
+helped me cross-check my implementation. He also added support for the
+FPS format in his fingerprint analysis tools.
 
 Dmitry Pavlov for insights in how Indigo works and improvements in the
 Indigo implementations.
