@@ -32,9 +32,7 @@ class Matcher(object):
     def __init__(self, query):
         self.query = query
     def has_match(self, indigo_matcher, mol):
-        for match in indigo_matcher.iterateMatches(self.query):
-            return True
-        return False
+        return bool(indigo_matcher.match(self.query))
 
     def num_matches(self, indigo_matcher, mol, max_count):
         return indigo_matcher.countMatches(self.query)
@@ -43,22 +41,10 @@ class Matcher(object):
 
 class HydrogenMatcher(object):
     def has_match(self, indigo_matcher, mol):
-        count = mol.countImplicitHydrogens()
-        if count:
-            return True
-        return any(atom.atomicNumber() == 1 for atom in mol.iterateAtoms())
+        return mol.countHydrogens() > 0
+    
     def num_matches(self, indigo_matcher, mol, max_count):
-        # This should all be fast, at the C level
-        count = mol.countImplicitHydrogens()
-        if count >= max_count:
-            return count
-        # Perhaps there's a few more hanging around?
-        for atom in mol.iterateAtoms():
-            if atom.atomicNumber() == 1:
-                count += 1
-                if count >= max_count:
-                    return count
-        return count
+        return mol.countHydrogens()
 
 # Use SSSR to count the number of aromatic rings
 
@@ -66,9 +52,8 @@ class AromaticRings(object):
     def __init__(self):
         self._single_query = _indigo.loadSmarts("[aR]")
     def has_match(self, indigo_matcher, mol):
-        for match in indigo_matcher.match(self._single_query):
-            return True
-        return False
+        return bool(indigo_matcher.match(self._single_query))
+
     def num_matches(self, indigo_matcher, mol, max_count):
         count = 0
         for ring in mol.iterateSSSR():
@@ -84,9 +69,8 @@ class HeteroAromaticRings(object):
     def __init__(self):
         self._single_query = _indigo.loadSmarts("[a;!#6]")
     def has_match(self, indigo_matcher, mol):
-        for match in indigo_matcher.match(self._single_query):
-            return True
-        return False
+        return bool(indigo_matcher.match(self._single_query))
+
     def num_matches(self, indigo_matcher, mol, max_count):
         count = 0
         for ring in mol.iterateSSSR():
