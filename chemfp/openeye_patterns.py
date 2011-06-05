@@ -45,6 +45,7 @@ class AromaticRings(object):
     def __init__(self, max_count):
         if max_count > 2:
             raise NotImplementedError("No support for >=3 aromatic rings")
+        self.max_count = max_count
         self._single_aromatic = OESubSearch("[aR]")
         # In OpenEye SMARTS, [a;!R2] will find aromatic atoms in at least two rings
         # The following finds atoms which are members of at least two aromatic rings
@@ -57,6 +58,9 @@ class AromaticRings(object):
         
     def Match(self, mol, flg=True):
         # We're trying to find if there are two aromatic rings.
+        if not self._single_aromatic.SingleMatch(mol):
+            return ()
+            
         if self._multiring_aromatic.SingleMatch(mol):
             # then obviously there are two aromatic rings
             return (1,2)
@@ -65,8 +69,10 @@ class AromaticRings(object):
         # the aromatic ring systems are disjoint, so this gives me the
         # number of ring systems
         num_aromatic_systems, parts = OEDetermineAromaticRingSystems(mol)
-        if num_aromatic_systems == 0:
-            return ()
+        if num_aromatic_systems >= self.max_count:
+            return [0]*self.max_count
+        
+        assert num_aromatic_systems != 0, "there is supposed to be an aromatic ring"
         if num_aromatic_systems == 1:
             return (1,)
         return (1,2)
@@ -76,6 +82,7 @@ class HeteroAromaticRings(object):
     def __init__(self, max_count):
         if max_count > 2:
             raise NotImplementedError("No support for >=3 hetero-aromatic rings")
+        self.max_count = max_count
 
     def SingleMatch(self, mol):
         for atom in mol.GetAtoms(_is_hetereo_aromatic):
@@ -138,8 +145,8 @@ class NumFragments(object):
 
 def aromatic_rings(max_count):
     if max_count > 2:
-        return NotImplemented
-    return AromaticRings(2)
+        return pattern_fingerprinter.LimitedMatcher(2, AromaticRings(2))
+    return AromaticRings(max_count)
 
 def hetero_aromatic_rings(max_count):
     if max_count > 2:
