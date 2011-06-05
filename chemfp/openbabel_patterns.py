@@ -54,7 +54,7 @@ class AromaticRings(object):
     def NumUniqueMatches(self, mol):
         num_rings = 0
         for ring in mol.GetSSSR():
-            if all(mol.GetAtom(atom_id).IsAromatic() for atom_id in ring._path):
+            if ring.IsAromatic():
                 num_rings += 1
                 if num_rings == self.max_count:
                     break
@@ -62,9 +62,6 @@ class AromaticRings(object):
 
 
 ###
-
-def _is_hetero_aromatic_atom(atom):
-    return atom.IsAromatic() and atom.GetAtomicNum() not in (1, 6)
 
 class HeteroAromaticRings(object):
     def __init__(self, max_count):
@@ -80,8 +77,8 @@ class HeteroAromaticRings(object):
     def NumUniqueMatches(self, mol):
         num_rings = 0
         for ring in mol.GetSSSR():
-            if all(_is_hetero_aromatic_atom(mol.GetAtom(atom_id))
-                        for atom_id in ring._path):
+            if (ring.IsAromatic() and
+                  any(mol.GetAtom(atom_id).GetAtomicNum() != 6 for atom_id in ring._path)):
                 num_rings += 1
                 if num_rings == self.max_count:
                     break
