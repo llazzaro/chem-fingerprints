@@ -133,7 +133,12 @@ def _bit_definition_to_pattern_definition(bit_definitions):
                count_info_list[-1].count,  # the largest count
                tuple(count_info_list)
                )
-        
+
+class LimitedMatcher(object):
+    def __init__(self, max_supported, matcher):
+        self.max_supported = max_supported
+        self.matcher = matcher
+                 
 def _build_matchers(patterns, pattern_definitions, compile_pattern):
     not_implemented = set()
     matcher_definitions = []
@@ -143,15 +148,23 @@ def _build_matchers(patterns, pattern_definitions, compile_pattern):
             continue
 
         matcher = compile_pattern(pattern, largest_count)
-
-        if matcher is NotImplemented:
+        if isinstance(matcher, LimitedMatcher):
+            max_supported = matcher.max_suppported
+            new_count_info = []
             for count_info in count_info_tuple:
-                not_implemented.add(count_info.bit)
-            continue
-        if matcher is NotImplementedError:
-            raise AssertionError("Use 'NotImplemented' not 'NotImplementedError'")
+                if count_info.count <= max_suppported:
+                    new_count_info.append(count_info)
+                else:
+                    not_implemented.add(count_info.bit)
+            
+            matcher = matcher.matcher
+            count_info_tuple = tuple(new_count_info)
+            if not count_info_tuple:
+                continue
 
         if matcher is None:
+            # During development I sometimes forgot to return a matcher
+            # This catches those cases
             raise UnsupportedPatternError(pattern)
         
         matcher_definitions.append( (matcher, largest_count, count_info_tuple) )
