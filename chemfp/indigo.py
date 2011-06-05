@@ -95,6 +95,7 @@ def read_structures(filename=None, format=None):
     reader = reader_factory(filename)
     def indigo_structure_reader(reader):
         for mol in reader:
+            mol.aromatize()
             yield mol.name(), mol
 
     return indigo_structure_reader(reader)
