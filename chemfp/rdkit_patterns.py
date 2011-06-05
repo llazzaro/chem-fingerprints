@@ -62,7 +62,7 @@ class HeteroAromaticRings(object):
     def num_matches(self, mol, largest_count):
         nArom = 0
         for ring in mol.GetRingInfo().AtomRings():
-            if all(_is_hetereo_aromatic_atom(mol.GetAtomWithIdx(atomIdx))
+            if any(_is_hetereo_aromatic_atom(mol.GetAtomWithIdx(atomIdx))
                                  for atomIdx in ring):
                 nArom += 1
                 if nArom == largest_count:
