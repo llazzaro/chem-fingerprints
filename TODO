@@ -25,3 +25,10 @@ looking at Pipeline Pilot, which has a default upper limit of
 0.999. But frankly, I'm not sure that's useful. I think the point is
 to ignore identical hits, so perhaps that's the real requirement.)
 
+Work on the pattern definition format. Should it have a distinction
+between "unique" and "non-unique" matches? Eg, C=* with count >= 2
+is the same as C=* (non-unique) with count >= 3, and the latter is
+likely faster.
+
+Add other fingerprints? Eg, the PaDEL substructure descriptors are
+available as a list of SMARTS.
