@@ -1,4 +1,5 @@
 import sys
+import os
 from cStringIO import StringIO
 
 # Ignore the close. io.write_fps1_output() auto-closes its output.
@@ -15,9 +16,17 @@ class SIO(object):
     def getvalue(self):
         return self.sio.getvalue()
 
-PUBCHEM_SDF = "pubchem.sdf"
-PUBCHEM_SDF_GZ = "pubchem.sdf.gz"
-PUBCHEM_ANOTHER_EXT = "pubchem.should_be_sdf_but_is_not"
+# Given a filename in the "tests/" directory, return its full path
+
+_dirname = os.path.dirname(__file__)
+def fullpath(name):
+    path = os.path.join(_dirname, name)
+    assert os.path.exists(path), path
+    return path
+
+PUBCHEM_SDF = fullpath("pubchem.sdf")
+PUBCHEM_SDF_GZ = fullpath("pubchem.sdf.gz")
+PUBCHEM_ANOTHER_EXT = fullpath("pubchem.should_be_sdf_but_is_not")
 
 real_stdin = sys.stdin
 real_stdout = sys.stdout
@@ -33,7 +42,11 @@ class Runner(object):
         pass
 
     def run(self, cmdline, source=PUBCHEM_SDF):
-        args = cmdline.split()
+        if isinstance(cmdline, basestring):
+            args = cmdline.split()
+        else:
+            args = cmdline
+            assert isinstance(args, list) or isinstance(args, tuple)
         if source is not None:
             args = args + [source]
         self.pre_run()
@@ -101,7 +114,13 @@ class Runner(object):
         finally:
             sys.stderr = real_stderr
         return stderr.getvalue()
-    
+
+
+####
+
+def can_skip(name):
+    s = os.environ.get("TOX_CHEMFP_TEST", "")
+    return not (s.startswith(name) or (","+name) in s)
 
 #### fingerprint encoding
 

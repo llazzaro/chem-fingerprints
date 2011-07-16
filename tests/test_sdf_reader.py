@@ -3,6 +3,8 @@ import sys
 import unittest2
 from cStringIO import StringIO as SIO
 
+import support
+
 # Make sure the module correctly implements __all__
 before = after = None
 before = set(globals())
@@ -14,11 +16,10 @@ assert len(after - before) == 4, ("wrong import * count", after-before)
 from chemfp import sdf_reader
 from chemfp.error_handlers import ChemFPParseError
 
-# At some point make this independent of where the tests are started
-TRYPTOPHAN_SDF = "tryptophan.sdf"
-PUBCHEM_SDF = "pubchem.sdf"
-PUBCHEM_SDF_GZ = "pubchem.sdf.gz"
-STRANGE_SDF = "strange.sdf"
+TRYPTOPHAN_SDF = support.fullpath("tryptophan.sdf")
+PUBCHEM_SDF = support.fullpath("pubchem.sdf")
+PUBCHEM_SDF_GZ = support.fullpath("pubchem.sdf.gz")
+STRANGE_SDF = support.fullpath("strange.sdf")
 
 expected_identifiers = ["9425004", "9425009", "9425012", "9425015",
                         "9425018", "9425021", "9425030", "9425031",
@@ -80,7 +81,7 @@ class TestReadRecords(unittest2.TestCase):
         loc = sdf_reader.FileLocation()
         results = []
         for x in open_sdf(PUBCHEM_SDF_GZ, loc=loc):
-            if sys.version_info[:] > (2, 5, 4):
+            if sys.version_info[:3] > (2, 5, 4):
                 # Earlier versions of the gzip library didn't
                 # keep track of the .name attribute
                 self.assertEquals(loc.name, PUBCHEM_SDF_GZ)

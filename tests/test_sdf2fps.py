@@ -4,11 +4,13 @@ from cStringIO import StringIO as SIO
 
 from chemfp.commandline import sdf2fps
 
+import support
+
 real_stdin = sys.stdin
 real_stdout = sys.stdout
 real_stderr = sys.stderr
 
-DECODER_SDF = "decoder.sdf"
+DECODER_SDF = support.fullpath("decoder.sdf")
 
 def run(s):
     args = s.split()

@@ -14,9 +14,9 @@ chemfp.openeye._USE_SELECT = False # Grrr. Needed to automate testing.
 real_stdout = sys.stdout
 real_stderr = sys.stderr
 
-PUBCHEM_SDF = "pubchem.sdf"
-PUBCHEM_SDF_GZ = "pubchem.sdf.gz"
-PUBCHEM_ANOTHER_EXT = "pubchem.should_be_sdf_but_is_not"
+PUBCHEM_SDF = support.fullpath("pubchem.sdf")
+PUBCHEM_SDF_GZ = support.fullpath("pubchem.sdf.gz")
+PUBCHEM_ANOTHER_EXT = support.fullpath("pubchem.should_be_sdf_but_is_not")
 
 
 oeerrs = oechem.oeosstream()
@@ -30,7 +30,7 @@ def _check_for_oe_errors():
             # There's a bug in OEChem where it generates this warning on unknown
             # file extensions even after SetFormat has been called
             continue
-        raise AssertionError("Unexpected message from OEChem: {msg!r}".format(msg=line))
+        raise AssertionError("Unexpected message from OEChem: %r" % (line,))
 
 
 # I build the fingerprints using bit offsetsto ensure that the test
@@ -44,7 +44,8 @@ def _construct_test_values():
     from openeye.oechem import oemolistream
     from openeye.oegraphsim import OEFingerPrint, OEMakePathFP
     fp = OEFingerPrint()
-    ifs = oemolistream("pubchem.sdf")
+    ifs = oemolistream()
+    assert ifs.open(PUBCHEM_SDF)
     hex_data = []
 
     def _convert_to_chemfp_order(s):
@@ -109,7 +110,7 @@ def headers(lines):
 
 class TestMACCS(unittest2.TestCase):
     def test_bitorder(self):
-        result = run_fps("--maccs166", 7, "maccs.smi")
+        result = run_fps("--maccs166", 7, support.fullpath("maccs.smi"))
         # The fingerprints are constructed to test the first few bytes.
         self.assertEquals(result[0][:6], support.set_bit(2))
         self.assertEquals(result[1][:6], support.set_bit(3))
@@ -272,7 +273,7 @@ class TestArgErrors(unittest2.TestCase):
     def test_num_bits_too_large(self):
         self._run("--numbits 65537", "between 16 and 65536 bits")
         # Check for overflow, even though I know it won't happen in Python
-        self._run("--numbits {big}".format(big=2**32+32), "between 16 and 65536 bits")
+        self._run("--numbits %(big)s"%dict(big=2**32+32), "between 16 and 65536 bits")
 
     def test_min_bonds_too_small(self):
         self._run("--minbonds=-1", "0 or greater")
