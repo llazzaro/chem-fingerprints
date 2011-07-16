@@ -5,22 +5,33 @@ from cStringIO import StringIO as SIO
 
 import support
 
-from openeye import oechem  # These tests require OEChem
+try:
+    from openeye import oechem  # These tests require OEChem
+    has_oechem = True
+    skip_oechem = False
+except ImportError:
+    has_oechem = False
+    skip_oechem = True
+    if not support.can_skip("oe"):
+        skip_oechem = False
+        from openeye import oechem
 
-from chemfp.commandline import oe2fps
-import chemfp.openeye
-chemfp.openeye._USE_SELECT = False # Grrr. Needed to automate testing.
+if has_oechem:
+    from chemfp.commandline import oe2fps
+    import chemfp.openeye
+    chemfp.openeye._USE_SELECT = False # Grrr. Needed to automate testing.
 
-real_stdout = sys.stdout
-real_stderr = sys.stderr
+    real_stdout = sys.stdout
+    real_stderr = sys.stderr
 
-PUBCHEM_SDF = support.fullpath("pubchem.sdf")
-PUBCHEM_SDF_GZ = support.fullpath("pubchem.sdf.gz")
-PUBCHEM_ANOTHER_EXT = support.fullpath("pubchem.should_be_sdf_but_is_not")
+    PUBCHEM_SDF = support.fullpath("pubchem.sdf")
+    PUBCHEM_SDF_GZ = support.fullpath("pubchem.sdf.gz")
+    PUBCHEM_ANOTHER_EXT = support.fullpath("pubchem.should_be_sdf_but_is_not")
 
 
-oeerrs = oechem.oeosstream()
-oechem.OEThrow.SetOutputStream(oeerrs)
+    oeerrs = oechem.oeosstream()
+    oechem.OEThrow.SetOutputStream(oeerrs)
+    
 def _check_for_oe_errors():
     lines = oeerrs.str().splitlines()
     for line in lines:
@@ -72,14 +83,14 @@ def _construct_test_values():
         hex_data.append("%s %s" % (as_hex, mol.GetTitle()))
     return hex_data
 
-hex_test_values = _construct_test_values()
-
 # I have this to flag any obvious changes in the OEChem algorithm and
 # to help with figuring out how to build a test case.
 
 _fp1 = "00001002200200000000000000000000000008400020000300801002300000000200000840000000000080000000000000204008000000000010000c10000000400000010100000210800002000000009400000000020020088000000000010000918000200000580400002000010020002440000008001001404000000200010000a8c00020400200002000004084000000030100820000000000000002000000510001800000010001000081100110000800480000100400000c00004c000800000808000100000022000228800020004000000200182100000100000000101000010004004808000000800000000001010010201000000090400000100000020010000010201000000040300100000000580000000000000200000000401000000000000008040004000000008002080820000310280200004040a000000010000080005000004010010018000000800000020008208040000400000200000000000000000800080050000008400100004000000200ac001000000000800100200060900010002000000040200000000000040808000048400040000000020000001001000000000302002008200000a044000180800000100000000200000049004080080000100022a00084000400280480000000402400080400404100000000040000020c10000000000c000100002000080010002080100002000600"
 
-assert hex_test_values[0].startswith(_fp1)
+if has_oechem:
+    hex_test_values = _construct_test_values()
+    assert hex_test_values[0].startswith(_fp1)
 
 class OERunner(support.Runner):
     def pre_run(self):
@@ -95,12 +106,13 @@ class OERunner(support.Runner):
         finally:
             oechem.oein.openfd(0, 0)
             os.close(fd)
-            
-runner = OERunner(oe2fps.main)
-run = runner.run
-run_stdin = runner.run_stdin
-run_fps = runner.run_fps
-run_exit = runner.run_exit
+
+if has_oechem:
+    runner = OERunner(oe2fps.main)
+    run = runner.run
+    run_stdin = runner.run_stdin
+    run_fps = runner.run_fps
+    run_exit = runner.run_exit
 
 def headers(lines):
     assert lines[0] == "FPS1"
@@ -119,6 +131,8 @@ class TestMACCS(unittest2.TestCase):
         self.assertEquals(result[4][:6], support.set_bit(9))
         self.assertEquals(result[5][:6], support.set_bit(10))
         self.assertEquals(result[6][:6], support.set_bit(16))
+
+TestMACCS = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestMACCS)
 
 class TestPath(unittest2.TestCase):
     def test_default(self):
@@ -220,6 +234,8 @@ class TestPath(unittest2.TestCase):
         result = run_fps("--btype Chiral", 19)
         self.assertNotEquals(result, hex_test_values)
 
+TestPath = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestPath)
+
 class TestIO(unittest2.TestCase):
     def test_compressed_input(self):
         result = run_fps("", source=PUBCHEM_SDF_GZ)
@@ -256,6 +272,8 @@ class TestIO(unittest2.TestCase):
 # XXX how to test that this generates a warning?
 #    def test_specify_input_format_with_dot(self):
 #        result = run_fps("--in .sdf", source=PUBCHEM_ANOTHER_EXT)
+
+TestIO = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestIO)
 
 class TestArgErrors(unittest2.TestCase):
     def _run(self, cmd, expect):
@@ -303,6 +321,8 @@ class TestArgErrors(unittest2.TestCase):
     def test_bad_btype3(self):
         self._run("--btype DefaultBond|", "Missing bond flag")
 
+TestArgErrors = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestArgErrors)
+
 class TestHeaderOutput(unittest2.TestCase):
     def _field(self, s, field):
         result = run(s)
@@ -348,6 +368,7 @@ class TestHeaderOutput(unittest2.TestCase):
         result = self._field("--maccs166", "#type")
         self.assertEquals(result, "#type=OpenEye-MACCS166/1")
     
+TestHeaderOutput = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHeaderOutput)
         
 if __name__ == "__main__":
     unittest2.main()

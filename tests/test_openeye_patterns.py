@@ -1,12 +1,17 @@
 import sys
 import unittest2
+import support
 
-from openeye.oechem import OEGraphMol, OEParseSmiles
-
+try:
+    from openeye.oechem import OEGraphMol, OEParseSmiles
+    skip_oechem = False
+except ImportError:
+    skip_oechem = support.can_skip("oe")
+else:
+    from chemfp import openeye_patterns
 
 import test_patterns
 
-from chemfp import openeye_patterns
 
 def parse_smiles(smiles):
     mol = OEGraphMol()
@@ -38,18 +43,24 @@ class ReferenceMixin(object):
                 mol = parse_smiles(smiles)
                 expected = min(expected, max_count)
                 self.assertGreaterEqual(_count(matcher.Match(mol)), expected, smiles)
-    
 
 class TestHydrogenMatcher(ReferenceMixin, unittest2.TestCase):
-    reference_class = openeye_patterns.HydrogenMatcher
-    reference_cases = test_patterns.hydrogen_test_cases
-    reference_limit = 100
+    if not skip_oechem:
+        reference_class = openeye_patterns.HydrogenMatcher
+        reference_cases = test_patterns.hydrogen_test_cases
+        reference_limit = 100
 
+TestHydrogenMatcher = unittest2.skipIf(skip_oechem, "OEChem not installed")(
+    TestHydrogenMatcher)
 
 class TestAromaticRingMatcher(ReferenceMixin, unittest2.TestCase):
-    reference_class = openeye_patterns.AromaticRings
-    reference_cases = test_patterns.aromatic_ring_cases
-    reference_limit = 2
+    if not skip_oechem:
+        reference_class = openeye_patterns.AromaticRings
+        reference_cases = test_patterns.aromatic_ring_cases
+        reference_limit = 2
+
+TestAromaticRingMatcher = unittest2.skipIf(skip_oechem, "OEChem not installed")(
+    TestAromaticRingMatcher)
 
 if __name__ == "__main__":
     unittest2.main()

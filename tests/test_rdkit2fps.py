@@ -17,6 +17,7 @@ except ImportError:
 
     if not support.can_skip("rdkit"):
         skip_rdkit = False
+        import rdkit
 
 if has_rdkit:
     from chemfp.commandline import rdkit2fps
@@ -41,7 +42,7 @@ class TestMACCS(unittest2.TestCase):
                 return
         self.assertEquals("could not find", "#type line")
 
-TestMACCS = unittest2.skipIf(skip_rdkit, "Missing RDKit")(TestMACCS)
+TestMACCS = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestMACCS)
 
 _fp1 = "32bb93145be9598dc6f22cbd1c781196e1733f7a53ed6f09e9e55e22bd3d3ac9e3be17f187fbcaefea8d2982ba7dab47ae1a3fd1aca52b48c70f540f964f79cd79afd9dc9871717341eaf7d7abe6febbc9bee9a971855ec7d960ecb2dacdbbb9b9b6d05f8ce9b7f4bc57fa7fa4573e95fe5a7dc918883f7fd9a3a825ef8e2fb2df944b94a2fb36c023cef883e967d9cf698fbb927cfe4fcbbaff71f7ada5ced97d5d679764bba6be8ff7d762f98d26bfbb3cb003647e1180966bc7eaffdad9a2ce47c6169bf679639e67e1bf50bd8bf30d3438dc877e67ba4e786fedfb831e56f34abc27bdfdce02c7aa57b36f761deb9d9bd5b2579df169ab0eae547515d2a7"
 
@@ -152,7 +153,7 @@ class TestRDKFingerprints(unittest2.TestCase):
 #    def test_ignore_Hs(self):
 #  I don't have a good test case for this... XXX
 
-TestRDKFingerprints = unittest2.skipIf(skip_rdkit, "Missing RDKit")(TestRDKFingerprints)
+TestRDKFingerprints = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestRDKFingerprints)
 
 class TestIO(unittest2.TestCase):
     def test_input_format(self):
@@ -191,7 +192,7 @@ class TestIO(unittest2.TestCase):
         result = runner.run_exit("--in spam")
         self.assertEquals(result, "Cannot read structure fingerprints: Unsupported format 'spam'\n")
 
-TestIO = unittest2.skipIf(skip_rdkit, "Missing RDKit")(TestIO)
+TestIO = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestIO)
 
 if __name__ == "__main__":
     unittest2.main()

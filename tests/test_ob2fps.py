@@ -16,7 +16,7 @@ except ImportError:
 
     if not support.can_skip("ob"):
         skip_openbabel = False
-
+        import openbabel
         
 if has_openbabel:
     import chemfp.openbabel
@@ -51,7 +51,7 @@ class TestFingerprintTypes(unittest2.TestCase):
         self.assertEquals(headers["#type"], "OpenBabel-FP4/1")
         self.assertEquals(fps[0], "1100000000000000000080000000000000010000000c9800000000000000000000000640407800 9425004")
 
-    @unittest2.skipIf(not HAS_MACCS, "Missing MACCS support")
+    @unittest2.skipUnless(HAS_MACCS, "Missing MACCS support")
     def test_MACCS(self):
         headers, fps = run_split("--MACCS", 19)
         if headers["#type"] == "OpenBabel-MACCS/1":
@@ -62,11 +62,11 @@ class TestFingerprintTypes(unittest2.TestCase):
             # Running on a corrected post-2.3.0 release
             self.assertEquals(fps[0], "000000000002080019cc44eacdec980baea378ef1f 9425004")
 
-    @unittest2.skipIf(not HAS_MACCS, "check for missing MACCS support")
+    @unittest2.skipIf(HAS_MACCS, "check for missing MACCS support")
     def test_MACCS_does_not_exist(self):
         run_exit("--MACCS")
 
-TestFingerprintTypes = unittest2.skipIf(skip_openbabel, "Missing OpenBabel")(
+TestFingerprintTypes = unittest2.skipIf(skip_openbabel, "OpenBabel not installed")(
     TestFingerprintTypes)
 
 
@@ -107,12 +107,12 @@ class TestIO(unittest2.TestCase):
         self.assertIn("Unknown structure format", errmsg)
         self.assertIn("xyzzy", errmsg)
         
-TestIO = unittest2.skipIf(skip_openbabel, "Missing OpenBabel")(TestIO)
+TestIO = unittest2.skipIf(skip_openbabel, "OpenBabel not installed")(TestIO)
 
 class TestMACCS(unittest2.TestCase):
     @unittest2.skipIf(not HAS_MACCS, "need MACCS support")
     def test_bitorder(self):
-        result = runner.run_fps("--MACCS", 7, "maccs.smi")
+        result = runner.run_fps("--MACCS", 7, support.fullpath("maccs.smi"))
         # The fingerprints are constructed to test the first few bytes.
         self.assertEquals(result[0][:6], support.set_bit(2))
         self.assertEquals(result[1][:6], support.set_bit(3))
@@ -120,13 +120,16 @@ class TestMACCS(unittest2.TestCase):
         self.assertEquals(result[3][:6], support.set_bit(5))
         self.assertEquals(result[4][:6], support.set_bit(9))
         ## This appears to be a bug in the OpenBabel MACCS definition
-        self.assertEquals(result[5][:6], support.set_bit(10))
+        if chemfp.openbabel._ob_version in ("2.2.3",):
+            self.assertEquals(result[5][:6], "000020")
+        else:
+            self.assertEquals(result[5][:6], support.set_bit(10))
         # This is WRONG, since OB has an off-by-one error in the ring sizes
         # Once this is fixed you must update the MACCS keys version number
         #self.assertEquals(result[5][:6], "000020")
         self.assertEquals(result[6][:6], support.set_bit(16))
 
-TestMACCS = unittest2.skipIf(skip_openbabel, "Missing OpenBabel")(TestMACCS)
+TestMACCS = unittest2.skipIf(skip_openbabel, "OpenBabel not installed")(TestMACCS)
 
 if __name__ == "__main__":
     unittest2.main()

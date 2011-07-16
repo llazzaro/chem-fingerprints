@@ -5,42 +5,50 @@ import sys
 import os
 import unittest2
 
-versions = os.environ.get("TOX_CHEMFP_TEST", None)
-if not versions:
+import support
+
+envstr = os.environ.get("TOX_CHEMFP_TEST", None)
+if not envstr:
     versions = []
 else:
-    versions = versions.split(",")
+    versions = envstr.split(",")
 
 def check_py25():
     version = sys.version_info[:2]
     assert version == (2,5), version
+    assert not support.can_skip("py25")
 
 def check_py26():
     version = sys.version_info[:2]
     assert version == (2,6), version
+    assert not support.can_skip("py26")
 
 def check_py27():
     version = sys.version_info[:2]
     assert version == (2,7), version
+    assert not support.can_skip("py27")
 
 def check_x32():
     assert sys.maxint == 2147483647
+    assert not support.can_skip("x32")
 
 def check_x64():
     assert sys.maxint == 9223372036854775807
+    assert not support.can_skip("x64")
     
-def check_oe161():
-    from openeye.oechem import OEChemGetRelease
-    version = OEChemGetRelease()
-    assert version == "1.6.1", version
-
 def check_oe174():
     from openeye.oechem import OEChemGetRelease
     version = OEChemGetRelease()
     assert version == "1.7.4", version
+    assert not support.can_skip("oe")
+    assert not support.can_skip("oe174")
 
 def check_ob223():
-    pass
+    import openbabel
+    from chemfp import openbabel
+    assert openbabel._ob_version == "2.2.3", openbabel._ob_version
+    assert not support.can_skip("ob")
+    assert not support.can_skip("ob223")
 
 
 def _check(required):
@@ -60,3 +68,6 @@ class TestToxVersion(unittest2.TestCase):
         for name in versions:
             func = globals()["check_" + name]
             func()
+
+TestToxVersion = unittest2.skipUnless(envstr, "Not building under the tox environment")(
+    TestToxVersion)
