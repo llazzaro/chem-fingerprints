@@ -6,3 +6,4 @@ src/CMakeFiles/*
 build/*
 *.fps
 
+.tox/*
