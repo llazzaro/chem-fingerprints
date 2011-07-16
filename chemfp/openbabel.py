@@ -180,12 +180,14 @@ def _check_for_maccs():
     obconversion = ob.OBConversion()
     obconversion.SetInFormat("smi")
     obmol = ob.OBMol()
-    obconversion.ReadString(obmol, "C1CCC1")
+    obconversion.ReadString(obmol, "CC1=CC(=NN1CC(=O)NNC(=O)C=CC2=C(C=CC=C2Cl)F)C")
     fp = calc_MACCS(obmol)
-    if fp[:6] == "000020":
+    if fp == "\x80\x04\x00\x00\x00\x02\x08\x00\x19\xc4@\xea\xcdl\x98\x0b\xae\xa1x\xef\x1b":
         MACCS_VERSION = 1
-    else:
+    elif fp[:6] == "00002H":
         MACCS_VERSION = 2
+    else:
+        raise AssertionError("Unknown MACCS fingerprint version: %r" % (fp,))
 
 _check_for_maccs()
 
