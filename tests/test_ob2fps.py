@@ -55,13 +55,13 @@ class TestFingerprintTypes(unittest2.TestCase):
     def test_MACCS(self):
         headers, fps = run_split("--MACCS", 19)
         if headers["#type"] == "OpenBabel-MACCS/1":
-            # Running on a buggy 2.3.0 release
+            # Running on a buggy 2.3.0 release or earlier
             self.assertEquals(fps[0], "800400000002080019cc40eacdec980baea378ef1b 9425004")
         else:
             self.assertEquals(headers["#type"], "OpenBabel-MACCS/2")
             # Running on a corrected post-2.3.0 release
-            self.assertEquals(fps[0], "000000000002080019cc44eacdec980baea378ef1f 9425004")
-
+            self.assertEquals(fps[0], "000000000002080019c444eacd6c980baea178ef1f 9425004")
+            
     @unittest2.skipIf(HAS_MACCS, "check for missing MACCS support")
     def test_MACCS_does_not_exist(self):
         run_exit("--MACCS")
@@ -120,7 +120,7 @@ class TestMACCS(unittest2.TestCase):
         self.assertEquals(result[3][:6], support.set_bit(5))
         self.assertEquals(result[4][:6], support.set_bit(9))
         ## This appears to be a bug in the OpenBabel MACCS definition
-        if chemfp.openbabel._ob_version in ("2.2.3",):
+        if chemfp.openbabel._ob_version in ("2.2.3", "2.3.0"):
             self.assertEquals(result[5][:6], "000020")
         else:
             self.assertEquals(result[5][:6], support.set_bit(10))
