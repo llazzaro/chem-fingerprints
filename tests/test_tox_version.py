@@ -50,6 +50,20 @@ def check_ob223():
     assert not support.can_skip("ob")
     assert not support.can_skip("ob223")
 
+def check_ob230():
+    import openbabel
+    from chemfp import openbabel
+    assert openbabel._ob_version == "2.3.0", openbabel._ob_version
+    assert not support.can_skip("ob")
+    assert not support.can_skip("ob230")
+
+def check_ob23svn1():
+    import openbabel
+    from chemfp import openbabel
+    assert openbabel._ob_version == "2.3.90", openbabel._ob_version
+    assert not support.can_skip("ob")
+    assert not support.can_skip("ob23svn1")
+
 
 def _check(required):
     req = required.split()
@@ -62,7 +76,7 @@ class TestToxVersion(unittest2.TestCase):
     def test_enough_specifications(self):
         _check("x32 x64")
         _check("py25 py26 py27 py32")
-        _check("oe174 ob223 ob230")
+        _check("oe174 ob223 ob230 ob23svn1")
         
     def test_version(self):
         for name in versions:
