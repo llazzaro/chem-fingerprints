@@ -62,10 +62,10 @@ def _emulated_GetReleaseVersion():
     return "<unknown>"
 
 try:
-    from openbabel import GetReleaseVersion
+    from openbabel import OBReleaseVersion
 except ImportError:
-    GetReleaseVersion = _emulated_GetReleaseVersion
-_ob_version = GetReleaseVersion()
+    OBReleaseVersion = _emulated_GetReleaseVersion
+_ob_version = OBGetReleaseVersion()
 
 SOFTWARE = "OpenBabel/" + _ob_version
 
@@ -105,6 +105,8 @@ def _init():
         else:
             _ob_get_fingerprint[name] = (ob_fingerprinter, ob_fingerprinter.GetFingerprint)
 
+    if _ob_get_fingerprint["FP2"][0] is None:
+        raise ImportError("Unable to load OpenBabel FP2 fingerprinter. Check $BABEL_LIBDIR")
     n = _ob_get_fingerprint["FP2"][0].Getbitsperint()
     if n != 32:
         raise AssertionError(
@@ -184,7 +186,7 @@ def _check_for_maccs():
     fp = calc_MACCS(obmol)
     if fp == "\x80\x04\x00\x00\x00\x02\x08\x00\x19\xc4@\xea\xcdl\x98\x0b\xae\xa1x\xef\x1b":
         MACCS_VERSION = 1
-    elif fp[:6] == "00002H":
+    elif fp == "\x00\x00\x00\x00\x00\x02\x08\x00\x19\xc4D\xea\xcdl\x98\x0b\xae\xa1x\xef\x1f":
         MACCS_VERSION = 2
     else:
         raise AssertionError("Unknown MACCS fingerprint version: %r" % (fp,))
