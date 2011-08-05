@@ -21,6 +21,7 @@ except ImportError:
 if has_openbabel:
     import chemfp.openbabel
     from chemfp.commandline import ob2fps
+    VERSION = chemfp.openbabel._ob_version
 
     runner = support.Runner(ob2fps.main)
     run = runner.run
@@ -49,7 +50,17 @@ class TestFingerprintTypes(unittest2.TestCase):
     def test_FP4(self):
         headers, fps = run_split("--FP4", 19)
         self.assertEquals(headers["#type"], "OpenBabel-FP4/1")
-        self.assertEquals(fps[0], "1100000000000000000080000000000000010000000c9800000000000000000000000640407800 9425004")
+        # Sigh. OpenBabel post 2.3 added stereo support. This structure is
+        #   Clc1c(/C=C/C(=O)NNC(=O)Cn2nc(cc2C)C)c(F)ccc1\t9425004\n
+        # FP4 bits 289 and 290 are "on" for post 2.3.0 releases
+        # Those bits are:
+        #  289 Cis_double_bond: */[D2]=[D2]\*
+        #  290 Trans_double_bond: */[D2]=[D2]/*
+        if (VERSION.startswith("2.2") or
+            VERSION == "2.3.0"):
+            self.assertEquals(fps[0], "1100000000000000000080000000000000010000000c9800000000000000000000000640407800 9425004")  # old (without stereo)
+        else:
+            self.assertEquals(fps[0], "1100000000000000000080000000000000010000000c9800000000000000000000000640437800 9425004")  # new (with stereo)
 
     @unittest2.skipUnless(HAS_MACCS, "Missing MACCS support")
     def test_MACCS(self):
@@ -120,13 +131,12 @@ class TestMACCS(unittest2.TestCase):
         self.assertEquals(result[3][:6], support.set_bit(5))
         self.assertEquals(result[4][:6], support.set_bit(9))
         ## This appears to be a bug in the OpenBabel MACCS definition
-        if chemfp.openbabel._ob_version in ("2.2.3", "2.3.0"):
+        if VERSION in ("2.2.3", "2.3.0"):
+            # This is WRONG, since OB has an off-by-one error in the ring sizes
             self.assertEquals(result[5][:6], "000020")
         else:
+            # which is fixed in the SVN version
             self.assertEquals(result[5][:6], support.set_bit(10))
-        # This is WRONG, since OB has an off-by-one error in the ring sizes
-        # Once this is fixed you must update the MACCS keys version number
-        #self.assertEquals(result[5][:6], "000020")
         self.assertEquals(result[6][:6], support.set_bit(16))
 
 TestMACCS = unittest2.skipIf(skip_openbabel, "OpenBabel not installed")(TestMACCS)
