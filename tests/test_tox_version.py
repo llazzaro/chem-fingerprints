@@ -64,6 +64,19 @@ def check_ob23svn1():
     assert not support.can_skip("ob")
     assert not support.can_skip("ob23svn1")
 
+def check_rd201106():
+    from rdkit.rdBase import rdkitVersion
+    assert rdkitVersion[:7] == "2011.06", rdkitVersion
+
+def check_rd201103():
+    import rdkit.rdBase
+    from rdkit.rdBase import rdkitVersion
+    assert rdkitVersion[:7] == "2011.03", rdkitVersion
+
+def check_rd201012():
+    import rdkit.rdBase
+    from rdkit.rdBase import rdkitVersion
+    assert rdkitVersion[:7] == "2010.12", rdkitVersion
 
 def _check(required):
     req = required.split()
@@ -76,7 +89,7 @@ class TestToxVersion(unittest2.TestCase):
     def test_enough_specifications(self):
         _check("x32 x64")
         _check("py25 py26 py27 py32")
-        _check("oe174 ob223 ob230 ob23svn1")
+        _check("oe174 ob223 ob230 ob23svn1 rd201106 rd201103 rd201012")
         
     def test_version(self):
         for name in versions:
