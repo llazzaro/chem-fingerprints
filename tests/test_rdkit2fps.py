@@ -23,10 +23,12 @@ if has_rdkit:
     from chemfp.commandline import rdkit2fps
 
     runner = support.Runner(rdkit2fps.main)
-        
+
+MACCS_SMI = support.fullpath("maccs.smi")
+
 class TestMACCS(unittest2.TestCase):
     def test_bitorder(self):
-        result = runner.run_fps("--maccs166", 7, "maccs.smi")
+        result = runner.run_fps("--maccs166", 7, MACCS_SMI)
         # The fingerprints are constructed to test the first few bytes.
         self.assertEquals(result[0][:6], support.set_bit(2))
         self.assertEquals(result[1][:6], support.set_bit(3))
@@ -36,7 +38,7 @@ class TestMACCS(unittest2.TestCase):
         self.assertEquals(result[5][:6], support.set_bit(10))
         self.assertEquals(result[6][:6], support.set_bit(16))
     def test_type(self):
-        for line in runner.run("--maccs166", "maccs.smi"):
+        for line in runner.run("--maccs166", MACCS_SMI):
             if line.startswith("#type="):
                 self.assertEquals(line, "#type=RDKit-MACCS166/1")
                 return
