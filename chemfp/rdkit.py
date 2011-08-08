@@ -11,6 +11,7 @@ import gzip
 
 import rdkit
 from rdkit import Chem
+import rdkit.rdBase
 from rdkit.Chem.MACCSkeys import GenMACCSKeys
 
 
@@ -19,32 +20,9 @@ from . import sdf_reader, decoders, error_handlers, io, types
 # These are the things I consider to be public
 __all__ = ["read_structures", "iter_smiles_molecules", "iter_sdf_molecules"]
 
-######## Some shenanigans to get a version field
 
-if hasattr(rdkit, "version"):
-    # This will be available in the next release of RDKit
-    SOFTWARE = "RDKit/" + rdkit.version()
-else:
-    # This distribution does not have version().
-    # Guess based on the evidence.
-
-    # This was added in Release_Q22009_1
-    import rdkit.Chem.AtomPairs.Torsions
-    if not hasattr(Chem.AtomPairs.Torsions, "GetHashedTopologicalTorsionFingerprint"):
-        SOFTWARE = "RDKit/unknown"
-    else:
-        # Either Release_Q22009_1 or Release_Q32009_1
-        # Q3 removed the DaylightFingerprint function.
-        if hasattr(Chem, "DaylightFingerprint"):
-            # In 2010 the version numbers were put into lexical order.
-            # Keep with the same principle.
-            SOFTWARE = "RDKit/2009Q2_1"
-        else:
-            SOFTWARE = "RDKit/2009Q3_1"
-
-##### Convert from RDKit explicit (dense) fingerprints to byte strings
-
-
+# If the attribute doesn't exist then this is an unsupported pre-2010 RDKit distribution
+SOFTWARE = "RDKit/" + getattr(rdkit.rdBase, "rdkitVersion", "unknown")
 
 #########
 _allowed_formats = ["sdf", "smi"]
