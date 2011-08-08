@@ -10,6 +10,7 @@ import os
 import struct
 import warnings
 
+import sys
 import openbabel as ob
 
 from . import io
@@ -44,11 +45,15 @@ if struct.calcsize("<I") != 4:
 # OpenBabel 2.2 doesn't expose "obErrorLog" to Python
 HAS_ERROR_LOG = hasattr(ob, "obErrorLog")
 
+# In OpenBabel 2.3.0, OBConversion() must be called before trying to
+# find any plugin. This was not needed in earlier releases.
+ob.OBConversion()
+
 # OpenBabel before 2.3 didn't have a function to return the version.
 # I've brought this up on the list, and it's in 2.3. I can fake
 # support for older lists by reading the PDB output text.
 
-def _emulated_GetReleaseVersion():
+def _emulated_OBReleaseVersion():
     "GetReleaseVersion() -> the version string for the OpenBabel toolkit"
     obconversion = ob.OBConversion()
     obconversion.SetInFormat("smi")
@@ -64,8 +69,8 @@ def _emulated_GetReleaseVersion():
 try:
     from openbabel import OBReleaseVersion
 except ImportError:
-    OBReleaseVersion = _emulated_GetReleaseVersion
-_ob_version = OBGetReleaseVersion()
+    OBReleaseVersion = _emulated_OBReleaseVersion
+_ob_version = OBReleaseVersion()
 
 SOFTWARE = "OpenBabel/" + _ob_version
 
@@ -98,6 +103,8 @@ SOFTWARE = "OpenBabel/" + _ob_version
 
 _ob_get_fingerprint = {}
 def _init():
+    # 
+    ob.OBConversion()
     for name in ("FP2", "FP3", "FP4", "MACCS"):
         ob_fingerprinter = ob.OBFingerprint.FindFingerprint(name)
         if ob_fingerprinter is None:
