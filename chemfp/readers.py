@@ -230,8 +230,22 @@ class InMemory(object):
         self.arenas = arenas
         self.arena_ids = arena_ids
 
+    def __len__(self):
+        return sum(len(x) for x in self.arena_ids)
+
     def reset(self):
         pass
+
+    def iter_ids(self):
+        for ids in self.arena_ids:
+            for id in ids:
+                yield id
+
+    def iter_pairs(self):
+        target_fp_size = self.header.num_bytes_per_fp
+        for arena, ids in zip(self.arenas, self.arena_ids):
+            for i, id in enumerate(ids):
+                yield id, arena[i*target_fp_size:(i+1)*target_fp_size]
 
     def iter_fingerprints(self):
         target_fp_size = self.header.num_bytes_per_fp
