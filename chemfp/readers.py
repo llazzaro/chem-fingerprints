@@ -209,6 +209,8 @@ def fps_to_in_memory(fps_reader, header=None):
         header = fps_reader.header
     num_bits = header.num_bits
     assert num_bits
+
+    # Keep track of one bin for each popcount
     id_bins = [[] for i in xrange(num_bits+1)]
     popcount_bins = [StringIO() for i in xrange(num_bits+1)]
     for i, (fp, id) in enumerate(fps_reader):
@@ -216,48 +218,62 @@ def fps_to_in_memory(fps_reader, header=None):
         id_bins[popcount].append(id)
         popcount_bins[popcount].write(fp)
 
-    # Do this so we don't always double the memory use
-    popcount_arenas = []
-    for i in xrange(num_bits+1):
-        popcount_arenas.append(popcount_bins[i].getvalue())
-        popcount_bins[i] = None
-    
-    return InMemory(header, popcount_arenas, id_bins)
+    # Merge the fingerprints into a single contiguous chunk of memory
+    arena = popcount_bins[0]
+    ids = id_bins[0]
+    popcount_sizes = map(len, id_bins)
+    for i in xrange(1, num_bits+1):
+        bin = popcount_bins[i]
+        arena.write(bin.getvalue())
 
-class InMemory(object):
-    def __init__(self, header, arenas, arena_ids):
+        # This should get rid of the excess memory
+        # (or do I need a seek(0) / truncate()? )
+        bin.close()
+        popcount_bins[i] = None
+
+        ids.extend(id_bins[i])
+        id_bins[i] = None
+
+    return InMemoryFingerprints(header, arena, popcount_sizes, ids)
+
+class InMemoryFingerprints(object):
+    def __init__(self, header, arena, popcount_sizes, ids):
         self.header = header
-        self.arenas = arenas
-        self.arena_ids = arena_ids
+        self.arena = arena
+        self.popcount_sizes = popcount_sizes
+        self.ids = ids
 
     def __len__(self):
-        return sum(len(x) for x in self.arena_ids)
+        return len(self.ids)
 
     def reset(self):
         pass
 
     def iter_ids(self):
-        for ids in self.arena_ids:
-            for id in ids:
-                yield id
+        return iter(self.ids)
 
     def iter_pairs(self):
         target_fp_size = self.header.num_bytes_per_fp
-        for arena, ids in zip(self.arenas, self.arena_ids):
-            for i, id in enumerate(ids):
-                yield id, arena[i*target_fp_size:(i+1)*target_fp_size]
+        for id, start_offset in zip(self.ids, xrange(0, len(self.arena), target_fp_size)):
+            yield id, arena[start_offset:start_offset+target_fp_size]
 
     def iter_fingerprints(self):
         target_fp_size = self.header.num_bytes_per_fp
-        for arena, arena_id in zip(self.arenas, self.arena_ids):
-            for index, offset in enumerate(xrange(0, len(arena), target_fp_size)):
-                yield arena[offset:offset+target_fp_size], arena_id[index]
+        for start_offset in xrange(0, len(self.arena), target_fp_size):
+            yield arena[start_offset:start_offset+target_fp_size]
 
     def __iter__(self):
         return self.iter_fingerprints()
     
     def _chemfp_tanimoto_knearest_search_batch(self, queries, k, threshold):
         return search.arena_tanimoto_knearest_search_batch(queries, self.arenas, self.arena_ids, k, threshold)
-    
+
+#    def _chemfp_tanimoto_search_batch(self, queries, threshold):
+#        return search.arena_tanimoto_search_batch(queries, self.arenas, self.arena_ids, threshold)
+
+    def _chemfp_tanimoto_search_self(self, threshold):
+        return search.arena_tanimoto_search_self(self.header.num_bytes_per_fp,
+                                                 self.arenas, self.arena_ids, threshold)
+
     def _chemfp_tanimoto_count_batch(self, queries, threshold):
         return search.arena_tanimoto_count_batch(queries, self.arenas, threshold)
