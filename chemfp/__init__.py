@@ -59,6 +59,8 @@ def open_fps(source):
     return readers.open_fps(source)
 
 def read_into_memory(reader):
+    if isinstance(reader, basestring):
+        reader = open(reader)
     # See if it has its own way to generate an in-memory search
     chemfp_in_memory = getattr(reader, "_chemfp_in_memory_", None)
     if chemfp_in_memory is not None:
@@ -105,7 +107,19 @@ def tanimoto_search(query, targets, threshold=0.0):
         return f(query, threshold)
     
     from chemfp import search
-    return search.generic_tanimoto(query, targets, k, threshold)
+    return search.generic_tanimoto_search(query, targets, threshold)
+
+def tanimoto_search_self(fingerprints, threshold=0.0):
+    if not (0.0 <= threshold <= 1.0):
+        raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
+
+    # Allow the targets to override the default search code
+    f = getattr(fingerprints, "_chemfp_tanimoto_search_self", None)
+    if f is not None:
+        return f(threshold)
+
+    from chemfp import search
+    return search.generic_tanimoto_search_self(fingerprints, threshold)
 
 def tanimoto_knearest_search_batch(queries, targets, k, threshold=0.0):
     if not (k > 0):
