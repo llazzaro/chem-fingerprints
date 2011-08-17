@@ -400,6 +400,248 @@ intersect_popcount_count(PyObject *self, PyObject *args) {
 					   );
 }
 
+static int
+bad_k(int k) {
+  if (k < 0) {
+    PyErr_SetString(PyExc_TypeError, "k must not be negative");
+    return 1;
+  }
+  return 0;
+}
+
+static int
+bad_threshold(double threshold) {
+  if (threshold <= 0.0 || threshold > 1.0) {
+    PyErr_SetString(PyExc_TypeError, "threshold must between 0.0 and 1.0, inclusive");
+    return 1;
+  }
+  return 0;
+}
+
+static int
+bad_fingerprint_sizes(int num_bits, int query_storage_size, int target_storage_size) {
+  char msg[150];
+  int fp_size = num_bits / 8;
+  if (num_bits <= 0) {
+    PyErr_SetString(PyExc_TypeError, "num_bits must be positive");
+    return 1;
+  }
+  if (query_storage_size < 0) {
+    PyErr_SetString(PyExc_TypeError, "query_storage_size must be positive");
+    return 1;
+  }
+  if (target_storage_size < 0) {
+    PyErr_SetString(PyExc_TypeError, "target_storage_size must be positive");
+    return 1;
+  }
+
+  if (fp_size > query_storage_size) {
+    sprintf(msg, "num_bits of %d (%d bytes) does not fit into query_storage_size of %d",
+	    num_bits, fp_size, query_storage_size);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+  if (fp_size > target_storage_size) {
+    sprintf(msg, "num_bits of %d (%d bytes) does not fit into target_storage_size of %d",
+	    num_bits, fp_size, target_storage_size);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+  return 0;
+}
+
+static int
+bad_popcount_indicies(const char *which, int num_bits,
+		      int popcount_indicies_size, int **popcount_indicies_ptr) {
+  char msg[150];
+  int num_popcounts;
+  int prev, i;
+  int *popcount_indicies;
+
+  if (popcount_indicies_size == 0) {
+    /* Special case: this means to ignore this field */
+    *popcount_indicies_ptr = NULL;
+    return 0;
+  }
+  if ((popcount_indicies_size % sizeof(int)) != 0) {
+    sprintf(msg,
+	    "%spopcount indicies length (%d) is not a multiple of the native integer size",
+	    which, num_bits);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+
+  num_popcounts = popcount_indicies_size / sizeof(int);
+
+  if (num_bits < num_popcounts - 1) {
+    sprintf(msg, "%d bits requires at least %d %spopcount indicies, not %d",
+	    num_bits, num_bits+1, which, num_popcounts);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+
+  popcount_indicies = *popcount_indicies_ptr;
+  if (popcount_indicies[0] != 0) {
+    sprintf(msg, "%s popcount indicies[0] must be 0", which);
+    PyErr_SetString(PyExc_TypeError, "%spopcount_indicies[0] must be 0");
+      return 1;
+  }
+  prev = 0;
+  for (i=1; i<num_popcounts; i++) {
+    if (popcount_indicies[i] < prev) {
+      sprintf(msg, "%spopcount indicies must never decrease", which);
+      PyErr_SetString(PyExc_TypeError, msg);
+      return 1;
+    }
+    prev = popcount_indicies[i];
+  }
+  return 0;
+}
+
+static int
+bad_limits(const char *which, int arena_size, int storage_size, int *start, int *end) {
+  char msg[150];
+  int max_index;
+  if (arena_size % storage_size != 0) {
+    sprintf(msg, "%s arena size (%d) is not a multiple of its storage size (%d)",
+	    which, arena_size, storage_size);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+  if (*start < 0) {
+    sprintf(msg, "%sstart must not be negative", which);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+  max_index = arena_size / storage_size;
+  if (*start > max_index) {
+    *start = max_index; // XXX Why isn't this an error?
+  }
+  if (*end == -1 || *end > max_index) {
+    *end = max_index;
+  } else if (*end < 0) {
+    sprintf(msg, "%send must either be -1 or non-negative", which);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+  return 0;
+}
+
+
+
+/* count_tanimoto_arena */
+static PyObject *
+count_tanimoto_arena(PyObject *self, PyObject *args) {
+  double threshold;
+  int num_bits;
+  unsigned char *query_arena, *target_arena;
+  int query_storage_size, query_arena_size=0, query_start=0, query_end=0;
+  int target_storage_size, target_arena_size=0, target_start=0, target_end=0;
+  
+  int *target_popcount_indicies, target_popcount_indicies_size;
+  
+  int result_counts_size, *result_counts;
+
+  if (!PyArg_ParseTuple(args, "diis#iiis#iis#w#",
+			&threshold,
+			&num_bits,
+			&query_storage_size, &query_arena, &query_arena_size,
+			&query_start, &query_end,
+			&target_storage_size, &target_arena, &target_arena_size,
+			&target_start, &target_end,
+			&target_popcount_indicies, &target_popcount_indicies_size,
+			&result_counts, &result_counts_size))
+    return NULL;
+
+  if (bad_threshold(threshold) ||
+      bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
+      bad_limits("query ", query_arena_size, query_storage_size,
+		 &query_start, &query_end) ||
+      bad_limits("target ", target_arena_size, target_storage_size,
+		 &target_start, &target_end) ||
+      bad_popcount_indicies("target ", num_bits,
+			    target_popcount_indicies_size, &target_popcount_indicies)) {
+    return NULL;
+  }
+
+  if (query_start > query_end) {
+    Py_RETURN_NONE;
+  }
+
+  if (result_counts_size < (query_end - query_start)*sizeof(int)) {
+    PyErr_SetString(PyExc_TypeError, "not enough space allocated for result_counts");
+    return NULL;
+  }
+
+  chemfp_count_tanimoto_arena(threshold,
+			      num_bits,
+			      query_storage_size, query_arena, query_start, query_end,
+			      target_storage_size, target_arena, target_start, target_end,
+			      target_popcount_indicies,
+			      result_counts);
+  Py_RETURN_NONE;
+}
+    
+
+/* klargest_tanimoto_arena */
+static PyObject *
+klargest_tanimoto_arena(PyObject *self, PyObject *args) {
+  int k;
+  double threshold;
+  int num_bits;
+  int query_storage_size, query_arena_size, query_start, query_end;
+  unsigned char *query_arena;
+  int target_storage_size, target_arena_size, target_start, target_end;
+  unsigned char *target_arena;
+
+  int *target_popcount_indicies, target_popcount_indicies_size;
+  int num_allocated;
+  int *result_counts, *result_indicies;
+  double *result_scores;
+
+  int result;
+
+    
+  if (!PyArg_ParseTuple(args, "idiis#iis#iit#iwww",
+			&k, &threshold,
+			&num_bits,
+			&query_storage_size, &query_arena, &query_arena_size,
+			&query_start, &query_end,
+			&target_storage_size, &target_arena, &target_arena_size,
+			&target_start, &target_end,
+			&target_popcount_indicies, &target_popcount_indicies_size,
+			&num_allocated,
+			&result_counts, &result_indicies, &result_scores
+			))
+    return NULL;
+
+  if (bad_k(k) ||
+      bad_threshold(threshold) ||
+      bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
+      bad_limits("query ", query_arena_size, query_storage_size,
+		 &query_start, &query_end) ||
+      bad_limits("target ", target_arena_size, target_storage_size,
+		 &query_start, &query_end) ||
+      bad_popcount_indicies("target ", num_bits,
+			    target_popcount_indicies_size, &target_popcount_indicies)) {
+    return NULL;
+  }
+      
+  if (num_allocated < 0) {
+    PyErr_SetString(PyExc_TypeError, "num_allocated must not be negative");
+    return NULL;
+  }
+
+  result = chemfp_klargest_tanimoto_arena(
+	k, threshold,
+	num_bits,
+	query_storage_size, query_arena, query_start, query_end,
+	target_storage_size, target_arena, target_start, target_end,
+	target_popcount_indicies,
+	num_allocated, result_counts, result_indicies, result_scores);
+
+  return PyInt_FromLong(result);
+}
 
 
 static PyMethodDef chemfp_methods[] = {
@@ -450,6 +692,12 @@ static PyMethodDef chemfp_methods[] = {
 
   {"intersect_popcount_count", intersect_popcount_count, METH_VARARGS,
    "intersect_popcount_count (TODO: document)"},
+
+  {"count_tanimoto_arena", count_tanimoto_arena, METH_VARARGS,
+   "count_tanimoto_arena (TODO: document)"},
+
+  {"klargest_tanimoto_arena", klargest_tanimoto_arena, METH_VARARGS,
+   "klargest_tanimoto_arena (TODO: document)"},
 
   {NULL, NULL, 0, NULL}        /* Sentinel */
 

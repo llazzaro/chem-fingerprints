@@ -171,4 +171,56 @@ int chemfp_byte_intersect_popcount_count(
         int num_targets, unsigned char *target_block, int offset, int storage_len,
 		int min_overlap);
 
+
+void chemfp_count_tanimoto_arena(
+	/* Count all matches within the given threshold */
+	double threshold,
+
+	/* Number of bits in the fingerprint */
+	int num_bits,
+
+	/* Query arena, start and end indicies */
+	int query_storage_size,
+	unsigned char *query_arena, int query_start, int query_end,
+
+	/* Target arena, start and end indicies */
+	int target_storage_size,
+	unsigned char *target_arena, int target_start, int target_end,
+
+	/* Target popcount distribution information */
+	/*  (must have at least num_bits+1 elements) */
+	int *target_popcount_indicies,
+
+	/* Results go into these arrays  */
+	int *result_counts
+				);
+
+int chemfp_klargest_tanimoto_arena(
+	/* Find the 'k' nearest items */
+	int k,
+	/* Within the given threshold */
+	double threshold,
+
+	/* Number of bits in the fingerprint */
+	int num_bits,
+
+	/* Query arena, start and end indicies */
+	int query_storage_size, unsigned char *query_arena,
+	int query_start, int query_end,
+
+	/* Target arena, start and end indicies */
+	int target_storage_size, unsigned char *target_arena,
+	int target_start, int target_end,
+
+	/* Target popcount distribution information */
+	/*  (must have at least num_bits+1 elements) */
+	int *target_popcount_indicies,
+
+	/* Results go into these arrays  */
+	int num_allocated,       /* Number of cells allocated */
+	int *result_offsets,
+	int *result_indicies,
+	double *result_scores
+				   );
+
 #endif /* CHEMFP_H */
