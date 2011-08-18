@@ -6,6 +6,8 @@ enum chemfp_errors {
   CHEMFP_OK = 0,
   CHEMFP_BAD_ARG = -1,  /* Generic error; not used */
 
+  CHEMFP_NO_MEM = -2,  /* memory allocation failed */
+
   /* File format errors */
   CHEMFP_UNSUPPORTED_WHITESPACE = -30,
   CHEMFP_MISSING_FINGERPRINT = -31,
@@ -171,6 +173,11 @@ int chemfp_byte_intersect_popcount_count(
         int num_targets, unsigned char *target_block, int offset, int storage_len,
 		int min_overlap);
 
+int chemfp_reorder_by_popcount(
+	int num_bits,
+	int storage_size, const unsigned char *arena, int start, int end,
+	unsigned char *new_arena, int *popcount_indicies);
+
 
 void chemfp_count_tanimoto_arena(
 	/* Count all matches within the given threshold */
@@ -181,11 +188,11 @@ void chemfp_count_tanimoto_arena(
 
 	/* Query arena, start and end indicies */
 	int query_storage_size,
-	unsigned char *query_arena, int query_start, int query_end,
+	const unsigned char *query_arena, int query_start, int query_end,
 
 	/* Target arena, start and end indicies */
 	int target_storage_size,
-	unsigned char *target_arena, int target_start, int target_end,
+	const unsigned char *target_arena, int target_start, int target_end,
 
 	/* Target popcount distribution information */
 	/*  (must have at least num_bits+1 elements) */
@@ -205,11 +212,11 @@ int chemfp_klargest_tanimoto_arena(
 	int num_bits,
 
 	/* Query arena, start and end indicies */
-	int query_storage_size, unsigned char *query_arena,
+	int query_storage_size, const unsigned char *query_arena,
 	int query_start, int query_end,
 
 	/* Target arena, start and end indicies */
-	int target_storage_size, unsigned char *target_arena,
+	int target_storage_size, const unsigned char *target_arena,
 	int target_start, int target_end,
 
 	/* Target popcount distribution information */

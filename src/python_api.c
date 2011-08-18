@@ -266,7 +266,7 @@ nlargest_tanimoto_block(PyObject *self, PyObject *args) {
     PyErr_SetString(PyExc_TypeError, "storage_len must be positive");
     return NULL;
   }
-  if (! (0<= threshold && threshold <= 1.0)) {
+  if (! (0.0 <= threshold && threshold <= 1.0)) {
     PyErr_SetString(PyExc_TypeError, "threshold must be between 0.0 and 1.0 inclusive");
     return NULL;
   }
@@ -353,10 +353,10 @@ intersect_popcount_count(PyObject *self, PyObject *args) {
   int query_len, target_block_len, offset, storage_len, min_overlap;
   int num_targets;
   if (!PyArg_ParseTuple(args, "s#s#iii",
-						&query_fp, &query_len,
-						&target_block, &target_block_len,
-						&offset, &storage_len,
-						&min_overlap))
+			&query_fp, &query_len,
+			&target_block, &target_block_len,
+			&offset, &storage_len,
+			&min_overlap))
 	return NULL;
   if (offset < 0) {
     PyErr_SetString(PyExc_TypeError, "offset cannot be negative");
@@ -411,7 +411,7 @@ bad_k(int k) {
 
 static int
 bad_threshold(double threshold) {
-  if (threshold <= 0.0 || threshold > 1.0) {
+  if (threshold < 0.0 || threshold > 1.0) {
     PyErr_SetString(PyExc_TypeError, "threshold must between 0.0 and 1.0, inclusive");
     return 1;
   }
@@ -421,7 +421,7 @@ bad_threshold(double threshold) {
 static int
 bad_fingerprint_sizes(int num_bits, int query_storage_size, int target_storage_size) {
   char msg[150];
-  int fp_size = num_bits / 8;
+  int fp_size = (num_bits+7) / 8;
   if (num_bits <= 0) {
     PyErr_SetString(PyExc_TypeError, "num_bits must be positive");
     return 1;
@@ -451,7 +451,7 @@ bad_fingerprint_sizes(int num_bits, int query_storage_size, int target_storage_s
 }
 
 static int
-bad_popcount_indicies(const char *which, int num_bits,
+bad_popcount_indicies(const char *which, int check_indicies, int num_bits,
 		      int popcount_indicies_size, int **popcount_indicies_ptr) {
   char msg[150];
   int num_popcounts;
@@ -473,27 +473,29 @@ bad_popcount_indicies(const char *which, int num_bits,
 
   num_popcounts = popcount_indicies_size / sizeof(int);
 
-  if (num_bits < num_popcounts - 1) {
+  if (num_bits > num_popcounts - 1) {
     sprintf(msg, "%d bits requires at least %d %spopcount indicies, not %d",
 	    num_bits, num_bits+1, which, num_popcounts);
     PyErr_SetString(PyExc_TypeError, msg);
     return 1;
   }
 
-  popcount_indicies = *popcount_indicies_ptr;
-  if (popcount_indicies[0] != 0) {
-    sprintf(msg, "%s popcount indicies[0] must be 0", which);
-    PyErr_SetString(PyExc_TypeError, "%spopcount_indicies[0] must be 0");
-      return 1;
-  }
-  prev = 0;
-  for (i=1; i<num_popcounts; i++) {
-    if (popcount_indicies[i] < prev) {
-      sprintf(msg, "%spopcount indicies must never decrease", which);
-      PyErr_SetString(PyExc_TypeError, msg);
+  if (check_indicies) {
+    popcount_indicies = *popcount_indicies_ptr;
+    if (popcount_indicies[0] != 0) {
+      sprintf(msg, "%s popcount indicies[0] must be 0", which);
+      PyErr_SetString(PyExc_TypeError, "%spopcount_indicies[0] must be 0");
       return 1;
     }
-    prev = popcount_indicies[i];
+    prev = 0;
+    for (i=1; i<num_popcounts; i++) {
+      if (popcount_indicies[i] < prev) {
+	sprintf(msg, "%spopcount indicies must never decrease", which);
+	PyErr_SetString(PyExc_TypeError, msg);
+	return 1;
+      }
+      prev = popcount_indicies[i];
+    }
   }
   return 0;
 }
@@ -525,6 +527,64 @@ bad_limits(const char *which, int arena_size, int storage_size, int *start, int 
     return 1;
   }
   return 0;
+}
+
+/* reorder_by_popcount */
+static PyObject *
+reorder_by_popcount(PyObject *self, PyObject *args) {
+  int num_bits;
+  int storage_size, start, end;
+  unsigned char *arena;
+  int arena_size;
+  PyObject *py_arena = NULL, *py_popcount_indicies = NULL;
+  int popcount_indicies_size;
+  int err;
+
+  if (!PyArg_ParseTuple(args, "iis#ii",
+			&num_bits,
+			&storage_size, &arena, &arena_size,
+			&start, &end))
+    return NULL;
+
+  if (bad_limits("", arena_size, storage_size, &start, &end))
+    return NULL;
+
+  popcount_indicies_size = (num_bits+1)*sizeof(int);
+  if (bad_popcount_indicies("", 0, num_bits, popcount_indicies_size, NULL))
+    return NULL;
+
+  if (end <= start) {
+    py_arena = PyString_FromStringAndSize("", 0);
+  } else {
+    py_arena = PyString_FromStringAndSize(NULL, (end-start)*storage_size);
+  }
+  if (!py_arena)
+    goto error;
+  py_popcount_indicies = PyString_FromStringAndSize(NULL, popcount_indicies_size);
+  if (!py_popcount_indicies)
+    goto error;
+
+  err = chemfp_reorder_by_popcount(num_bits, storage_size,
+				   arena, start, end,
+				   (unsigned char *) PyString_AS_STRING(py_arena),
+				   /* Assumes that the char* is int* aligned! */
+				   (int *) PyString_AS_STRING(py_popcount_indicies));
+  if (err == CHEMFP_NO_MEM) {
+    PyErr_NoMemory();
+    goto error;
+  } else if (err < 0) {
+    PyErr_SetString(PyExc_AssertionError, chemfp_strerror(err));
+  }
+  return Py_BuildValue("OO", py_arena, py_popcount_indicies);
+
+ error:
+  if (py_popcount_indicies) {
+    PyObject_Del(py_popcount_indicies);
+  }
+  if (py_arena) {
+    PyObject_Del(py_arena);
+  }
+  return NULL;
 }
 
 
@@ -559,7 +619,7 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
 		 &query_start, &query_end) ||
       bad_limits("target ", target_arena_size, target_storage_size,
 		 &target_start, &target_end) ||
-      bad_popcount_indicies("target ", num_bits,
+      bad_popcount_indicies("target ", 1, num_bits, 
 			    target_popcount_indicies_size, &target_popcount_indicies)) {
     return NULL;
   }
@@ -622,7 +682,7 @@ klargest_tanimoto_arena(PyObject *self, PyObject *args) {
 		 &query_start, &query_end) ||
       bad_limits("target ", target_arena_size, target_storage_size,
 		 &query_start, &query_end) ||
-      bad_popcount_indicies("target ", num_bits,
+      bad_popcount_indicies("target ", 1, num_bits,
 			    target_popcount_indicies_size, &target_popcount_indicies)) {
     return NULL;
   }
@@ -698,6 +758,9 @@ static PyMethodDef chemfp_methods[] = {
 
   {"klargest_tanimoto_arena", klargest_tanimoto_arena, METH_VARARGS,
    "klargest_tanimoto_arena (TODO: document)"},
+
+  {"reorder_by_popcount", reorder_by_popcount, METH_VARARGS,
+   "reorder_by_popcount (TODO: document)"},
 
   {NULL, NULL, 0, NULL}        /* Sentinel */
 

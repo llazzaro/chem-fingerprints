@@ -8,6 +8,8 @@ const char *chemfp_strerror(int err) {
   switch (err) {
   case CHEMFP_OK: return "Ok";
   case CHEMFP_BAD_ARG: return "Bad argument";
+   
+  case CHEMFP_NO_MEM: return "Cannot allocate memory";
 
   case CHEMFP_UNSUPPORTED_WHITESPACE: return "Unsupported whitespace";
   case CHEMFP_MISSING_FINGERPRINT: return "Missing fingerprint field";

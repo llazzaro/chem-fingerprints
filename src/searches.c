@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdio.h> // XXX remove
+#include <stdlib.h>
 #include "heapq.h"
 #include "chemfp.h"
 
@@ -424,11 +425,11 @@ void chemfp_count_tanimoto_arena(
 
 	/* Query arena, start and end indicies */
 	int query_storage_size,
-	unsigned char *query_arena, int query_start, int query_end,
+	const unsigned char *query_arena, int query_start, int query_end,
 
 	/* Target arena, start and end indicies */
 	int target_storage_size,
-	unsigned char *target_arena, int target_start, int target_end,
+	const unsigned char *target_arena, int target_start, int target_end,
 
 	/* Target popcount distribution information */
 	int *target_popcount_indicies,
@@ -438,7 +439,7 @@ void chemfp_count_tanimoto_arena(
 				   ) {
 
   int query_index, target_index;
-  unsigned char *query_fp, *target_fp;
+  const unsigned char *query_fp, *target_fp;
   int start, end;
   int count;
   int fp_size = num_bits / 8;
@@ -448,12 +449,10 @@ void chemfp_count_tanimoto_arena(
   int intersect_popcount;
   
   if (query_start >= query_end) {
-    printf("No queries\n");
     /* No queries */
     return;
   }
   if (target_start >= target_end) {
-    printf("No targets\n");
     for (query_index = query_start; query_index < query_end; query_index++) {
       /* No possible targets */
       *result_counts++ = 0;
@@ -490,11 +489,12 @@ void chemfp_count_tanimoto_arena(
        query_index++, query_fp += query_storage_size) {
     
     query_popcount = chemfp_byte_popcount(fp_size, query_fp);
-    
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
     if (query_popcount == 0) {
       if (threshold == 0.0) {
 	*result_counts++ = (target_end - target_start);
+      } else {
+	result_counts++;
       }
       continue;
     }
@@ -509,31 +509,31 @@ void chemfp_count_tanimoto_arena(
 	end_target_popcount = num_bits;
       }
     }
+    count = 0;
     for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
 	 target_popcount++) {
       
-    start = target_popcount_indicies[start_target_popcount];
-    end = target_popcount_indicies[end_target_popcount+1];
-    if (start < target_start) {
-      start = target_start;
-    }
-    if (end > target_end) {
-      end = target_end;
-    }
+      start = target_popcount_indicies[target_popcount];
+      end = target_popcount_indicies[target_popcount+1];
+      if (start < target_start) {
+	start = target_start;
+      }
+      if (end > target_end) {
+	end = target_end;
+      }
 
-    target_fp = target_arena + (target_start * target_storage_size);
-    count = 0;
-    popcount_sum = query_popcount + target_storage_size;
-    for (target_index = start; target_index < end;
-	 target_index++, target_fp += target_storage_size) {
-      intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
-      score = intersect_popcount / (popcount_sum - intersect_popcount);
-      if (score >= threshold) {
-	count++;
+      target_fp = target_arena + (start * target_storage_size);
+      popcount_sum = query_popcount + target_popcount;
+      for (target_index = start; target_index < end;
+	   target_index++, target_fp += target_storage_size) {
+	intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
+	score = intersect_popcount / (popcount_sum - intersect_popcount);
+	if (score >= threshold) {
+	  count++;
+	}
       }
     }
     *result_counts++ = count;
-    }
   } /* go through each of the queries */
 }
 
@@ -552,11 +552,11 @@ klargest_tanimoto_arena_no_popcounts(
 	int num_bits,
 
 	/* Query arena, start and end indicies */
-	int query_storage_size, unsigned char *query_arena,
+	int query_storage_size, const unsigned char *query_arena,
 	int query_start, int query_end,
 
 	/* Target arena, start and end indicies */
-	int target_storage_size, unsigned char *target_arena,
+	int target_storage_size, const unsigned char *target_arena,
 	int target_start, int target_end,
 
 	/* Results go into these arrays  */
@@ -566,8 +566,8 @@ klargest_tanimoto_arena_no_popcounts(
 	double *result_scores
 				   ) {
   int query_index, target_index;
-  int fp_size = num_bits/8;
-  unsigned char *query_fp, *target_fp;
+  int fp_size = (num_bits+7)/8;
+  const unsigned char *query_fp, *target_fp;
   double query_threshold, score;
   int heap_size;
   IndexScoreData heap;
@@ -662,11 +662,11 @@ int chemfp_klargest_tanimoto_arena(
 	int num_bits,
 
 	/* Query arena, start and end indicies */
-	int query_storage_size, unsigned char *query_arena,
+	int query_storage_size, const unsigned char *query_arena,
 	int query_start, int query_end,
 
 	/* Target arena, start and end indicies */
-	int target_storage_size, unsigned char *target_arena,
+	int target_storage_size, const unsigned char *target_arena,
 	int target_start, int target_end,
 
 	/* Target popcount distribution information */
@@ -682,7 +682,7 @@ int chemfp_klargest_tanimoto_arena(
   int heap_size, fp_size;
   int query_popcount, target_popcount, intersect_popcount;
   double score, best_possible_score, popcount_sum, query_threshold;
-  unsigned char *query_fp, *target_fp;
+  const unsigned char *query_fp, *target_fp;
   int query_index, target_index;
   int start, end;
   PopcountOrdering popcount_ordering;
@@ -704,7 +704,7 @@ int chemfp_klargest_tanimoto_arena(
     }
     return query_index;
   }
-  fp_size = num_bits/8;
+  fp_size = (num_bits+7)/8;
 
   if (target_popcount_indicies == NULL) {
     /* precomputed targets aren't available. Use the slower algorithm. */
@@ -863,3 +863,101 @@ int chemfp_klargest_tanimoto_arena(
 
   return query_index;
 }
+
+typedef struct {
+  int popcount;
+  int index;
+} PopcountReorder;
+
+static int compare_by_popcount(const void *left_p, const void *right_p) {
+  const PopcountReorder *left = (PopcountReorder *) left_p;
+  const PopcountReorder *right = (PopcountReorder *) right_p;
+  if (left->popcount < right->popcount) {
+    return -1;
+  }
+  if (left->popcount > right->popcount) {
+    return 1;
+  }
+  if (left->index < right->index) {
+    return -1;
+  }
+  if (left->index > right->index) {
+    return 1;
+  }
+  return 0;
+}
+
+int
+chemfp_reorder_by_popcount(
+	int num_bits,
+	int storage_size, const unsigned char *arena, int start, int end,
+	unsigned char *new_arena, int *popcount_indicies) {
+
+  int num_fingerprints, popcount;
+  int fp_size = (num_bits+7)/8;
+  int i;
+  PopcountReorder *reordering;
+  const unsigned char *fp;
+
+  if (end <= start) {
+    for (i=0; i<=(num_bits+1); i++) {
+      *popcount_indicies++ = 0;
+    }
+    return 0;
+  }
+  num_fingerprints = end - start;
+  reordering = malloc(num_fingerprints * sizeof(PopcountReorder));
+  if (!reordering) {
+    return CHEMFP_NO_MEM;
+  }
+
+  fp = arena + (start * storage_size);
+  for (i = start; i<end; i++, fp += storage_size) {
+    popcount = chemfp_byte_popcount(fp_size, fp);
+    reordering[i].popcount = popcount;
+    reordering[i].index = i;
+  }
+  qsort(reordering, num_fingerprints, sizeof(PopcountReorder), compare_by_popcount);
+
+
+  /* Build the new arena based on the values in the old arena */
+
+  for (i=0; i<num_fingerprints; i++) {
+    memcpy(new_arena, arena+(reordering[i].index * storage_size), storage_size);
+    new_arena += storage_size;
+  }
+  
+  /* Create the popcount indicies */
+  if (popcount_indicies != NULL) {
+    /* Since we've sorted by popcount, this is easy */
+    popcount = 0;
+    *popcount_indicies++ = 0;
+    for (i=0; i<num_fingerprints; i++) {
+      while (popcount < reordering[i].popcount) {
+	*popcount_indicies++ = i;
+	popcount++;
+	if (popcount == num_bits) {
+	  // We are at or above the limit. We can stop now.
+	  i = num_fingerprints+1;
+	  break;
+	  // Note: with incorrupte data it is possible
+	  // that ->popcount can be > num_bits. This is
+	  // undefined behavior. I get to do what I want.
+	  // I decided to treat them as having "max_popcount" bits.
+	  // After all, I don't want corrupt data to crash the
+	  // system, and no one is going to validate the input
+	  // fingerprints for correctness each time.
+	}
+      }
+    }
+    /* Finish up the high end */
+    while (popcount <= num_bits) {
+      *popcount_indicies++ = i;
+      popcount++;
+    }
+  }
+
+  free(reordering);
+  return num_fingerprints;
+}
+			   
