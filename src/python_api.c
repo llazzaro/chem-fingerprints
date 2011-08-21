@@ -466,7 +466,7 @@ bad_popcount_indicies(const char *which, int check_indicies, int num_bits,
   if ((popcount_indicies_size % sizeof(int)) != 0) {
     sprintf(msg,
 	    "%spopcount indicies length (%d) is not a multiple of the native integer size",
-	    which, num_bits);
+	    which, popcount_indicies_size);
     PyErr_SetString(PyExc_TypeError, msg);
     return 1;
   }
@@ -528,6 +528,55 @@ bad_limits(const char *which, int arena_size, int storage_size, int *start, int 
   }
   return 0;
 }
+
+
+static int
+bad_offsets(int num_queries, int size, int start) {
+  int num_offsets = size/sizeof(int);
+
+  // There must be enough space for num_queries, plus 1 for the end
+  char msg[100];
+  if (start < 0) {
+    PyErr_SetString(PyExc_TypeError, "result offsets start must not be negative");
+    return 1;
+  }
+  if (start > num_offsets) {
+    sprintf(msg, "result offsets start (%d) is too large", start);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+  if ((num_queries+1) < (num_offsets - start)) {
+    sprintf(msg, "Insuffient space to store %d result offsets", num_queries);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+  return 0;
+}
+
+static int
+bad_cells(int k,int indicies_size, int scores_size, int *num_cells) {
+  char msg[100];
+  int num_indicies = indicies_size / sizeof(int);
+  int num_scores = scores_size / sizeof(double);
+
+  if (num_indicies < k) {
+    sprintf(msg, "Insufficient space to store k=%d indicies", k);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+  if (num_scores < k) {
+    sprintf(msg, "Insufficient space to store k=%d scores", k);
+    PyErr_SetString(PyExc_TypeError, msg);
+    return 1;
+  }
+  if (num_indicies < num_scores) {
+    *num_cells = num_indicies;
+  } else {
+    *num_cells = num_scores;
+  }
+  return 0;
+}
+
 
 /* reorder_by_popcount */
 static PyObject *
@@ -655,14 +704,15 @@ klargest_tanimoto_arena(PyObject *self, PyObject *args) {
   unsigned char *target_arena;
 
   int *target_popcount_indicies, target_popcount_indicies_size;
-  int num_allocated;
-  int *result_counts, *result_indicies;
+  int num_cells;
+  int *result_offsets, result_offsets_size, result_offsets_start;
+  int *result_indicies, result_indicies_size, result_scores_size;
   double *result_scores;
 
   int result;
 
     
-  if (!PyArg_ParseTuple(args, "idiis#iis#iit#iwww",
+  if (!PyArg_ParseTuple(args, "idiit#iiit#iit#w#iw#w#",
 			&k, &threshold,
 			&num_bits,
 			&query_storage_size, &query_arena, &query_arena_size,
@@ -670,8 +720,9 @@ klargest_tanimoto_arena(PyObject *self, PyObject *args) {
 			&target_storage_size, &target_arena, &target_arena_size,
 			&target_start, &target_end,
 			&target_popcount_indicies, &target_popcount_indicies_size,
-			&num_allocated,
-			&result_counts, &result_indicies, &result_scores
+			&result_offsets, &result_offsets_size, &result_offsets_start,
+			&result_indicies, &result_indicies_size,
+			&result_scores, &result_scores_size
 			))
     return NULL;
 
@@ -681,14 +732,14 @@ klargest_tanimoto_arena(PyObject *self, PyObject *args) {
       bad_limits("query ", query_arena_size, query_storage_size,
 		 &query_start, &query_end) ||
       bad_limits("target ", target_arena_size, target_storage_size,
-		 &query_start, &query_end) ||
+		 &target_start, &target_end) ||
       bad_popcount_indicies("target ", 1, num_bits,
 			    target_popcount_indicies_size, &target_popcount_indicies)) {
     return NULL;
   }
-      
-  if (num_allocated < 0) {
-    PyErr_SetString(PyExc_TypeError, "num_allocated must not be negative");
+
+  if (bad_offsets(query_end-query_start, result_offsets_size, result_offsets_start) ||
+      bad_cells(k, result_indicies_size, result_scores_size, &num_cells)) {
     return NULL;
   }
 
@@ -698,7 +749,8 @@ klargest_tanimoto_arena(PyObject *self, PyObject *args) {
 	query_storage_size, query_arena, query_start, query_end,
 	target_storage_size, target_arena, target_start, target_end,
 	target_popcount_indicies,
-	num_allocated, result_counts, result_indicies, result_scores);
+	result_offsets+result_offsets_start,
+	num_cells, result_indicies, result_scores);
 
   return PyInt_FromLong(result);
 }

@@ -560,8 +560,8 @@ klargest_tanimoto_arena_no_popcounts(
 	int target_start, int target_end,
 
 	/* Results go into these arrays  */
-	int num_allocated,       /* Number of cells allocated */
 	int *result_offsets,
+	int num_cells,
 	int *result_indicies,
 	double *result_scores
 				   ) {
@@ -571,16 +571,15 @@ klargest_tanimoto_arena_no_popcounts(
   double query_threshold, score;
   int heap_size;
   IndexScoreData heap;
-  int result_offset=0;
-
+  int result_offset=*result_offsets++;
 
   query_fp = query_arena + (query_start * query_storage_size);
   for (query_index = query_start; query_index < query_end;
        query_index++, query_fp += query_storage_size) {
 
-    if (num_allocated < k) {
+    if (num_cells < k) {
       /* Not enough space to store everything, so stop here. */
-      return query_index;
+      return query_index-query_start;
     }
 
     query_threshold = threshold;
@@ -638,6 +637,7 @@ klargest_tanimoto_arena_no_popcounts(
     
     /* Pass back the query results */
     result_offset += heap_size;
+    //printf("Adding %d %p\n", result_offset, result_offsets);
     *result_offsets++ = result_offset;
     memcpy(result_indicies, heap.indicies, heap_size * sizeof(int));
     memcpy(result_scores, heap.scores, heap_size * sizeof(double));
@@ -647,9 +647,10 @@ klargest_tanimoto_arena_no_popcounts(
     //    printf("scores %f %f\n", heap.scores[0], heap.scores[1]);
     result_indicies += heap_size;
     result_scores += heap_size;
-    num_allocated -= heap_size;
+    num_cells -= heap_size;
   } /* Loop through the queries */
-  return query_index;
+
+  return query_index-query_start;
 }
 
 int chemfp_klargest_tanimoto_arena(
@@ -673,8 +674,8 @@ int chemfp_klargest_tanimoto_arena(
 	int *target_popcount_indicies,
 
 	/* Results go into these arrays  */
-	int num_allocated,       /* Number of cells allocated */
 	int *result_offsets,
+	int num_cells,
 	int *result_indicies,
 	double *result_scores
 				   ) {
@@ -692,17 +693,17 @@ int chemfp_klargest_tanimoto_arena(
   /* This is C. We don't check for illegal input values. */
 
   if (query_start >= query_end) {
-    return query_start;
+    return 0;
   }
-  result_offset = 0;
-  *result_offsets++ = 0;  // The first offset is always 0
+  /* The caller gets to set the initial offset */
+  result_offset = result_offsets[0];
 
   /* k == 0 is a valid input, and of course the result is no matches */
   if (k == 0) {
     for (query_index = query_start; query_index < query_end; query_index++) {
-      *result_offsets++ = 0;
+      *result_offsets++ = result_offset;
     }
-    return query_index;
+    return query_index-query_start;
   }
   fp_size = (num_bits+7)/8;
 
@@ -712,17 +713,17 @@ int chemfp_klargest_tanimoto_arena(
 	k, threshold, fp_size,
 	query_storage_size, query_arena, query_start, query_end,
 	target_storage_size, target_arena, target_start, target_end,
-	num_allocated, result_offsets, result_indicies, result_scores);
+	result_offsets, num_cells, result_indicies, result_scores);
   }
 
   /* Loop through the query fingerprints */
   query_fp = query_arena + (query_start * query_storage_size);
   for (query_index = query_start; query_index < query_end;
        query_index++, query_fp += query_storage_size) {
-    printf("Query index %d\n", query_index);
-    if (num_allocated < k) {
+    //    printf("Query index %d\n", query_index);
+    if (num_cells < k) {
       /* Not enough space to store everything, so stop here. */
-      return query_index;
+      return query_index-query_start;
     }
 
     query_threshold = threshold;
@@ -856,12 +857,12 @@ int chemfp_klargest_tanimoto_arena(
       //      printf("scores %f %f\n", heap.scores[0], heap.scores[1]);
       result_indicies += heap_size;
       result_scores += heap_size;
-      num_allocated -= heap_size;
+      num_cells -= heap_size;
     }
 
   } /* looped over all queries */
 
-  return query_index;
+  return query_index-query_start;
 }
 
 typedef struct {

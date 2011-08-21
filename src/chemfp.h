@@ -224,8 +224,8 @@ int chemfp_klargest_tanimoto_arena(
 	int *target_popcount_indicies,
 
 	/* Results go into these arrays  */
-	int num_allocated,       /* Number of cells allocated */
 	int *result_offsets,
+	int num_cells,
 	int *result_indicies,
 	double *result_scores
 				   );
