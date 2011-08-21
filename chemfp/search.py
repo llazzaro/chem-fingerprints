@@ -181,7 +181,7 @@ def arena_tanimoto_count_batch(queries, arenas, threshold):
 # arena is a block of target fingerprints as a byte string
 # storage_len is the fingerprint size in bytes (may include trailing 0 padding)
 # popcount_offsets contains index information for each popcount in the arena
-def arena_tanimoto_knearest_search_batch(queries, arena, storage_len,
+def x_arena_tanimoto_knearest_search_batch(queries, arena, storage_len,
                                          popcount_offsets, k, threshold):
     assert k >= 1
     assert 0.0 <= threshold <= 1.0
@@ -210,8 +210,7 @@ def arena_tanimoto_knearest_search_batch(queries, arena, storage_len,
     return results
 
 
-def knearest_tanimoto_arena_arena(k, threshold,
-                                  queries, targets):
+def threshold_tanimoto_arena_arena(threshold, queries, targets):
     assert queries.header.num_bits == targets.header.num_bits
     num_bits = queries.header.num_bits
 
@@ -220,41 +219,38 @@ def knearest_tanimoto_arena_arena(k, threshold,
     offsets = (ctypes.c_int * (num_queries+1))()
     offsets[0] = 0
 
-    batch_size = min(100, len(queries))
-    num_cells = k*batch_size
-
+    num_cells = min(100, len(queries)) * len(targets)
     indicies = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
-
+    
     query_start = 0
     query_end = len(queries)
 
-    num_added = _chemfp.klargest_tanimoto_arena(
-        k, threshold, num_bits,
-        queries.storage_size, queries.arena, query_start, query_end,
-        targets.storage_size, targets.arena, 0, -1,
-        targets.popcount_indicies,
-        offsets, 0,
-        indicies, scores)
-    if num_added == query_end:
-        return SearchResults(offsets, indicies, scores)
 
-    query_start = num_added
-    
-    last = offsets[num_added]
-    all_indicies = indicies[:last]
-    all_scores = scores[:last]
-
-    while query_start < query_end:
-        prev_last = offsets[query_start]
-        num_added = _chemfp.klargest_tanimoto_arena(
-            k, threshold, num_bits,
+    def add_rows(query_start):
+        return _chemfp.threshold_tanimoto_arena(
+            threshold, num_bits,
             queries.storage_size, queries.arena, query_start, query_end,
             targets.storage_size, targets.arena, 0, -1,
             targets.popcount_indicies,
             offsets, query_start,
             indicies, scores)
-        
+
+    return _search(query_end, offsets, indicies, scores, add_rows)
+
+def _search(query_end, offsets, indicies, scores, add_rows):
+    num_added = add_rows(0)
+    if num_added == query_end:
+        return SearchResults(offsets, indicies, scores)
+
+    query_start = num_added
+
+    last = offsets[num_added]
+    all_indicies = indicies[:last]
+    all_scores = scores[:last]
+
+    while query_start < query_end:
+        num_added = add_rows(query_start)
         assert num_added > 0
 
         prev_last = offsets[query_start]
@@ -264,6 +260,35 @@ def knearest_tanimoto_arena_arena(k, threshold,
         query_start += num_added
 
     return SearchResults(offsets, all_indicies, all_scores)
+
+
+def knearest_tanimoto_arena_arena(k, threshold, queries, targets):
+    assert queries.header.num_bits == targets.header.num_bits
+    num_bits = queries.header.num_bits
+
+    num_queries = len(queries)
+
+    offsets = (ctypes.c_int * (num_queries+1))()
+    offsets[0] = 0
+
+    num_cells = min(100, len(queries))*k
+
+    indicies = (ctypes.c_int * num_cells)()
+    scores = (ctypes.c_double * num_cells)()
+
+    query_start = 0
+    query_end = len(queries)
+
+    def add_rows(query_start):
+        return _chemfp.klargest_tanimoto_arena(
+            k, threshold, num_bits,
+            queries.storage_size, queries.arena, query_start, query_end,
+            targets.storage_size, targets.arena, 0, -1,
+            targets.popcount_indicies,
+            offsets, query_start,
+            indicies, scores)
+
+    return _search(query_end, offsets, indicies, scores, add_rows)
 
 
 class SearchResults(object):

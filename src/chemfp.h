@@ -179,7 +179,7 @@ int chemfp_reorder_by_popcount(
 	unsigned char *new_arena, int *popcount_indicies);
 
 
-void chemfp_count_tanimoto_arena(
+int chemfp_count_tanimoto_arena(
 	/* Count all matches within the given threshold */
 	double threshold,
 
@@ -201,6 +201,33 @@ void chemfp_count_tanimoto_arena(
 	/* Results go into these arrays  */
 	int *result_counts
 				);
+
+int chemfp_threshold_tanimoto_arena(
+	/* Within the given threshold */
+	double threshold,
+
+	/* Number of bits in the fingerprint */
+	int num_bits,
+
+	/* Query arena, start and end indicies */
+	int query_storage_size, const unsigned char *query_arena,
+	int query_start, int query_end,
+
+	/* Target arena, start and end indicies */
+	int target_storage_size, const unsigned char *target_arena,
+	int target_start, int target_end,
+
+	/* Target popcount distribution information */
+	/*  (must have at least num_bits+1 elements) */
+	int *target_popcount_indicies,
+
+	/* Results go into these arrays  */
+	int *result_offsets,
+	int num_cells,
+	int *result_indicies,
+	double *result_scores
+				    );
+
 
 int chemfp_klargest_tanimoto_arena(
 	/* Find the 'k' nearest items */

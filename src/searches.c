@@ -416,7 +416,7 @@ check_bounds(PopcountOrdering *popcount_ordering,
 }
 
 /* count code */
-void chemfp_count_tanimoto_arena(
+int chemfp_count_tanimoto_arena(
 	/* Count all matches within the given threshold */
 	double threshold,
 
@@ -450,14 +450,18 @@ void chemfp_count_tanimoto_arena(
   
   if (query_start >= query_end) {
     /* No queries */
-    return;
+    return 0;
   }
-  if (target_start >= target_end) {
+  /* Prevent overflow if someone uses a threshold of, say, 1E-80 */
+  if (threshold < 1.0/num_bits) {
+    threshold = 0.0;
+  }
+  if ((target_start >= target_end) || threshold > 1.0) {
     for (query_index = query_start; query_index < query_end; query_index++) {
       /* No possible targets */
       *result_counts++ = 0;
     }
-    return;
+    return query_index-query_start;
   }
   if (target_popcount_indicies == NULL) {
     /* Handle the case when precomputed targets aren't available. */
@@ -478,7 +482,7 @@ void chemfp_count_tanimoto_arena(
       }
       *result_counts++ = count;
     }
-    return;
+    return query_index-query_start;
   }
   
   /* This uses the limits from Swamidass and Baldi */
@@ -512,9 +516,8 @@ void chemfp_count_tanimoto_arena(
     count = 0;
     for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
 	 target_popcount++) {
-      
       start = target_popcount_indicies[target_popcount];
-      end = target_popcount_indicies[target_popcount+1];
+      end = target_popcount_indicies[end_target_popcount+1];
       if (start < target_start) {
 	start = target_start;
       }
@@ -534,8 +537,160 @@ void chemfp_count_tanimoto_arena(
       }
     }
     *result_counts++ = count;
-  } /* go through each of the queries */
+  } /* went through each of the queries */
+  return query_index-query_start;
 }
+
+
+int chemfp_threshold_tanimoto_arena(
+	/* Within the given threshold */
+	double threshold,
+
+	/* Number of bits in the fingerprint */
+	int num_bits,
+
+	/* Query arena, start and end indicies */
+	int query_storage_size, const unsigned char *query_arena,
+	int query_start, int query_end,
+
+	/* Target arena, start and end indicies */
+	int target_storage_size, const unsigned char *target_arena,
+	int target_start, int target_end,
+
+	/* Target popcount distribution information */
+	/*  (must have at least num_bits+1 elements) */
+	int *target_popcount_indicies,
+
+	/* Results go into these arrays  */
+	int *result_offsets,
+	int num_cells,
+	int *result_indicies,
+	double *result_scores
+				    ) {
+
+  int query_index, target_index;
+  const unsigned char *query_fp, *target_fp;
+  int start, end;
+  int count;
+  int fp_size = num_bits / 8;
+  double score, popcount_sum;
+  int query_popcount, start_target_popcount, end_target_popcount;
+  int target_popcount;
+  int intersect_popcount;
+  int result_offset = *result_offsets++;
+  
+  if (query_start >= query_end) {
+    /* No queries */
+    return 0;
+  }
+
+  /* Prevent overflow if someone uses a threshold of, say, 1E-80 */
+  if (threshold < 1.0/num_bits) {
+    threshold = 0.0;
+  }
+  if ((target_start >= target_end) || threshold > 1.0) {
+    for (query_index = query_start; query_index < query_end; query_index++) {
+      /* No possible targets */
+      *result_offsets++ = result_offset;
+    }
+    return query_index-query_start;
+  }
+  if (target_popcount_indicies == NULL) {
+    /* Handle the case when precomputed targets aren't available. */
+    /* This is a slower algorithm because it tests everything. */
+    query_fp = query_arena + (query_start * query_storage_size);
+    for (query_index = query_start; query_index < query_end;
+	 query_index++, query_fp += query_storage_size) {
+      target_fp = target_arena + (target_start * target_storage_size);
+      // Handle the popcount(query) == 0 special case?
+      count = 0;
+      for (target_index = target_start; target_index < target_end;
+	   target_index++, target_fp += query_storage_size) {
+	score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
+	if (score >= threshold) {
+	  *result_indicies++ = target_index;
+	  *result_scores++ = score;
+	  count++;
+	}
+      }
+      result_offset += count;
+      num_cells -= count;
+      *result_offsets++ = result_offset;
+    }
+    return query_index-query_start;
+  }
+  
+  /* This uses the limits from Swamidass and Baldi */
+  /* It doesn't use the ordering because it's supposed to find everything */
+
+  query_fp = query_arena + (query_start * query_storage_size);
+  for (query_index = query_start; query_index < query_end;
+       query_index++, query_fp += query_storage_size) {
+
+    if (num_cells < (target_end - target_start)) {
+      break;
+    }
+    
+    query_popcount = chemfp_byte_popcount(fp_size, query_fp);
+    /* Special case when popcount(query) == 0; everything has a score of 0.0 */
+    if (query_popcount == 0) {
+      if (threshold == 0.0) {
+	for (target_index = target_start; target_index < target_end; target_index++) {
+	  *result_indicies++ = target_index;
+	  *result_scores++ = 0.0;
+	}
+	count = (target_index - target_start);
+	result_offset += count;
+	num_cells -= count;
+	*result_offsets++ = result_offset;
+      }
+      continue;
+    }
+    /* Figure out which fingerprints to search */
+    if (threshold == 0.0) {
+      start_target_popcount = 0;
+      end_target_popcount = num_bits;
+    } else {
+      start_target_popcount = query_popcount * threshold;
+      end_target_popcount = ceil(query_popcount / threshold);
+      if (end_target_popcount > num_bits) {
+	end_target_popcount = num_bits;
+      }
+    }
+
+    count = 0;
+    for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
+	 target_popcount++) {
+      start = target_popcount_indicies[start_target_popcount];
+      end = target_popcount_indicies[end_target_popcount+1];
+      if (start < target_start) {
+	start = target_start;
+      }
+      if (end > target_end) {
+	end = target_end;
+      }
+
+      target_fp = target_arena + (start * target_storage_size);
+      popcount_sum = query_popcount + target_popcount;
+      for (target_index = start; target_index < end;
+	   target_index++, target_fp += target_storage_size) {
+	intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
+	score = intersect_popcount / (popcount_sum - intersect_popcount);
+	if (score >= threshold) {
+	  *result_indicies++ = target_index;
+	  *result_scores++ = score;
+	  count++;
+	}
+      }
+    }
+    result_offset += count;
+    num_cells -= count;
+    *result_offsets++ = result_offset;
+  } /* went through each of the queries */
+  return query_index-query_start;
+}
+
+
 
 
 
@@ -653,6 +808,7 @@ klargest_tanimoto_arena_no_popcounts(
   return query_index-query_start;
 }
 
+
 int chemfp_klargest_tanimoto_arena(
 	/* Find the 'k' nearest items */
 	int k,
@@ -695,11 +851,10 @@ int chemfp_klargest_tanimoto_arena(
   if (query_start >= query_end) {
     return 0;
   }
-  /* The caller gets to set the initial offset */
-  result_offset = result_offsets[0];
 
   /* k == 0 is a valid input, and of course the result is no matches */
   if (k == 0) {
+    result_offset = *result_offsets++;
     for (query_index = query_start; query_index < query_end; query_index++) {
       *result_offsets++ = result_offset;
     }
@@ -729,6 +884,7 @@ int chemfp_klargest_tanimoto_arena(
     query_threshold = threshold;
     query_popcount = chemfp_byte_popcount(fp_size, query_fp);
 
+    result_offset = *result_offsets++;
     if (query_popcount == 0) {
       /* By definition this will never return hits. Even if threshold == 0.0. */
       /* (I considered returning the first k hits, but that's chemically meaninless.) */
@@ -849,8 +1005,9 @@ int chemfp_klargest_tanimoto_arena(
     result_offset += heap_size;
     *result_offsets++ = result_offset;
     if (heap_size) {
-      memcpy(result_indicies, heap.indicies, heap_size * sizeof(int));
-      memcpy(result_scores, heap.scores, heap_size * sizeof(double));
+      // XXX does this do anything?
+      //      memcpy(result_indicies, heap.indicies, heap_size * sizeof(int));
+      //      memcpy(result_scores, heap.scores, heap_size * sizeof(double));
 
       /* Move the pointers so I can report the next results */
       //      printf("Adding %d\n", heap_size);

@@ -554,19 +554,16 @@ bad_offsets(int num_queries, int size, int start) {
 }
 
 static int
-bad_cells(int k,int indicies_size, int scores_size, int *num_cells) {
-  char msg[100];
+bad_cells(int min_row_size,int indicies_size, int scores_size, int *num_cells) {
   int num_indicies = indicies_size / sizeof(int);
   int num_scores = scores_size / sizeof(double);
 
-  if (num_indicies < k) {
-    sprintf(msg, "Insufficient space to store k=%d indicies", k);
-    PyErr_SetString(PyExc_TypeError, msg);
+  if (num_indicies < min_row_size) {
+    PyErr_SetString(PyExc_TypeError, "Insufficient space to store indicies for a row");
     return 1;
   }
-  if (num_scores < k) {
-    sprintf(msg, "Insufficient space to store k=%d scores", k);
-    PyErr_SetString(PyExc_TypeError, msg);
+  if (num_scores < min_row_size) {
+    PyErr_SetString(PyExc_TypeError, "Insufficient space to store scores for a row");
     return 1;
   }
   if (num_indicies < num_scores) {
@@ -694,6 +691,68 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
 
 /* klargest_tanimoto_arena */
 static PyObject *
+threshold_tanimoto_arena(PyObject *self, PyObject *args) {
+  double threshold;
+  int num_bits;
+  int query_storage_size, query_arena_size, query_start, query_end;
+  unsigned char *query_arena;
+  int target_storage_size, target_arena_size, target_start, target_end;
+  unsigned char *target_arena;
+
+  int *target_popcount_indicies, target_popcount_indicies_size;
+  int num_cells;
+  int *result_offsets, result_offsets_size, result_offsets_start;
+  int *result_indicies, result_indicies_size, result_scores_size;
+  double *result_scores;
+
+  int result;
+
+    
+  if (!PyArg_ParseTuple(args, "diit#iiit#iit#w#iw#w#",
+			&threshold,
+			&num_bits,
+			&query_storage_size, &query_arena, &query_arena_size,
+			&query_start, &query_end,
+			&target_storage_size, &target_arena, &target_arena_size,
+			&target_start, &target_end,
+			&target_popcount_indicies, &target_popcount_indicies_size,
+			&result_offsets, &result_offsets_size, &result_offsets_start,
+			&result_indicies, &result_indicies_size,
+			&result_scores, &result_scores_size
+			))
+    return NULL;
+
+  printf("Threshold %f\n", threshold);
+  if (bad_threshold(threshold) ||
+      bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
+      bad_limits("query ", query_arena_size, query_storage_size,
+		 &query_start, &query_end) ||
+      bad_limits("target ", target_arena_size, target_storage_size,
+		 &target_start, &target_end) ||
+      bad_popcount_indicies("target ", 1, num_bits,
+			    target_popcount_indicies_size, &target_popcount_indicies)) {
+    return NULL;
+  }
+
+  if (bad_offsets(query_end-query_start, result_offsets_size, result_offsets_start) ||
+      bad_cells(target_end-target_start, result_indicies_size,
+		result_scores_size, &num_cells)) {
+    return NULL;
+  }
+
+  result = chemfp_threshold_tanimoto_arena(
+	threshold,
+	num_bits,
+	query_storage_size, query_arena, query_start, query_end,
+	target_storage_size, target_arena, target_start, target_end,
+	target_popcount_indicies,
+	result_offsets+result_offsets_start,
+	num_cells, result_indicies, result_scores);
+
+  return PyInt_FromLong(result);
+}
+/* klargest_tanimoto_arena */
+static PyObject *
 klargest_tanimoto_arena(PyObject *self, PyObject *args) {
   int k;
   double threshold;
@@ -807,6 +866,9 @@ static PyMethodDef chemfp_methods[] = {
 
   {"count_tanimoto_arena", count_tanimoto_arena, METH_VARARGS,
    "count_tanimoto_arena (TODO: document)"},
+
+  {"threshold_tanimoto_arena", threshold_tanimoto_arena, METH_VARARGS,
+   "threshold_tanimoto_arena (TODO: document)"},
 
   {"klargest_tanimoto_arena", klargest_tanimoto_arena, METH_VARARGS,
    "klargest_tanimoto_arena (TODO: document)"},
