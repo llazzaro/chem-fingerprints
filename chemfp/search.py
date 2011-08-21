@@ -177,55 +177,116 @@ def arena_tanimoto_count_batch(queries, arenas, threshold):
     return results
 
 
-
-def arena_tanimoto_knearest_search_batch(queries, arenas, arena_ids, k, threshold):
+# queries iterates over fingerprints
+# arena is a block of target fingerprints as a byte string
+# storage_len is the fingerprint size in bytes (may include trailing 0 padding)
+# popcount_offsets contains index information for each popcount in the arena
+def arena_tanimoto_knearest_search_batch(queries, arena, storage_len,
+                                         popcount_offsets, k, threshold):
+    assert k >= 1
+    assert 0.0 <= threshold <= 1.0
     results = []
-    num_arenas = len(arenas)
+
+    # Not yet handling padded zeros. Don't know if I should have popcount_offsets
+    # include the 0s for the pad characters.
+    max_popcount = len(popcount_offsets) - 1
+    end = popcount_offsets[-1]
+    if max_popcount != (storage_len*8 + 1):
+        raise TypeError("Size mismatch between max popcount and storage_len")
+
+    hit_indicies = (ctypes.c_int*k)()
+    hit_scores = (ctypes.c_double*k)()
+    
     for query in queries:
-        query_popcount = bitops.byte_popcount(query)
-        if query_popcount == 0:
-            # By definition this will be 0.
-            results.append([])
-            continue
-
-        # This is the same algorithm in Swamidass and Baldi.  I tried
-        # the obvious merge sort but it was slower.
-        # (Probably because of Python function call overhead and
-        # because the built-in timsort handles this case well.)
-        scores = []
-        for target_popcount in range(0, len(arenas)):
-            if target_popcount < query_popcount:
-                best_possible_score = target_popcount/query_popcount
-            else:
-                best_possible_score = query_popcount/target_popcount
-            if best_possible_score >= threshold:
-                scores.append( (best_possible_score, target_popcount) )
-        scores.sort(reverse=True)
-
-        best = []
-        best_len = 0
-        for negative_best_possible_score, target_popcount in scores:
-            best_possible_score = negative_best_possible_score
-
-            if best_len == k and best[0][0] > best_possible_score:
-                break
-
-            arena = arenas[target_popcount]
-            target_ids = arena_ids[target_popcount]
-            for (index, score) in bitops.byte_nlargest_tanimoto_block(k, query, arena, 0, threshold=threshold):
-                if best_len == k:
-                    if best[0][0] < score:
-                        new_hit = (score, target_ids[index])
-                        heapq.heapreplace(best, new_hit)
-                        if best[0][0] >= best_possible_score:
-                            break
-                else:
-                    new_hit = (score, target_ids[index])
-                    best_len += 1
-                    heapq.heappush(best, new_hit)
-
-        # XXX Should I use a bunch of heap pops here?
-        # Probably end up with Python function call overhead.
-        results.append( [(id, score) for (score, id) in sorted(best, reverse=True)] )
+        num_hits = _chemfp.arena_tanimoto_knearest_search(query,
+                                                          arena, storage_len, 0, end,
+                                                          popcount_offsets, k, threshold,
+                                                          hit_indicies, hit_scores)
+        assert num_hits >= 0, num_hits
+        
+        # Copy over the hits 
+        results.append( (hit_indicies[:hits], hit_scores[:hits]) )
+        
     return results
 
+
+def knearest_tanimoto_arena_arena(k, threshold,
+                                  queries, targets):
+    assert queries.header.num_bits == targets.header.num_bits
+    num_bits = queries.header.num_bits
+
+    num_queries = len(queries)
+
+    offsets = (ctypes.c_int * (num_queries+1))()
+    offsets[0] = 0
+
+    batch_size = min(100, len(queries))
+    num_cells = k*batch_size
+
+    indicies = (ctypes.c_int * num_cells)()
+    scores = (ctypes.c_double * num_cells)()
+
+    query_start = 0
+    query_end = len(queries)
+
+    num_added = _chemfp.klargest_tanimoto_arena(
+        k, threshold, num_bits,
+        queries.storage_size, queries.arena, query_start, query_end,
+        targets.storage_size, targets.arena, 0, -1,
+        targets.popcount_indicies,
+        offsets, 0,
+        indicies, scores)
+    if num_added == query_end:
+        return SearchResults(offsets, indicies, scores)
+
+    query_start = num_added
+    
+    last = offsets[num_added]
+    all_indicies = indicies[:last]
+    all_scores = scores[:last]
+
+    while query_start < query_end:
+        prev_last = offsets[query_start]
+        num_added = _chemfp.klargest_tanimoto_arena(
+            k, threshold, num_bits,
+            queries.storage_size, queries.arena, query_start, query_end,
+            targets.storage_size, targets.arena, 0, -1,
+            targets.popcount_indicies,
+            offsets, query_start,
+            indicies, scores)
+        
+        assert num_added > 0
+
+        prev_last = offsets[query_start]
+        all_indicies[prev_last:] = indicies
+        all_scores[prev_last:] = scores
+
+        query_start += num_added
+
+    return SearchResults(offsets, all_indicies, all_scores)
+
+
+class SearchResults(object):
+    def __init__(self, offsets, indicies, scores):
+        assert len(offsets) > 0
+        if offsets:
+            assert indicies[offsets[-2]]
+            assert scores[offsets[-2]]
+        self.offsets = offsets
+        self.indicies = indicies
+        self.scores = scores
+    def __len__(self):
+        return len(offsets)-1
+
+    def size(self, i):
+        return self.offsets[i+1]-self.offsets[i]
+    
+    def __getitem__(self, i):
+        start, end = self.offsets[i:i+2]
+        return zip(self.indicies[start:end], self.scores[start:end])
+
+    def __iter__(self):
+        start = self.offsets[0]
+        for end in self.offsets[1:]:
+            yield zip(self.indicies[start:end], self.scores[start:end])
+            start = end

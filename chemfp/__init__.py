@@ -58,13 +58,13 @@ def open_fps(source):
     from . import readers
     return readers.open_fps(source)
 
-def read_into_memory(reader):
+def load_fingerprints(reader):
     if isinstance(reader, basestring):
         reader = open(reader)
-    # See if it has its own way to generate an in-memory search
-    chemfp_in_memory = getattr(reader, "_chemfp_in_memory_", None)
-    if chemfp_in_memory is not None:
-        return chemfp_in_memory()
+#    # See if it has its own way to generate an in-memory search
+#    chemfp_in_memory = getattr(reader, "_chemfp_in_memory_", None)
+#    if chemfp_in_memory is not None:
+#        return chemfp_in_memory()
 
     # Nope. Use the basic forward-iteration algorithm
     from chemfp import readers
