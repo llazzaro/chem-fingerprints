@@ -419,13 +419,18 @@ bad_threshold(double threshold) {
 }
 
 static int
-bad_fingerprint_sizes(int num_bits, int query_storage_size, int target_storage_size) {
-  char msg[150];
-  int fp_size = (num_bits+7) / 8;
+bad_num_bits(int num_bits) {
   if (num_bits <= 0) {
     PyErr_SetString(PyExc_TypeError, "num_bits must be positive");
     return 1;
   }
+  return 0;
+}
+
+static int
+bad_fingerprint_sizes(int num_bits, int query_storage_size, int target_storage_size) {
+  char msg[150];
+  int fp_size = (num_bits+7) / 8;
   if (query_storage_size < 0) {
     PyErr_SetString(PyExc_TypeError, "query_storage_size must be positive");
     return 1;
@@ -582,23 +587,30 @@ reorder_by_popcount(PyObject *self, PyObject *args) {
   int storage_size, start, end;
   unsigned char *arena;
   int arena_size;
-  PyObject *py_arena = NULL, *py_popcount_indicies = NULL;
-  int popcount_indicies_size;
-  int err;
+  PyObject *py_arena = NULL;
+  ChemFPOrderedPopcount *ordering;
+  int ordering_size;
+  int *popcount_indicies, popcount_indicies_size;
 
-  if (!PyArg_ParseTuple(args, "iis#ii",
+  if (!PyArg_ParseTuple(args, "iit#iiw#w#",
 			&num_bits,
 			&storage_size, &arena, &arena_size,
-			&start, &end))
+			&start, &end,
+			&ordering, &ordering_size,
+			&popcount_indicies, &popcount_indicies_size
+			)) {
     return NULL;
+  }
 
-  if (bad_limits("", arena_size, storage_size, &start, &end))
+  if (bad_num_bits(num_bits) ||
+      bad_limits("", arena_size, storage_size, &start, &end) ||
+      bad_popcount_indicies("", 0, num_bits, popcount_indicies_size, NULL)) {
     return NULL;
-
-  popcount_indicies_size = (num_bits+1)*sizeof(int);
-  if (bad_popcount_indicies("", 0, num_bits, popcount_indicies_size, NULL))
+  }
+  if ((ordering_size / sizeof(ChemFPOrderedPopcount)) < (end-start)) {
+    PyErr_SetString(PyExc_TypeError, "allocated ordering space is too small");
     return NULL;
-
+  }
   if (end <= start) {
     py_arena = PyString_FromStringAndSize("", 0);
   } else {
@@ -606,27 +618,15 @@ reorder_by_popcount(PyObject *self, PyObject *args) {
   }
   if (!py_arena)
     goto error;
-  py_popcount_indicies = PyString_FromStringAndSize(NULL, popcount_indicies_size);
-  if (!py_popcount_indicies)
-    goto error;
 
-  err = chemfp_reorder_by_popcount(num_bits, storage_size,
-				   arena, start, end,
-				   (unsigned char *) PyString_AS_STRING(py_arena),
-				   /* Assumes that the char* is int* aligned! */
-				   (int *) PyString_AS_STRING(py_popcount_indicies));
-  if (err == CHEMFP_NO_MEM) {
-    PyErr_NoMemory();
-    goto error;
-  } else if (err < 0) {
-    PyErr_SetString(PyExc_AssertionError, chemfp_strerror(err));
-  }
-  return Py_BuildValue("OO", py_arena, py_popcount_indicies);
+  chemfp_reorder_by_popcount(num_bits, storage_size,
+			     arena, start, end,
+			     (unsigned char *) PyString_AS_STRING(py_arena),
+			     ordering, popcount_indicies);
+
+  return py_arena;
 
  error:
-  if (py_popcount_indicies) {
-    PyObject_Del(py_popcount_indicies);
-  }
   if (py_arena) {
     PyObject_Del(py_arena);
   }
@@ -660,6 +660,7 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
     return NULL;
 
   if (bad_threshold(threshold) ||
+      bad_num_bits(num_bits) ||
       bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
       bad_limits("query ", query_arena_size, query_storage_size,
 		 &query_start, &query_end) ||
@@ -724,6 +725,7 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
 
   printf("Threshold %f\n", threshold);
   if (bad_threshold(threshold) ||
+      bad_num_bits(num_bits) ||
       bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
       bad_limits("query ", query_arena_size, query_storage_size,
 		 &query_start, &query_end) ||
@@ -787,6 +789,7 @@ klargest_tanimoto_arena(PyObject *self, PyObject *args) {
 
   if (bad_k(k) ||
       bad_threshold(threshold) ||
+      bad_num_bits(num_bits) ||
       bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
       bad_limits("query ", query_arena_size, query_storage_size,
 		 &query_start, &query_end) ||
