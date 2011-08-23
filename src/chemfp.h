@@ -35,6 +35,11 @@ const char *chemfp_version(void);
 /* Convert an error code to a string description */
 const char *chemfp_strerror(int err);
 
+typedef struct {
+  int popcount;
+  int index;
+} ChemFPOrderedPopcount;
+
 
 /*** Low-level operations directly on hex fingerprints ***/
 
@@ -176,7 +181,8 @@ int chemfp_byte_intersect_popcount_count(
 int chemfp_reorder_by_popcount(
 	int num_bits,
 	int storage_size, const unsigned char *arena, int start, int end,
-	unsigned char *new_arena, int *popcount_indicies);
+	unsigned char *new_arena, ChemFPOrderedPopcount *ordering,
+	int *popcount_indicies);
 
 
 int chemfp_count_tanimoto_arena(

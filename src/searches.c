@@ -287,42 +287,42 @@ typedef struct {
   int up_popcount;
   int down_popcount;
   double score;
-} PopcountOrdering;
+} PopcountSearchOrder;
 
-static void init_popcount_ordering(PopcountOrdering *popcount_ordering, int query_popcount,
-				   int max_popcount) {
-  //  printf("init_popcount_ordering(%d, %d)\n", query_popcount, max_popcount);
-  popcount_ordering->query_popcount = query_popcount;
-  popcount_ordering->popcount = query_popcount;
-  popcount_ordering->max_popcount = max_popcount;
+static void init_search_order(PopcountSearchOrder *popcount_order, int query_popcount,
+			      int max_popcount) {
+  popcount_order->query_popcount = query_popcount;
+  popcount_order->popcount = query_popcount;
+  popcount_order->max_popcount = max_popcount;
   if (query_popcount <= 1) {
-    popcount_ordering->direction = UP_ONLY;
-    popcount_ordering->down_popcount = 0;
+    popcount_order->direction = UP_ONLY;
+    popcount_order->down_popcount = 0;
   } else {
-    popcount_ordering->direction = UP_OR_DOWN;
-    popcount_ordering->down_popcount = query_popcount-1;
+    popcount_order->direction = UP_OR_DOWN;
+    popcount_order->down_popcount = query_popcount-1;
   }
-  popcount_ordering->up_popcount = query_popcount;
+  popcount_order->up_popcount = query_popcount;
 }
-static void ordering_no_higher(PopcountOrdering *popcount_ordering) {
-  switch (popcount_ordering->direction) {
+
+static void ordering_no_higher(PopcountSearchOrder *popcount_order) {
+  switch (popcount_order->direction) {
   case UP_OR_DOWN:
-    popcount_ordering->direction = DOWN_ONLY;
+    popcount_order->direction = DOWN_ONLY;
     break;
   case UP_ONLY:
-    popcount_ordering->direction = FINISHED;
+    popcount_order->direction = FINISHED;
     break;
   default:
     break;
   }
 }
-static void ordering_no_lower(PopcountOrdering *popcount_ordering) {
-  switch (popcount_ordering->direction) {
+static void ordering_no_lower(PopcountSearchOrder *popcount_order) {
+  switch (popcount_order->direction) {
   case UP_OR_DOWN:
-    popcount_ordering->direction = UP_ONLY;
+    popcount_order->direction = UP_ONLY;
     break;
   case DOWN_ONLY:
-    popcount_ordering->direction = FINISHED;
+    popcount_order->direction = FINISHED;
     break;
   default:
     break;
@@ -333,44 +333,42 @@ static void ordering_no_lower(PopcountOrdering *popcount_ordering) {
 #define UP_SCORE(po) (((double)(po->query_popcount))/po->up_popcount)
 #define DOWN_SCORE(po) (((double)(po->down_popcount))/po->query_popcount)
 
-static int next_popcount(PopcountOrdering *popcount_ordering, double threshold) {
+static int next_popcount(PopcountSearchOrder *popcount_order, double threshold) {
   double up_score, down_score;
-  //  printf("Starting with %d %d up %d down %d\n", popcount_ordering->direction,
-  //	 popcount_ordering->popcount,
-  //	 popcount_ordering->up_popcount, popcount_ordering->down_popcount);
-  switch (popcount_ordering->direction) {
+
+  switch (popcount_order->direction) {
   case UP_OR_DOWN:
-    up_score = UP_SCORE(popcount_ordering);
-    down_score = DOWN_SCORE(popcount_ordering);
+    up_score = UP_SCORE(popcount_order);
+    down_score = DOWN_SCORE(popcount_order);
     //printf("up %f down %f\n", up_score, down_score);
     if (up_score >= down_score) {
-      popcount_ordering->popcount = (popcount_ordering->up_popcount)++;
-      popcount_ordering->score = up_score;
-      if (popcount_ordering->up_popcount > popcount_ordering->max_popcount) {
-	popcount_ordering->direction = DOWN_ONLY;
+      popcount_order->popcount = (popcount_order->up_popcount)++;
+      popcount_order->score = up_score;
+      if (popcount_order->up_popcount > popcount_order->max_popcount) {
+	popcount_order->direction = DOWN_ONLY;
       }
     } else {
-      popcount_ordering->popcount = (popcount_ordering->down_popcount)--;
-      popcount_ordering->score = down_score;
-      if (popcount_ordering->down_popcount < 0) {
-	popcount_ordering->direction = UP_ONLY;
+      popcount_order->popcount = (popcount_order->down_popcount)--;
+      popcount_order->score = down_score;
+      if (popcount_order->down_popcount < 0) {
+	popcount_order->direction = UP_ONLY;
       }
     }
     break;
    
   case UP_ONLY:
-    popcount_ordering->score = UP_SCORE(popcount_ordering);
-    popcount_ordering->popcount = (popcount_ordering->up_popcount)++;
-    if (popcount_ordering->up_popcount > popcount_ordering->max_popcount) {
-      popcount_ordering->direction = FINISHED;
+    popcount_order->score = UP_SCORE(popcount_order);
+    popcount_order->popcount = (popcount_order->up_popcount)++;
+    if (popcount_order->up_popcount > popcount_order->max_popcount) {
+      popcount_order->direction = FINISHED;
     }
     break;
     
   case DOWN_ONLY:
-    popcount_ordering->score = DOWN_SCORE(popcount_ordering);
-    popcount_ordering->popcount = (popcount_ordering->down_popcount)--;
-    if (popcount_ordering->down_popcount < 0) {
-      popcount_ordering->direction = FINISHED;
+    popcount_order->score = DOWN_SCORE(popcount_order);
+    popcount_order->popcount = (popcount_order->down_popcount)--;
+    if (popcount_order->down_popcount < 0) {
+      popcount_order->direction = FINISHED;
     }
     break;
 
@@ -379,11 +377,11 @@ static int next_popcount(PopcountOrdering *popcount_ordering, double threshold) 
   }
 
   //  printf("count and score %d %f (%f)\n",
-  // popcount_ordering->popcount, popcount_ordering->score, threshold);
+  // popcount_order->popcount, popcount_order->score, threshold);
 
   /* If the best possible score is under the threshold then we're done. */
-  if (popcount_ordering->score < threshold) {
-    popcount_ordering->direction = FINISHED;
+  if (popcount_order->score < threshold) {
+    popcount_order->direction = FINISHED;
     return 0;
   }
   return 1;
@@ -391,25 +389,25 @@ static int next_popcount(PopcountOrdering *popcount_ordering, double threshold) 
 }
 
 static int 
-check_bounds(PopcountOrdering *popcount_ordering,
+check_bounds(PopcountSearchOrder *popcount_order,
 	     int *start, int *end, int target_start, int target_end) {
   if (*start > target_end) {
-    ordering_no_higher(popcount_ordering);
+    ordering_no_higher(popcount_order);
     //printf("  -- no higher\n");
     return 0;
   }
   if (*end < target_start) {
-    ordering_no_lower(popcount_ordering);
+    ordering_no_lower(popcount_order);
     //printf("  -- no lower\n");
     return 0;
   };
 
   if (*start < target_start) {
-    ordering_no_higher(popcount_ordering);
+    ordering_no_higher(popcount_order);
     *start = target_start;
   }
   if (*end > target_end) {
-    ordering_no_lower(popcount_ordering);
+    ordering_no_lower(popcount_order);
     *end = target_end;
   }
   return 1;
@@ -842,7 +840,7 @@ int chemfp_klargest_tanimoto_arena(
   const unsigned char *query_fp, *target_fp;
   int query_index, target_index;
   int start, end;
-  PopcountOrdering popcount_ordering;
+  PopcountSearchOrder popcount_order;
   IndexScoreData heap;
   int result_offset;
 
@@ -894,16 +892,16 @@ int chemfp_klargest_tanimoto_arena(
     }
 
     /* Search the bins using the ordering from Swamidass and Baldi.*/
-    init_popcount_ordering(&popcount_ordering, query_popcount, num_bits);
+    init_search_order(&popcount_order, query_popcount, num_bits);
 
     heap_size = 0;
     heap.indicies = result_indicies;
     heap.scores = result_scores;
 
     /* Look through the sections of the arena in optimal popcount order */
-    while (next_popcount(&popcount_ordering, query_threshold)) {
-      target_popcount = popcount_ordering.popcount;
-      best_possible_score = popcount_ordering.score;
+    while (next_popcount(&popcount_order, query_threshold)) {
+      target_popcount = popcount_order.popcount;
+      best_possible_score = popcount_order.score;
       //printf("popcount %d %f\n", target_popcount, best_possible_score);
 
       /* If we can't beat the query threshold then we're done with the targets */
@@ -916,7 +914,7 @@ int chemfp_klargest_tanimoto_arena(
       end = target_popcount_indicies[target_popcount+1];
       //printf("  start %d end %d\n", start, end);
       
-      if (!check_bounds(&popcount_ordering, &start, &end, target_start, target_end)) {
+      if (!check_bounds(&popcount_order, &start, &end, target_start, target_end)) {
 	continue;
       }
       //printf("  (adjusted) start %d end %d\n", start, end);
@@ -1022,14 +1020,9 @@ int chemfp_klargest_tanimoto_arena(
   return query_index-query_start;
 }
 
-typedef struct {
-  int popcount;
-  int index;
-} PopcountReorder;
-
 static int compare_by_popcount(const void *left_p, const void *right_p) {
-  const PopcountReorder *left = (PopcountReorder *) left_p;
-  const PopcountReorder *right = (PopcountReorder *) right_p;
+  const ChemFPOrderedPopcount *left = (ChemFPOrderedPopcount *) left_p;
+  const ChemFPOrderedPopcount *right = (ChemFPOrderedPopcount *) right_p;
   if (left->popcount < right->popcount) {
     return -1;
   }
@@ -1049,56 +1042,49 @@ int
 chemfp_reorder_by_popcount(
 	int num_bits,
 	int storage_size, const unsigned char *arena, int start, int end,
-	unsigned char *new_arena, int *popcount_indicies) {
+	unsigned char *new_arena, ChemFPOrderedPopcount *ordering,
+	int *popcount_indicies) {
 
   int num_fingerprints, popcount;
   int fp_size = (num_bits+7)/8;
-  int i;
-  PopcountReorder *reordering;
+  int fp_index, i;
   const unsigned char *fp;
 
-  if (end <= start) {
-    for (i=0; i<=(num_bits+1); i++) {
-      *popcount_indicies++ = 0;
-    }
+  if (start >= end) {
     return 0;
   }
+
   num_fingerprints = end - start;
-  reordering = malloc(num_fingerprints * sizeof(PopcountReorder));
-  if (!reordering) {
-    return CHEMFP_NO_MEM;
-  }
 
   fp = arena + (start * storage_size);
-  for (i = start; i<end; i++, fp += storage_size) {
+  for (fp_index = start; fp_index < end; fp_index++, fp += storage_size) {
     popcount = chemfp_byte_popcount(fp_size, fp);
-    reordering[i].popcount = popcount;
-    reordering[i].index = i;
+    ordering[fp_index].popcount = popcount;
+    ordering[fp_index].index = fp_index;
   }
-  qsort(reordering, num_fingerprints, sizeof(PopcountReorder), compare_by_popcount);
+  qsort(ordering, num_fingerprints, sizeof(ChemFPOrderedPopcount), compare_by_popcount);
 
 
   /* Build the new arena based on the values in the old arena */
-
   for (i=0; i<num_fingerprints; i++) {
-    memcpy(new_arena, arena+(reordering[i].index * storage_size), storage_size);
+    memcpy(new_arena, arena+(ordering[i].index * storage_size), storage_size);
     new_arena += storage_size;
   }
-  
+
   /* Create the popcount indicies */
   if (popcount_indicies != NULL) {
     /* Since we've sorted by popcount, this is easy */
     popcount = 0;
     *popcount_indicies++ = 0;
     for (i=0; i<num_fingerprints; i++) {
-      while (popcount < reordering[i].popcount) {
+      while (popcount < ordering[i].popcount) {
 	*popcount_indicies++ = i;
 	popcount++;
 	if (popcount == num_bits) {
 	  // We are at or above the limit. We can stop now.
 	  i = num_fingerprints+1;
 	  break;
-	  // Note: with incorrupte data it is possible
+	  // Note: with corrupted data it is possible
 	  // that ->popcount can be > num_bits. This is
 	  // undefined behavior. I get to do what I want.
 	  // I decided to treat them as having "max_popcount" bits.
@@ -1114,8 +1100,5 @@ chemfp_reorder_by_popcount(
       popcount++;
     }
   }
-
-  free(reordering);
   return num_fingerprints;
 }
-			   
