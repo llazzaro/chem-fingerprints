@@ -204,7 +204,8 @@ def read_header(f, filename, warn=warn_to_stderr):
     # Reached the end of file. No fingerprint lines and nothing left to process.
     return header, lineno, None
 
-def fps_to_in_memory(fps_reader, header=None):
+def fps_to_in_memory(fps_reader, header=None, sort=True):
+    import search
     if header is None:
         header = fps_reader.header
     num_bits = header.num_bits
@@ -220,14 +221,16 @@ def fps_to_in_memory(fps_reader, header=None):
     unsorted_fps.close()
     unsorted_fps = None
 
-    arena, popcount_offsets = _chemfp.reorder_by_popcount(num_bits, header.num_bytes_per_fp,
-                                                          unsorted_arena, 0, -1)
+    from . import library
+    fingerprints = library.Library(header, header.num_bytes_per_fp,
+                                   unsorted_arena, "", ids)
 
+    if sort:
+        return library.reorder_fingerprints(fingerprints)
+    else:
+        return fingerprints
 
-    return InMemoryFingerprints(header, header.num_bytes_per_fp,
-                                arena, popcount_offsets, ids)
-
-class InMemoryFingerprints(object):
+class Fingerprints(object):
     def __init__(self, header, storage_size, arena, popcount_offsets, ids):
         self.header = header
         self.storage_size = storage_size
@@ -242,25 +245,20 @@ class InMemoryFingerprints(object):
     def reset(self):
         pass
 
-    def iter_ids(self):
-        return iter(self.ids)
-
-    def iter_pairs(self):
-        target_fp_size = self.header.num_bytes_per_fp
-        for id, start_offset in zip(self.ids, xrange(0, len(self.arena), target_fp_size)):
-            yield id, arena[start_offset:start_offset+target_fp_size]
-
     def iter_fingerprints(self):
         target_fp_size = self.header.num_bytes_per_fp
         for start_offset in xrange(0, len(self.arena), target_fp_size):
             yield self.arena[start_offset:start_offset+target_fp_size]
 
     def __iter__(self):
-        return self.iter_fingerprints()
+        target_fp_size = self.header.num_bytes_per_fp
+        arena = self.arena
+        for id, start_offset in zip(self.ids, xrange(0, len(self.arena), target_fp_size)):
+            yield id, arena[start_offset:start_offset+target_fp_size]
     
-    def _chemfp_tanimoto_knearest_search_batch(self, queries, k, threshold):
-        return search.arena_tanimoto_knearest_search_batch(queries, self.arena,
-                                                           self.header.num_bytes_per_fp,
+    def _knearest_tanimoto_search_(self, queries, k, threshold):
+        return search.knearest_tanimoto_arena_arena(
+                                                    self.header.num_bytes_per_fp,
                                                            self.popcount_offsets, k, threshold)
 
 #    def _chemfp_tanimoto_search_batch(self, queries, threshold):

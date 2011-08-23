@@ -58,37 +58,57 @@ def open_fps(source):
     from . import readers
     return readers.open_fps(source)
 
-def load_fingerprints(reader):
+def load_fingerprints(reader, sort=True):
     if isinstance(reader, basestring):
         reader = open(reader)
-#    # See if it has its own way to generate an in-memory search
-#    chemfp_in_memory = getattr(reader, "_chemfp_in_memory_", None)
-#    if chemfp_in_memory is not None:
-#        return chemfp_in_memory()
+    # See if it has its own way to generate an in-memory search
+    f = getattr(reader, "_chemfp_load_fingerprints_", None)
+    if f is not None:
+        return f(sort=sort)
 
     # Nope. Use the basic forward-iteration algorithm
     from chemfp import readers
-    return readers.fps_to_in_memory(reader)
-    
-def tanimoto_count_batch(queries, targets, threshold=0.0):
-    if not (0.0 <= threshold <= 1.0):
-        raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
+    return readers.fps_to_in_memory(reader, sort=sort)
 
-    f = getattr(targets, "_chemfp_tanimoto_count_batch", None)
-    if f is not None:
-        return f(queries, threshold)
-    
-    from chemfp import search
-    return search.generic_tanimoto_count_batch(query, targets, threshold)
+##
 
-def tanimoto_count(query, targets, threshold=0.0):
-    return tanimoto_count_batch([queries], targets, threshold=0.0)[0]
+# Emulate multiple dispatch
 
-# There is no non-batch mode because this requires indefinite memory
-# and I don't see a batch search will lead to any savings.
-# If I implement a batch mode, do I return a list of iterators?
+# Q is an iterator    ; fine
+# Q,T is an iterator  ; can't do NxM
+#   T is an iterator  ; must 
+#     is an iterator 
 
-def tanimoto_search(query, targets, threshold=0.0):
+# return a list of (id, score) pairs
+# These are called "hits"
+
+def tanimoto_count_fp(query_fp, targets, threshold=0.9):
+    return targets._tanimoto_count_fp_(query_fp, targets, threshold)
+
+
+# Only read the queries once
+# Return a list of (query_id, hits)
+
+def tanimoto_count(queries, targets, threshold=0.9):
+    return targets._tanimoto_count_(queries, targets, threshold)
+
+# Only read the targets once
+# Return a list of (query_id, hits)
+
+def tanimoto_count_once(queries, targets, threshold=0.9):
+    return tanimoto_count_once._tanimoto_count_once_(queries, targets, threshold)
+
+# Must read
+
+def tanimoto_count_self(fingerprints, threshold=0.9):
+    raise NotImplementedError("Someday")
+
+##########
+
+def threshold_tanimoto_search_fp(query_fp, targets, threshold=0.9):
+    return targets._threshold_tanimoto_search_fp_(query_fp, targets, threshold)
+
+def threshold_tanimoto_search(queries, targets, threshold=0.9):
     """Find all targets at least 'threshold' similar to the query fingerprint
 
     The 'query' fingerprint string must be in binary representation, not hex.
@@ -98,45 +118,24 @@ def tanimoto_search(query, targets, threshold=0.0):
     'threshold' is the minimum allowed Tanimoto score and must be between 0.0 and 1.0 .
 
     """
-    if not (0.0 <= threshold <= 1.0):
-        raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
+    return targets._threshold_tanimoto_search_(queries, targets, threshold)
 
-    # Allow the targets to override the default search code
-    f = getattr(targets, "_chemfp_tanimoto_search", None)
-    if f is not None:
-        return f(query, threshold)
-    
-    from chemfp import search
-    return search.generic_tanimoto_search(query, targets, threshold)
+def threshold_tanimoto_search_once(queries, targets, threshold=0.9):
+    return targets._threshold_tanimoto_search_once_(queries, targets, threshold)
 
-def tanimoto_search_self(fingerprints, threshold=0.0):
-    if not (0.0 <= threshold <= 1.0):
-        raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
+def threshold_tanimoto_search_self(fingerprints, threshold=0.9):
+    raise NotImplementedError("Someday")
 
-    # Allow the targets to override the default search code
-    f = getattr(fingerprints, "_chemfp_tanimoto_search_self", None)
-    if f is not None:
-        return f(threshold)
+##
 
-    from chemfp import search
-    return search.generic_tanimoto_search_self(fingerprints, threshold)
+def knearest_tanimoto_search_fp(query_fp, targets, k=3, threshold=0.9):
+    return targets._knearest_tanimoto_search_fp_(query_fp, targets, k, threshold)
 
-def tanimoto_knearest_search_batch(queries, targets, k, threshold=0.0):
-    if not (k > 0):
-        raise TypeError("k must be a postive integer")
-    if not (0.0 <= threshold <= 1.0):
-        raise TypeError("threshold must be between 0.0 and 1.0, inclusive")
+def knearest_tanimoto_search(queries, targets, k=3, threshold=0.9):
+    return targets._knearest_tanimoto_search_(queries, targets, k, threshold)
 
-    # Allow the targets to override the default search code
-    f = getattr(targets, "_chemfp_tanimoto_knearest_search_batch", None)
-    if f is not None:
-        return f(queries, k, threshold)
+def knearest_tanimoto_search_once(queries, targets, k=3, threshold=0.9):
+    return targets._knearest_tanimoto_once_(queries, targets, k, threshold)
 
-    results = []
-    from chemfp import search
-
-    return search.generic_tanimoto_knearest_search_batch(query, targets, k, threshold)
-                       
-    
-def tanimoto_knearest_search(query, targets, k, threshold=0.0):
-    return tanimoto_knearest_search([query], targets, k, threshold)[0]
+def knearest_tanimoto_search_self(fingerprints, k=3, threshold=0.9):
+    raise NotImplementedError("Someday")
