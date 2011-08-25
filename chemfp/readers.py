@@ -63,6 +63,7 @@ class FPSReader(object):
             self._seekpos = None
         self._at_start = True
         self._it = None
+        self._block_reader = None
         
     def reset(self):
         self._it = None
@@ -70,8 +71,14 @@ class FPSReader(object):
             raise IOError("ASDFASDF")
         self._infile.seek(self._seekpos)
         self._at_start = True
+        self._block_reader = None
         
     def iter_blocks(self):
+        if self._block_reader is None:
+            self._block_reader = iter(self._iter_blocks())
+        return self._block_reader
+
+    def _iter_blocks(self):
         if self._at_start:
             self._at_start = False
             if self._first_fp_block is not None:
@@ -82,20 +89,6 @@ class FPSReader(object):
             raise TypeError("Already iterating")
         for block in _read_blocks(self._infile):
             yield block
-
-    def iter_rows(self):
-        unhexlify = binascii.unhexlify
-        lineno = self._first_fp_lineno
-        expected_hex_len = self._expected_hex_len
-        for block in self.iter_blocks():
-            for line in block.splitlines():
-                errcode = _chemfp.fps_line_validate(expected_hex_len, line)
-                if errcode:
-                    raise Error
-                fields = line.split()
-                fp = unhexlify(fields[0])
-                yield (fp,) + tuple(fields[1:])
-                lineno += 1
 
     def iter_fingerprints(self):
         unhexlify = binascii.unhexlify
@@ -110,10 +103,36 @@ class FPSReader(object):
                 yield unhexlify(fields[0]), fields[1]
                 lineno += 1
         
-    def __iter__(self):
-        return self.iter_fingerprints()
+    def iter_rows(self):
+        unhexlify = binascii.unhexlify
+        lineno = self._first_fp_lineno
+        expected_hex_len = self._expected_hex_len
+        for block in self.iter_blocks():
+            for line in block.splitlines(True):
+                errcode = _chemfp.fps_line_validate(expected_hex_len, line)
+                if errcode:
+                    raise Exception(errcode, expected_hex_len, line)
+                fields = line.split()
+                fp = unhexlify(fields[0])
+                yield (fp,) + tuple(fields[1:])
+                lineno += 1
 
-    def _chemfp_tanimoto_knearest_search_batch(self, queries, n, threshold):
+    def __iter__(self):
+        unhexlify = binascii.unhexlify
+        lineno = self._first_fp_lineno
+        expected_hex_len = self._expected_hex_len
+        for block in self.iter_blocks():
+            for line in block.splitlines(True):
+                errcode = _chemfp.fps_line_validate(expected_hex_len, line)
+                if errcode:
+                    raise Exception(errcode, expected_hex_len, line)
+                fields = line.split()
+                fp = unhexlify(fields[0])
+                yield fields[1], fp
+                lineno += 1
+
+    _threshold_tanimoto_search_fp_ = staticmethod(search.threshold_tanimoto_search_fp)
+    def _tanimoto_knearest_search_batch(self, queries, n, threshold):
         return search.block_tanimoto_knearest_search_batch(queries, self, n, threshold)
 
     def _chemfp_tanimoto_count_batch(self, queries, threshold):
@@ -204,28 +223,3 @@ def read_header(f, filename, warn=warn_to_stderr):
     # Reached the end of file. No fingerprint lines and nothing left to process.
     return header, lineno, None
 
-def fps_to_in_memory(fps_reader, header=None, sort=True):
-    import search
-    if header is None:
-        header = fps_reader.header
-    num_bits = header.num_bits
-    assert num_bits
-
-    ids = []
-    unsorted_fps = StringIO()
-    for (fp, id) in fps_reader:
-        unsorted_fps.write(fp)
-        ids.append(id)
-
-    unsorted_arena = unsorted_fps.getvalue()
-    unsorted_fps.close()
-    unsorted_fps = None
-
-    from . import library
-    fingerprints = library.Library(header, header.num_bytes_per_fp,
-                                   unsorted_arena, "", ids)
-
-    if sort:
-        return library.reorder_fingerprints(fingerprints)
-    else:
-        return fingerprints

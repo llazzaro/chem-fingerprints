@@ -4,6 +4,7 @@ from __future__ import division
 import operator
 import heapq
 import ctypes
+import array
 
 from chemfp import bitops
 import _chemfp
@@ -21,7 +22,91 @@ import _chemfp
 def _error(errno, lineno):
     raise AssertionError( (errno, _chemfp.strerror(errno), lineno) )
 
-import ctypes
+
+class BlockTanimotoCounter(object):
+    __slots__ = ["hex_query", "threshold", "lineno_ptr", "count_ptr"]
+    def __init__(self, query, threshold, lineno):
+        self.hex_query = query.encode("hex")
+        self.threshold = threshold
+        self.lineno_ptr = (ctypes.c_int)()
+        self.lineno_ptr.value = lineno
+        self.count_ptr = (ctypes.c_int)()
+        self.count_ptr.value = 0
+
+    def feed(self, block):
+        err = _chemfp.fps_tanimoto_count(self.hex_query, block, self.threshold,
+                                         self.count_ptr, self.lineno_ptr)
+        if err < 0:
+            raise _error(err, self.lineno_ptr.value)
+
+    def finish(self):
+        return self.count_ptr.value
+
+def block_tanimoto_count(query_fp, targets, threshold):
+    result = block_tanimoto_count_all( [(None, query_fp)], targets, threshold )
+    return result[0][1]
+
+def block_tanimoto_count_all(queries, targets, threshold):
+    lineno = targets._first_fp_lineno
+    query_ids = []
+    counters = []
+    for query_id, query_fp in queries:
+        query_ids.append(query_id)
+        counters.append(BlockTanimotoCounter(query_id, threshold, lineno))
+
+    for block in targets.iter_blocks():
+        for counter in counters:
+            counter.feed(block)
+    return zip(query_ids, (counter.finish() for counter in counters))
+
+
+
+##############
+
+def threshold_tanimoto_search_fp(query_fp, targets, threshold):
+    size = -1
+    indicies = None
+    id_starts = None
+    id_lens = None
+    scores = None
+    lineno = array.array("i", (0,)) # fixme
+    n = array.array("i", (0,))
+    
+    hits = []
+    for block in targets.iter_blocks():
+        if len(block) > size:
+            # Each line has a fingerprint, a tab, at least one id character, and "\n"
+            max_hits = len(block) // (len(query_fp)*2 + 3)
+            x = xrange(max_hits)
+            id_starts = array.array("i", (0 for i in x))
+            id_lens = array.array("i", (0 for i in x))
+            scores = array.array("d", (0.0 for i in x))
+            
+        num_found = _chemfp.fps_tanimoto(query_fp, block, threshold,
+                                         n, id_starts, id_lens, scores,
+                                         lineno)
+        print n, num_found, id_starts[:4]
+        if num_found < 0:
+            _error(num_found, lineno)
+        for i in xrange(num_found):
+            start = id_starts[i]
+            hits.append( (block[start:start_id_lens[i]], scores[i]) )
+    return hits
+        
+    
+# This does not make sense as targets is consumed
+#def threshold_tanimoto_search(queries, targets, threshold):
+    
+
+# queries must be a list
+def threshold_tanimoto_search_all(queries, targets, threshold):
+    raise NotImplementedError
+    pass
+
+
+
+##############
+
 
 class TanimotoHeap(ctypes.Structure):
     _fields_ = [("size", ctypes.c_int),
@@ -100,44 +185,3 @@ def block_knearest_tanimoto_search_all(queries, targets, k, threshold):
 
 ####
 
-
-
-class BlockTanimotoCounter(object):
-    __slots__ = ["hex_query", "threshold", "lineno_ptr", "count_ptr"]
-    def __init__(self, query, threshold, lineno):
-        self.hex_query = query.encode("hex")
-        self.threshold = threshold
-        self.lineno_ptr = (ctypes.c_int)()
-        self.lineno_ptr.value = lineno
-        self.count_ptr = (ctypes.c_int)()
-        self.count_ptr.value = 0
-
-    def feed(self, block):
-        err = _chemfp.fps_tanimoto_count(self.hex_query, block, self.threshold,
-                                         self.count_ptr, self.lineno_ptr)
-        if err < 0:
-            raise _error(err, self.lineno_ptr.value)
-
-    def finish(self):
-        return self.count_ptr.value
-
-def block_tanimoto_count(query_fp, targets, threshold):
-    result = block_tanimoto_count_all( [(None, query_fp)], targets, threshold )
-    return result[0][1]
-
-def block_tanimoto_count_all(queries, targets, threshold):
-    lineno = targets._first_fp_lineno
-    query_ids = []
-    counters = []
-    for query_id, query_fp in queries:
-        query_ids.append(query_id)
-        counters.append(BlockTanimotoCounter(query_id, threshold, lineno))
-
-    for block in targets.iter_blocks():
-        for counter in counters:
-            counter.feed(block)
-    return zip(query_ids, (counter.finish() for counter in counters))
-
-
-
-##############

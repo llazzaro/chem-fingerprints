@@ -1,6 +1,7 @@
-import _chemfp
 import ctypes
+from cStringIO import StringIO
 
+import _chemfp
 
 def check_fp_compatibility(query_fp, targets):
     if len(query_fp) != targets.header.num_bytes_per_fp:
@@ -285,4 +286,26 @@ def knearest_tanimoto_search_fp(query_fp, targets, k, threshold):
 
 
 
+def fps_to_library(fps_reader, header=None, sort=True):
+    if header is None:
+        header = fps_reader.header
+    num_bits = header.num_bits
+    assert num_bits
 
+    ids = []
+    unsorted_fps = StringIO()
+    for (fp, id) in fps_reader:
+        unsorted_fps.write(fp)
+        ids.append(id)
+
+    unsorted_arena = unsorted_fps.getvalue()
+    unsorted_fps.close()
+    unsorted_fps = None
+
+    fingerprints = Library(header, header.num_bytes_per_fp,
+                           unsorted_arena, "", ids)
+
+    if sort:
+        return library.reorder_fingerprints(fingerprints)
+    else:
+        return fingerprints
