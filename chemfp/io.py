@@ -117,7 +117,7 @@ def get_filename(source):
     elif isinstance(source, basestring):
         return source
     else:
-        return getattr(infile, "name", None)
+        return getattr(source, "name", None)
 
 ####
 

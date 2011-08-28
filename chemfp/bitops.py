@@ -11,9 +11,9 @@ from _chemfp import (hex_isvalid, hex_popcount, hex_intersect_popcount,
 from _chemfp import (byte_popcount, byte_intersect_popcount,
                      byte_tanimoto, byte_contains)
 
-from _chemfp import nlargest_tanimoto_block as _nlargest_tanimoto_block
-from _chemfp import hex_nlargest_tanimoto_block as _hex_nlargest_tanimoto_block
-from _chemfp import intersect_popcount_count as _intersect_popcount_count
+#from _chemfp import nlargest_tanimoto_block as _nlargest_tanimoto_block
+#from _chemfp import hex_nlargest_tanimoto_block as _hex_nlargest_tanimoto_block
+#from _chemfp import intersect_popcount_count as _intersect_popcount_count
 
 def _score_iterator(calculate_score, target_fps):
     for i, (target_fp, target_id) in enumerate(target_fps):
@@ -29,6 +29,7 @@ def byte_nlargest_tanimoto(n, query_fp, target_fps):
     return _nlargest_tanimoto(n, functools.partial(byte_tanimoto, query_fp), target_fps)
 
 
+"""
 def byte_nlargest_tanimoto_block(n, query_fp, target_block, offset=0,
                                  storage_len=None, threshold=0.0):
     if storage_len is None:
@@ -144,3 +145,4 @@ class FPSTanimotoCount(object):
 ## allow searching once finish() is called, while FPSTanimotoCount allows it.
 #    def finish(self):
 #        return self._count_ptr.value
+"""

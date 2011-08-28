@@ -269,7 +269,7 @@ def reorder_fingerprints(fingerprints):
     ordering = (ChemFPOrderedPopcount*len(fingerprints))()
     popcounts = array.array("i", (0,)*(fingerprints.header.num_bits+1))
     #popcounts = (ctypes.c_int*(fingerprints.header.num_bits+1))()
-    
+
     new_arena = _chemfp.reorder_by_popcount(
         fingerprints.header.num_bits, fingerprints.storage_size,
         fingerprints.arena, 0, -1, ordering, popcounts)
@@ -294,7 +294,7 @@ def fps_to_library(fps_reader, header=None, sort=True):
 
     ids = []
     unsorted_fps = StringIO()
-    for (fp, id) in fps_reader:
+    for (id, fp) in fps_reader:
         unsorted_fps.write(fp)
         ids.append(id)
 
@@ -306,6 +306,6 @@ def fps_to_library(fps_reader, header=None, sort=True):
                            unsorted_arena, "", ids)
 
     if sort:
-        return library.reorder_fingerprints(fingerprints)
+        return reorder_fingerprints(fingerprints)
     else:
         return fingerprints

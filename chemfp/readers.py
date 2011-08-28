@@ -98,7 +98,7 @@ class FPSReader(object):
             for line in block.splitlines(True):
                 errcode = _chemfp.fps_line_validate(expected_hex_len, line)
                 if errcode:
-                    raise Exception(errcode, line)
+                    raise Exception(errcode, _chemfp.strerror(errcode), line)
                 fields = line.split(None, 2)
                 yield unhexlify(fields[0]), fields[1]
                 lineno += 1
@@ -125,18 +125,18 @@ class FPSReader(object):
             for line in block.splitlines(True):
                 errcode = _chemfp.fps_line_validate(expected_hex_len, line)
                 if errcode:
-                    raise Exception(errcode, expected_hex_len, line)
+                    raise Exception(errcode, _chemfp.strerror(errcode), line)
                 fields = line.split()
                 fp = unhexlify(fields[0])
                 yield fields[1], fp
                 lineno += 1
 
     _threshold_tanimoto_search_fp_ = staticmethod(search.threshold_tanimoto_search_fp)
-    def _tanimoto_knearest_search_batch(self, queries, n, threshold):
-        return search.block_tanimoto_knearest_search_batch(queries, self, n, threshold)
+#    def _tanimoto_knearest_search_batch(self, queries, n, threshold):
+#        return search.block_tanimoto_knearest_search_batch(queries, self, n, threshold)
 
-    def _chemfp_tanimoto_count_batch(self, queries, threshold):
-        return search.block_tanimoto_count_batch(queries, self, threshold)
+#    def _chemfp_tanimoto_count_batch(self, queries, threshold):
+#        return search.block_tanimoto_count_batch(queries, self, threshold)
 
 
 # XXX Use Python's warning system

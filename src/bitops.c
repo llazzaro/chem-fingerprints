@@ -80,8 +80,9 @@ int _popcount[32] = {
 };
 
 /* Return 1 if the string contains only hex characters; 0 otherwise */
-int chemfp_hex_isvalid(int len, const unsigned char *fp) {
+int chemfp_hex_isvalid(int len, const char *sfp) {
   int i, union_w=0;
+  const unsigned char *fp = (unsigned char *) sfp;
 
   /* Out of range values set 0x10 so do cumulative bitwise-or and see if that
      bit is set. Optimize for the expected common case of validfingerprints. */
@@ -92,8 +93,9 @@ int chemfp_hex_isvalid(int len, const unsigned char *fp) {
 }
 
 /* Return the population count of a hex fingerprint, otherwise return -1 */
-int chemfp_hex_popcount(int len, const unsigned char *fp) {
+int chemfp_hex_popcount(int len, const char *sfp) {
   int i, union_w=0, popcount=0;
+  const unsigned char *fp = (const unsigned char *) sfp;
 
   for (i=0; i<len; i++) {
     /* Keep track of the cumulative popcount and the cumulative bitwise-or */
@@ -108,10 +110,11 @@ int chemfp_hex_popcount(int len, const unsigned char *fp) {
 
 /* Return the population count of the intersection of two hex fingerprints,
    otherwise return -1. */
-int chemfp_hex_intersect_popcount(int len, const unsigned char *fp1,
-                                  const unsigned char *fp2) {
+int chemfp_hex_intersect_popcount(int len, const char *sfp1, const char *sfp2) {
   int i, union_w=0, intersect_popcount=0;
   int w1, w2;
+  const unsigned char *fp1 = (const unsigned char *) sfp1;
+  const unsigned char *fp2 = (const unsigned char *) sfp2;
 
   for (i=0; i<len; i++) {
     /* Get the popcount for each hex value. (Or 0 for non-hex values.) */
@@ -131,13 +134,14 @@ int chemfp_hex_intersect_popcount(int len, const unsigned char *fp1,
    If neither fingerprint has any set bits then return 1.0 */
 /* I spent a lot of time trying out different ways to optimize this code.
    This is quite fast, but feel free to point out better ways! */
-double chemfp_hex_tanimoto(int len, const unsigned char *fp1,
-                           const unsigned char *fp2) {
+double chemfp_hex_tanimoto(int len, const char *sfp1, const char *sfp2) {
   int i=0, union_w=0;
   int union_popcount=0, intersect_popcount=0;
   int w1, w2;
   int w3, w4;
   int upper_bound = len - (len%2);
+  const unsigned char *fp1 = (const unsigned char *) sfp1;
+  const unsigned char *fp2 = (const unsigned char *) sfp2;
 
   /* Hex fingerprints really should be even-length since two hex characters
      are used for a single fingerprint byte and all chemfp fingerprints must
@@ -188,10 +192,13 @@ double chemfp_hex_tanimoto(int len, const unsigned char *fp1,
 /* Return 1 if the query fingerprint is contained in the target, 0 if it isn't,
    or -1 for invalid fingerprints */
 /* This code assumes that 1) most tests fail and 2) most fingerprints are valid */
-int chemfp_hex_contains(int len, const unsigned char *query_fp,
-                        const unsigned char *target_fp) {
+int chemfp_hex_contains(int len, const char *squery_fp,
+                        const char *starget_fp) {
   int i, query_w, target_w;
   int union_w=0;
+  const unsigned char *query_fp = (const unsigned char *) squery_fp;
+  const unsigned char *target_fp = (const unsigned char *) starget_fp;
+
   for (i=0; i<len; i++) {
     /* Subset test is easy; check if query & target == query
        I'll do word-by-word tests, where the word can also overflow to BIG
@@ -281,3 +288,39 @@ int chemfp_byte_contains(int len, const unsigned char *query_fp,
   return 1;
 }
 
+
+/* Return the Tanitoto between a byte fingerprint and a hex fingerprint */
+/* The size is the number of bytes in the byte_fp */
+double chemfp_byte_hex_tanimoto(int size,
+				const unsigned char *byte_fp,
+				const char *shex_fp) {
+  const unsigned char *hex_fp = (unsigned char *) shex_fp;
+  int union_w=0;
+  int union_popcount=0, intersect_popcount=0;
+  int w1, w2;
+  int byte;
+  unsigned char wc;
+
+  /* I'll process two characters at a time. Loop-unrolling was about 4% faster. */
+  while (size > 0) {
+    w1 = hex_to_value[*hex_fp++];
+    w2 = hex_to_value[*hex_fp++];
+    /* Check for illegal characters */
+    union_w |= (w1|w2);
+    wc = (w1<<4) | w2;
+    byte = *byte_fp++;
+    union_popcount += byte_popcounts[byte | wc];
+    intersect_popcount += byte_popcounts[byte & wc];
+    size--;
+  }
+  if (union_w >= BIG) {
+    return -1.0;
+  }
+  /* Special case define that 0/0 = 0.0. It's hard to decide what to 
+	 use here, for example, OpenEye uses 1.0. It seems that 0.0
+     is the least surprising choice. */
+  if (union_popcount == 0) {
+    return 0.0;
+  }
+  return (intersect_popcount + 0.0) / union_popcount;  /* +0.0 to coerce to double */
+}

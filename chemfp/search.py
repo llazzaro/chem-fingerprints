@@ -5,6 +5,7 @@ import operator
 import heapq
 import ctypes
 import array
+import itertools
 
 from chemfp import bitops
 import _chemfp
@@ -13,23 +14,18 @@ import _chemfp
 # And about 6 times slower, even with bitops.byte_tanimoto in C!
 
 
-
 #
 # Support code for fast FPS searches
 # 
 
-# XXX What is this?
-def _error(errno, lineno):
-    raise AssertionError( (errno, _chemfp.strerror(errno), lineno) )
 
-
+"""
 class BlockTanimotoCounter(object):
     __slots__ = ["hex_query", "threshold", "lineno_ptr", "count_ptr"]
     def __init__(self, query, threshold, lineno):
         self.hex_query = query.encode("hex")
         self.threshold = threshold
-        self.lineno_ptr = (ctypes.c_int)()
-        self.lineno_ptr.value = lineno
+        self.lineno = lineno
         self.count_ptr = (ctypes.c_int)()
         self.count_ptr.value = 0
 
@@ -59,54 +55,156 @@ def block_tanimoto_count_all(queries, targets, threshold):
             counter.feed(block)
     return zip(query_ids, (counter.finish() for counter in counters))
 
-
+"""
 
 ##############
 
-def threshold_tanimoto_search_fp(query_fp, targets, threshold):
-    size = -1
-    indicies = None
-    id_starts = None
-    id_lens = None
-    scores = None
-    lineno = array.array("i", (0,)) # fixme
-    n = array.array("i", (0,))
+def _make_knearest_search(num_queries, k):
+    class TanimotoHeap(ctypes.Structure):
+        _fields_ = [("size", ctypes.c_int),
+                    ("heap_state", ctypes.c_int),
+                    ("indicies", POINTER(ctypes.c_int*k)),
+                    ("ids", POINTER(ctypes.c_int*k)),
+                    ("scores", POINTER(ctypes.c_double*k))]
+
+    class KNearestSearch(ctypes.Structure):
+        _fields_ = [("num_queries", ctypes.c_int),
+                    ("fp_size", ctypes.c_int),
+                    ("k", ctypes.c_int),
+                    ("search_state", ctypes.c_int),
+                    ("threshold", ctypes.c_double),
+                    ("queries", ctypes.c_str),
+                    ("heaps", POINTER(TanimotoHeap*num_queries)),
+                    ("num_targets_processed", ctypes.c_int),
+                    ("_all_ids", ctypes.c_void_ptr),
+                    ("_all_scores", ctypes.c_void_ptr)]
+
+    return KNearestSearch()
+
+
+def knearest_tanimoto_search(queries, targets, k, threshold):
+    id, fp = queries[0]
+    fp_size = len(fp)
+    query_str = "".join(fp for (id, fp) in queries)
+
+    blah = _make_knearest_search(len(queries), k)
     
+    err = _chemfp.fps_knearest_search_alloc(blah, fp_size, query_str, k, threshold)
+    if err < 0:
+        error
+    assert blah.fp_size == fp_size
+    try:
+        for block in targets.iter_blocks():
+            _chemfp.fps_knearest_search_feed(blah, block)
+
+        _chemfp.fps_knearest_finish(blah)
+
+        results = []
+        for heap in blah.heaps:
+            results.append( [(heap.ids[i], heap.scores[i]) for i in xrange(heap.size)] )
+        return results
+    finally:
+            fps_knearest_search_free(blah)
+
+
+class TanimotoCell(ctypes.Structure):
+    _fields_ = [("score", ctypes.c_double),
+                ("query_index", ctypes.c_int),
+                ("id_start", ctypes.c_int),
+                ("id_end", ctypes.c_int)]
+
+
+def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
+    assert query_arena.header.num_bits == target_reader.header.num_bits
     hits = []
-    for block in targets.iter_blocks():
-        if len(block) > size:
-            # Each line has a fingerprint, a tab, at least one id character, and "\n"
-            max_hits = len(block) // (len(query_fp)*2 + 3)
-            x = xrange(max_hits)
-            id_starts = array.array("i", (0 for i in x))
-            id_lens = array.array("i", (0 for i in x))
-            scores = array.array("d", (0.0 for i in x))
-            
-        num_found = _chemfp.fps_tanimoto(query_fp, block, threshold,
-                                         n, id_starts, id_lens, scores,
-                                         lineno)
-        print n, num_found, id_starts[:4]
-        if num_found < 0:
-            _error(num_found, lineno)
-        for i in xrange(num_found):
-            start = id_starts[i]
-            hits.append( (block[start:start_id_lens[i]], scores[i]) )
-    return hits
+
+    fp_size = len(query_fp)
+    if target_reader.num_bytes_per_fp != fp_size:
+        ERROR
+    num_bits = fp_size * 8
         
+    NUM_CELLS = 1000
+    cells = (TanimotoCell*num_cells)()
+
+    lineno = target_reader._first_fp_lineno
+    
+    for block in targets.iter_blocks():
+        start = 0
+        while 1:
+            start, num_lines, num_cells = _chemfp.fps_threshold_tanimoto_search(
+                num_bits, fp_size, query_fp, 0, -1,
+                block, start, -1,
+                threshold, cells)
+            if num_cells < 0:
+                raise TypeError("Error at or after line %r of %r: %s" %
+                                (lineno, target_reader, _chemfp.strerror(num_cells)))
+                
+            for cell in itertools.islice(cells, 0, num_cells):
+                    id = block[cell.id_start:cell.id_end]
+                    hits.append( (id, cell.score) )
+            lineno += num_lines
+            
+            if start == end:
+                break
+    return hits
+
+def threshold_tanimoto_search_all(queries, target_reader, threshold):
+    if not queries:
+        return []
+    all_hits = [[] for i in xrange(len(queries))]
+
+    total_num_lines = 0
+
+    
+    # Compute at least 100 tanimotos per query, but at most 10,000 at a time
+    # (That's about 200K of memory)
+    NUM_CELLS = max(10000, len(queries) * 100)
+    cells = (TanimotoCell*NUM_CELLS)()
+
+    lineno = array.array("i", (0,))
+
+    for block in target_reader.iter_blocks():
+        start = 0
+        end = len(block)
+        while 1:
+            print start, end
+            start, num_lines, num_cells = _chemfp.fps_threshold_tanimoto_search(
+                queries.header.num_bits, queries.storage_size, queries.arena, 0, -1,
+                block, start, end,
+                threshold, cells)
+            print " =>", num_cells, start, end
+            if num_cells < 0:
+                ERROR
+                
+            for cell in itertools.islice(cells, 0, num_cells):
+                id = block[cell.id_start:cell.id_end]
+                all_hits[cell.query_index].append( (id, cell.score) )
+
+            if start == end:
+                break
+
+    return all_hits
+            
+# queries must be a list
+def threshold_tanimoto_search_all(queries, targets, threshold):
+    if not queries:
+        return []
+    query_ids, query_fps = zip(*queries)
+    all_hits = threshold_tanimoto_search_fps(query_fps)
+    return zip(query_ids, all_hits)
+        
+    
     
 # This does not make sense as targets is consumed
 #def threshold_tanimoto_search(queries, targets, threshold):
     
-
-# queries must be a list
-def threshold_tanimoto_search_all(queries, targets, threshold):
-    raise NotImplementedError
-    pass
-
+    
+    
 
 
 ##############
 
+"""
 
 class TanimotoHeap(ctypes.Structure):
     _fields_ = [("size", ctypes.c_int),
@@ -185,3 +283,4 @@ def block_knearest_tanimoto_search_all(queries, targets, k, threshold):
 
 ####
 
+"""

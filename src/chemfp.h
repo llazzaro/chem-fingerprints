@@ -40,29 +40,34 @@ typedef struct {
   int index;
 } ChemFPOrderedPopcount;
 
+typedef struct {
+  double score;
+  int query_index;
+  int id_start;
+  int id_end;
+} chemfp_tanimoto_cell;
+
+
 
 /*** Low-level operations directly on hex fingerprints ***/
 
 /* Return 1 if the string contains only hex characters; 0 otherwise */
-int chemfp_hex_isvalid(int len, const unsigned char *fp);
+int chemfp_hex_isvalid(int len, const char *fp);
 
 /* Return the population count of a hex fingerprint, otherwise return -1 */
-int chemfp_hex_popcount(int len, const unsigned char *fp);
+int chemfp_hex_popcount(int len, const char *fp);
 
 /* Return the population count of the intersection of two hex fingerprints,
    otherwise return -1. */
-int chemfp_hex_intersect_popcount(int len, const unsigned char *fp1,
-                                  const unsigned char *fp2);
+int chemfp_hex_intersect_popcount(int len, const char *fp1, const char *fp2);
 
 /* Return the Tanitoto between two hex fingerprints, or -1.0 for invalid fingerprints
    If neither fingerprint has any set bits then return 1.0 */
-double chemfp_hex_tanimoto(int len, const unsigned char *fp1,
-                           const unsigned char *fp2);
+double chemfp_hex_tanimoto(int len, const char *fp1, const char *fp2);
 
 /* Return 1 if the query fingerprint is contained in the target, 0 if it isn't,
    or -1 for invalid fingerprints */
-int chemfp_hex_contains(int len, const unsigned char *query_fp,
-                        const unsigned char *target_fp);
+int chemfp_hex_contains(int len, const char *query_fp, const char *target_fp);
 
 /**** Low-level operations directly on byte fingerprints ***/
 
@@ -78,6 +83,9 @@ int chemfp_byte_intersect_popcount(int len, const unsigned char *fp1,
 double chemfp_byte_tanimoto(int len, const unsigned char *fp1,
                             const unsigned char *fp2);
 
+double chemfp_byte_hex_tanimoto(int size, const unsigned char *byte_fp,
+				const char *hex_fp);
+
 /* Return 1 if the query fingerprint is contained in the target, 0 if it isn't */
 int chemfp_byte_contains(int len, const unsigned char *query_fp,
                          const unsigned char *target_fp);
@@ -90,10 +98,27 @@ int chemfp_byte_contains(int len, const unsigned char *query_fp,
    additional fields. The fps block must end with a newline. */
 
 /* Return 0 if string is a valid fps fingerprint line, otherwise an error code */
-int chemfp_fps_line_validate(int hex_len,  // use -1 if not known
-                             int line_len, char *line);
+int chemfp_fps_line_validate(int hex_size,  // use -1 if not known
+                             int line_size, const char *line_start);
 
 
+int chemfp_threshold_tanimoto_hexfp_fps(
+	int hex_size, const char *hex_query_fp,
+	int target_block_size, const char *target_block_start,
+	int *lineno, const char **stopped_at,
+	double threshold,
+	int num_cells, int *id_starts, int *id_ends, double *scores);
+
+/* Return the number of fingerprints in the fps block which are greater
+   than or equal to the specified threshold. */
+int chemfp_fps_tanimoto_count(
+	int num_bits,
+	int query_storage_size,
+	const unsigned char *query_arena, int query_start, int query_end,
+	const char *target_block, int target_block_end,
+        double threshold,
+	int *counts, int *num_lines_processed);
+#if 0
 /* Compute Tanimoto scores for each line in the fps block and report all
    scores which are greater than or equal to the specified threshold. Callers
    must preallocate enough space in id_starts, id_lens, and scores for the
@@ -106,58 +131,75 @@ int chemfp_fps_tanimoto(
 
     double threshold,    // Report only those values >= threshold
     int *num_found,      // Will be set to the number of fingerprints which matched
-    char **id_starts, int *id_lens,     // id locations in the current block
+    int *id_starts, int *id_ends,     // id locations in the current block
     double *scores,      // Corresponding Tanimoto similarity score
 
     // (optional) track the line number. The caller must initialize the
     // number if not NULL. All this function does is increment the count
     int *lineno
   );
+#endif
 
-
-/* Return the number of fingerprints in the fps block which are greater
-   than or equal to the specified threshold. */
-int chemfp_fps_tanimoto_count(int hex_len, char *hex_query,
-                              int target_block_len, char *target_block,
-                              double threshold,
-                              int *num_found, int *lineno);
 
 typedef struct {
   int size;           /* current heap size */
-  int k;              /* max number of elements to find */
-  int unique_idx;     /* counter if a unique index is needed */
-  int _reserved;      /* used for nice alignment on 64 bit machines */
-  double threshold;   /* initial threshold */
+  int heap_state;
 
   /* These all point to arrays of size k */
   int *indicies;      /* [k]; contains a unique id or index */
+  char **ids;          /* [k]; array of NULL or malloc'ed identifier */
   double *scores;     /* [k]; the Tanimoto similarity */
-  char **id_starts;   /* [k]; location (in the current block) of the start of the id */
-  int *id_lens;       /* [k]; length of that id */
-} chemfp_heap;
+} chemfp_fps_heap;
+
+typedef struct {
+  const unsigned char *query_start;
+  int num_queries;
+  int query_fp_size;
+  int query_storage_size;
+  int k;              /* max number of elements to find */
+  int search_state;          /* 0 for not not finished, 1 for finished */
+  double threshold;   /* initial threshold */
+  chemfp_fps_heap *heaps;    /* [num_queries] heaps */
+
+  int num_targets_processed;
+  char **_all_ids;
+  double *_all_scores;
+} chemfp_fps_knearest_search;
 
 
-/* Initialize the chemfp_heap data structure.
-   The caller must set things up correctly, including allocating enough memory */
-void chemfp_fps_heap_init(chemfp_heap *heap,  /* the structure to initialize */
-                          int k, double threshold,
-                          int *indicies, double *scores,
-                          char **id_starts, int *id_lens);
+int chemfp_fps_knearest_search_init(
+        chemfp_fps_knearest_search *knearest_search,
+	int num_bits, int query_storage_size,
+	const unsigned char *query_arena, int query_start, int query_end,
+        int k, double threshold);
 
 /* Update the heap based on the lines in an fps fingerprint data block. */
-int chemfp_fps_heap_update_tanimoto(chemfp_heap *heap,
-                                    int hex_len, char *hex_query,
-                                    int target_block_len, char *target_block,
-                                    int *lineno);
+int chemfp_fps_knearest_search_feed(
+	chemfp_fps_knearest_search *knearest_search,
+	int target_block_len, const char *target_block);
 
 /* Call this after the last fps block, in order to convert the heap into an
    sorted array. */
-void chemfp_fps_heap_finish_tanimoto(chemfp_heap *heap);
+void chemfp_fps_knearest_search_finish(chemfp_fps_knearest_search *knearest_search);
+
+void chemfp_fps_knearest_search_free(chemfp_fps_knearest_search *knearest_search);
+
+
+int chemfp_fps_threshold_tanimoto_search(
+	int num_bits,
+	int query_storage_size,
+	const unsigned char *query_arena, int query_start, int query_end,
+	
+	const char *target_block, int target_block_end,
+        double threshold,
+	int num_cells, chemfp_tanimoto_cell *cells,
+	const char ** stopped_at, int *num_lines_processed, int *num_cells_processed);
 
 
 /***** The byte-oriented algorithms  ********/
 
 
+/* You must have enough cells */
 
 int chemfp_nlargest_tanimoto_block(
         int n,
@@ -171,7 +213,8 @@ int chemfp_hex_tanimoto_block(
         int len, unsigned char *hex_query_fp,
         int target_len, unsigned char *target_block,
         double threshold,
-        double *scores, unsigned char **start_ids, int *id_lens, int *lineno);
+        double *scores, int *id_starts, int *id_ends, int *lineno);
+
 
 int chemfp_byte_intersect_popcount_count(
         int len, unsigned char *query_fp,

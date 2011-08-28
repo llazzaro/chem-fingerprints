@@ -100,9 +100,9 @@ int chemfp_nlargest_tanimoto_block(
 }
 
 
-static int hex_readline(int len, unsigned char *hex_query_fp,
-                        unsigned char *target_block, int *offset_p,
-                        double *score_p, unsigned char **start_id_p, int *id_len_p,
+static int hex_readline(int len, char *hex_query_fp,
+                        char *target_block, int *offset_p,
+                        double *score_p, char **start_id_p, int *id_len_p,
                         int *lineno) {
 
   int offset = *offset_p;
@@ -138,10 +138,10 @@ static int hex_readline(int len, unsigned char *hex_query_fp,
   (*lineno)++;
   return 0;
 }
-
+#if 0
 typedef struct {
   double *scores;
-  unsigned char **start_ids;
+  char **start_ids;
   int *id_lens;
 } HexScoreData;
 
@@ -154,7 +154,7 @@ static int hex_score_lt(HexScoreData *data, int i, int j) {
 }
 static void hex_score_swap(HexScoreData *data, int i, int j) {
   double tmp_score = data->scores[i];
-  unsigned char *tmp_start_id = data->start_ids[i];
+  char *tmp_start_id = data->start_ids[i];
   int tmp_id_len = data->id_lens[i];
 
   data->scores[i] = data->scores[j];
@@ -234,7 +234,7 @@ int chemfp_hex_tanimoto_block(
                         (chemfp_heapq_swap) hex_score_swap);
   return n;
 }
-
+#endif
 /* Count the number of byte fingerprints which, when intersected with the
    query, have at least min_overlap bits in common */
 
