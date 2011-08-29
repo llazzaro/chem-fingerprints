@@ -5,7 +5,7 @@ import _chemfp
 
 def check_fp_compatibility(query_fp, targets):
     if len(query_fp) != targets.header.num_bytes_per_fp:
-        raise TypeError("Query fingerprint size does not match target library")
+        raise TypeError("Query fingerprint size does not match target arena")
 
 def check_compatibility(queries, targets):
     if queries.header.num_bits != targets.header.num_bits:
@@ -218,7 +218,7 @@ class FingerprintLookup(object):
         start_offset = self._range_check[i] * self._storage_size
         return self._arena[start_offset:start_offset+self._fp_size]
 
-class Library(object):
+class FingerprintArena(object):
     def __init__(self, header, storage_size, arena, popcount_indicies, ids):
         self.header = header
         self.num_bits = header.num_bits
@@ -275,18 +275,18 @@ def reorder_fingerprints(fingerprints):
         fingerprints.arena, 0, -1, ordering, popcounts)
 
     new_ids = [fingerprints.ids[item.index] for item in ordering]
-    return Library(fingerprints.header, fingerprints.storage_size,
-                   new_arena, popcounts.tostring(), new_ids)
+    return FingerprintArena(fingerprints.header, fingerprints.storage_size,
+                            new_arena, popcounts.tostring(), new_ids)
                                 
 
 def knearest_tanimoto_search_fp(query_fp, targets, k, threshold):
-    if not isinstance(query_fp, Library):
+    if not isinstance(query_fp, FingerprintArena):
         raise Spam
     
 
 
 
-def fps_to_library(fps_reader, header=None, sort=True):
+def fps_to_arena(fps_reader, header=None, sort=True):
     if header is None:
         header = fps_reader.header
     num_bits = header.num_bits
@@ -302,8 +302,8 @@ def fps_to_library(fps_reader, header=None, sort=True):
     unsorted_fps.close()
     unsorted_fps = None
 
-    fingerprints = Library(header, header.num_bytes_per_fp,
-                           unsorted_arena, "", ids)
+    fingerprints = FingerprintArena(header, header.num_bytes_per_fp,
+                                    unsorted_arena, "", ids)
 
     if sort:
         return reorder_fingerprints(fingerprints)
