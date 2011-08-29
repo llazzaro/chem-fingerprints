@@ -7,8 +7,10 @@ import _chemfp
 import re
 import sys
 import heapq
+import itertools
 
-from chemfp import bitops
+import chemfp
+from chemfp import fps_search
 import ctypes
 
 from . import search, io
@@ -66,6 +68,8 @@ class FPSReader(object):
         self._block_reader = None
         
     def reset(self):
+        if self._at_start:
+            return
         self._it = None
         if self._seekpos is None:
             raise IOError("ASDFASDF")
@@ -79,29 +83,28 @@ class FPSReader(object):
         return self._block_reader
 
     def _iter_blocks(self):
-        if self._at_start:
-            self._at_start = False
-            if self._first_fp_block is not None:
-                yield self._first_fp_block
-            else:
-                return
-        else:
+        if not self._at_start:
             raise TypeError("Already iterating")
-        for block in _read_blocks(self._infile):
+        
+        self._at_start = False
+
+        if self._first_fp_block is None:
+            return
+        
+        block_stream = _read_blocks(self._infile)
+        yield self._first_fp_block
+        for block in block_stream:
             yield block
 
-    def iter_fingerprints(self):
-        unhexlify = binascii.unhexlify
-        lineno = self._first_fp_lineno
-        expected_hex_len = self._expected_hex_len
-        for block in self.iter_blocks():
-            for line in block.splitlines(True):
-                errcode = _chemfp.fps_line_validate(expected_hex_len, line)
-                if errcode:
-                    raise Exception(errcode, _chemfp.strerror(errcode), line)
-                fields = line.split("\t", 2)
-                yield unhexlify(fields[0]), fields[1]
-                lineno += 1
+    def iter_arenas(self, arena_size = 1000):
+        id_fps = iter(self)
+        while 1:
+            arena = chemfp.load_fingerprints(itertools.islice(id_fps, 0, arena_size),
+                                             header = self.header,
+                                             sort = False)
+            if not arena:
+                break
+            yield arena
         
     def iter_rows(self):
         unhexlify = binascii.unhexlify
@@ -109,12 +112,11 @@ class FPSReader(object):
         expected_hex_len = self._expected_hex_len
         for block in self.iter_blocks():
             for line in block.splitlines(True):
-                errcode = _chemfp.fps_line_validate(expected_hex_len, line)
-                if errcode:
+                err = _chemfp.fps_line_validate(expected_hex_len, line)
+                if err:
+                    XXXX
                     raise Exception(errcode, expected_hex_len, line)
-                fields = line.split("\t")
-                fp = unhexlify(fields[0])
-                yield (fp,) + tuple(fields[1:])
+                yield line.split("\t")
                 lineno += 1
 
     def __iter__(self):
@@ -123,20 +125,30 @@ class FPSReader(object):
         expected_hex_len = self._expected_hex_len
         for block in self.iter_blocks():
             for line in block.splitlines(True):
-                errcode = _chemfp.fps_line_validate(expected_hex_len, line)
-                if errcode:
-                    raise Exception(errcode, _chemfp.strerror(errcode), line)
-                fields = line.split("\t")
-                fp = unhexlify(fields[0])
-                yield fields[1], fp
+                err, id_fp = _chemfp.fps_parse_id_fp(expected_hex_len, line)
+                if err:
+                    # Include the line?
+                    raise _error(err, lineno, self._filename)
+                yield id_fp
                 lineno += 1
 
-    _threshold_tanimoto_search_fp_ = staticmethod(search.threshold_tanimoto_search_fp)
-#    def _tanimoto_knearest_search_batch(self, queries, n, threshold):
-#        return search.block_tanimoto_knearest_search_batch(queries, self, n, threshold)
+    def tanimoto_count_fp(self, query_fp, threshold=0.7):
+        return fps_search.tanimoto_count_fp(query_fp, self, threshold)
 
-#    def _chemfp_tanimoto_count_batch(self, queries, threshold):
-#        return search.block_tanimoto_count_batch(queries, self, threshold)
+    def tanimoto_count_arena(self, query_arena, threshold=0.7):
+        return fps_search.tanimoto_count_arena(query_arena, self, threshold)
+
+    def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
+        return fps_search.threshold_tanimoto_search_fp(query_fp, self, threshold)
+
+    def threshold_tanimoto_search_arena(self, query_arena, threshold=0.7):
+        return fps_search.threshold_tanimoto_search_all(query_arena, self, threshold)
+
+    def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
+        return fps_search.knearest_tanimoto_search_fp(query_fp, self, k, threshold)
+
+    def knearest_tanimoto_search_arena(self, query_arena, k=3, threshold=0.7):
+        return fps_search.knearest_tanimoto_search_all(query_arena, self, k, threshold)
 
 
 # XXX Use Python's warning system
