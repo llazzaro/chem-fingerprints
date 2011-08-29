@@ -10,13 +10,13 @@ import _chemfp
 
 def _fp_to_arena(query_fp, header):
     assert len(query_fp) == header.num_bytes_per_fp
-    from . import library
-    return library.Library(header, len(query_fp), query_fp, "", [None])
+    from . import arena
+    return arena.Library(header, len(query_fp), query_fp, "", [None])
 
 def tanimoto_count_fp(query_fp, target_reader, threshold):
-    return tanimoto_count_all(_fp_to_arena(query_fp, target_reader.header), threshold)[0]
+    return tanimoto_count_arena(_fp_to_arena(query_fp, target_reader.header), threshold)[0]
 
-def tanimoto_count_all(query_arena, target_reader, threshold):
+def tanimoto_count_arena(query_arena, target_reader, threshold):
     counts = array.array("i", (0 for i in xrange(len(query_arena))))
 
     lineno = target_reader._first_fp_lineno
@@ -46,25 +46,26 @@ class TanimotoCell(ctypes.Structure):
 
 
 def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
-    assert query_arena.header.num_bits == target_reader.header.num_bits
+    #assert len(query_fp) == target_reader.num_bytes_per_fp
     hits = []
 
     fp_size = len(query_fp)
-    if target_reader.num_bytes_per_fp != fp_size:
-        ERROR
+#    if target_reader.num_bytes_per_fp != fp_size:
+#        ERROR
     num_bits = fp_size * 8
         
     NUM_CELLS = 1000
-    cells = (TanimotoCell*num_cells)()
+    cells = (TanimotoCell*NUM_CELLS)()
 
     lineno = target_reader._first_fp_lineno
     
     for block in target_reader.iter_blocks():
         start = 0
+        end = len(block)
         while 1:
             err, start, num_lines, num_cells = _chemfp.fps_threshold_tanimoto_search(
                 num_bits, fp_size, query_fp, 0, -1,
-                block, start, -1,
+                block, start, end,
                 threshold, cells)
             lineno += num_lines
             if err:
@@ -148,6 +149,10 @@ def check_num_bits_compatibility(query_arena, target_reader):
         raise TypeError("The query fingerprints have %d bits while the targets have %d" %
                         (num_bits, target_reader.header.num_bits))
     return num_bits
+
+def knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
+    query_arena = _fp_to_arena(query_fp, target_reader.header)
+    return knearest_tanimoto_search_all(query_arena, target_reader, k, threshold)[0]
 
 def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
     num_bits = check_num_bits_compatibility(query_arena, target_reader)
