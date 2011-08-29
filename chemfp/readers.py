@@ -99,7 +99,7 @@ class FPSReader(object):
                 errcode = _chemfp.fps_line_validate(expected_hex_len, line)
                 if errcode:
                     raise Exception(errcode, _chemfp.strerror(errcode), line)
-                fields = line.split(None, 2)
+                fields = line.split("\t", 2)
                 yield unhexlify(fields[0]), fields[1]
                 lineno += 1
         
@@ -112,7 +112,7 @@ class FPSReader(object):
                 errcode = _chemfp.fps_line_validate(expected_hex_len, line)
                 if errcode:
                     raise Exception(errcode, expected_hex_len, line)
-                fields = line.split()
+                fields = line.split("\t")
                 fp = unhexlify(fields[0])
                 yield (fp,) + tuple(fields[1:])
                 lineno += 1
@@ -126,7 +126,7 @@ class FPSReader(object):
                 errcode = _chemfp.fps_line_validate(expected_hex_len, line)
                 if errcode:
                     raise Exception(errcode, _chemfp.strerror(errcode), line)
-                fields = line.split()
+                fields = line.split("\t")
                 fp = unhexlify(fields[0])
                 yield fields[1], fp
                 lineno += 1
