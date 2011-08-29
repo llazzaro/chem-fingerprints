@@ -33,6 +33,9 @@ import __builtin__
 
 from .error_handlers import ChemFPError
 
+_K = 3
+_THRESHOLD = 0.7
+
 def read_structure_fingerprints(type, source=None, format=None):
     from . import types
     return types.read_structure_fingerprints(type, source, format)
@@ -58,7 +61,7 @@ def open_fps(source):
     from . import readers
     return readers.open_fps(source)
 
-def load_library(reader, header=None, sort=True):
+def load_fingerprints(reader, header=None, sort=True):
     if isinstance(reader, basestring):
         reader = open(reader)
     # See if it has its own way to generate an in-memory search library
@@ -70,72 +73,43 @@ def load_library(reader, header=None, sort=True):
     from chemfp import library
     return library.fps_to_library(reader, header=header, sort=sort)
 
-##
+# High-level interface
 
-# Emulate multiple dispatch
+def tanimoto_count(queries, targets, threshold=_THRESHOLD, batch_size=100):
+    if batch_size == 1:
+        for (query_id, query_fp) in queries:
+            targets.reset()
+            yield query_id, targets.tanimoto_count(query_fp, threshold)
+        return
+    
+    for query_arena in queries.iter_arenas(batch_size):
+        targets.reset()
+        results = targets.tanimoto_count_arena(query_arena, threshold)
+        for item in zip(query_arena.ids, results):
+            yield item
+    
 
-# Q is an iterator    ; fine
-# Q,T is an iterator  ; can't do NxM
-#   T is an iterator  ; must 
-#     is an iterator 
+def threshold_tanimoto_search(queries, targets, threshold=_THRESHOLD, batch_size=100):
+    if batch_size == 1:
+        for (query_id, query_fp) in queries:
+            targets.reset()
+            yield query_id, targets.threshold_tanimoto_search_fp(query_fp, threshold)
+        return
+    
+    for query_arena in queries.iter_arenas(batch_size):
+        targets.reset()
+        results = targets.threshold_tanimoto_search_arena(query_arena, threshold)
+        for item in zip(query_arena.ids, results):
+            yield item
 
-# return a list of (id, score) pairs
-# These are called "hits"
+def knearest_tanimoto_search(queries, targets, k=_K, threshold=_THRESHOLD, batch_size=100):
+    if batch_size == 1:
+        for (query_id, query_fp) in queries:
+            targets.reset()
+            yield query_id, targets.threshold_tanimoto_search_fp(query_fp, k, threshold)
 
-def tanimoto_count_fp(query_fp, targets, threshold=0.9):
-    return targets._tanimoto_count_fp_(query_fp, targets, threshold)
-
-
-# Only read the queries once
-# Return a list of (query_id, hits)
-
-def tanimoto_count(queries, targets, threshold=0.9):
-    return targets._tanimoto_count_(queries, targets, threshold)
-
-# Only read the targets once
-# Return a list of (query_id, hits)
-
-def tanimoto_count_once(queries, targets, threshold=0.9):
-    return tanimoto_count_once._tanimoto_count_once_(queries, targets, threshold)
-
-# Must read
-
-def tanimoto_count_self(fingerprints, threshold=0.9):
-    raise NotImplementedError("Someday")
-
-##########
-
-def threshold_tanimoto_search_fp(query_fp, targets, threshold=0.9):
-    return targets._threshold_tanimoto_search_fp_(query_fp, targets, threshold)
-
-def threshold_tanimoto_search(queries, targets, threshold=0.9):
-    """Find all targets at least 'threshold' similar to the query fingerprint
-
-    The 'query' fingerprint string must be in binary representation, not hex.
-    If 'targets' implements '_chemfp_tanimoto_search' then the search is delegated to it
-      as targets._chemfp_tanimoto_search(query, threshold)
-    Otherwise, 'targets' must be iterable, returning binary fingerprint strings.
-    'threshold' is the minimum allowed Tanimoto score and must be between 0.0 and 1.0 .
-
-    """
-    return targets._threshold_tanimoto_search_(queries, targets, threshold)
-
-def threshold_tanimoto_search_once(queries, targets, threshold=0.9):
-    return targets._threshold_tanimoto_search_once_(queries, targets, threshold)
-
-def threshold_tanimoto_search_self(fingerprints, threshold=0.9):
-    raise NotImplementedError("Someday")
-
-##
-
-def knearest_tanimoto_search_fp(query_fp, targets, k=3, threshold=0.9):
-    return targets._knearest_tanimoto_search_fp_(query_fp, targets, k, threshold)
-
-def knearest_tanimoto_search(queries, targets, k=3, threshold=0.9):
-    return targets._knearest_tanimoto_search_(queries, targets, k, threshold)
-
-def knearest_tanimoto_search_once(queries, targets, k=3, threshold=0.9):
-    return targets._knearest_tanimoto_once_(queries, targets, k, threshold)
-
-def knearest_tanimoto_search_self(fingerprints, k=3, threshold=0.9):
-    raise NotImplementedError("Someday")
+    for query_arena in queries.iter_arenas(batch_size):
+        targets.reset()
+        results = targets.threshold_tanimoto_search_arena(query_arena, k, threshold)
+        for item in zip(query_arena.ids, results):
+            yield item
