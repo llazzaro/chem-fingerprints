@@ -76,10 +76,17 @@ def load_fingerprints(reader, header=None, sort=True):
 # High-level interface
 
 def tanimoto_count(queries, targets, threshold=_THRESHOLD, batch_size=100):
+    if batch_size is None:
+        # Then the input is an arena
+        results = targets.tanimoto_count_arena(queries, threshold)
+        for item in zip(queries.ids, results):
+            yield item
+        return
+    
     if batch_size == 1:
         for (query_id, query_fp) in queries:
             targets.reset()
-            yield query_id, targets.tanimoto_count(query_fp, threshold)
+            yield query_id, targets.tanimoto_count_arena(query_fp, threshold)
         return
     
     for query_arena in queries.iter_arenas(batch_size):
@@ -90,6 +97,13 @@ def tanimoto_count(queries, targets, threshold=_THRESHOLD, batch_size=100):
     
 
 def threshold_tanimoto_search(queries, targets, threshold=_THRESHOLD, batch_size=100):
+    if batch_size is None:
+        # Then the input is an arena
+        results = targets.threshold_tanimoto_search_arena(queries, k, threshold)
+        for item in zip(queries.ids, results):
+            yield item
+        return
+    
     if batch_size == 1:
         for (query_id, query_fp) in queries:
             targets.reset()
@@ -103,13 +117,20 @@ def threshold_tanimoto_search(queries, targets, threshold=_THRESHOLD, batch_size
             yield item
 
 def knearest_tanimoto_search(queries, targets, k=_K, threshold=_THRESHOLD, batch_size=100):
+    if batch_size is None:
+        # Then the input is an arena
+        results = targets.knearest_tanimoto_search_arena(queries, k, threshold)
+        for item in zip(queries.ids, results):
+            yield item
+            
     if batch_size == 1:
         for (query_id, query_fp) in queries:
             targets.reset()
-            yield query_id, targets.threshold_tanimoto_search_fp(query_fp, k, threshold)
+            yield query_id, targets.knearest_tanimoto_search_fp(query_fp, k, threshold)
+        return
 
     for query_arena in queries.iter_arenas(batch_size):
         targets.reset()
-        results = targets.threshold_tanimoto_search_arena(query_arena, k, threshold)
+        results = targets.knearest_tanimoto_search_arena(query_arena, k, threshold)
         for item in zip(query_arena.ids, results):
             yield item
