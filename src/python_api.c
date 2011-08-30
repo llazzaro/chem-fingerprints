@@ -367,17 +367,87 @@ bad_counts(int count_size, int num_queries) {
 
 
 /*************** FPS functions  *************/
+static int
+bad_hex_size(int hex_size) {
+  if (hex_size == -1) {
+    return 0;
+  }
+  if (hex_size < 1) {
+    PyErr_SetString(PyExc_TypeError, "hex_size must be positive or -1");
+    return 1;
+  }
+  if (hex_size % 2 != 0) {
+    PyErr_SetString(PyExc_TypeError, "hex_size must be a multiple of 2");
+    return 1;
+  }
+  return 0;
+}
 
 // Is this something I really need? Peering into a block might be better
 static PyObject *
 fps_line_validate(PyObject *self, PyObject *args) {
-  int hex_len, line_len;
+  int hex_size, line_size;
   char *line;
   
-  if (!PyArg_ParseTuple(args, "is#:fps_line_validate", &hex_len, &line, &line_len))
+  if (!PyArg_ParseTuple(args, "is#:fps_line_validate", &hex_size, &line, &line_size))
     return NULL;
-  return PyInt_FromLong(chemfp_fps_line_validate(hex_len, line_len, line));
+  if (bad_hex_size(hex_size))
+    return NULL;
+  return PyInt_FromLong(chemfp_fps_line_validate(hex_size, line_size, line));
 }
+
+/* Extract the binary fingerprint and identifier from the line */
+
+/* This assume only the characters 0-9, A-F and a-f will be used */
+static const int _hex_digit_to_value[] = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /*  0-15 */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 16-31 */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 32-47 */
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, /* 48-63 */
+  0,10,11,12,13,14,15, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 64-79 */
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 80-95 */
+  0,10,11,12,13,14,15};                           /* 96-102 */
+
+static PyObject *
+fps_parse_id_fp(PyObject *self, PyObject *args) {
+  int hex_size, line_size, err, i;
+  char *line;
+  const char *id_start, *id_end;
+  PyObject *fp, *retval;
+  char *s;
+  
+  if (!PyArg_ParseTuple(args, "is#:fps_line_validate", &hex_size, &line, &line_size))
+    return NULL;
+  if (bad_hex_size(hex_size))
+    return NULL;
+
+  if (line_size == 0 || line[line_size-1] != '\n') {
+    return Py_BuildValue("i(ss)", CHEMFP_MISSING_NEWLINE, NULL, NULL);
+  }
+  err = chemfp_fps_find_id(hex_size, line, &id_start, &id_end);
+  if (err != CHEMFP_OK) {
+    return Py_BuildValue("i(ss)", err, NULL, NULL);
+  }
+  if (hex_size == -1) {
+    hex_size = (id_start-line)-1;
+  }
+  fp = PyString_FromStringAndSize(NULL, hex_size/2);
+  if (!fp)
+    return NULL;
+  s = PyString_AS_STRING(fp);
+  for (i=0; i<hex_size; i+=2) {
+    *s++ = ((_hex_digit_to_value[(int)line[i]]<<4)+_hex_digit_to_value[(int)line[i+1]]);
+  }
+
+  retval = Py_BuildValue("i(s#O)", err, id_start, id_end-id_start, fp);
+
+  /* The "O" added a reference which I need to take away */
+  Py_DECREF(fp);
+
+  return retval;
+}
+
+
 
 /* In Python this is
  (err, num_lines_processed) = fps_tanimoto_count(
@@ -719,7 +789,6 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
                         ))
     return NULL;
 
-  printf("Threshold %f\n", threshold);
   if (bad_threshold(threshold) ||
       bad_num_bits(num_bits) ||
       bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
@@ -844,6 +913,8 @@ static PyMethodDef chemfp_methods[] = {
   // FPS
   {"fps_line_validate", fps_line_validate, METH_VARARGS,
    "fps_line_validate (TODO: document)"},
+  {"fps_parse_id_fp", fps_parse_id_fp, METH_VARARGS,
+   "fps_parse_id_fp (TODO: document)"},
 
   {"fps_threshold_tanimoto_search", fps_threshold_tanimoto_search, METH_VARARGS,
    "fps_threshold_tanimoto_search (TODO: document)"},

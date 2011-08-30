@@ -9,10 +9,11 @@
 
 enum {ADD_TO_HEAP, REPLACE_IN_HEAP, MAXED_OUT_HEAP};
 
-/* Internal function to parse a line from the fps block.
-   The line MUST match /[0-9A-Fa-f]+\s\S+.*\n/
-   It MUST be known to end with a newline. */
-static int parse_line(
+/* Internal function to find the id field in an FPS line */
+/* (Which means the fingerprint field is from line to *id_start-1 ) */
+/* The line MUST match /^[0-9A-Fa-f]+\t\S+/ */
+/* REQUIRED: the line MUST end with a newline (this is not checked) */
+int chemfp_fps_find_id(
         int hex_size,  /* The expected length of the hex field, or -1 if unknown
                            (If it's known then it's used to validate.) */
         const char *line,   /* The input line */
@@ -74,7 +75,7 @@ int chemfp_fps_line_validate(int hex_size, int line_size, const char *line_start
   const char *id_start, *id_end;
   if (line_size == 0 || line_start[line_size-1] != '\n')
     return CHEMFP_MISSING_NEWLINE;
-  return parse_line(hex_size, line_start, &id_start, &id_end);
+  return chemfp_fps_find_id(hex_size, line_start, &id_start, &id_end);
 }
 
 #if 0
@@ -103,7 +104,7 @@ int chemfp_fps_tanimoto(int hex_size, char *hex_query,
   }
   while (line < end) {
     /* Parse a line, get the id start position and length, and verify hex_size */
-    err = parse_line(hex_size, line, id_starts, id_lens);
+    err = chemfp_fps_find_id(hex_size, line, id_starts, id_lens);
     if (err < 0)
       goto finish;
     /* The character after the id might be a newline, or there might be other fields */
@@ -153,7 +154,7 @@ int chemfp_fps_tanimoto_count(
   line = target_block;
   while (line < end) {
     /* Parse a line, get the id start position and length, and verify hex_size */
-    err = parse_line(fp_size*2, line, &id_start, &id_end);
+    err = chemfp_fps_find_id(fp_size*2, line, &id_start, &id_end);
     if (err < 0)
       goto finish;
     /* The character after the id might be a newline, or there might be other fields */
@@ -215,7 +216,7 @@ int chemfp_fps_threshold_tanimoto_search(
     if (num_cells < num_queries) {
       goto success;
     }
-    err = parse_line(2*fp_size, line, &id_start, &id_end);
+    err = chemfp_fps_find_id(2*fp_size, line, &id_start, &id_end);
     if (err < 0) {
       retval = err;
       goto finish;
@@ -320,7 +321,7 @@ int chemfp_fps_heap_update_tanimoto(chemfp_fsp_heap *heap,
 
   /* Have not found k elements yet. The array values are still unsorted.  */
   while (line < end) {
-    err = parse_line(hex_size, line, &id_start, &id_end);
+    err = chemfp_fps_find_id(hex_size, line, &id_start, &id_end);
     if (err < 0) {
       heap->size = size;  /* Save in case the error changed after already adding elements */
       goto finish;
@@ -355,7 +356,7 @@ int chemfp_fps_heap_update_tanimoto(chemfp_fsp_heap *heap,
  replace_in_heap:
   /* The heap already has k elements. New hits must replace old ones */
   while (line < end) {
-    err = parse_line(hex_size, line, &id_start, &id_end);
+    err = chemfp_fps_find_id(hex_size, line, &id_start, &id_end);
     if (err < 0)
       goto finish;
     next_line = chemfp_to_next_line(id_end);
@@ -501,7 +502,7 @@ int chemfp_fps_knearest_search_feed(
 
   line = target_block;
   while (line < end) {
-    err = parse_line(query_hex_size, line, &id_start, &id_end);
+    err = chemfp_fps_find_id(query_hex_size, line, &id_start, &id_end);
     if (err < 0) {
       retval = err;
       goto finish;
