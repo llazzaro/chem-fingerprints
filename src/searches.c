@@ -570,11 +570,11 @@ int chemfp_threshold_tanimoto_arena(
   const unsigned char *query_fp, *target_fp;
   int start, end;
   int count;
-  int fp_size = num_bits / 8;
-  double score, popcount_sum;
+  int fp_size = (num_bits+7) / 8;
+  double score;
   int query_popcount, start_target_popcount, end_target_popcount;
   int target_popcount;
-  int intersect_popcount;
+  int intersect_popcount, popcount_sum;
   int result_offset = *result_offsets++;
   
   if (query_start >= query_end) {
@@ -659,8 +659,8 @@ int chemfp_threshold_tanimoto_arena(
     count = 0;
     for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
 	 target_popcount++) {
-      start = target_popcount_indicies[start_target_popcount];
-      end = target_popcount_indicies[end_target_popcount+1];
+      start = target_popcount_indicies[target_popcount];
+      end = target_popcount_indicies[target_popcount+1];
       if (start < target_start) {
 	start = target_start;
       }
@@ -672,9 +672,8 @@ int chemfp_threshold_tanimoto_arena(
       popcount_sum = query_popcount + target_popcount;
       for (target_index = start; target_index < end;
 	   target_index++, target_fp += target_storage_size) {
-	//printf("Testing %d\n", target_index);
 	intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
-	score = intersect_popcount / (popcount_sum - intersect_popcount);
+	score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
 	if (score >= threshold) {
 	  *result_indicies++ = target_index;
 	  *result_scores++ = score;
