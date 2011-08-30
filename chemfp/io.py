@@ -251,7 +251,7 @@ ignore_pipe_errors = _IgnorePipeErrors()
 
 
 def write_fps1_fingerprint(outfile, fp, title):
-    outfile.write("%s %s\n" % (binascii.hexlify(fp), title))
+    outfile.write("%s\t%s\n" % (binascii.hexlify(fp), title))
 
 
 # This is a bit of a hack. If I open a file then I want to close it,
