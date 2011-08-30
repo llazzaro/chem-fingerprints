@@ -70,8 +70,8 @@ def load_fingerprints(reader, header=None, sort=True):
         return f(sort=sort)
 
     # Nope. Use the basic forward-iteration algorithm
-    from chemfp import library
-    return library.fps_to_library(reader, header=header, sort=sort)
+    from chemfp import arena
+    return arena.fps_to_arena(reader, header=header, sort=sort)
 
 # High-level interface
 
