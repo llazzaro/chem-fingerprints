@@ -45,7 +45,7 @@ def tanimoto_count_arena(query_arena, target_arena, threshold):
 
 # Search results stored in a compressed sparse row form
 
-class SearchResultRows(object):
+class SearchHits(object):
     def __init__(self, offsets, indicies, scores, query_ids, target_ids):
         assert len(offsets) > 0
         if offsets:
@@ -72,9 +72,9 @@ class SearchResultRows(object):
         indicies = self.indicies
         scores = self.scores
         start = self.offsets[0]
-        for target_id, end in zip(self.query_ids, self.offsets[1:]):
-            yield target_id, zip((target_ids[index] for index in indicies[start:end]),
-                                 scores[start:end])
+        for end in self.offsets[1:]:
+            yield zip((target_ids[index] for index in indicies[start:end]),
+                      scores[start:end])
             start = end
 
     def iterhits():
@@ -94,7 +94,7 @@ def threshold_tanimoto_search_fp_indicies(query_fp, targets, threshold):
     
     num_cells = len(targets)
     indicies = (ctypes.c_int * num_cells)()
-    offsets = (ctypes.c_double * num_cells)()
+    scores = (ctypes.c_double * num_cells)()
 
     num_added = _chemfp.threshold_tanimoto_arena(
         threshold, num_bits,
@@ -111,10 +111,10 @@ def threshold_tanimoto_search_fp_indicies(query_fp, targets, threshold):
 
 def threshold_tanimoto_search_fp(query_fp, targets, threshold):
     result = threshold_tanimoto_search_fp_indicies(query_fp, targets, threshold)
-    return [(targets.ids[i], score) for (index, score) in result]
+    return [(targets.ids[index], score) for (index, score) in result]
 
 
-def threshold_tanimoto_search(queries, targets, threshold):
+def threshold_tanimoto_search_arena(queries, targets, threshold):
     check_compatibility(queries, targets)
     num_bits = targets.num_bits
 
@@ -127,20 +127,20 @@ def threshold_tanimoto_search(queries, targets, threshold):
     indicies = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
     
-    query_start = 0
-    query_end = len(queries)
+    query_start = queries.start
+    query_end = queries.end
 
 
-    def add_rows(query_start):
+    def add_rows(query_start, offset_start):
         return _chemfp.threshold_tanimoto_arena(
             threshold, num_bits,
             queries.storage_size, queries.arena, query_start, query_end,
             targets.storage_size, targets.arena, targets.start, targets.end,
             targets.popcount_indicies,
-            offsets, query_start,
+            offsets, offset_start, # XXX should query_start=0?
             indicies, scores)
 
-    return _search(query_end, offsets, indicies, scores, add_rows,
+    return _search(query_start, query_end, offsets, indicies, scores, add_rows,
                    queries.ids, targets.ids)
 
 def knearest_tanimoto_search(queries, targets, k, threshold):
@@ -157,16 +157,16 @@ def knearest_tanimoto_search(queries, targets, k, threshold):
     indicies = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
 
-    query_start = 0
-    query_end = len(queries)
+    query_start = queries.start
+    query_end = queries.end
 
-    def add_rows(query_start):
+    def add_rows(query_start, offset_start):
         return _chemfp.klargest_tanimoto_arena(
             k, threshold, num_bits,
             queries.storage_size, queries.arena, query_start, query_end,
             targets.storage_size, targets.arena, targets.start, targets.end,
             targets.popcount_indicies,
-            offsets, query_start,
+            offsets, offset_start,
             indicies, scores)
 
     return _search(query_end, offsets, indicies, scores, add_rows,
@@ -175,19 +175,21 @@ def knearest_tanimoto_search(queries, targets, k, threshold):
 
 # Core of the Tanimoto search routine
 
-def _search(query_end, offsets, indicies, scores, add_rows, query_ids, target_ids):
-    num_added = add_rows(0)
+def _search(query_start, query_end, offsets, indicies, scores,
+            add_rows, query_ids, target_ids):
+    num_added = add_rows(query_start, 0)
     if num_added == query_end:
-        return SearchResultRows(offsets, indicies, scores, query_ids, target_ids)
+        return SearchHits(offsets, indicies, scores, query_ids, target_ids)
 
-    query_start = num_added
+    query_start = query_start + num_added
+    offset_start = num_added
 
     last = offsets[num_added]
     all_indicies = indicies[:last]
     all_scores = scores[:last]
 
     while query_start < query_end:
-        num_added = add_rows(query_start)
+        num_added = add_rows(query_start, offset_start)
         assert num_added > 0
 
         prev_last = offsets[query_start]
@@ -196,7 +198,7 @@ def _search(query_end, offsets, indicies, scores, add_rows, query_ids, target_id
 
         query_start += num_added
 
-    return SearchResultRows(offsets, all_indicies, all_scores, query_ids, target_ids)
+    return SearchHits(offsets, all_indicies, all_scores, query_ids, target_ids)
 
 
 
@@ -297,7 +299,6 @@ import array
 def reorder_fingerprints(fingerprints):
     ordering = (ChemFPOrderedPopcount*len(fingerprints))()
     popcounts = array.array("i", (0,)*(fingerprints.header.num_bits+1))
-    #popcounts = (ctypes.c_int*(fingerprints.header.num_bits+1))()
 
     new_arena = _chemfp.reorder_by_popcount(
         fingerprints.header.num_bits, fingerprints.storage_size,
