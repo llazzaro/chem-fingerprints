@@ -99,7 +99,7 @@ def tanimoto_count(queries, targets, threshold=_THRESHOLD, batch_size=100):
 def threshold_tanimoto_search(queries, targets, threshold=_THRESHOLD, batch_size=100):
     if batch_size is None:
         # Then the input is an arena
-        results = targets.threshold_tanimoto_search_arena(queries, k, threshold)
+        results = targets.threshold_tanimoto_search_arena(queries, threshold)
         for item in zip(queries.ids, results):
             yield item
         return
