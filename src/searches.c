@@ -868,6 +868,7 @@ int chemfp_klargest_tanimoto_arena(
 	target_storage_size, target_arena, target_start, target_end,
 	result_offsets, num_cells, result_indicies, result_scores);
   }
+  result_offset = *result_offsets++;
 
   /* Loop through the query fingerprints */
   query_fp = query_arena + (query_start * query_storage_size);
@@ -882,7 +883,6 @@ int chemfp_klargest_tanimoto_arena(
     query_threshold = threshold;
     query_popcount = chemfp_byte_popcount(fp_size, query_fp);
 
-    result_offset = *result_offsets++;
     if (query_popcount == 0) {
       /* By definition this will never return hits. Even if threshold == 0.0. */
       /* (I considered returning the first k hits, but that's chemically meaninless.) */
@@ -946,7 +946,6 @@ int chemfp_klargest_tanimoto_arena(
 	      // Since we leave the loop early, I need to advance the pointers
 	      target_index++;
 	      target_fp += target_storage_size;
-	      //printf("w00t\n");
 	      goto heap_replace;
 	    }
 	  } /* Added to heap */
@@ -1003,13 +1002,6 @@ int chemfp_klargest_tanimoto_arena(
     result_offset += heap_size;
     *result_offsets++ = result_offset;
     if (heap_size) {
-      // XXX does this do anything?
-      //      memcpy(result_indicies, heap.indicies, heap_size * sizeof(int));
-      //      memcpy(result_scores, heap.scores, heap_size * sizeof(double));
-
-      /* Move the pointers so I can report the next results */
-      //      printf("Adding %d\n", heap_size);
-      //      printf("scores %f %f\n", heap.scores[0], heap.scores[1]);
       result_indicies += heap_size;
       result_scores += heap_size;
       num_cells -= heap_size;
