@@ -69,12 +69,21 @@ _btype_flags = [(OEGetFPBondType(btype), btype) for btype in
                 OEFPBondType_Chiral,
                 OEFPBondType_InRing)]
 
-# Mapping from atype string to flag (includes AtomDefault)
 _atypes = dict(_atype_flags)
 _btypes = dict(_btype_flags)
 
-_atypes["DefaultAtom"] = OEFPAtomType_DefaultAtom
-_btypes["DefaultBond"] = OEFPBondType_DefaultBond
+# I support the DefaultAtom and DefaultBond values but I'm worried
+# that OpenEye will change the composition of those in the future. I
+# talked with Krisztina Boda and she says that that won't change, but
+# I don't necessarily trust future maintainers. To minimize problems,
+# I'll hard-code them the current Default* values.
+
+_atype_flags.insert(0, ("DefaultAtom", 191))
+_atypes["DefaultAtom"] = 191 # OEFPAtomType_DefaultAtom
+
+_btype_flags.insert(0, ("DefaultBond", 3))
+_btypes["DefaultBond"] = 3 # OEFPBondType_DefaultBond
+
 
 ## Go from a "," or "|" separated text field to an integer value
 # Removes extra whitespace, but none should be present.
@@ -118,10 +127,6 @@ def bond_description_to_value(description):
     return _get_type_value("bond", _btypes, description)
 
 ## Go from an integer value into a canonical description
-
-# I could make the final string sorter by using DefaultAtom/
-# DefaultBond but OpenEye might change that value in the future. I
-# think this is slightly safer.
 
 # I could use OEGetFPAtomType() and OEGetFPBondType() but I wanted
 # something which has a fixed sort order even for future releases,
@@ -167,11 +172,11 @@ _maccs_decoders = {"numbits": int,
 
 def decode_path_parameters(parameters):
     assert len(parameters) == len(_maccs_decoders)
-    kwargs = {}
+    fingerprinter_kwargs = {}
     for name, decoder in _maccs_decoders.items():
         value = parameters[name]
-        kwargs[name] = decoder(value)
-    return kwargs
+        fingerprinter_kwargs[name] = decoder(value)
+    return fingerprinter_kwargs
 
 _maccs_encoders = {"numbits": str,
                    "minbonds": str,
@@ -179,11 +184,11 @@ _maccs_encoders = {"numbits": str,
                    "atype": atom_value_to_description,
                    "btype": bond_value_to_description}
 
-def encode_path_parameters(kwargs):
-    assert len(kwargs) == len(_maccs_encoders)
+def encode_path_parameters(fingerprinter_kwargs):
+    assert len(fingerprinter_kwargs) == len(_maccs_encoders)
     parameters = {}
     for name, encoder in _maccs_encoders.items():
-        value = kwargs[name]
+        value = fingerprinter_kwargs[name]
         parameters[name] = encoder(value)
     return parameters
 
@@ -201,6 +206,9 @@ def encode_path_parameters(kwargs):
 # If you need to use these in multiple threads, then make multiple
 # fingerprinters.
 
+# Believe it or not, reusing the preallocated fingerprint measurably
+# helps the performance.
+
 def get_path_fingerprinter(numbits, minbonds, maxbonds, atype, btype):
     # Extra level of error checking since I expect people will think
     # of this as part of the public API.
@@ -211,8 +219,9 @@ def get_path_fingerprinter(numbits, minbonds, maxbonds, atype, btype):
     if not (minbonds <= maxbonds):
         raise TypeError("maxbonds must not be smaller than minbonds")
 
-    # XXX validate the atype and type values? Should just
-    # be a simple bitwise-and and test for 0.
+    # XXX validate the atype and type values?
+    # It's a simple mask against the | of all possible value, then test for 0.
+    # However, I'm not sure what to report as the error message.
     
     fp = OEFingerPrint()
     fp.SetSize(numbits)
@@ -225,11 +234,9 @@ def get_path_fingerprinter(numbits, minbonds, maxbonds, atype, btype):
 
     return path_fingerprinter
 
-# Believe it or not, reusing the preallocated fingerprint does help
-# the performance.
 def get_maccs_fingerprinter():
     fp = OEFingerPrint()
-    # SetSize() now to force space allocation, so I only need one GetData()
+    # Call SetSize() now to force space allocation, so I only need one GetData()
     fp.SetSize(166)
     data_location = int(fp.GetData())
     num_bytes = (166+7)//8
@@ -321,15 +328,21 @@ def _get_format_setter(format=None):
     if format_flag is None:
         raise UnknownFormat(format)
 
-    def _apply_format(ifs):
+    def set_format(ifs):
         ifs.SetFormat(format_flag)
         if is_compressed:
             ifs.Setgz(is_compressed)
-    return _apply_format
+    return set_format
 
-def _open_ifs(filename, _apply_format):
+def _open_ifs(filename, set_format, aromaticity_flavor):
     ifs = oemolistream()
-    _apply_format(ifs)
+    set_format(ifs)
+
+    if aromaticity_flavor is not None:
+        flavor = ifs.GetFlavor(ifs.GetFormat())
+        flavor |= aromaticity_flavor
+        ifs.SetFlavor(ifs.GetFormat(), flavor)
+
     if not ifs.open(filename):
         # Let Python try to do better error reporting.
         open(filename).close()
@@ -344,21 +357,64 @@ def _open_ifs(filename, _apply_format):
 # can be opened (if it exists) and the format is understood. But it
 # can wait until later to actually parse the files.
 
-def read_structures(filename=None, format=None):
+_aromaticity_flags_sorted_data = (
+    ("default", None),
+    ("openeye", OEIFlavor_Generic_OEAroModelOpenEye),
+    ("daylight", OEIFlavor_Generic_OEAroModelDaylight),
+    ("tripos", OEIFlavor_Generic_OEAroModelTripos),
+    ("mdl", OEIFlavor_Generic_OEAroModelMDL),
+    ("mmff", OEIFlavor_Generic_OEAroModelMMFF),
+    )
+_aromaticity_flags = dict(_aromaticity_flags_sorted_data)
+_aromaticity_flag_names = [pair[0] for pair in _aromaticity_flags_sorted_data]
+_aromaticity_flags[None] = None
+del _aromaticity_flags_sorted_data
+
+
+# Part of the code (parameter checking, opening the file) are eager.
+# Actually reading the structures is lazy.
+
+def read_structures(filename=None, format=None, id_tag=None, aromaticity=None):
     # Check that that the format is known
-    _apply_format = _get_format_setter(format)
+    set_format = _get_format_setter(format)
+    try:
+        aromaticity_flag = _aromaticity_flags[aromaticity]
+    except KeyError:
+        raise TypeError("Unsupported aromaticity name %r" % (aromaticity,))
 
     # Input is from a file
     if filename is not None:
-        ifs = _open_ifs(filename, _apply_format)
-        return _iter_structures(ifs)
+        ifs = _open_ifs(filename, set_format, aromaticity_flag)
     else:
         # Input is from stdin
-        return _stdin_check(_apply_format)
+        ifs = _open_stdin(set_format, aromaticity_flag)
 
-def _iter_structures(ifs):
-    for mol in ifs.GetOEGraphMols():
-        yield mol.GetTitle(), mol
+    # Only SD files can take the id_tag
+    if ifs.GetFormat() != OEFormat_SDF:
+        id_tag = None
+
+    # Lazy structure reader
+    return _iter_structures(ifs, id_tag)
+
+def _iter_structures(ifs, id_tag):
+    if id_tag is None:
+        for i, mol in enumerate(ifs.GetOEGraphMols()):
+            id = mol.GetTitle()
+            if not id:
+                id = "Mol_%d" % i
+            yield id, mol
+    else:
+        for i, mol in enumerate(ifs.GetOEGraphMols()):
+            id = OEGetSDData(mol, id_tag)
+            # Use the first line if it's a multi-line value
+            # (this should be rare)
+            if "\n" in id:
+                id = id.splitlines()[0]
+                # (In theory this must have content. I don't trust that.)
+
+            if not id:
+                id = "Mol_%d" % i
+            yield id, mol
 
 # The reason for this is to allow ^C to work if there hasn't yet been
 # any input. Why? When Python calls out to a C++ function it blocks
@@ -369,7 +425,7 @@ def _iter_structures(ifs):
 # reading from stdin, don't dispatch to OEChem until there's input.
 
 _USE_SELECT = True
-def _stdin_check(_apply_format):
+def _open_stdin(set_format, aromaticity_flag, id_flag):
     if _USE_SELECT:
         try:
             select.select([sys.stdin], [], [sys.stdin])
@@ -377,14 +433,21 @@ def _stdin_check(_apply_format):
             raise SystemExit()
     ifs = oemolistream()
     ifs.open()
-    _apply_format(ifs)
-    for mol in ifs.GetOEGraphMols():
-        yield mol.GetTitle(), mol
+    set_format(ifs)
+    
+    if aromaticity is not None:
+        flavor = ifs.GetFlavor(ifs.GetFormat())
+        flavor |= aromaticity_flavor
+        ifs.SetFlavor(ifs.GetFormat(), flavor)
+
+    return ifs
+        
 
 ############# Methods to get the right structure readers
 
-def read_maccs166_fingerprints_v1(source=None, format=None, kwargs={}):
-    assert not kwargs, kwargs
+def read_maccs166_fingerprints_v1(source=None, format=None,
+                                  fingerprinter_kwargs={}, reader_kwargs={}):
+    assert not fingerprinter_kwargs, fingerprinter_kwargs
     # The OEChem interface only handles stdin and filenames
     if not (isinstance(source, basestring) or source is None):
         raise NotImplementedError
@@ -397,13 +460,14 @@ def read_maccs166_fingerprints_v1(source=None, format=None, kwargs={}):
             yield fingerprinter(mol), title
     return read_oechem_maccs_structure_fingerprints()
 
-def read_path_fingerprints_v1(source=None, format=None, kwargs={}):
+def read_path_fingerprints_v1(source=None, format=None,
+                              fingerprinter_kwargs={}, reader_kwargs={}):
     # The OEChem interface only handles stdin and filenames
     if not (isinstance(source, basestring) or source is None):
         raise NotImplementedError
     
-    fingerprinter = get_path_fingerprinter(**kwargs)
-    structure_reader = read_structures(source, format)
+    fingerprinter = get_path_fingerprinter(**fingerprinter_kwargs)
+    structure_reader = read_structures(source, format, **reader_kwargs)
     
     def read_oechem_path_structure_fingerprints():
         for (title, mol) in structure_reader:
@@ -416,23 +480,30 @@ class OpenEyePathFingerprinter_v1(types.Fingerprinter):
     format_string = ("numbits=%(numbits)s minbonds=%(minbonds)s "
                      "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s")
     software = SOFTWARE
-    def __init__(self, kwargs):
-        self.num_bits = kwargs["numbits"]
-        super(OpenEyePathFingerprinter_v1, self).__init__(kwargs)
+    def __init__(self, fingerprinter_kwargs):
+        self.num_bits = fingerprinter_kwargs["numbits"]
+        super(OpenEyePathFingerprinter_v1, self).__init__(fingerprinter_kwargs)
 
     @classmethod
     def from_parameters(cls, parameters):
         return cls(decode_path_parameters(parameters))
 
     def _encode_parameters(self):
-        return encode_path_parameters(self.kwargs)
+        return encode_path_parameters(self.fingerprinter_kwargs)
 
-    _get_reader = staticmethod(read_path_fingerprints_v1)
-
+    @staticmethod
+    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
+        reader_kwargs = {"id_tag": None, "aromaticity": None}
+        reader_kwargs.update(reader_options)
+        return read_path_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
     
 class OpenEyeMACCSFingerprinter_v1(types.Fingerprinter):
     name = "OpenEye-MACCS166/1"
     num_bits = 166
     software = SOFTWARE
 
-    _get_reader = staticmethod(read_maccs166_fingerprints_v1)
+    @staticmethod
+    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
+        reader_kwargs = {"id_tag": None, "aromaticity": None}
+        reader_kwargs.update(reader_options)
+        return read_maccs166_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)

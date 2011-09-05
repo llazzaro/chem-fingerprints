@@ -108,8 +108,8 @@ def get_fingerprint_family(name):
 class Fingerprinter(object):
     format_string = None
     software = None
-    def __init__(self, kwargs):
-        self.kwargs = kwargs
+    def __init__(self, fingerprinter_kwargs):
+        self.fingerprinter_kwargs = fingerprinter_kwargs
         # Some self-test code to make sure preconditions are met
         # This means they must be set before calling super().__init__
         if getattr(self, "name", None) is None:
@@ -132,22 +132,21 @@ class Fingerprinter(object):
     # Subclasses may hook into this
     def _encode_parameters(self):
         # Assume they can be interpreted directly in the format_string
-        return self.kwargs
+        return self.fingerprinter_kwargs
 
     def get_type(self):
         if self.format_string is None:
-            if self.kwargs:
-                assert not kwargs, self
+            assert self.fingerprinter_kwargs, self # XXX huh?
             return self.name
         encoded = self.format_string % self._encode_parameters()
         return self.name + " " + encoded
 
     # Subclasses must hook into this
-    def _get_reader(self, source, format, kwargs):
+    def _get_reader(self, source, format, fingerprinter_kwargs, reader_options):
         raise NotImplementedError
     
-    def read_structure_fingerprints(self, source, format=None):
-        reader = self._get_reader(source, format, self.kwargs)
+    def read_structure_fingerprints(self, source, format=None, reader_options={}):
+        reader = self._get_reader(source, format, self.fingerprinter_kwargs, reader_options)
 
         source_filename = io.get_filename(source)
         return io.FPIterator(io.Header(num_bits = self.num_bits,

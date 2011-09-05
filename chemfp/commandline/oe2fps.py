@@ -78,7 +78,16 @@ substruct_group.add_argument(
 rdmaccs_group = parser.add_argument_group("ChemFP version of the 166 bit RDKit/MACCS keys")
 rdmaccs_group.add_argument(
     "--rdmaccs", action="store_true", help="generate 166 bit RDKit/MACCS fingerprints")
-    
+
+parser.add_argument(
+    "--aromaticity", metavar="NAME", choices=oe._aromaticity_flag_names,
+    default="default",
+    help="use the named aromaticity model")
+
+parser.add_argument(
+    "--id-tag", metavar="NAME",
+    help="tag name containing the record id  (SD files only)")
+
 parser.add_argument(
     "--in", metavar="FORMAT", dest="format",
     help="input structure format (default guesses from filename)")
@@ -134,7 +143,9 @@ def main(args=None):
 
     # Ready the input reader/iterator
     try:
-        reader = opener.read_structure_fingerprints(args.filename, args.format)
+        reader = opener.read_structure_fingerprints(args.filename, args.format,
+                                                    dict(aromaticity = args.aromaticity,
+                                                         id_tag = args.id_tag))
     except (IOError, oe.UnknownFormat), err:
         sys.stderr.write("Cannot read structure fingerprints: %s\n" % err)
         raise SystemExit(1)
