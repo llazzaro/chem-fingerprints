@@ -401,7 +401,7 @@ def _iter_structures(ifs, id_tag):
         for i, mol in enumerate(ifs.GetOEGraphMols()):
             id = mol.GetTitle()
             if not id:
-                id = "Mol_%d" % i
+                id = "Record_%d" % (i+1)
             yield id, mol
     else:
         for i, mol in enumerate(ifs.GetOEGraphMols()):
@@ -453,7 +453,7 @@ def read_maccs166_fingerprints_v1(source=None, format=None,
         raise NotImplementedError
 
     fingerprinter = get_maccs_fingerprinter()
-    structure_reader = read_structures(source, format)
+    structure_reader = read_structures(source, format, **reader_kwargs)
 
     def read_oechem_maccs_structure_fingerprints():
         for (title, mol) in structure_reader:
