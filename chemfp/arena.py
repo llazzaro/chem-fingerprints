@@ -48,9 +48,6 @@ def tanimoto_count_arena(query_arena, target_arena, threshold):
 class SearchHits(object):
     def __init__(self, offsets, indicies, scores, query_ids, target_ids):
         assert len(offsets) > 0
-        if offsets:
-            assert indicies[offsets[-2]]
-            assert scores[offsets[-2]]
         self.offsets = offsets
         self.indicies = indicies
         self.scores = scores
@@ -143,7 +140,7 @@ def threshold_tanimoto_search_arena(queries, targets, threshold):
     return _search(query_start, query_end, offsets, indicies, scores, add_rows,
                    queries.ids, targets.ids)
 
-def knearest_tanimoto_search(queries, targets, k, threshold):
+def knearest_tanimoto_search_arena(queries, targets, k, threshold):
     check_compatibility(queries, targets)
     num_bits = queries.header.num_bits
 
@@ -169,7 +166,7 @@ def knearest_tanimoto_search(queries, targets, k, threshold):
             offsets, offset_start,
             indicies, scores)
 
-    return _search(query_end, offsets, indicies, scores, add_rows,
+    return _search(query_start, query_end, offsets, indicies, scores, add_rows,
                    queries.ids, targets.ids)
 
 
@@ -285,10 +282,10 @@ class FingerprintArena(object):
         return threshold_tanimoto_search_arena(query_arena, self, threshold)
 
     def knearest_tanimoto_search_fp(self, query_fp, k=_K, threshold=_THRESHOLD):
-        return threshold_tanimoto_search_fp(query_fp, self, k, threshold)
+        return knearest_tanimoto_search_fp(query_fp, self, k, threshold)
 
     def knearest_tanimoto_search_arena(self, query_arena, k=_K, threshold=_THRESHOLD):
-        return threshold_tanimoto_search_arena(query_arena, self, k, threshold)
+        return knearest_tanimoto_search_arena(query_arena, self, k, threshold)
 
 
 class ChemFPOrderedPopcount(ctypes.Structure):
@@ -308,12 +305,6 @@ def reorder_fingerprints(fingerprints):
     return FingerprintArena(fingerprints.header, fingerprints.storage_size,
                             new_arena, popcounts.tostring(), new_ids)
                                 
-
-def knearest_tanimoto_search_fp(query_fp, targets, k, threshold):
-    if not isinstance(query_fp, FingerprintArena):
-        raise Spam
-    
-
 
 
 def fps_to_arena(fps_reader, header=None, sort=True):
