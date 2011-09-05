@@ -3,6 +3,7 @@ import chemfp
 import math
 from chemfp import argparse, readers, io, SOFTWARE
 import sys
+import itertools
 
 def write_simsearch_magic(outfile):
     outfile.write("#Simsearch/1\n")
@@ -19,53 +20,38 @@ def write_simsearch_header(outfile, d):
     outfile.writelines(lines)
 
 
-def report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_formatter, outfile):
-    format_string = float_formatter + " %s"
-    k = args.k_nearest
-    threshold = args.threshold
-    batch_size = args.batch_size
+def report_threshold(outfile, query_arenas, targets, threshold):
+    def search_function(query_arena):
+        return chemfp.threshold_tanimoto_search(query_arena, targets,
+                                                threshold=threshold)
+    _report_search(outfile, query_arenas, search_function)
+
+def report_knearest(outfile, query_arenas, targets, k, threshold):
+    def search_function(query_arena):
+        return chemfp.knearest_tanimoto_search(query_arena, targets,
+                                               k=k, threshold=threshold)
+    _report_search(outfile, query_arenas, search_function)
+
+def _report_search(outfile, query_arenas, search_function):
+    for query_arena in query_arenas:
+        for query_id, hits in search_function(query_arena):
+            outfile.write("%d\t%s" % (len(hits), query_id))
+            for hit in hits:
+                outfile.write("\t%s\t%f" % hit)
+            outfile.write("\n") # XXX flush?
     
-    first_time = True
-    while 1:
-        if not first_time:
-            targets.reset()
-        else:
-            first_time = False
-            
-        results = chemfp.tanimoto_knearest_search_batch(batch_fps, targets, k, threshold)
-            
-        for query_id, closest_targets in zip(batch_ids, results):
-            fields = ["%d %s" % (len(closest_targets), query_id)]
-            for (target_name, score) in closest_targets:
-                fields.append(format_string % (score, target_name))
-            outfile.write(" ".join(fields))
-            outfile.write("\n") # XX flush
 
-        batch_ids, batch_fps = read_batch(batch_size, query_iter)
-        if not batch_ids:
-            break
 
-def report_counts(query_iter, batch_ids, batch_fps, targets, args, outfile):
-    threshold = args.threshold
-    batch_size = args.batch_size
-
-    first_time = True
-    while 1:
-        if not first_time:
-            targets.reset()
-        else:
-            first_time = False
-            
-        results = chemfp.tanimoto_count_batch(batch_fps, targets, threshold)
-            
-        for count, query_id in zip(results, batch_ids):
-            outfile.write("%d %s\n" % (count, query_id))
-
-        batch_ids, batch_fps = read_batch(batch_size, query_iter)
-        if not batch_ids:
-            break
+def report_counts(outfile, query_arenas, targets, threshold):
+    for query_arena in query_arenas:
+        results = chemfp.count_tanimoto_hits(query_arena, targets, threshold)
+        for query_id, hit_count in results:
+            outfile.write("%d\t%s\n" % (hit_count, query_id))
         
-
+def int_or_all(s):
+    if s == "all":
+        return s
+    return int(s)
 
 # the "2fps" options need a way to say "get the options from --reference"
 # ob2fps --reference targets.fps | simsearch -k  5 --threshold 0.5 targets.fps
@@ -73,12 +59,14 @@ def report_counts(query_iter, batch_ids, batch_fps, targets, args, outfile):
 
 parser = argparse.ArgumentParser(
     description="Search an FPS file for similar fingerprints")
-parser.add_argument("-k" ,"--k-nearest", help="select the k nearest neighbors",
-                    default=3, type=int)
+parser.add_argument("-k" ,"--k-nearest", help="select the k nearest neighbors (use 'all' for all neighbors)",
+                    default=3, type=int_or_all)
 parser.add_argument("-t" ,"--threshold", help="minimum similarity score threshold",
                     default=0.0, type=float)
 parser.add_argument("-q", "--queries", help="filename containing the query fingerprints")
 parser.add_argument("--hex-query", help="query in hex")
+parser.add_argument("--query-id", default="query",
+                    help="id for the hex query")
 parser.add_argument("--in", metavar="FORMAT", dest="query_format",
                     help="input query format (default uses the file extension, else 'fps')")
 parser.add_argument("-o", "--output", metavar="FILENAME",
@@ -90,9 +78,9 @@ parser.add_argument("-c", "--count", help="report counts", action="store_true")
 parser.add_argument("-b", "--batch-size", help="batch size",
                     default=100, type=int)
 
-parser.add_argument("--file-scan", help="search directly from the input FPS file",
+parser.add_argument("--scan", help="scan the file to find matches (low memory overhead)",
                     action="store_true")
-parser.add_argument("--in-memory", help="use an in-memory fingerprint search",
+parser.add_argument("--memory", help="build and search an in-memory data structure (faster for multiple queries)",
                     action="store_true")
 
 parser.add_argument("--times", help="report load and execution times to stderr",
@@ -104,35 +92,41 @@ parser.add_argument("target_filename", nargs=1, help="target filename", default=
 #parser.add_argument("-j", "--jobs", help="number of jobs ",
 #                    default=10, type=int)
 
-def read_batch(batch_size, queries):
-    if batch_size <= 0:
-        return [], []
-    batch_size -= 1
-    batch_fps = []
-    batch_ids = []
-    for i, query in enumerate(queries):
-        batch_fps.append(query[0])
-        batch_ids.append(query[1])
-        if i == batch_size:
-            break
-
-    return batch_ids, batch_fps
-
 
 def main(args=None):
     args = parser.parse_args(args)
     target_filename = args.target_filename[0]
     threshold = args.threshold
 
-    if args.file_scan and args.in_memory:
-        args.error("Cannot specify both --file-scan and --in-memory")
+    if args.scan and args.memory:
+        parser.error("Cannot specify both --scan and --memory")
     
     if args.hex_query and args.queries:
-        args.error("Cannot specify both --hex-query and --queries")
+        parser.error("Cannot specify both --hex-query and --queries")
+    if args.hex_query:
+        query_id = args.query_id
+        for c, name in ( ("\t", "tab"),
+                         ("\n", "newline"),
+                         ("\0", "NUL")):
+            if c in query_id:
+                parser.error("--query-id must not contain the %s character" %
+                             (name,))
+            
 
-    batch_size = args.batch_size # args.batch_size
+    if args.k_nearest == "all":
+        pass
+    elif args.k_nearest < 0:
+        parser.error("--k-nearest must non-negative or 'all'")
 
-    # Open the file. This reads just enough to get the header.
+    if not (0.0 <= args.threshold <= 1.0):
+        parser.error("--threshold must be between 0.0 and 1.0, inclusive")
+
+    if args.batch_size < 1:
+        parser.error("--batch-size must be positive")
+
+    batch_size = args.batch_size
+
+    # Open the target file. This reads just enough to get the header.
 
     try:
         targets = chemfp.open(target_filename, type=args.type)
@@ -141,28 +135,28 @@ def main(args=None):
             parser.error("--type is required to convert structure in the targets file to fingerprints")
         raise
             
-    type = targets.header.type
-
     if args.hex_query is not None:
         try:
-            query = args.hex_query.decode("hex")
+            query_fp = args.hex_query.decode("hex")
         except ValueError, err:
-            args.error("--hex-query is not a hex string: %s" % (err,))
-        query_iter = iter( [(query, "Query1")] )
-        queries = io.FPIterator(io.Header(num_bits = len(query) * 8), query_iter)
+            parser.error("--hex-query is not a hex string: %s" % (err,))
+        compatible = io.check_compatibility(fp=query_fp, header=targets.header)
 
-    elif args.queries is not None:
-        queries = chemfp.open(args.queries, format=args.query_format, type=type)
+        query_num_bits = len(query_fp) * 8
+        target_num_bits = targets.header.num_bits
+        
+        if not compatible:
+            parser.error("--hex-query with %d bits is not compatible with targets with %d bits" %
+                         (query_num_bits, target_num_bits))
+        
+        queries = chemfp.Fingerprints([(query_id, query_fp)],
+                                      io.Header(num_bits=target_num_bits))
+
     else:
-        queries = chemfp.open(None, format=args.query_format, type=type)
+        queries = chemfp.open(args.queries, format=args.query_format, type=type)        
 
-    query_iter = iter(queries)
-
-    # See if there's enough queries to justify reading the targets into memory
-    batch_ids, batch_fps = read_batch(batch_size, query_iter)
-    if not batch_ids:
-        return
-
+    query_arena_iter = queries.iter_arenas(batch_size)
+    
     # Suppose you have a 4K fingerprint.
     #   1/4096 = 0.000244140625.
     #   2/4096 = 0.00048828125
@@ -180,35 +174,25 @@ def main(args=None):
     import time
     t1 = time.time()
 
-    # Looks like in-memory is about 5x faster (500 structures)
+    first_query_arena = None
+    for first_query_arena in query_arena_iter:
+        break
 
-    ## Estimate about 10 is the tradeoff, but these are bad numbers.
-    # fps_reader:
-    #   1  1.6
-    #   6  5.4
-    #  12 10.1
-    #  19 15.4
-    # in_memory
-    #   1  3.3  (0.03 in search)
-    #   6  3.8 (0.4 for search)
-    #  12  7.1 (1.0 for search)
-    #  19  5.2 (1.8 for search)
-
-    # In my testing, using the FPS reader is much faster than an
-    # in-memory search for 1 structure. The breakeven point is around
-    # 6 input structures.
-
-    if args.file_scan:
-        use_in_memory = False
-    elif args.in_memory:
-        use_in_memory = True
-    elif (len(batch_ids) <= 6 and batch_size > 6):
-        use_in_memory = False
+    if args.scan:
+        # Leave the targets as-is
+        pass
+    elif args.memory:
+        targets = chemfp.load_fingerprints(targets)
+    if not first_query_arena:
+        # No input. Leave as-is
+        pass
+    elif len(first_query_arena) < min(10, batch_size):
+        # Figure out the optimal search. If there is a
+        # small number of inputs (< ~10) then a scan
+        # of the FPS file is faster than an arena search.
+        pass
     else:
-        use_in_memory = True
-
-    if use_in_memory:
-        targets = chemfp.read_into_memory(targets)
+        targets = chemfp.load_fingerprints(targets)
 
     if queries.header.num_bits is not None and targets.header.num_bits is not None:
         if queries.header.num_bits != targets.header.num_bits:
@@ -240,11 +224,22 @@ def main(args=None):
             "query_source": queries.header.source,
             "target_source": targets.header.source})
 
-        if args.count:
-            report_counts(query_iter, batch_ids, batch_fps, targets, args, outfile)
-        else:
-            report_knearest(query_iter, batch_ids, batch_fps, targets, args, float_formatter, outfile)
+        if first_query_arena:
+            query_arenas = itertools.chain([first_query_arena],
+                                           query_arena_iter)
 
+            if args.count:
+                report_counts(outfile, query_arenas, targets,
+                              threshold = args.threshold)
+            elif args.k_nearest == "all":
+                report_threshold(outfile, query_arenas, targets,
+                                 threshold = args.threshold)
+            else:
+                report_knearest(outfile, query_arenas, targets,
+                                k = args.k_nearest,
+                                threshold = args.threshold)
+                
+                    
     t3 = time.time()
     if args.times:
         sys.stderr.write("open %.2f search %.2f total %.2f\n" % (t2-t1, t3-t2, t3-t1))
