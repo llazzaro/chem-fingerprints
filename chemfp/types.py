@@ -136,7 +136,7 @@ class Fingerprinter(object):
 
     def get_type(self):
         if self.format_string is None:
-            assert self.fingerprinter_kwargs, self # XXX huh?
+            #assert self.fingerprinter_kwargs, self # XXX huh?
             return self.name
         encoded = self.format_string % self._encode_parameters()
         return self.name + " " + encoded
@@ -153,7 +153,8 @@ class Fingerprinter(object):
                                        source = source_filename,
                                        software = self.software,
                                        type = self.get_type(),
-                                       date = io.utcnow()),
+                                       date = io.utcnow(),
+                                       aromaticity = reader_options.get("aromaticity", None)),
                              reader)
     def describe(self, bitno):
         if 0 <= bitno < self.num_bits:
@@ -184,6 +185,6 @@ def parse_type(type):
     return family.from_parameters(parameters)
 
 
-def read_structure_fingerprints(type, source=None, format=None):
+def read_structure_fingerprints(type, source=None, format=None, options={}):
     structure_fingerprinter = parse_type(type)
-    return structure_fingerprinter.read_structure_fingerprints(source, format)
+    return structure_fingerprinter.read_structure_fingerprints(source, format, options)
