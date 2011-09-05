@@ -22,13 +22,14 @@ def check_compatibility(fp, header):
 
 class Header(object):
     def __init__(self, num_bits=None, software=None, type=None,
-                 source=None, date=None):
+                 source=None, date=None, aromaticity=None):
         assert num_bits is None or isinstance(num_bits, int)
         self.num_bits = num_bits
         self.software = software
         self.type = type
         self.source = source
         self.date = date
+        self.aromaticity = aromaticity
 
     @property
     def num_bytes_per_fp(self):
@@ -240,6 +241,9 @@ def write_fps1_header(outfile, header):
 
     if header.date is not None:
         lines.append("#date=" + header.date.encode("ascii")+"\n") # date cannot contain non-ASCII characters
+
+    if header.aromaticity is not None:
+        lines.append("#aromaticity=%s\n" % header.aromaticity.encode("ascii"))
         
     outfile.writelines(lines)
 
