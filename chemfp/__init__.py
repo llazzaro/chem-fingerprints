@@ -30,15 +30,16 @@ SOFTWARE = "chemfp/" + __version__
 
 import os
 import __builtin__
+import itertools
 
 from .error_handlers import ChemFPError
 
 _K = 3
 _THRESHOLD = 0.7
 
-def read_structure_fingerprints(type, source=None, format=None):
+def read_structure_fingerprints(type, source=None, format=None, options={}):
     from . import types
-    return types.read_structure_fingerprints(type, source, format)
+    return types.read_structure_fingerprints(type, source, format, options)
     
 # Low-memory, forward-iteration, or better
 def open(source, format=None, type=None):
@@ -75,7 +76,7 @@ def load_fingerprints(reader, header=None, sort=True):
 
 # High-level interface
 
-def tanimoto_count(queries, targets, threshold=_THRESHOLD, batch_size=100):
+def count_tanimoto_hits(queries, targets, threshold=_THRESHOLD, batch_size=100):
     if batch_size is None:
         # Then the input is an arena
         results = targets.tanimoto_count_arena(queries, threshold)
@@ -134,3 +135,22 @@ def knearest_tanimoto_search(queries, targets, k=_K, threshold=_THRESHOLD, batch
         results = targets.knearest_tanimoto_search_arena(query_arena, k, threshold)
         for item in zip(query_arena.ids, results):
             yield item
+
+class Fingerprints(object):
+    def __init__(self, id_fp_pairs, header):
+        self._id_fp_pairs = id_fp_pairs
+        self.header = header # should I auto-guess based on the size? XXX
+    def __iter__(self):
+        yield iter(self._id_fp_pairs)
+    def __len__(self):
+        return len(self._id_fp_pairs)
+
+    def iter_arenas(self, batch_size):
+        ### Not an arena
+        it = iter(self._id_fp_pairs)
+        while 1:
+            slice = itertools.islice(it, 0, batch_size)
+            arena = load_fingerprints(slice, self.header, sort=False)
+            if not arena:
+                break
+            yield arena
