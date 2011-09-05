@@ -10,6 +10,16 @@ from datetime import datetime
 def utcnow():
     return datetime.utcnow().isoformat().split(".", 1)[0]
 
+def check_compatibility(fp, header):
+    if header.num_bits is None:
+        raise TypeError("Missing header num_bits")
+    # 0 -> 0
+    # 1 -> 1-8
+    # 2 -> 9-16
+    if header.num_bits == 0:
+        return len(fp) == 0
+    return (header.num_bits+7)//8 == len(fp)
+
 class Header(object):
     def __init__(self, num_bits=None, software=None, type=None,
                  source=None, date=None):
