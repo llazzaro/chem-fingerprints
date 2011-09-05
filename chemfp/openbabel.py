@@ -9,6 +9,7 @@ import sys
 import os
 import struct
 import warnings
+import itertools
 
 import sys
 import openbabel as ob
@@ -207,8 +208,8 @@ def _get_ob_error(log):
     msgs = log.GetMessagesOfLevel(ob.obError)
     return "".join(msgs)
 
-def read_structures(filename=None, format=None):
-    """read_structures(filename, format) -> (title, OBMol) iterator 
+def read_structures(filename=None, format=None, id_tag=None):
+    """read_structures(filename, format) -> (id, OBMol) iterator 
     
     Iterate over structures from filename, returning the structure
     title and OBMol for each record. The structure is assumed to be
@@ -237,37 +238,39 @@ def read_structures(filename=None, format=None):
         if not os.path.exists("/dev/stdin"):
             raise TypeError("Unable to read from stdin on this platform")
 
-        return _stdin_reader(obconversion, obmol)
+        success = _open_stdin(obconversion, obmol)
 
-    # Deal with OpenBabel's logging
-    if HAS_ERROR_LOG:
-        ob.obErrorLog.ClearLog()
-        lvl = ob.obErrorLog.GetOutputLevel()
-        ob.obErrorLog.SetOutputLevel(-1) # Suppress messages to stderr
+    else:
+        
+        # Deal with OpenBabel's logging
+        if HAS_ERROR_LOG:
+            ob.obErrorLog.ClearLog()
+            lvl = ob.obErrorLog.GetOutputLevel()
+            ob.obErrorLog.SetOutputLevel(-1) # Suppress messages to stderr
 
-    success = obconversion.ReadFile(obmol, filename)
+        success = obconversion.ReadFile(obmol, filename)
 
-    errmsg = None
-    if HAS_ERROR_LOG:
-        ob.obErrorLog.SetOutputLevel(lvl) # Restore message level
-        if ob.obErrorLog.GetErrorMessageCount():
-            errmsg = _get_ob_error(ob.obErrorLog)
+        errmsg = None
+        if HAS_ERROR_LOG:
+            ob.obErrorLog.SetOutputLevel(lvl) # Restore message level
+            if ob.obErrorLog.GetErrorMessageCount():
+                errmsg = _get_ob_error(ob.obErrorLog)
 
-    if not success:
-        # Either there was an error or there were no structures.
-        open(filename).close() # Make sure the file can be opened for reading
+        if not success:
+            # Either there was an error or there were no structures.
+            open(filename).close() # Make sure the file can be opened for reading
 
-        # If I get here then the file exists and is readable.
+            # If I get here then the file exists and is readable.
 
-        # If there was an error message then use it.
-        if errmsg is not None:
-            # Okay, don't know what's going on. Report OB's error
-            raise IOError(5, errmsg, filename)
+            # If there was an error message then use it.
+            if errmsg is not None:
+                # Okay, don't know what's going on. Report OB's error
+                raise IOError(5, errmsg, filename)
 
     # We've opened the file. Switch to the iterator.
-    return _file_reader(obconversion, obmol, success)
+    return _file_reader(obconversion, obmol, success, id_tag)
 
-def _stdin_reader(obconversion, obmol):
+def _open_stdin(obconversion, obmol):
     "This is an internal function"
     # Read structures from stdin.
 
@@ -292,26 +295,46 @@ def _stdin_reader(obconversion, obmol):
         raise SystemExit()
 
     # There's data. Pass parsing control into OpenBabel.
-    notatend = obconversion.ReadFile(obmol, "/dev/stdin")
-    return _file_reader(obconversion, obmol, notatend)
+    return obconversion.ReadFile(obmol, "/dev/stdin")
 
-def _file_reader(obconversion, obmol, notatend):
-    i = 1
-    while notatend:
-        title = obmol.GetTitle()
-        if not title:
-            title = "Record" + str(i)
-        yield title, obmol
-        i += 1
-        obmol.Clear()
-        notatend = obconversion.Read(obmol)
-        # How do I detect if the input contains a failure?
+def _file_reader(obconversion, obmol, success, id_tag):
+    # How do I detect if the input contains a failure?
+    if id_tag is None:
+        for i in itertools.count(1):
+            if not success:
+                break
+            id = obmol.GetTitle()
+            if not id:
+                id = "Record_%d" % i
+
+            yield id, obmol
+            obmol.Clear()
+            success = obconversion.Read(obmol)
+
+    else:
+        for i in itertools.count(1):
+            if not success:
+                break
+        
+            obj = obmol.GetData(id_tag)
+            if obj is None:
+                id = "Record_%d" % i
+            else:
+                id = obj.GetValue()
+                if "\n" in id:
+                    id = id.splitlines()[0]
+                if not id:
+                    id = "Record_%d" % i
+            
+            yield id, obmol
+            obmol.Clear()
+            success = obconversion.Read(obmol)
 
 ########
-def read_fp2_fingerprints_v1(source, format, kwargs={}):
-    assert not kwargs
+def read_fp2_fingerprints_v1(source, format, fingerprinter_kwargs={}, reader_kwargs={}):
+    assert not fingerprinter_kwargs
     fingerprinter = calc_FP2
-    reader = read_structures(source, format)
+    reader = read_structures(source, format, **reader_kwargs)
 
     def read_openbabel_fp2_structure_fingerprints():
         for (title, mol) in reader:
@@ -319,10 +342,10 @@ def read_fp2_fingerprints_v1(source, format, kwargs={}):
 
     return read_openbabel_fp2_structure_fingerprints()
 
-def read_fp3_fingerprints_v1(source, format, kwargs={}):
-    assert not kwargs
+def read_fp3_fingerprints_v1(source, format, fingerprinter_kwargs={}):
+    assert not fingerprinter_kwargs
     fingerprinter = calc_FP3
-    reader = read_structures(source, format)
+    reader = read_structures(source, format, **reader_kwargs)
 
     def read_openbabel_fp3_structure_fingerprints():
         for (title, mol) in reader:
@@ -330,10 +353,10 @@ def read_fp3_fingerprints_v1(source, format, kwargs={}):
 
     return read_openbabel_fp3_structure_fingerprints()
 
-def read_fp4_fingerprints_v1(source, format, kwargs={}):
-    assert not kwargs
+def read_fp4_fingerprints_v1(source, format, fingerprinter_kwargs={}):
+    assert not fingerprinter_kwargs
     fingerprinter = calc_FP4
-    reader = read_structures(source, format)
+    reader = read_structures(source, format, **reader_kwargs)
 
     def read_openbabel_fp4_structure_fingerprints():
         for (title, mol) in reader:
@@ -341,13 +364,13 @@ def read_fp4_fingerprints_v1(source, format, kwargs={}):
 
     return read_openbabel_fp4_structure_fingerprints()
 
-def read_maccs166_fingerprints_v1(source, format, kwargs={}):
+def read_maccs166_fingerprints_v1(source, format, fingerprinter_kwargs={}):
     assert HAS_MACCS
     assert MACCS_VERSION == 1
         
-    assert not kwargs
+    assert not fingerprinter_kwargs
     fingerprinter = calc_MACCS
-    reader = read_structures(source, format)
+    reader = read_structures(source, format, **reader_kwargs)
 
     def read_openbabel_maccs166_structure_fingerprints():
         for (title, mol) in reader:
@@ -355,13 +378,13 @@ def read_maccs166_fingerprints_v1(source, format, kwargs={}):
 
     return read_openbabel_maccs166_structure_fingerprints()
 
-def read_maccs166_fingerprints_v2(source, format, kwargs={}):
+def read_maccs166_fingerprints_v2(source, format, fingerprinter_kwargs={}):
     assert HAS_MACCS
     assert MACCS_VERSION == 2
         
-    assert not kwargs
+    assert not fingerprinter_kwargs
     fingerprinter = calc_MACCS
-    reader = read_structures(source, format)
+    reader = read_structures(source, format, **reader_kwargs)
 
     def read_openbabel_maccs166_structure_fingerprints():
         for (title, mol) in reader:
@@ -377,25 +400,41 @@ class _OpenBabelFingerprinter(types.Fingerprinter):
 class OpenBabelFP2Fingerprinter_v1(_OpenBabelFingerprinter):
     name = "OpenBabel-FP2/1"
     num_bits = 1021
-    _get_reader = staticmethod(read_fp2_fingerprints_v1)
+    @staticmethod
+    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
+        reader_kwargs = {"id_tag": None}
+        reader_kwargs.update(reader_options)
+        return read_fp2_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
 
 class OpenBabelFP3Fingerprinter_v1(_OpenBabelFingerprinter):
     name = "OpenBabel-FP3/1"
     num_bits = 55
-    _get_reader = staticmethod(read_fp3_fingerprints_v1)
+    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
+        reader_kwargs = {"id_tag": None}
+        reader_kwargs.update(reader_options)
+        return read_fp3_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
 
 class OpenBabelFP4Fingerprinter_v1(_OpenBabelFingerprinter):
     name = "OpenBabel-FP4/1"
     num_bits = 307
-    _get_reader = staticmethod(read_fp4_fingerprints_v1)
+    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
+        reader_kwargs = {"id_tag": None}
+        reader_kwargs.update(reader_options)
+        return read_fp4_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
 
 
 class OpenBabelMACCSFingerprinter_v1(_OpenBabelFingerprinter):
     name = "OpenBabel-MACCS/1"
     num_bits = 166
-    _get_reader = staticmethod(read_maccs166_fingerprints_v1)
+    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
+        reader_kwargs = {"id_tag": None}
+        reader_kwargs.update(reader_options)
+        return read_maccs166_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
     
 class OpenBabelMACCSFingerprinter_v2(_OpenBabelFingerprinter):
     name = "OpenBabel-MACCS/2"
     num_bits = 166
-    _get_reader = staticmethod(read_maccs166_fingerprints_v2)
+    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
+        reader_kwargs = {"id_tag": None}
+        reader_kwargs.update(reader_options)
+        return read_maccs166_fingerprints_v2(source, format, fingerprinter_kwargs, reader_kwargs)
