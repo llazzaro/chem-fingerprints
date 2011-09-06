@@ -330,111 +330,55 @@ def _file_reader(obconversion, obmol, success, id_tag):
             obmol.Clear()
             success = obconversion.Read(obmol)
 
-########
-def read_fp2_fingerprints_v1(source, format, fingerprinter_kwargs={}, reader_kwargs={}):
-    assert not fingerprinter_kwargs
-    fingerprinter = calc_FP2
-    reader = read_structures(source, format, **reader_kwargs)
-
-    def read_openbabel_fp2_structure_fingerprints():
-        for (title, mol) in reader:
-            yield (fingerprinter(mol), title)
-
-    return read_openbabel_fp2_structure_fingerprints()
-
-def read_fp3_fingerprints_v1(source, format, fingerprinter_kwargs={}):
-    assert not fingerprinter_kwargs
-    fingerprinter = calc_FP3
-    reader = read_structures(source, format, **reader_kwargs)
-
-    def read_openbabel_fp3_structure_fingerprints():
-        for (title, mol) in reader:
-            yield (fingerprinter(mol), title)
-
-    return read_openbabel_fp3_structure_fingerprints()
-
-def read_fp4_fingerprints_v1(source, format, fingerprinter_kwargs={}):
-    assert not fingerprinter_kwargs
-    fingerprinter = calc_FP4
-    reader = read_structures(source, format, **reader_kwargs)
-
-    def read_openbabel_fp4_structure_fingerprints():
-        for (title, mol) in reader:
-            yield (fingerprinter(mol), title)
-
-    return read_openbabel_fp4_structure_fingerprints()
-
-def read_maccs166_fingerprints_v1(source, format, fingerprinter_kwargs={}):
-    assert HAS_MACCS
-    assert MACCS_VERSION == 1
-        
-    assert not fingerprinter_kwargs
-    fingerprinter = calc_MACCS
-    reader = read_structures(source, format, **reader_kwargs)
-
-    def read_openbabel_maccs166_structure_fingerprints():
-        for (title, mol) in reader:
-            yield (fingerprinter(mol), title)
-
-    return read_openbabel_maccs166_structure_fingerprints()
-
-def read_maccs166_fingerprints_v2(source, format, fingerprinter_kwargs={}):
-    assert HAS_MACCS
-    assert MACCS_VERSION == 2
-        
-    assert not fingerprinter_kwargs
-    fingerprinter = calc_MACCS
-    reader = read_structures(source, format, **reader_kwargs)
-
-    def read_openbabel_maccs166_structure_fingerprints():
-        for (title, mol) in reader:
-            yield (fingerprinter(mol), title)
-
-    return read_openbabel_maccs166_structure_fingerprints()
-
 #####
 
 class _OpenBabelFingerprinter(types.Fingerprinter):
     software = SOFTWARE
 
+    @staticmethod
+    def _read_structures(source, format, id_tag, aromaticity):
+        if aromaticity is not None:
+            raise TypeError("OpenBabel does not support alternate aromaticity models")
+        return read_structures(source, format, id_tag)
+
+    @classmethod
+    def _get_fingerprinter(cls):
+        return cls._fingerprinter
+
 class OpenBabelFP2Fingerprinter_v1(_OpenBabelFingerprinter):
     name = "OpenBabel-FP2/1"
     num_bits = 1021
-    @staticmethod
-    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
-        reader_kwargs = {"id_tag": None}
-        reader_kwargs.update(reader_options)
-        return read_fp2_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
+
+    _fingerprinter = staticmethod(calc_FP2)
 
 class OpenBabelFP3Fingerprinter_v1(_OpenBabelFingerprinter):
     name = "OpenBabel-FP3/1"
     num_bits = 55
-    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
-        reader_kwargs = {"id_tag": None}
-        reader_kwargs.update(reader_options)
-        return read_fp3_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
+    
+    _fingerprinter = staticmethod(calc_FP3)
 
 class OpenBabelFP4Fingerprinter_v1(_OpenBabelFingerprinter):
     name = "OpenBabel-FP4/1"
     num_bits = 307
-    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
-        reader_kwargs = {"id_tag": None}
-        reader_kwargs.update(reader_options)
-        return read_fp4_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
+    _fingerprinter = staticmethod(calc_FP4)
 
 
 class OpenBabelMACCSFingerprinter_v1(_OpenBabelFingerprinter):
     name = "OpenBabel-MACCS/1"
     num_bits = 166
-    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
-        reader_kwargs = {"id_tag": None}
-        reader_kwargs.update(reader_options)
-        return read_maccs166_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
+
+    @staticmethod
+    def _get_fingerprinter():
+        assert HAS_MACCS
+        assert MACCS_VERSION == 1
+        return calc_MACCS
     
 class OpenBabelMACCSFingerprinter_v2(_OpenBabelFingerprinter):
     name = "OpenBabel-MACCS/2"
     num_bits = 166
-    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
-        reader_kwargs = {"id_tag": None}
-        reader_kwargs.update(reader_options)
-        return read_maccs166_fingerprints_v2(source, format, fingerprinter_kwargs, reader_kwargs)
+
+    @staticmethod
+    def _get_fingerprinter():
+        assert HAS_MACCS
+        assert MACCS_VERSION == 2
+        return calc_MACCS

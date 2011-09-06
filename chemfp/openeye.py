@@ -357,19 +357,20 @@ def _open_ifs(filename, set_format, aromaticity_flavor):
 # can be opened (if it exists) and the format is understood. But it
 # can wait until later to actually parse the files.
 
-_aromaticity_flags_sorted_data = (
-    ("default", None),
+_aromaticity_sorted = (
+#    ("default", None),
     ("openeye", OEIFlavor_Generic_OEAroModelOpenEye),
     ("daylight", OEIFlavor_Generic_OEAroModelDaylight),
     ("tripos", OEIFlavor_Generic_OEAroModelTripos),
     ("mdl", OEIFlavor_Generic_OEAroModelMDL),
     ("mmff", OEIFlavor_Generic_OEAroModelMMFF),
     )
-_aromaticity_flags = dict(_aromaticity_flags_sorted_data)
-_aromaticity_flag_names = [pair[0] for pair in _aromaticity_flags_sorted_data]
-_aromaticity_flags[None] = None
-del _aromaticity_flags_sorted_data
+_aromaticity_flavors = dict(_aromaticity_sorted)
+_aromaticity_flavor_names = [pair[0] for pair in _aromaticity_sorted]
+del _aromaticity_sorted, pair
 
+# If unspecified, use "openeye" (this is what OEChem does internally)
+_aromaticity_flavors[None] = _aromaticity_flavors["openeye"]   # Allow "None"
 
 # Part of the code (parameter checking, opening the file) are eager.
 # Actually reading the structures is lazy.
@@ -378,16 +379,16 @@ def read_structures(filename=None, format=None, id_tag=None, aromaticity=None):
     # Check that that the format is known
     set_format = _get_format_setter(format)
     try:
-        aromaticity_flag = _aromaticity_flags[aromaticity]
+        aromaticity_flavor = _aromaticity_flavors[aromaticity]
     except KeyError:
         raise TypeError("Unsupported aromaticity name %r" % (aromaticity,))
 
     # Input is from a file
     if filename is not None:
-        ifs = _open_ifs(filename, set_format, aromaticity_flag)
+        ifs = _open_ifs(filename, set_format, aromaticity_flavor)
     else:
         # Input is from stdin
-        ifs = _open_stdin(set_format, aromaticity_flag)
+        ifs = _open_stdin(set_format, aromaticity_flavor)
 
     # Only SD files can take the id_tag
     if ifs.GetFormat() != OEFormat_SDF:
@@ -425,7 +426,7 @@ def _iter_structures(ifs, id_tag):
 # reading from stdin, don't dispatch to OEChem until there's input.
 
 _USE_SELECT = True
-def _open_stdin(set_format, aromaticity_flag, id_flag):
+def _open_stdin(set_format, aromaticity_flavor):
     if _USE_SELECT:
         try:
             select.select([sys.stdin], [], [sys.stdin])
@@ -435,7 +436,7 @@ def _open_stdin(set_format, aromaticity_flag, id_flag):
     ifs.open()
     set_format(ifs)
     
-    if aromaticity is not None:
+    if aromaticity_flavor is not None:
         flavor = ifs.GetFlavor(ifs.GetFormat())
         flavor |= aromaticity_flavor
         ifs.SetFlavor(ifs.GetFormat(), flavor)
@@ -443,38 +444,12 @@ def _open_stdin(set_format, aromaticity_flag, id_flag):
     return ifs
         
 
-############# Methods to get the right structure readers
 
-def read_maccs166_fingerprints_v1(source=None, format=None,
-                                  fingerprinter_kwargs={}, reader_kwargs={}):
-    assert not fingerprinter_kwargs, fingerprinter_kwargs
-    # The OEChem interface only handles stdin and filenames
-    if not (isinstance(source, basestring) or source is None):
-        raise NotImplementedError
+def _read_fingerprints(structure_reader, fingerprinter):
+    for (id, mol) in structure_reader:
+        yield id, fingerprinter(mol)
 
-    fingerprinter = get_maccs_fingerprinter()
-    structure_reader = read_structures(source, format, **reader_kwargs)
 
-    def read_oechem_maccs_structure_fingerprints():
-        for (title, mol) in structure_reader:
-            yield fingerprinter(mol), title
-    return read_oechem_maccs_structure_fingerprints()
-
-def read_path_fingerprints_v1(source=None, format=None,
-                              fingerprinter_kwargs={}, reader_kwargs={}):
-    # The OEChem interface only handles stdin and filenames
-    if not (isinstance(source, basestring) or source is None):
-        raise NotImplementedError
-    
-    fingerprinter = get_path_fingerprinter(**fingerprinter_kwargs)
-    structure_reader = read_structures(source, format, **reader_kwargs)
-    
-    def read_oechem_path_structure_fingerprints():
-        for (title, mol) in structure_reader:
-            yield fingerprinter(mol), title
-    return read_oechem_path_structure_fingerprints()
-
-############# Used when generate the FPS header
 class OpenEyePathFingerprinter_v1(types.Fingerprinter):
     name = "OpenEye-Path/1"
     format_string = ("numbits=%(numbits)s minbonds=%(minbonds)s "
@@ -491,19 +466,24 @@ class OpenEyePathFingerprinter_v1(types.Fingerprinter):
     def _encode_parameters(self):
         return encode_path_parameters(self.fingerprinter_kwargs)
 
-    @staticmethod
-    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
-        reader_kwargs = {"id_tag": None, "aromaticity": None}
-        reader_kwargs.update(reader_options)
-        return read_path_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
+    _get_fingerprinter = staticmethod(get_path_fingerprinter)
+    _read_structures = staticmethod(read_structures)
     
 class OpenEyeMACCSFingerprinter_v1(types.Fingerprinter):
     name = "OpenEye-MACCS166/1"
     num_bits = 166
     software = SOFTWARE
 
+    _get_fingerprinter = staticmethod(get_maccs_fingerprinter)
+    _read_structures = staticmethod(read_structures)
     @staticmethod
-    def _get_reader(source, format, fingerprinter_kwargs, reader_options):
-        reader_kwargs = {"id_tag": None, "aromaticity": None}
-        reader_kwargs.update(reader_options)
-        return read_maccs166_fingerprints_v1(source, format, fingerprinter_kwargs, reader_kwargs)
+    def _get_reader(source, format, id_tag, aromaticity, fingerprinter_kwargs):
+        # The OEChem interface only handles stdin and filenames
+        if not (isinstance(source, basestring) or source is None):
+            raise NotImplementedError
+        if fingerprinter_kwargs:
+            raise TypeError
+        fingerprinter = get_maccs_fingerprinter()
+        structure_reader = read_structures(source, format, id_tag, aromaticity)
+        return _read_fingerprints(structure_reader, fingerprinter)
+

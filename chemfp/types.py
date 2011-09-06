@@ -142,20 +142,30 @@ class Fingerprinter(object):
         return self.name + " " + encoded
 
     # Subclasses must hook into this
-    def _get_reader(self, source, format, fingerprinter_kwargs, reader_options):
+    def _read_structures(self, source, format, id_tag, aromaticity):
+        raise NotImplementedError
+
+    def _get_fingerprinter(self, **fingerprinter_kwargs):
         raise NotImplementedError
     
-    def read_structure_fingerprints(self, source, format=None, reader_options={}):
-        reader = self._get_reader(source, format, self.fingerprinter_kwargs, reader_options)
-
+    def read_structure_fingerprints(self, source, format=None, id_tag=None, aromaticity=None):
+        structure_reader = self._read_structures(source, format, id_tag, aromaticity)
+        fingerprinter = self._get_fingerprinter(**self.fingerprinter_kwargs)
         source_filename = io.get_filename(source)
+
+        def fingerprint_reader(structure_reader, fingerprinter):
+            for (id, mol) in structure_reader:
+                yield id, fingerprinter(mol)
+        reader = fingerprint_reader(structure_reader, fingerprinter)
+        
         return io.FPIterator(io.Header(num_bits = self.num_bits,
                                        source = source_filename,
                                        software = self.software,
                                        type = self.get_type(),
                                        date = io.utcnow(),
-                                       aromaticity = reader_options.get("aromaticity", None)),
+                                       aromaticity = aromaticity),
                              reader)
+    
     def describe(self, bitno):
         if 0 <= bitno < self.num_bits:
             return "bit %d (unknown)" % (bitno,)
