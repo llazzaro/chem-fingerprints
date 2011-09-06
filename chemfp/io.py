@@ -287,5 +287,5 @@ def write_fps1_output(reader, destination):
             write_fps1_magic(outfile)
             write_fps1_header(outfile, reader.header)
 
-            for (fp, title) in reader:
-                outfile.write("%s %s\n" % (hexlify(fp), title))
+            for (id, fp) in reader:
+                outfile.write("%s %s\n" % (hexlify(fp), id))
