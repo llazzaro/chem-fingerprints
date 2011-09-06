@@ -55,6 +55,10 @@ rdmaccs_group.add_argument(
     "--rdmaccs", action="store_true", help="generate 166 bit RDKit/MACCS fingerprints")
 
 parser.add_argument(
+    "--id-tag", metavar="NAME",
+    help="tag name containing the record id (SD files only)")
+    
+parser.add_argument(
     "--in", metavar="FORMAT", dest="format",
     help="input structure format (default guesses from filename)")
 parser.add_argument(
@@ -102,7 +106,7 @@ def main(args=None):
     elif args.rdmaccs:
         opener = types.get_fingerprint_family("RDMACCS-RDKit")()
     try:
-        reader = opener.read_structure_fingerprints(args.filename, args.format)
+        reader = opener.read_structure_fingerprints(args.filename, args.format, args.id_tag)
     except (TypeError, IOError), err:
         sys.stderr.write("Cannot read structure fingerprints: %s\n" % err)
         raise SystemExit(1)

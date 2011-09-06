@@ -250,3 +250,12 @@ def iter_title_and_tag(sdf_iter, tag):
     tag_substr = "<" + tag + ">"
     for rec in sdf_iter:
         yield rec[:rec.find("\n")].strip(), _find_tag_data(rec, tag_substr)
+
+def iter_tag_and_record(sdf_iter, tag):
+    m = _bad_char.search(tag)
+    if m:
+        raise TypeError("tag must not contain the character %r" % (m.group(0),))
+
+    tag_substr = "<" + tag + ">"
+    for rec in sdf_iter:
+        yield _find_tag_data(rec, tag_substr), rec

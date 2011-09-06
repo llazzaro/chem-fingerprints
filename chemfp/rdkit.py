@@ -87,13 +87,13 @@ def iter_smiles_molecules(fileobj, name=None, errors="strict"):
             continue
         
         if len(words) == 1:
-            yield str(lineno+1), mol
+            yield "Record_%d" % (lineno+1), mol
         else:
             yield words[1], mol
 
 
-def iter_sdf_molecules(fileobj, name=None, errors="strict"):
-    """Iterate over the SD file records, returning (title, Chem.Mol) pairs
+def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
+    """Iterate over the SD file records, returning (id, Chem.Mol) pairs
 
     fileobj - the input file object
     name - the name to use to report errors. If None, use fileobj.name .
@@ -104,15 +104,38 @@ def iter_sdf_molecules(fileobj, name=None, errors="strict"):
         name = getattr(fileobj, "name", None)
     loc = sdf_reader.FileLocation(name)
     error = error_handlers.get_parse_error_handler(errors)
-    for text in sdf_reader.iter_sdf_records(fileobj, errors, loc):
-        mol = Chem.MolFromMolBlock(text)
-        if mol is None:
-            # This was not a molecule?
-            error("Could not parse molecule block", loc)
-        else:
-            yield mol.GetProp("_Name"), mol
-
-# This class helps the case when someone is entering structure
+    if id_tag is None:
+        for i, text in enumerate(sdf_reader.iter_sdf_records(fileobj, errors, loc)):
+            mol = Chem.MolFromMolBlock(text)
+            if mol is None:
+                # This was not a molecule?
+                error("Could not parse molecule block", loc)
+            id = mol.GetProp("_Name")
+            if "\n" in id:
+                id = id.split("\n")[0]
+            if not id:
+                id = "Record_%d" % (i+1)
+            yield id, mol
+    else:
+        # According to
+        #   http://www.mail-archive.com/rdkit-discuss@lists.sourceforge.net/msg01436.html
+        # I can make a new SDMolSupplier, then SetData(), get the first record, and
+        # get its property names. That's ... crazy.
+        sdf_iter = sdf_reader.iter_sdf_records(fileobj, errors, loc)
+        for i, (id, text) in enumerate(sdf_reader.iter_tag_and_record(sdf_iter, id_tag)):
+            mol = Chem.MolFromMolBlock(text)
+            if mol is None:
+                # This was not a molecule?
+                error("Could not parse molecule block", loc)
+            if id is None:
+                id = ""
+            elif "\n" in id:
+                id = id.split("\n")[0]
+            if not id:
+                id = "Record_%d" % (i+1)
+            yield id, mol
+            
+# this class helps the case when someone is entering structure
 # by-hand. (Most likely to occur with SMILES input). They would like
 # to see the result as soon as a record is entered. But normal
 # interation reader grabs a buffer of input to process, and not a
@@ -145,7 +168,7 @@ def iter_sdf_molecules(fileobj, name=None, errors="strict"):
 ##     return open(filename, "rU")
     
 
-def read_structures(source, format=None, errors="strict"):
+def read_structures(source, format=None, id_tag=None, aromaticity=None, errors="strict"):
     """Iterate the records in the input source as (title, RDKit.Chem.Mol) pairs
 
     'source' is a filename, a file object, or None for stdin
@@ -182,7 +205,7 @@ def read_structures(source, format=None, errors="strict"):
 
         fileobj = io.open_compressed_input_universal(source, compression)
         # fileobj should always have the .name attribute set.
-        return iter_sdf_molecules(fileobj, None, errors)
+        return iter_sdf_molecules(fileobj, None, id_tag, errors)
 
     elif format_name == "smi":
         # I timed the native reader at 31.6 seconds (best of 31.6, 31.7, 31.7)
@@ -258,25 +281,8 @@ def maccs166_fingerprinter(mol):
     bitstring_with_167_bits = fp.ToBitString()
     return decoders.from_binary_lsb(bitstring_with_167_bits[1:])[1]
 
-
-def read_maccs166_fingerprints_v1(source=None, format=None, kwargs={}):
-    assert not kwargs
-    fingerprinter = maccs166_fingerprinter
-    reader = read_structures(source, format)
-    def read_rdkit_maccs166_fingerprints():
-        for (title, mol) in reader:
-            yield (fingerprinter(mol), title)
-
-    return read_rdkit_maccs166_fingerprints()
-
-def read_rdkit_fingerprints_v1(source=None, format=None, kwargs={}):
-    fingerprinter = make_rdk_fingerprinter(**kwargs)
-    reader = read_structures(source, format)
-    def read_rdkit_fingerprints():
-        for (title, mol) in reader:
-            yield (fingerprinter(mol), title)
-
-    return read_rdkit_fingerprints()
+def make_maccs166_fingerprinter():
+    return make_maccs166_fingerprinter
 
 ####################
 
@@ -284,8 +290,12 @@ class RDKitMACCSFingerprinter_v1(types.Fingerprinter):
     name = "RDKit-MACCS166/1"
     num_bits = 166
     software = SOFTWARE
-    
-    _get_reader = staticmethod(read_maccs166_fingerprints_v1)
+
+    def _get_fingerprinter(self):
+        return maccs166_fingerprinter
+
+    _read_structures = staticmethod(read_structures)
+    _get_fingerprinter = staticmethod(make_maccs166_fingerprinter)
 
 class RDKitFingerprinter_v1(types.Fingerprinter):
     name = "RDKit-Fingerprint/1"
@@ -302,4 +312,5 @@ class RDKitFingerprinter_v1(types.Fingerprinter):
         kwargs = decode_fingerprint_parameters(parameters)
         return cls(kwargs)
 
-    _get_reader = staticmethod(read_rdkit_fingerprints_v1)
+    _get_fingerprinter = staticmethod(make_rdk_fingerprinter)
+    _read_structures = staticmethod(read_structures)

@@ -86,7 +86,7 @@ parser.add_argument(
 
 parser.add_argument(
     "--id-tag", metavar="NAME",
-    help="tag name containing the record id  (SD files only)")
+    help="tag name containing the record id (SD files only)")
 
 parser.add_argument(
     "--in", metavar="FORMAT", dest="format",
