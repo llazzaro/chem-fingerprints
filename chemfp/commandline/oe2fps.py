@@ -80,8 +80,8 @@ rdmaccs_group.add_argument(
     "--rdmaccs", action="store_true", help="generate 166 bit RDKit/MACCS fingerprints")
 
 parser.add_argument(
-    "--aromaticity", metavar="NAME", choices=oe._aromaticity_flag_names,
-    default="default",
+    "--aromaticity", metavar="NAME", choices=oe._aromaticity_flavor_names,
+    default="openeye",
     help="use the named aromaticity model")
 
 parser.add_argument(
@@ -144,8 +144,7 @@ def main(args=None):
     # Ready the input reader/iterator
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format,
-                                                    dict(aromaticity = args.aromaticity,
-                                                         id_tag = args.id_tag))
+                                                    args.id_tag, args.aromaticity)
     except (IOError, oe.UnknownFormat), err:
         sys.stderr.write("Cannot read structure fingerprints: %s\n" % err)
         raise SystemExit(1)

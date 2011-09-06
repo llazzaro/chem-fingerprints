@@ -104,7 +104,7 @@ def main(args=None):
     # Ready the input reader/iterator
     try:
         reader = opener.read_structure_fingerprints(args.filename, args.format,
-                                                    dict(id_tag = args.id_tag))
+                                                    args.id_tag)
     except IOError, err:
         sys.stderr.write("Cannot read structures: %s" % (err,))
         raise SystemExit(1)
