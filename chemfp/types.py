@@ -1,5 +1,6 @@
 # Information about fingerprint types
 
+from . import FingerprintIterator
 from . import io
 from .decoders import import_decoder  # XXX too specific to the decoder module
 
@@ -120,7 +121,15 @@ class Fingerprinter(object):
             raise AssertionError("num_bits not defined (%r)" % (self.name,))
         if getattr(self, "software", None) is None:
             raise AssertionError("software not defined (%r)" % (self.name,))
-        
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__.__name__, self.fingerprinter_kwargs)
+
+    def __eq__(self, other):
+        return self.get_type() == other.get_type()
+
+    def __ne__(self, other):
+        return self.get_type() != other.get_type()
 
     @classmethod
     def from_parameters(cls, parameters):
@@ -136,7 +145,7 @@ class Fingerprinter(object):
 
     def get_type(self):
         if self.format_string is None:
-            #assert self.fingerprinter_kwargs, self # XXX huh?
+            assert not self.fingerprinter_kwargs, "kwargs but no format string!"
             return self.name
         encoded = self.format_string % self._encode_parameters()
         return self.name + " " + encoded
@@ -159,13 +168,13 @@ class Fingerprinter(object):
                 yield id, fingerprinter(mol)
         reader = fingerprint_reader(structure_reader, fingerprinter)
         
-        return io.FPIterator(io.Header(num_bits = self.num_bits,
-                                       source = source_filename,
-                                       software = self.software,
-                                       type = self.get_type(),
-                                       date = io.utcnow(),
-                                       aromaticity = aromaticity),
-                             reader)
+        return FPIterator(io.Header(num_bits = self.num_bits,
+                                    source = source_filename,
+                                    software = self.software,
+                                    type = self.get_type(),
+                                    date = io.utcnow(),
+                                    aromaticity = aromaticity),
+                          reader)
     
     def describe(self, bitno):
         if 0 <= bitno < self.num_bits:
@@ -187,9 +196,13 @@ def parse_type(type):
     seen = set()
     parameters = []
     for term in terms[1:]:
-        left, right = term.split("=")
+        try:
+            left, right = term.split("=")
+        except ValueError:
+            raise TypeError("Term %r of type %r must have one and only one '='" %
+                            (term, type))
         if left in seen:
-            raise TypeError("Duplicate name")
+            raise TypeError("Duplicate name %r in type %r" % (left, type))
         seen.add(left)
         parameters.append((left, right))
 
