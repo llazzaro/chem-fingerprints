@@ -13,17 +13,17 @@ def _fp_to_arena(query_fp, header):
     from . import arena
     return arena.Library(header, len(query_fp), query_fp, "", [None])
 
-def tanimoto_count_fp(query_fp, target_reader, threshold):
-    return tanimoto_count_arena(_fp_to_arena(query_fp, target_reader.header), threshold)[0]
+def count_tanimoto_hits_fp(query_fp, target_reader, threshold):
+    return count_tanimoto_hits_arena(_fp_to_arena(query_fp, target_reader.header), threshold)[0]
 
-def tanimoto_count_arena(query_arena, target_reader, threshold):
+def count_tanimoto_hits_arena(query_arena, target_reader, threshold):
     counts = array.array("i", (0 for i in xrange(len(query_arena))))
 
     lineno = target_reader._first_fp_lineno
     num_bits = target_reader.header.num_bits
 
     for block in target_reader.iter_blocks():
-        err, num_lines = _chemfp.fps_tanimoto_count(
+        err, num_lines = _chemfp.fps_count_tanimoto_hits(
             num_bits, query_arena.storage_size, query_arena.arena, 0, -1,
             block, 0, -1,
             threshold, counts)
