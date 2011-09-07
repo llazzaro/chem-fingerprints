@@ -1,7 +1,7 @@
 import ctypes
 from cStringIO import StringIO
 
-from chemfp import _THRESHOLD, _K
+from chemfp import _THRESHOLD, _K, FingerprintReader as _FingerprintReader
 import _chemfp
 
 def check_fp_compatibility(query_fp, targets):
@@ -16,7 +16,7 @@ def check_compatibility(queries, targets):
 
 
 
-def tanimoto_count_fp(query_fp, target_arena, threshold):
+def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
     check_fp_compatibility(query_fp, target_arena)
 
     counts = array.array("i", (0 for i in xrange(len(query_fp))))
@@ -29,7 +29,7 @@ def tanimoto_count_fp(query_fp, target_arena, threshold):
     return counts[0]
 
 
-def tanimoto_count_arena(query_arena, target_arena, threshold):
+def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
     check_compatibility(query_arena, target_arena)
 
     counts = (ctypes.c_int*len(query_arena))()
@@ -158,7 +158,7 @@ def knearest_tanimoto_search_arena(queries, targets, k, threshold):
     query_end = queries.end
 
     def add_rows(query_start, offset_start):
-        return _chemfp.klargest_tanimoto_arena(
+        return _chemfp.knearest_tanimoto_arena(
             k, threshold, num_bits,
             queries.storage_size, queries.arena, query_start, query_end,
             targets.storage_size, targets.arena, targets.start, targets.end,
@@ -221,7 +221,7 @@ class FingerprintLookup(object):
         start_offset = self._range_check[i] * self._storage_size
         return self._arena[start_offset:start_offset+self._fp_size]
 
-class FingerprintArena(object):
+class FingerprintArena(_FingerprintReader):
     def __init__(self, header, storage_size, arena, popcount_indicies, ids,
                  start=0, end=None):
         self.header = header
@@ -259,21 +259,25 @@ class FingerprintArena(object):
                                                      self.end*storage_size, storage_size)):
             yield id, arena[start_offset:start_offset+target_fp_size]
 
-    def iter_arenas(self, batch_size):
+    def iter_arenas(self, arena_size):
+        if arena_size is None:
+            yield self
+            return
+        
         storage_size = self.storage_size
         start = self.start
-        for i in xrange(0, len(self), batch_size):
-            ids = self.ids[i:i+batch_size]
+        for i in xrange(0, len(self), arena_size):
+            ids = self.ids[i:i+arena_size]
             end = start+len(ids)
             yield FingerprintArena(self.header, self.storage_size, self.arena,
                                    self.popcount_indicies, ids, start, end)
             start = end
 
-    def tanimoto_count_fp(self, query_fp, threshold=_THRESHOLD):
-        return tanimoto_count_fp(query_fp, self, threshold)
+    def count_tanimoto_hits_fp(self, query_fp, threshold=_THRESHOLD):
+        return count_tanimoto_hits_fp(query_fp, self, threshold)
 
-    def tanimoto_count_arena(self, query_arena, threshold=_THRESHOLD):
-        return tanimoto_count_arena(query_arena, self, threshold)
+    def count_tanimoto_hits_arena(self, query_arena, threshold=_THRESHOLD):
+        return count_tanimoto_hits_arena(query_arena, self, threshold)
 
     def threshold_tanimoto_search_fp(self, query_fp, threshold=_THRESHOLD):
         return threshold_tanimoto_search_fp(query_fp, self, threshold)
