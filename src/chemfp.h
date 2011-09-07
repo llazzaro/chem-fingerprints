@@ -202,8 +202,8 @@ int chemfp_fps_threshold_tanimoto_search(
 
 /* You must have enough cells */
 
-int chemfp_nlargest_tanimoto_block(
-        int n,
+int chemfp_knearest_tanimoto_block(
+        int k,
         int query_len, unsigned char *query_fp,
         int num_targets, unsigned char *target_block, int offset, int storage_len,
         double threshold,
@@ -279,7 +279,7 @@ int chemfp_threshold_tanimoto_arena(
 				    );
 
 
-int chemfp_klargest_tanimoto_arena(
+int chemfp_knearest_tanimoto_arena(
 	/* Find the 'k' nearest items */
 	int k,
 	/* Within the given threshold */

@@ -30,7 +30,8 @@ static void double_score_swap(IndexScoreData *data, int i, int j) {
   data->scores[j] = tmp_score;
 }
 
-int chemfp_nlargest_tanimoto_block(
+#if 0
+int chemfp_knearest_tanimoto_block(
         int n,
         int len, unsigned char *query_fp,
         int num_targets, unsigned char *target_block, int offset, int storage_len,
@@ -98,7 +99,7 @@ int chemfp_nlargest_tanimoto_block(
                  
   return n;
 }
-
+#endif
 
 static int hex_readline(int len, char *hex_query_fp,
                         char *target_block, int *offset_p,
@@ -692,10 +693,10 @@ int chemfp_threshold_tanimoto_arena(
 
 
 
-/**** k-largest code ****/
+/**** k-nearest code ****/
 
 static int 
-klargest_tanimoto_arena_no_popcounts(
+knearest_tanimoto_arena_no_popcounts(
 	/* Find the 'k' nearest items */
 	int k,
 	/* Within the given threshold */
@@ -807,7 +808,7 @@ klargest_tanimoto_arena_no_popcounts(
 }
 
 
-int chemfp_klargest_tanimoto_arena(
+int chemfp_knearest_tanimoto_arena(
 	/* Find the 'k' nearest items */
 	int k,
 	/* Within the given threshold */
@@ -862,7 +863,7 @@ int chemfp_klargest_tanimoto_arena(
 
   if (target_popcount_indicies == NULL) {
     /* precomputed targets aren't available. Use the slower algorithm. */
-    return klargest_tanimoto_arena_no_popcounts(
+    return knearest_tanimoto_arena_no_popcounts(
 	k, threshold, fp_size,
 	query_storage_size, query_arena, query_start, query_end,
 	target_storage_size, target_arena, target_start, target_end,

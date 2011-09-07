@@ -756,7 +756,7 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
 }
     
 
-/* klargest_tanimoto_arena */
+/* threshold_tanimoto_arena */
 static PyObject *
 threshold_tanimoto_arena(PyObject *self, PyObject *args) {
   double threshold;
@@ -818,9 +818,10 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
 
   return PyInt_FromLong(result);
 }
-/* klargest_tanimoto_arena */
+
+/* knearest_tanimoto_arena */
 static PyObject *
-klargest_tanimoto_arena(PyObject *self, PyObject *args) {
+knearest_tanimoto_arena(PyObject *self, PyObject *args) {
   int k;
   double threshold;
   int num_bits;
@@ -870,7 +871,7 @@ klargest_tanimoto_arena(PyObject *self, PyObject *args) {
     return NULL;
   }
 
-  result = chemfp_klargest_tanimoto_arena(
+  result = chemfp_knearest_tanimoto_arena(
         k, threshold,
         num_bits,
         query_storage_size, query_arena, query_start, query_end,
@@ -960,8 +961,8 @@ static PyMethodDef chemfp_methods[] = {
   {"threshold_tanimoto_arena", threshold_tanimoto_arena, METH_VARARGS,
    "threshold_tanimoto_arena (TODO: document)"},
 
-  {"klargest_tanimoto_arena", klargest_tanimoto_arena, METH_VARARGS,
-   "klargest_tanimoto_arena (TODO: document)"},
+  {"knearest_tanimoto_arena", knearest_tanimoto_arena, METH_VARARGS,
+   "knearest_tanimoto_arena (TODO: document)"},
 
   {"reorder_by_popcount", reorder_by_popcount, METH_VARARGS,
    "reorder_by_popcount (TODO: document)"},
