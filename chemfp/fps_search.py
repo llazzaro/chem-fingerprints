@@ -167,7 +167,7 @@ def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
 
     try:
         for block in target_reader.iter_blocks():
-            err = _chemfp.fps_knearest_search_feed(search, block)
+            err = _chemfp.fps_knearest_tanimoto_search_feed(search, block)
             if err:
                 ERR
 
