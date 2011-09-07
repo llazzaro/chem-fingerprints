@@ -37,17 +37,6 @@ class Header(object):
             return None
         return (self.num_bits+7)//8
 
-class FPIterator(object):
-    def __init__(self, header, iterator):
-        self.header = header
-        self.iterator = iterator
-
-    def iter_fingerprints(self):
-        return self.iterator
-
-    def __iter__(self):
-        return self.iterator
-    
 ####
     
 _compression_extensions = {
