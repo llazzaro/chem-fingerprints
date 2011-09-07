@@ -169,12 +169,19 @@ _maccs_decoders = {"numbits": int,
                    "maxbonds": int,
                    "atype": atom_description_to_value,
                    "btype": bond_description_to_value}
+_maccs_defaults = {"numbits": 4096,
+                   "minbonds": 0,
+                   "maxbonds": 5,
+                   "atype": OEFPAtomType_DefaultAtom,
+                   "btype": OEFPBondType_DefaultBond}
+                   
 
 def decode_path_parameters(parameters):
-    assert len(parameters) == len(_maccs_decoders)
-    fingerprinter_kwargs = {}
-    for name, decoder in _maccs_decoders.items():
-        value = parameters[name]
+    fingerprinter_kwargs = _maccs_defaults.copy()
+    for name, value in parameters:
+        if name not in _maccs_decoders:
+            raise TypeError("Unknown OpenEye-Path paramter %r" % (name,))
+        decoder = _maccs_decoders[name]
         fingerprinter_kwargs[name] = decoder(value)
     return fingerprinter_kwargs
 
