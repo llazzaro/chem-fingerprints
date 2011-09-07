@@ -1,7 +1,7 @@
 import ctypes
 from cStringIO import StringIO
 
-from chemfp import _THRESHOLD, _K, FingerprintReader as _FingerprintReader
+from chemfp import _THRESHOLD, _K, FingerprintReader
 import _chemfp
 
 def check_fp_compatibility(query_fp, targets):
@@ -221,7 +221,7 @@ class FingerprintLookup(object):
         start_offset = self._range_check[i] * self._storage_size
         return self._arena[start_offset:start_offset+self._fp_size]
 
-class FingerprintArena(_FingerprintReader):
+class FingerprintArena(FingerprintReader):
     def __init__(self, header, storage_size, arena, popcount_indicies, ids,
                  start=0, end=None):
         self.header = header
