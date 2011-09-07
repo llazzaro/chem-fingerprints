@@ -44,7 +44,7 @@ def _check_for_oe_errors():
         raise AssertionError("Unexpected message from OEChem: %r" % (line,))
 
 
-# I build the fingerprints using bit offsetsto ensure that the test
+# I build the fingerprints using bit offsets to ensure that the test
 # data matches the actual bit results from OEChem. While I could
 # reproduce the method in chemfp.openeye.get_maccs_fingerprinter, that
 # would be cheating. I could test against ToHexString() but then I
@@ -330,38 +330,47 @@ class TestHeaderOutput(unittest2.TestCase):
         self.assertEquals(len(filtered), 1, result)
         return filtered[0]
 
-##     def test_software(self):
-##         result = self._field("", "#software")
-##         self.assertEquals("#software=OEGraphSim/1.0.0 (20100809)" in result, True, result)
-##         result = self._field("--maccs166", "#software")
-##         self.assertEquals("#software=OEGraphSim/1.0.0 (20100809)" in result, True, result)
+    def test_software(self):
+        result = self._field("", "#software")
+        self.assertEquals("#software=OEGraphSim/" in result, True, result)
+        self.assertEquals("(" in result, True, result)
+        self.assertEquals(")" in result, True, result)
+        result = self._field("--maccs166", "#software")
+        self.assertEquals("#software=OEGraphSim/" in result, True, result)
 
-##     def test_type(self):
-##         result = self._field("", "#type")
-##         self.assertEquals(result,
-##   "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 "
-##   "atype=Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization "
-##   "btype=BondOrder|Chiral")
+    def test_type(self):
+        result = self._field("", "#type")
+        self.assertEquals(result,
+  "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond")
+
+    def test_default_atom_and_bond(self):
+        result = self._field(
+            "--atype=Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization "
+            "--btype=BondOrder|Chiral", "#type")
+        self.assertEquals(result,
+  "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond")
 
         
-##     # different flags. All flags? and order
-##     def test_num_bits(self):
-##         result = self._field("--numbits 38", "#num_bits")
-##         self.assertEquals(result, "#num_bits=38")
+    # different flags. All flags? and order
+    def test_num_bits(self):
+        result = self._field("--numbits 38", "#num_bits")
+        self.assertEquals(result, "#num_bits=38")
         
-##     def test_atype_flags(self):
-##         result = self._field("--atype FormalCharge|FormalCharge", "#type") + " "
-##         self.assertEquals(" atype=FormalCharge " in result, True, result)
-        
-##     def test_btype_flags(self):
-##         result = self._field("--btype Chiral|BondOrder", "#type") + " "
-##         self.assertEquals(" btype=BondOrder|Chiral " in result, True, result)
+    def test_atype_flags(self):
+        result = self._field("--atype FormalCharge|FormalCharge", "#type") + " "
+        self.assertEquals(" atype=FormalCharge " in result, True, result)
+    
+    def test_btype_flags(self):
+        result = self._field("--btype Chiral|BondOrder", "#type") + " "
+        self.assertEquals(" btype=DefaultBond " in result, True, result)
+        result = self._field("--btype BondOrder|Chiral", "#type") + " "
+        self.assertEquals(" btype=DefaultBond " in result, True, result)
     
     def test_pipe_or_comma(self):
         result = self._field("--atype HvyDegree,FormalCharge --btype Chiral,BondOrder",
                              "#type") + " "
         self.assertEquals(" atype=FormalCharge|HvyDegree " in result, True, result)
-        self.assertEquals(" btype=BondOrder|Chiral " in result, True, result)
+        self.assertEquals(" btype=DefaultBond " in result, True, result)
         
     
     def test_maccs_header(self):
