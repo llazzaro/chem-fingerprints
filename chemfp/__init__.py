@@ -345,6 +345,7 @@ class FingerprintReader(object):
     containing a Header.
     """
     def __init__(self, header):
+        """initialize with a Header instance"""
         self.header = header
 
     def __iter__(self):
@@ -399,46 +400,50 @@ class FingerprintReader(object):
             yield arena
 
 class FingerprintIterator(FingerprintReader):
-    """A FingerprintReader """
+    """A FingerprintReader for an iterator of (id, fingerprint) pairs
+
+    This is most used used when reading files or using containers
+    which only support forward iteration.
+    """
     def __init__(self, header, id_fp_iterator):
+        """initialize with a Header instance and the (id, fingerprint) iterator"""
         super(FingerprintIterator, self).__init__(header)
         self._id_fp_iterator = id_fp_iterator
         self._at_start = True
 
     def __iter__(self):
+        """iterate over the (id, fingerprint) pairs"""
         for x in self._id_fp_iterator:
             self._at_start = False
             yield x
 
     def reset(self):
+        """raise TypeError except if the iterator has not been used"""
         if not self._at_start:
             raise TypeError("It is not possible to reset a FingerprintIterator once it is in use")
 
     
 class Fingerprints(FingerprintReader):
+    """A FingerprintReader contining a list of (id, fingerprint) pairs
+
+    This class add implementations for len() and []
+    """
     def __init__(self, header, id_fp_pairs):
+        """initialize with a Header instance and the (id, fingerprint) pair list"""
         super(Fingerprints, self).__init__(header)
         self._id_fp_pairs = id_fp_pairs
     def __len__(self):
+        """return the number of available (id, fingerprint) pairs"""
         return len(self._id_fp_pairs)
     def __iter__(self):
+        """iterate over the (id, fingerprint) pairs"""
         return iter(self._id_fp_pairs)
-    
-    __hash__ = None
     
     def __repr__(self):
         return "FingerprintList(%r, %r)" % (self.header, self._id_fp_pairs)
     
-    def __eq__(self, other):
-        if self.header != other.header:
-            return 0
-        return self._id_fp_pairs == other._id_fp_pairs
-    def __ne__(self, other):
-        if self.header != other.header:
-            return 1
-        return self._id_fp_pairs != other._id_fp_pairs
-
-    def __getslice__(self, i, j):
-        return Fingerprints(self.header, self._id_fp_pairs[i:j])
     def __getitem__(self, i):
+        """return the given (id, fingerprint) pair"""
         return self._id_fp_pairs[i]
+
+    # Question: should I support other parts of the list API?
