@@ -282,7 +282,7 @@ def maccs166_fingerprinter(mol):
     return decoders.from_binary_lsb(bitstring_with_167_bits[1:])[1]
 
 def make_maccs166_fingerprinter():
-    return make_maccs166_fingerprinter
+    return maccs166_fingerprinter
 
 ####################
 
