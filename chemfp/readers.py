@@ -72,10 +72,6 @@ class FPSReader(object):
         self._expected_hex_len = 2*header.num_bytes_per_fp
         self._hex_len_source = "size in header"
 
-        try:
-            self._seekpos = infile.tell()
-        except IOError:
-            self._seekpos = None
         self._at_start = True
         self._it = None
         self._block_reader = None
@@ -83,15 +79,7 @@ class FPSReader(object):
     def reset(self):
         if self._at_start:
             return
-        self._it = None
-        if self._seekpos is None:
-            raise TypeError("The underlying stream %r does not support seeks" %
-                            (self._filename,))
-        self._infile.seek(self._seekpos)
-        tell = self._infile.tell()
-        
-        self._at_start = True
-        self._block_reader = None
+        raise TypeError("FPSReader instances do not support reset()")
         
     def iter_blocks(self):
         if self._block_reader is None:
