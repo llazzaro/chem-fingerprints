@@ -164,7 +164,7 @@ _whitespace = re.compile(r"[ \t\n]")
 def read_header(f, filename, warn=warn_to_stderr):
     header = io.Header()
 
-    lineno = 0
+    lineno = 1
     for block in _read_blocks(f):
         # A block must be non-empty
         start = 0
@@ -198,12 +198,12 @@ def read_header(f, filename, warn=warn_to_stderr):
             else:
                 line = block[start:end]
                 start = end+1
-            lineno += 1
 
             # Right! We've got a line. Check if it's magic
             # This is the only line which cannot contain a '='
             if lineno == 1:
                 if line.rstrip() == "FPS1":
+                    lineno += 1
                     continue
                 assert "=" not in line, line
                 
@@ -235,6 +235,7 @@ def read_header(f, filename, warn=warn_to_stderr):
             else:
                 print "UNKNOWN", repr(line), repr(key), repr(value)
                 #warn(filename, lineno, "Unknown header %r" % (value,))
+            lineno += 1
 
     # Reached the end of file. No fingerprint lines and nothing left to process.
     return header, lineno, None
