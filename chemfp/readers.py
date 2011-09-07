@@ -17,6 +17,19 @@ from . import search, io
 
 BLOCKSIZE = 20000
 
+class FPSParseError(Exception):
+    def __init__(self, errcode, lineno, filename):
+        self.errcode = errcode
+        self.lineno = lineno
+        self.filename = filename
+    def __repr__(self):
+        return "FPSParseError(%d, %d, %s)" % (self.errcode, self.lineno, self.filename)
+    def __str__(self):
+        msg = _chemfp.strerror(self.errcode)
+        msg += " at line %d" % (self.lineno,)
+        if self.filename is not None:
+            msg += " of file %r" % (self.filename,)
+        return msg
 
 
 def open_fps(source, format=None):
@@ -72,8 +85,11 @@ class FPSReader(object):
             return
         self._it = None
         if self._seekpos is None:
-            raise IOError("ASDFASDF")
+            raise TypeError("The underlying stream %r does not support seeks" %
+                            (self._filename,))
         self._infile.seek(self._seekpos)
+        tell = self._infile.tell()
+        
         self._at_start = True
         self._block_reader = None
         
@@ -128,15 +144,15 @@ class FPSReader(object):
                 err, id_fp = _chemfp.fps_parse_id_fp(expected_hex_len, line)
                 if err:
                     # Include the line?
-                    raise _error(err, lineno, self._filename)
+                    raise FPSParseError(err, lineno, self._filename)
                 yield id_fp
                 lineno += 1
 
-    def tanimoto_count_fp(self, query_fp, threshold=0.7):
-        return fps_search.tanimoto_count_fp(query_fp, self, threshold)
+    def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
+        return fps_search.count_tanimoto_hits_fp(query_fp, self, threshold)
 
-    def tanimoto_count_arena(self, query_arena, threshold=0.7):
-        return fps_search.tanimoto_count_arena(query_arena, self, threshold)
+    def count_tanimoto_hits_arena(self, query_arena, threshold=0.7):
+        return fps_search.count_tanimoto_hits_arena(query_arena, self, threshold)
 
     def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
         return fps_search.threshold_tanimoto_search_fp(query_fp, self, threshold)
