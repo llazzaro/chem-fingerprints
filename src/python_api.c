@@ -456,7 +456,7 @@ fps_parse_id_fp(PyObject *self, PyObject *args) {
      threshold, counts)
 */
 static PyObject *
-fps_tanimoto_count(PyObject *self, PyObject *args) {
+fps_count_tanimoto_hits(PyObject *self, PyObject *args) {
   int num_bits, query_storage_size, query_arena_size, query_start, query_end;
   const unsigned char *query_arena;
   const char *target_block;
@@ -489,7 +489,7 @@ fps_tanimoto_count(PyObject *self, PyObject *args) {
     // start of next byte to process, num lines processed, num cells
     return Py_BuildValue("iiii", CHEMFP_OK, 0);
   }
-  err = chemfp_fps_tanimoto_count(
+  err = chemfp_fps_count_tanimoto_hits(
         num_bits, 
         query_storage_size, query_arena, query_start, query_end,
         target_block+target_start, target_end-target_start,
@@ -589,7 +589,7 @@ fps_knearest_search_init(PyObject *self, PyObject *args) {
 }
 
 static PyObject *
-fps_knearest_search_feed(PyObject *self, PyObject *args) {
+fps_knearest_tanimoto_search_feed(PyObject *self, PyObject *args) {
   chemfp_fps_knearest_search *knearest_search;  
   int knearest_search_size;
   const char *target_block;
@@ -605,7 +605,7 @@ fps_knearest_search_feed(PyObject *self, PyObject *args) {
       bad_block_limits(target_block_size, &target_start, &target_end))
     return NULL;
 
-  err = chemfp_fps_knearest_search_feed(knearest_search, target_block_size, target_block);
+  err = chemfp_fps_knearest_tanimoto_search_feed(knearest_search, target_block_size, target_block);
   return PyInt_FromLong(err);
 }
 
@@ -920,14 +920,14 @@ static PyMethodDef chemfp_methods[] = {
   {"fps_threshold_tanimoto_search", fps_threshold_tanimoto_search, METH_VARARGS,
    "fps_threshold_tanimoto_search (TODO: document)"},
 
-  {"fps_tanimoto_count", fps_tanimoto_count, METH_VARARGS,
-   "fps_tanimoto_count (TODO: document)"},
+  {"fps_count_tanimoto_hits", fps_count_tanimoto_hits, METH_VARARGS,
+   "fps_count_tanimoto_hits (TODO: document)"},
 
 
   {"fps_knearest_search_init", fps_knearest_search_init, METH_VARARGS,
    "fps_knearest_search_init (TODO: document)"},
-  {"fps_knearest_search_feed", fps_knearest_search_feed, METH_VARARGS,
-   "fps_knearest_search_feed (TODO: document)"},
+  {"fps_knearest_tanimoto_search_feed", fps_knearest_tanimoto_search_feed, METH_VARARGS,
+   "fps_knearest_tanimoto_search_feed (TODO: document)"},
   {"fps_knearest_search_finish", fps_knearest_search_finish, METH_VARARGS,
    "fps_knearest_search_finish (TODO: document)"},
   {"fps_knearest_search_free", fps_knearest_search_free, METH_VARARGS,

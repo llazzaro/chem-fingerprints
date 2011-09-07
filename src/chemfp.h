@@ -112,7 +112,7 @@ int chemfp_threshold_tanimoto_hexfp_fps(
 
 /* Return the number of fingerprints in the fps block which are greater
    than or equal to the specified threshold. */
-int chemfp_fps_tanimoto_count(
+int chemfp_fps_count_tanimoto_hits(
 	int num_bits,
 	int query_storage_size,
 	const unsigned char *query_arena, int query_start, int query_end,
@@ -175,7 +175,7 @@ int chemfp_fps_knearest_search_init(
         int k, double threshold);
 
 /* Update the heap based on the lines in an fps fingerprint data block. */
-int chemfp_fps_knearest_search_feed(
+int chemfp_fps_knearest_tanimoto_search_feed(
 	chemfp_fps_knearest_search *knearest_search,
 	int target_block_len, const char *target_block);
 
