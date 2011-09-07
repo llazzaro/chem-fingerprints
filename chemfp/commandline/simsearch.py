@@ -20,24 +20,25 @@ def write_simsearch_header(outfile, d):
     outfile.writelines(lines)
 
 
-def report_threshold(outfile, query_arenas, targets, threshold):
+def report_threshold(outfile, float_formatter, query_arenas, targets, threshold):
     def search_function(query_arena):
         return chemfp.threshold_tanimoto_search(query_arena, targets,
                                                 threshold=threshold)
-    _report_search(outfile, query_arenas, search_function)
+    _report_search(outfile, float_formatter, query_arenas, search_function)
 
-def report_knearest(outfile, query_arenas, targets, k, threshold):
+def report_knearest(outfile, float_formatter, query_arenas, targets, k, threshold):
     def search_function(query_arena):
         return chemfp.knearest_tanimoto_search(query_arena, targets,
                                                k=k, threshold=threshold)
-    _report_search(outfile, query_arenas, search_function)
+    _report_search(outfile, float_formatter, query_arenas, search_function)
 
-def _report_search(outfile, query_arenas, search_function):
+def _report_search(outfile, float_formatter, query_arenas, search_function):
+    hit_formatter = "\t%s\t" + float_formatter
     for query_arena in query_arenas:
         for query_id, hits in search_function(query_arena):
             outfile.write("%d\t%s" % (len(hits), query_id))
             for hit in hits:
-                outfile.write("\t%s\t%f" % hit)
+                outfile.write(hit_formatter % hit)
             outfile.write("\n") # XXX flush?
     
 
@@ -62,16 +63,15 @@ parser = argparse.ArgumentParser(
 parser.add_argument("-k" ,"--k-nearest", help="select the k nearest neighbors (use 'all' for all neighbors)",
                     default=3, type=int_or_all)
 parser.add_argument("-t" ,"--threshold", help="minimum similarity score threshold",
-                    default=0.0, type=float)
+                    default=0.7, type=float)
 parser.add_argument("-q", "--queries", help="filename containing the query fingerprints")
 parser.add_argument("--hex-query", help="query in hex")
-parser.add_argument("--query-id", default="query",
+parser.add_argument("--query-id", default="Query1",
                     help="id for the hex query")
 parser.add_argument("--in", metavar="FORMAT", dest="query_format",
                     help="input query format (default uses the file extension, else 'fps')")
 parser.add_argument("-o", "--output", metavar="FILENAME",
                     help="output filename (default is stdout)")
-parser.add_argument("--type", help="fingerprint type", default=None)
 
 parser.add_argument("-c", "--count", help="report counts", action="store_true")
 
@@ -128,12 +128,7 @@ def main(args=None):
 
     # Open the target file. This reads just enough to get the header.
 
-    try:
-        targets = chemfp.open(target_filename, type=args.type)
-    except TypeError, err:
-        if "'type' is required" in str(err):
-            parser.error("--type is required to convert structure in the targets file to fingerprints")
-        raise
+    targets = chemfp.open(target_filename)
             
     if args.hex_query is not None:
         try:
@@ -153,7 +148,7 @@ def main(args=None):
                                       [(query_id, query_fp)])
 
     else:
-        queries = chemfp.open(args.queries, format=args.query_format, type=type)        
+        queries = chemfp.open(args.queries, format=args.query_format)
 
     query_arena_iter = queries.iter_arenas(batch_size)
     
@@ -232,10 +227,10 @@ def main(args=None):
                 report_counts(outfile, query_arenas, targets,
                               threshold = args.threshold)
             elif args.k_nearest == "all":
-                report_threshold(outfile, query_arenas, targets,
+                report_threshold(outfile, float_formatter, query_arenas, targets,
                                  threshold = args.threshold)
             else:
-                report_knearest(outfile, query_arenas, targets,
+                report_knearest(outfile, float_formatter, query_arenas, targets,
                                 k = args.k_nearest,
                                 threshold = args.threshold)
                 
