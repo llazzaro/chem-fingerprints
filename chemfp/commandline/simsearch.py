@@ -149,8 +149,8 @@ def main(args=None):
             parser.error("--hex-query with %d bits is not compatible with targets with %d bits" %
                          (query_num_bits, target_num_bits))
         
-        queries = chemfp.Fingerprints([(query_id, query_fp)],
-                                      io.Header(num_bits=target_num_bits))
+        queries = chemfp.Fingerprints(io.Header(num_bits=target_num_bits),
+                                      [(query_id, query_fp)])
 
     else:
         queries = chemfp.open(args.queries, format=args.query_format, type=type)        
