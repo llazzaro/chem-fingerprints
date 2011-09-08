@@ -9,7 +9,7 @@ import _chemfp
 def report_errors(problem_report):
     for (severity, error, msg_template) in problem_report:
         if severity == "error":
-            raise TypeError(msg_template.format(metadata1 = "query",
+            raise TypeError(msg_template % dict(metadata1 = "query",
                                                 metadata2 = "target"))
 
 def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
@@ -311,6 +311,8 @@ def fps_to_arena(fps_reader, metadata=None, sort=True):
     if metadata is None:
         metadata = fps_reader.metadata
     num_bits = metadata.num_bits
+    if not num_bits:
+        num_bits = metadata.num_bytes * 8
     assert num_bits
 
     ids = []
