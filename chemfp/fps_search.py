@@ -32,7 +32,7 @@ def _chemfp_error(err, lineno, filename):
 def report_errors(problem_report):
     for (severity, error, msg_template) in problem_report:
         if severity == "error":
-            raise TypeError(msg_template.format(metadata1 = "query",
+            raise TypeError(msg_template % dict(metadata1 = "query",
                                                 metadata2 = "target"))
 
 ######## count Tanimoto search #########
@@ -180,7 +180,7 @@ def knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
     return knearest_tanimoto_search_all(query_arena, target_reader, k, threshold)[0]
 
 def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
-    report_errors(query_arena.metadata, target_reader.metadata)
+    report_errors(check_metadata_problems(query_arena.metadata, target_reader.metadata))
     num_bits = query_arena.metadata.num_bits
 
     num_queries = len(query_arena)
@@ -193,7 +193,7 @@ def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
 
     try:
         for block in target_reader.iter_blocks():
-            err = _chemfp.fps_knearest_tanimoto_search_feed(search, block)
+            err = _chemfp.fps_knearest_tanimoto_search_feed(search, block, 0, -1)
             if err:
                 lineno = target_reader._first_fp_lineno + search.num_targets_processed
                 raise _chemfp_error(err, lineno, target_reader._filename)
