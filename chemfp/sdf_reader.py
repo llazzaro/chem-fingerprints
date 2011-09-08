@@ -7,12 +7,50 @@
 
 
 from __future__ import absolute_import
-from . import error_handlers, io
+from . import ChemFPError
+from . import io
 
 __all__ = ["open_sdf", "iter_sdf_records", "iter_two_tags", "iter_title_and_tag"]
 
 import re
 import chemfp
+
+class SDFParseError(ChemFPError):
+    def __init__(self, msg, filename, lineno):
+        super(SDFFormatError, self).__init__(msg, filename, lineno)
+        self.msg = msg
+        self.filename = filename
+        self.lineno = lineno
+    def __repr__(self):
+        return "SDFFormatError(%r, %r, %r)" % (self.msg, self.filename, self.lineno)
+    def __str__(self):
+        return self.msg
+
+def ignore_parse_errors(msg, loc):
+    pass
+
+def log_parse_errors(msg, loc):
+    import logging
+    logger = logging.getLogger("chemfp")
+    logger.error("%s %s" % (msg, loc.where()))
+
+def strict_parse_errors(msg, loc):
+    raise SDFParseError(msg + " " + loc.where(),
+                        loc.lineno, log.name)
+
+_parse_error_handlers = {
+    "ignore": ignore_parse_errors,
+    "log": log_parse_errors,
+    "strict": strict_parse_errors,
+    }
+
+def get_parse_error_handler(name_or_callable="strict"):
+    if name_or_callable is None:
+        return strict_parse_errors
+    if isinstance(name_or_callable, basestring):
+        return _parse_error_handlers[name_or_callable]
+    return name_or_callable
+
 
 
 # Do a quick check that the SD record is in the correct format
@@ -104,7 +142,7 @@ def iter_sdf_records(fileobj, errors="strict", loc=None):
         loc = FileLocation()
     if loc.name is None:
         loc.name = getattr(fileobj, "name", None)
-    error = error_handlers.get_parse_error_handler(errors)
+    error = get_parse_error_handler(errors)
     pushback_buffer = ''
     records = None
     while 1:
