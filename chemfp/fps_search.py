@@ -6,7 +6,26 @@ import itertools
 import array
 
 import _chemfp
+from . import ChemFPError
 from . import check_fp_problems, check_metadata_problems
+
+class FPSFormatError(ChemFPError):
+    def __init__(self, code, filename, lineno):
+        self.code = code
+        self.filename = filename
+        self.lineno = lineno
+        super(FPSFormatError, self).__init__(code, filename, lineno)
+    def __repr__(self):
+        return "FPSFormatError(%r, %r, %r)" % (self.code, self.filename, self.lineno)
+    def __str__(self):
+        return "%s at line %s of %r" % (_chemfp.strerror(code), lineno, filename)
+
+def _chemfp_error(err, lineno, filename):
+    if -40 <= err <= -30:
+        return FPSFormatError(err, lineno, filename)
+    else:
+        return ChemFPError(_chemfp.strerror(err))
+
 
 def report_errors(problem_report):
     for (severity, error, msg_template) in problem_report:
@@ -37,7 +56,7 @@ def count_tanimoto_hits_arena(query_arena, target_reader, threshold):
             threshold, counts)
         lineno += num_lines
         if err:
-            ERROR
+            raise _chemfp_error(err, lineno, target_reader._filename)
 
     return list(counts)
     
@@ -74,8 +93,7 @@ def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
                 threshold, cells)
             lineno += num_lines
             if err:
-                raise TypeError("Error at or after line %r of %r: %s" %
-                                (lineno, target_reader, _chemfp.strerror(err)))
+                raise _chemfp_error(err, lineno, target_reader._filename)
                 
             for cell in itertools.islice(cells, 0, num_cells):
                     id = block[cell.id_start:cell.id_end]
@@ -108,7 +126,7 @@ def threshold_tanimoto_search_all(query_arena, target_reader, threshold):
                 threshold, cells)
             lineno += num_lines
             if err:
-                ERROR
+                raise _chemfp_error(err, lineno, target_reader._filename)
                 
             for cell in itertools.islice(cells, 0, num_cells):
                 id = block[cell.id_start:cell.id_end]
@@ -175,7 +193,8 @@ def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
         for block in target_reader.iter_blocks():
             err = _chemfp.fps_knearest_tanimoto_search_feed(search, block)
             if err:
-                ERR
+                lineno = target_reader._first_fp_lineno + search.num_targets_processed
+                raise _chemfp_error(err, lineno, target_reader._filename)
 
         _chemfp.fps_knearest_search_finish(search)
 
