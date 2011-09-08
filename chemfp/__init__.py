@@ -341,7 +341,7 @@ def knearest_tanimoto_search(queries, targets, k=_K, threshold=_THRESHOLD, arena
 
 def check_fp_problems(fp, metadata):
     if len(fp) != metadata.num_bytes:
-        msg = ("{fp} fingerprint contains %d bytes but {metadata} has %d byte fingerprints" %
+        msg = ("%%(fp)s fingerprint contains %d bytes but %%(metadata)s has %d byte fingerprints" %
                (len(fp), metadata.num_bytes))
         return [("error", "num_bytes mismatch", msg)]
     return []
@@ -352,7 +352,7 @@ def check_metadata_problems(metadata1, metadata2):
     if (metadata1.num_bits is not None and metadata2.num_bits is not None):
         compared_num_bits = True
         if metadata1.num_bits != metadata2.num_bits:
-            msg = ("{metadata1} has %d bit fingerprints but {metadata2} has %d bit fingerprints" %
+            msg = ("%%(metadata1)s has %d bit fingerprints but %%(metadata2)s has %d bit fingerprints" %
                    (metadata1.num_bits, metadata2.num_bits))
             messages.append( ("error", "num_bits mismatch", msg) )
 
@@ -361,7 +361,7 @@ def check_metadata_problems(metadata1, metadata2):
         metadata2.num_bytes is not None and
         metadata1.num_bytes != metadata2.num_bytes):
         
-        msg = ("{metadata1} has %d byte fingerprints but {metadata2} has %d byte fingerprints" %
+        msg = ("%%(metadata1)s has %d byte fingerprints but %%(metadata2) has %d byte fingerprints" %
                (metadata1.num_bytes, metadata2.num_bytes))
         messages.append( ("error", "num_bytes mismatch", msg) )
 
@@ -370,7 +370,7 @@ def check_metadata_problems(metadata1, metadata2):
         metadata2.type is not None and
         metadata1.type != metadata2.type):
         
-        msg = ("{metadata1} has fingerprints of type %r but {metadata2} has fingerprints of type %r" %
+        msg = ("%%(metadata1)s has fingerprints of type %r but %%(metadata2)s has fingerprints of type %r" %
                (metadata1.type, metadata2.type))
         messages.append( ("warning", "type mismatch", msg) )
 
@@ -378,7 +378,7 @@ def check_metadata_problems(metadata1, metadata2):
         metadata2.aromaticity is not None and
         metadata1.aromaticity != metadata2.aromaticity):
 
-        msg = ("{metadata1} uses aromaticity %r but {metadata2} uses aromaticity %r" %
+        msg = ("%%(metadata1)s uses aromaticity %r but %%(metadata2)s uses aromaticity %r" %
                (metadata1.aromaticity, metadata2.aromaticity))
         messages.append( ("warning", "aromaticity mismatch", msg) )
 
@@ -386,7 +386,7 @@ def check_metadata_problems(metadata1, metadata2):
         metadata2.software is not None and
         metadata1.software != metadata2.software):
 
-        msg = ("{metadata1} comes from software %r but {metadata2} comes from software %r" %
+        msg = ("%%(metadata1)s comes from software %r but %%(metadata2)s comes from software %r" %
                (metadata1.software, metadata2.software))
         messages.append( ("info", "software mismatch", msg) )
 
@@ -412,7 +412,8 @@ class Metadata(object):
         if sources is None:
             self.sources = []
         elif isinstance(sources, basestring):
-            raise TypeError("sources must be a list, not a string")
+            self.sources = [sources]
+            #raise TypeError("sources must be a list, not a string")
         else:
             self.sources = sources
         self.date = date
