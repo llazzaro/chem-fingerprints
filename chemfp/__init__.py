@@ -37,6 +37,9 @@ from .error_handlers import ChemFPError
 _K = 3
 _THRESHOLD = 0.7
 
+class ChemFPError(Exception):
+    pass
+
 def read_structure_fingerprints(type, source=None, format=None, id_tag=None, aromaticity=None):
     """Read structures from `source` and return the corresponding ids and fingerprints
 
