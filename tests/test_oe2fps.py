@@ -80,7 +80,7 @@ def _construct_test_values():
         assert as_hex == _convert_to_chemfp_order(oe_hex), (
             as_hex, _convert_to_chemfp_order(oe_hex))
         
-        hex_data.append("%s %s" % (as_hex, mol.GetTitle()))
+        hex_data.append("%s\t%s" % (as_hex, mol.GetTitle()))
     return hex_data
 
 # I have this to flag any obvious changes in the OEChem algorithm and
@@ -148,7 +148,7 @@ class TestPath(unittest2.TestCase):
 
     def test_num_bits(self):
         result = run_fps("--numbits 16", 19)
-        self.assertEquals(result[0][:5], "ff1f ")
+        self.assertEquals(result[0][:5], "ff1f\t")
 
     def test_min_bonds_default(self):
         result = run_fps("--minbonds 0", 19)

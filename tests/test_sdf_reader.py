@@ -14,7 +14,6 @@ assert len(after - before) == 4, ("wrong import * count", after-before)
 
 # Needed for access to the experimental FileLocation
 from chemfp import sdf_reader
-from chemfp.error_handlers import ChemFPParseError
 
 TRYPTOPHAN_SDF = support.fullpath("tryptophan.sdf")
 PUBCHEM_SDF = support.fullpath("pubchem.sdf")
@@ -164,7 +163,7 @@ class TestReadErrors(unittest2.TestCase):
         try:
             for x in open_sdf(f):
                 raise AssertionError("Bad parse")
-        except ChemFPParseError, err:
+        except sdf_reader.SDFParseError, err:
             self.assertEquals("Could not find a valid SD record" in str(err), True)
             self.assertEquals("line 1" in str(err), True, str(err))
             
@@ -173,7 +172,7 @@ class TestReadErrors(unittest2.TestCase):
         try:
             for x in open_sdf(f):
                 raise AssertionError("should not be able to read the first record")
-        except ChemFPParseError, err:
+        except sdf_reader.SDFParseError, err:
             self.assertEquals("too large" in str(err), True, str(err))
             self.assertEquals("at line 1" in str(err), True, str(err))
 
@@ -183,7 +182,7 @@ class TestReadErrors(unittest2.TestCase):
             for i, x in enumerate(open_sdf(f)):
                 if i > 1:
                     raise AssertionError("bad record count")
-        except ChemFPParseError, err:
+        except sdf_reader.SDFParseError, err:
             self.assertEquals("unexpected content" in str(err), True)
             expected_lineno = (tryptophan.count("\n")*2) + 1
             expected_lineno_msg = "at line %d" % expected_lineno
@@ -195,7 +194,7 @@ class TestReadErrors(unittest2.TestCase):
             for i, x in enumerate(open_sdf(f)):
                 if i > 0:
                     raise AssertionError("bad record count")
-        except ChemFPParseError, err:
+        except sdf_reader.SDFParseError, err:
             self.assertEquals("incorrectly formatted record" in str(err), True, str(err))
             self.assertEquals("at line 70" in str(err), True, str(err))
 
