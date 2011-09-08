@@ -32,8 +32,6 @@ import os
 import __builtin__
 import itertools
 
-from .error_handlers import ChemFPError
-
 _K = 3
 _THRESHOLD = 0.7
 
