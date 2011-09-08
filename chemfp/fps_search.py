@@ -23,9 +23,11 @@ class FPSFormatError(ChemFPError):
 def _chemfp_error(err, lineno, filename):
     if -40 <= err <= -30:
         return FPSFormatError(err, lineno, filename)
+    elif err == -2:
+        raise MemoryError(_chemfp.strerror(err))
     else:
-        return ChemFPError(_chemfp.strerror(err))
-
+        # This shouldn't happen
+        return RuntimeError(_chemfp.strerror(err))
 
 def report_errors(problem_report):
     for (severity, error, msg_template) in problem_report:
