@@ -1,6 +1,6 @@
 # Information about fingerprint types
 
-from . import FingerprintIterator
+from . import FingerprintIterator, Metadata
 
 from . import io
 from .decoders import import_decoder  # XXX too specific to the decoder module
@@ -169,12 +169,12 @@ class Fingerprinter(object):
                 yield id, fingerprinter(mol)
         reader = fingerprint_reader(structure_reader, fingerprinter)
         
-        return FingerprintIterator(io.Header(num_bits = self.num_bits,
-                                             source = source_filename,
-                                             software = self.software,
-                                             type = self.get_type(),
-                                             date = io.utcnow(),
-                                             aromaticity = aromaticity),
+        return FingerprintIterator(Metadata(num_bits = self.num_bits,
+                                            sources = [source_filename],
+                                            software = self.software,
+                                            type = self.get_type(),
+                                            date = io.utcnow(),
+                                            aromaticity = aromaticity),
                                    reader)
     
     def describe(self, bitno):

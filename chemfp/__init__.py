@@ -72,7 +72,7 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, aro
     Here is an example of using fingerprints generated from structure file:
     
         fp_reader = read_structure_fingerprints("OpenBabel-FP4/1", "example.sdf.gz")
-        print "Each fingerprint has", fps.header.num_bits, "bits"
+        print "Each fingerprint has", fps.metadata.num_bits, "bits"
         for (id, fp) in fp_reader:
            print id, repr(fp)
 
@@ -151,7 +151,7 @@ def open(source, format=None):
     raise TypeError("Unable to determine fingerprint format type from %r" % (source,))
 
 
-def load_fingerprints(reader, header=None, sort=True):
+def load_fingerprints(reader, metadata=None, sort=True):
     """Load all of the fingerprints into an in-memory FingerprintArena data structure
 
     The FingerprintArena data structure reads all of the fingerprints and
@@ -159,8 +159,8 @@ def load_fingerprints(reader, header=None, sort=True):
     structure which supports fast similarity searches.
 
     `reader` is either an iterator over (id, fingerprint) pairs or the name
-    of a file containing fingerprints. `header` contains the header metadata
-    for the arena. If not specified then `reader` must contain a "header"
+    of a file containing fingerprints. `metadata` contains the metadata metadata
+    for the arena. If not specified then `reader` must contain a "metadata"
     attribute.
 
     The loader may reorder the fingerprints by for better search performance.
@@ -168,19 +168,19 @@ def load_fingerprints(reader, header=None, sort=True):
 
     :param reader: An iterator over (id, fingerprint) pairs
     :type reader: FingerprintReader or any iterator
-    :param header: The header for the arena, if other than reader.header
-    :type header: Header
+    :param metadata: The metadata for the arena, if other than reader.metadata
+    :type metadata: Metadata
     :param sort: Specify if fingerprints should be reordered for better performance
     :type sort: True or False
     :returns: FingerprintArena
     """
     if isinstance(reader, basestring):
         reader = open(reader)
-    if header is None:
-        header = reader.header
+    if metadata is None:
+        metadata = reader.metadata
 
     from . import arena
-    return arena.fps_to_arena(reader, header=header, sort=sort)
+    return arena.fps_to_arena(reader, metadata=metadata, sort=sort)
 
 ##### High-level search interfaces
 
@@ -338,15 +338,95 @@ def knearest_tanimoto_search(queries, targets, k=_K, threshold=_THRESHOLD, arena
         for item in zip(query_arena.ids, results):
             yield item
 
+def check_fp_problems(fp, metadata):
+    if len(fp) != metadata.num_bytes:
+        msg = ("{fp} fingerprint contains %d bytes but {metadata} has %d byte fingerprints" %
+               (len(fp), metadata.num_bytes))
+        return [("error", "num_bytes mismatch", msg)]
+    return []
+
+def check_metadata_problems(metadata1, metadata2):
+    messages = []
+    compared_num_bits = False
+    if (metadata1.num_bits is not None and metadata2.num_bits is not None):
+        compared_num_bits = True
+        if metadata1.num_bits != metadata2.num_bits:
+            msg = ("{metadata1} has %d bit fingerprints but {metadata2} has %d bit fingerprints" %
+                   (metadata1.num_bits, metadata2.num_bits))
+            messages.append( ("error", "num_bits mismatch", msg) )
+
+    if (not compared_num_bits and
+        metadata1.num_bytes is not None and
+        metadata2.num_bytes is not None and
+        metadata1.num_bytes != metadata2.num_bytes):
+        
+        msg = ("{metadata1} has %d byte fingerprints but {metadata2} has %d byte fingerprints" %
+               (metadata1.num_bytes, metadata2.num_bytes))
+        messages.append( ("error", "num_bytes mismatch", msg) )
+
+
+    if (metadata1.type is not None and
+        metadata2.type is not None and
+        metadata1.type != metadata2.type):
+        
+        msg = ("{metadata1} has fingerprints of type %r but {metadata2} has fingerprints of type %r" %
+               (metadata1.type, metadata2.type))
+        messages.append( ("warning", "type mismatch", msg) )
+
+    if (metadata1.aromaticity is not None and
+        metadata2.aromaticity is not None and
+        metadata1.aromaticity != metadata2.aromaticity):
+
+        msg = ("{metadata1} uses aromaticity %r but {metadata2} uses aromaticity %r" %
+               (metadata1.aromaticity, metadata2.aromaticity))
+        messages.append( ("warning", "aromaticity mismatch", msg) )
+
+    if (metadata1.software is not None and
+        metadata2.software is not None and
+        metadata1.software != metadata2.software):
+
+        msg = ("{metadata1} comes from software %r but {metadata2} comes from software %r" %
+               (metadata1.software, metadata2.software))
+        messages.append( ("info", "software mismatch", msg) )
+
+    return messages
+
+class Metadata(object):
+    def __init__(self, num_bits=None, num_bytes=None, software=None, type=None,
+                 sources=None, date=None, aromaticity=None):
+        if num_bytes is None:
+            if num_bits is None:
+                pass
+            else:
+                num_bytes = (num_bits + 7)//8
+        elif num_bits is not None:
+            if (num_bits + 7)//8 != num_bytes:
+                raise TypeError("num_bits of %d is incompatible with num_bytes of %d" %
+                                (num_bits, num_bytes))
+            
+        self.num_bits = num_bits
+        self.num_bytes = num_bytes
+        self.software = software
+        self.type = type
+        if sources is None:
+            self.sources = []
+        elif isinstance(sources, basestring):
+            raise TypeError("sources must be a list, not a string")
+        else:
+            self.sources = sources
+        self.date = date
+        self.aromaticity = aromaticity
+
+
 class FingerprintReader(object):
     """Base class for all chemfp objects holding fingerprint data
 
-    All FingerprintReader instances have a `header` attribute
-    containing a Header.
+    All FingerprintReader instances have a `metadata` attribute
+    containing a Metadata.
     """
-    def __init__(self, header):
-        """initialize with a Header instance"""
-        self.header = header
+    def __init__(self, metadata):
+        """initialize with a Metadata instance"""
+        self.metadata = metadata
 
     def __iter__(self):
         """iterate over the (id, fingerprint) pairs"""
@@ -384,7 +464,7 @@ class FingerprintReader(object):
         :type arena_size: positive integer, or None
         """
         if arena_size is None:
-            yield load_fingerprints(self, self.header, sort=False)
+            yield load_fingerprints(self, self.metadata, sort=False)
             return
 
         if arena_size < 1:
@@ -394,7 +474,7 @@ class FingerprintReader(object):
         it = iter(self)
         while 1:
             slice = itertools.islice(it, 0, arena_size)
-            arena = load_fingerprints(slice, self.header, sort=False)
+            arena = load_fingerprints(slice, self.metadata, sort=False)
             if not arena:
                 break
             yield arena
@@ -405,9 +485,9 @@ class FingerprintIterator(FingerprintReader):
     This is most used used when reading files or using containers
     which only support forward iteration.
     """
-    def __init__(self, header, id_fp_iterator):
-        """initialize with a Header instance and the (id, fingerprint) iterator"""
-        super(FingerprintIterator, self).__init__(header)
+    def __init__(self, metadata, id_fp_iterator):
+        """initialize with a Metadata instance and the (id, fingerprint) iterator"""
+        super(FingerprintIterator, self).__init__(metadata)
         self._id_fp_iterator = id_fp_iterator
         self._at_start = True
 
@@ -428,9 +508,9 @@ class Fingerprints(FingerprintReader):
 
     This class add implementations for len() and []
     """
-    def __init__(self, header, id_fp_pairs):
-        """initialize with a Header instance and the (id, fingerprint) pair list"""
-        super(Fingerprints, self).__init__(header)
+    def __init__(self, metadata, id_fp_pairs):
+        """initialize with a Metadata instance and the (id, fingerprint) pair list"""
+        super(Fingerprints, self).__init__(metadata)
         self._id_fp_pairs = id_fp_pairs
     def __len__(self):
         """return the number of available (id, fingerprint) pairs"""
@@ -440,7 +520,7 @@ class Fingerprints(FingerprintReader):
         return iter(self._id_fp_pairs)
     
     def __repr__(self):
-        return "FingerprintList(%r, %r)" % (self.header, self._id_fp_pairs)
+        return "FingerprintList(%r, %r)" % (self.metadata, self._id_fp_pairs)
     
     def __getitem__(self, i):
         """return the given (id, fingerprint) pair"""

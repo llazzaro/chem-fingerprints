@@ -8,12 +8,11 @@ import re
 import sys
 import heapq
 import itertools
-
-import chemfp
-from chemfp import fps_search
 import ctypes
 
-from . import search, io
+from . import load_fingerprints, Metadata
+from . import fps_search
+from . import io
 
 BLOCKSIZE = 20000
 
@@ -63,18 +62,22 @@ def _read_blocks(infile):
             
 
 class FPSReader(object):
-    def __init__(self, infile, header, first_fp_lineno, first_fp_block):
+    def __init__(self, infile, metadata, first_fp_lineno, first_fp_block):
         self._infile = infile
         self._filename = getattr(infile, "name", "<unknown>")
-        self.header = header
+        self.metadata = metadata
         self._first_fp_lineno = first_fp_lineno
         self._first_fp_block = first_fp_block
-        self._expected_hex_len = 2*header.num_bytes_per_fp
+        self._expected_hex_len = 2*metadata.num_bytes
         self._hex_len_source = "size in header"
 
         self._at_start = True
         self._it = None
         self._block_reader = None
+
+# Not sure if this is complete. Also, should have a context manager
+#    def close(self):
+#        self._infile.close()
         
     def reset(self):
         if self._at_start:
@@ -103,9 +106,9 @@ class FPSReader(object):
     def iter_arenas(self, arena_size = 1000):
         id_fps = iter(self)
         while 1:
-            arena = chemfp.load_fingerprints(itertools.islice(id_fps, 0, arena_size),
-                                             header = self.header,
-                                             sort = False)
+            arena = load_fingerprints(itertools.islice(id_fps, 0, arena_size),
+                                      metadata = self.metadata,
+                                      sort = False)
             if not arena:
                 break
             yield arena
@@ -162,7 +165,7 @@ def warn_to_stderr(filename, lineno, message):
 
 _whitespace = re.compile(r"[ \t\n]")
 def read_header(f, filename, warn=warn_to_stderr):
-    header = io.Header()
+    metadata = Metadata()
 
     lineno = 1
     for block in _read_blocks(f):
@@ -176,7 +179,7 @@ def read_header(f, filename, warn=warn_to_stderr):
             if c != '#':
                 # End of the header. This block contains the first fingerprint line
                 block = block[start:]
-                if header.num_bits is None:
+                if metadata.num_bits is None:
                     # We can figure this out from the fingerprint on the first line
                     m = _whitespace.search(block)
                     if m is None:
@@ -184,9 +187,9 @@ def read_header(f, filename, warn=warn_to_stderr):
                     i = m.end()-1 # Back up from the whitespace
                     if i % 2 == 1:
                         raise TypeError(block)
-                    header.num_bits = i * 4
+                    metadata.num_bits = i * 4
                     
-                return header, lineno, block
+                return metadata, lineno, block
 
             start += 1 # Skip the '#'
             end = block.find("\n", start)
@@ -214,27 +217,33 @@ def read_header(f, filename, warn=warn_to_stderr):
 
             if key == "num_bits":
                 try:
-                    header.num_bits = int(value)
-                    if not (header.num_bits > 0):
+                    metadata.num_bits = int(value)
+                    if not (metadata.num_bits > 0):
                         raise ValueError
                 except ValueError:
                     raise TypeError(
                         "num_bits header must be a positive integer, not %r: %s" %
                         (value, _where(filename, lineno)))
+                metadata.num_bytes = (metadata.num_bits+7)//8
             elif key == "software":
-                header.software = value
+                metadata.software = value.decode("utf8")
             elif key == "type":
                 # Should I have an auto-normalization step here which
                 # removes excess whitespace?
-                #header.type = normalize_type(value)
-                header.type = value
+                #metadata.type = normalize_type(value)
+                metadata.type = value
             elif key == "source":
-                header.source = value
+                metadata.sources.append(value)
             elif key == "date":
-                header.date = value
+                metadata.date = value
+            elif key == "aromaticity":
+                metadata.aromaticity = value
+            elif key.startswith("x-"):
+                pass
             else:
-                print "UNKNOWN", repr(line), repr(key), repr(value)
+                #print "UNKNOWN", repr(line), repr(key), repr(value)
                 #warn(filename, lineno, "Unknown header %r" % (value,))
+                pass
             lineno += 1
 
     # Reached the end of file. No fingerprint lines and nothing left to process.

@@ -10,33 +10,6 @@ from datetime import datetime
 def utcnow():
     return datetime.utcnow().isoformat().split(".", 1)[0]
 
-def check_compatibility(fp, header):
-    if header.num_bits is None:
-        raise TypeError("Missing header num_bits")
-    # 0 -> 0
-    # 1 -> 1-8
-    # 2 -> 9-16
-    if header.num_bits == 0:
-        return len(fp) == 0
-    return (header.num_bits+7)//8 == len(fp)
-
-class Header(object):
-    def __init__(self, num_bits=None, software=None, type=None,
-                 source=None, date=None, aromaticity=None):
-        assert num_bits is None or isinstance(num_bits, int)
-        self.num_bits = num_bits
-        self.software = software
-        self.type = type
-        self.source = source
-        self.date = date
-        self.aromaticity = aromaticity
-
-    @property
-    def num_bytes_per_fp(self):
-        if self.num_bits is None:
-            return None
-        return (self.num_bits+7)//8
-
 ####
     
 _compression_extensions = {
@@ -210,29 +183,29 @@ def open_compressed_input_universal(source, compression):
 def write_fps1_magic(outfile):
     outfile.write("#FPS1\n")
 
-def write_fps1_header(outfile, header):
+def write_fps1_header(outfile, metadata):
     lines = []
-    if header.num_bits is not None:
-        lines.append("#num_bits=%d\n" % header.num_bits)
+    if metadata.num_bits is not None:
+        lines.append("#num_bits=%d\n" % metadata.num_bits)
 
-    if header.software is not None:
-        assert "\n" not in header.software
-        lines.append("#software=" + header.software.encode("utf8")+"\n")
+    if metadata.software is not None:
+        assert "\n" not in metadata.software
+        lines.append("#software=" + metadata.software.encode("utf8")+"\n")
 
-    if header.type is not None:
-        assert "\n" not in header.type
-        lines.append("#type=" + header.type.encode("ascii")+"\n") # type cannot contain non-ASCII characters
+    if metadata.type is not None:
+        assert "\n" not in metadata.type
+        lines.append("#type=" + metadata.type.encode("ascii")+"\n") # type cannot contain non-ASCII characters
 
-    if header.source is not None:
+    for source in metadata.sources:
         # Ignore newlines in the source filename, if present
-        source = header.source.replace("\n", "")
+        source = source.replace("\n", "")
         lines.append("#source=" + source.encode("utf8")+"\n")
 
-    if header.date is not None:
-        lines.append("#date=" + header.date.encode("ascii")+"\n") # date cannot contain non-ASCII characters
+    if metadata.date is not None:
+        lines.append("#date=" + metadata.date.encode("ascii")+"\n") # date cannot contain non-ASCII characters
 
-    if header.aromaticity is not None:
-        lines.append("#aromaticity=%s\n" % header.aromaticity.encode("ascii"))
+    if metadata.aromaticity is not None:
+        lines.append("#aromaticity=" + metadata.aromaticity.encode("ascii") + "\n")
         
     outfile.writelines(lines)
 
@@ -253,8 +226,15 @@ class _IgnorePipeErrors(object):
 ignore_pipe_errors = _IgnorePipeErrors()
 
 
-def write_fps1_fingerprint(outfile, fp, title):
-    outfile.write("%s\t%s\n" % (binascii.hexlify(fp), title))
+def write_fps1_fingerprint(outfile, fp, id):
+    if "\t" in id:
+        raise ValueError("fingerprint ids must not contain a tab: %r" % (id,))
+    if "\n" in id:
+        raise ValueError("fingerprint ids must not contain a newline: %r" % (id,))
+    if not id:
+        raise ValueError("fingerprint ids must contain characters: %r" % (id,))
+    
+    outfile.write("%s\t%s\n" % (binascii.hexlify(fp), id))
 
 
 # This is a bit of a hack. If I open a file then I want to close it,
@@ -269,12 +249,14 @@ class _closing_output(object):
         if self.output is not sys.stdout:
             self.output.close()
 
-def write_fps1_output(reader, destination):
+def write_fps1_output(reader, destination, metadata=None):
+    if metadata is None:
+        metadata = reader.metadata
     hexlify = binascii.hexlify
     with _closing_output(destination) as outfile:
         with ignore_pipe_errors:
             write_fps1_magic(outfile)
-            write_fps1_header(outfile, reader.header)
+            write_fps1_header(outfile, metadata)
 
             for (id, fp) in reader:
-                outfile.write("%s %s\n" % (hexlify(fp), id))
+                outfile.write("%s\t%s\n" % (hexlify(fp), id))

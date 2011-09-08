@@ -1,26 +1,34 @@
 # Internal module to help with FPS-based searches
+from __future__ import absolute_import
 
 import ctypes
 import itertools
 import array
 
 import _chemfp
+from . import check_fp_problems, check_metadata_problems
+
+def report_errors(problem_report):
+    for (severity, error, msg_template) in problem_report:
+        if severity == "error":
+            raise TypeError(msg_template.format(metadata1 = "query",
+                                                metadata2 = "target"))
 
 ######## count Tanimoto search #########
 
-def _fp_to_arena(query_fp, header):
-    assert len(query_fp) == header.num_bytes_per_fp
+def _fp_to_arena(query_fp, metadata):
+    assert len(query_fp) == metadata.num_bytes
     from . import arena
-    return arena.Library(header, len(query_fp), query_fp, "", [None])
+    return arena.Library(metadata, len(query_fp), query_fp, "", [None])
 
 def count_tanimoto_hits_fp(query_fp, target_reader, threshold):
-    return count_tanimoto_hits_arena(_fp_to_arena(query_fp, target_reader.header), threshold)[0]
+    return count_tanimoto_hits_arena(_fp_to_arena(query_fp, target_reader.metadata), threshold)[0]
 
 def count_tanimoto_hits_arena(query_arena, target_reader, threshold):
     counts = array.array("i", (0 for i in xrange(len(query_arena))))
 
     lineno = target_reader._first_fp_lineno
-    num_bits = target_reader.header.num_bits
+    num_bits = target_reader.metadata.num_bits
 
     for block in target_reader.iter_blocks():
         err, num_lines = _chemfp.fps_count_tanimoto_hits(
@@ -46,12 +54,9 @@ class TanimotoCell(ctypes.Structure):
 
 
 def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
-    #assert len(query_fp) == target_reader.num_bytes_per_fp
     hits = []
 
     fp_size = len(query_fp)
-#    if target_reader.num_bytes_per_fp != fp_size:
-#        ERROR
     num_bits = fp_size * 8
         
     NUM_CELLS = 1000
@@ -97,7 +102,7 @@ def threshold_tanimoto_search_all(query_arena, target_reader, threshold):
         end = len(block)
         while 1:
             err, start, num_lines, num_cells = _chemfp.fps_threshold_tanimoto_search(
-                query_arena.header.num_bits, query_arena.storage_size,
+                query_arena.metadata.num_bits, query_arena.storage_size,
                 query_arena.arena, 0, -1,
                 block, start, end,
                 threshold, cells)
@@ -144,18 +149,19 @@ def _make_knearest_search(num_queries, k):
 
 
 def check_num_bits_compatibility(query_arena, target_reader):
-    num_bits = query_arena.header.num_bits
-    if num_bits != target_reader.header.num_bits:
+    num_bits = query_arena.metadata.num_bits
+    if num_bits != target_reader.metadata.num_bits:
         raise TypeError("The query fingerprints have %d bits while the targets have %d" %
-                        (num_bits, target_reader.header.num_bits))
+                        (num_bits, target_reader.metadata.num_bits))
     return num_bits
 
 def knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
-    query_arena = _fp_to_arena(query_fp, target_reader.header)
+    query_arena = _fp_to_arena(query_fp, target_reader.metadata)
     return knearest_tanimoto_search_all(query_arena, target_reader, k, threshold)[0]
 
 def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
-    num_bits = check_num_bits_compatibility(query_arena, target_reader)
+    report_errors(query_arena.metadata, target_reader.metadata)
+    num_bits = query_arena.metadata.num_bits
 
     num_queries = len(query_arena)
     search = _make_knearest_search(num_queries, k)

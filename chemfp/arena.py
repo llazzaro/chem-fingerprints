@@ -1,23 +1,19 @@
+from __future__ import absolute_import
+
 import ctypes
 from cStringIO import StringIO
 
-from chemfp import _THRESHOLD, _K, FingerprintReader
+from chemfp import _THRESHOLD, _K, FingerprintReader, check_fp_problems, check_metadata_problems
 import _chemfp
 
-def check_fp_compatibility(query_fp, targets):
-    if len(query_fp) != targets.header.num_bytes_per_fp:
-        raise TypeError("Query fingerprint size (%d) does not match target arena size (%d)"
-                        % (len(query_fp), targets.header.num_bytes_per_fp))
-
-def check_compatibility(queries, targets):
-    if queries.header.num_bits != targets.header.num_bits:
-        raise TypeError("Incompatible fingerprint sizes: queries=%d and targets=%d" %
-                        (queries.header.num_bits, targets.header.num_bits))
-
-
+def report_errors(problem_report):
+    for (severity, error, msg_template) in problem_report:
+        if severity == "error":
+            raise TypeError(msg_template.format(metadata1 = "query",
+                                                metadata2 = "target"))
 
 def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
-    check_fp_compatibility(query_fp, target_arena)
+    report_errors(check_fp_problems(query_fp, target_arena.metadata))
 
     counts = array.array("i", (0 for i in xrange(len(query_fp))))
     _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
@@ -30,7 +26,7 @@ def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
 
 
 def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
-    check_compatibility(query_arena, target_arena)
+    report_errors(check_metadata_problems(query_arena.metadata, target_arena.metadata))
 
     counts = (ctypes.c_int*len(query_arena))()
     _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
@@ -83,7 +79,7 @@ class SearchHits(object):
             start = end
 
 def threshold_tanimoto_search_fp_indicies(query_fp, targets, threshold):
-    check_fp_compatibility(query_fp, targets)
+    report_errors(check_fp_problems(query_fp, targets.metadata))
     num_bits = targets.num_bits
 
     offsets = (ctypes.c_int * 2)()
@@ -142,7 +138,7 @@ def threshold_tanimoto_search_arena(queries, targets, threshold):
 
 def knearest_tanimoto_search_arena(queries, targets, k, threshold):
     check_compatibility(queries, targets)
-    num_bits = queries.header.num_bits
+    num_bits = queries.metadata.num_bits
 
     num_queries = len(queries)
 
@@ -222,18 +218,18 @@ class FingerprintLookup(object):
         return self._arena[start_offset:start_offset+self._fp_size]
 
 class FingerprintArena(FingerprintReader):
-    def __init__(self, header, storage_size, arena, popcount_indicies, ids,
+    def __init__(self, metadata, storage_size, arena, popcount_indicies, ids,
                  start=0, end=None):
-        self.header = header
-        self.num_bits = header.num_bits
+        self.metadata = metadata
+        self.num_bits = metadata.num_bits
         self.storage_size = storage_size
         self.arena = arena
         self.popcount_indicies = popcount_indicies
         self.ids = ids
-        self.fingerprints = FingerprintLookup(header.num_bytes_per_fp, storage_size, arena)
+        self.fingerprints = FingerprintLookup(metadata.num_bytes, storage_size, arena)
         self.start = start
         if end is None:
-            end = len(arena) // self.header.num_bytes_per_fp
+            end = len(arena) // self.metadata.num_bytes
         self.end = end
         assert end >= start
         self._range_check = xrange(end-start)
@@ -245,7 +241,7 @@ class FingerprintArena(FingerprintReader):
         i = self._range_check[i]
         arena_i = i + self.start
         start_offset = arena_i * self._storage_size
-        end_offset = start_offset + self.header.num_bytes_per_fp
+        end_offset = start_offset + self.metadata.num_bytes
         return self.ids[i], self.arena[start_offset:end_offset]
         
     def reset(self):
@@ -253,7 +249,7 @@ class FingerprintArena(FingerprintReader):
 
     def __iter__(self):
         storage_size = self.storage_size
-        target_fp_size = self.header.num_bytes_per_fp
+        target_fp_size = self.metadata.num_bytes
         arena = self.arena
         for id, start_offset in zip(self.ids, xrange(self.start*storage_size,
                                                      self.end*storage_size, storage_size)):
@@ -269,7 +265,7 @@ class FingerprintArena(FingerprintReader):
         for i in xrange(0, len(self), arena_size):
             ids = self.ids[i:i+arena_size]
             end = start+len(ids)
-            yield FingerprintArena(self.header, self.storage_size, self.arena,
+            yield FingerprintArena(self.metadata, self.storage_size, self.arena,
                                    self.popcount_indicies, ids, start, end)
             start = end
 
@@ -299,22 +295,22 @@ class ChemFPOrderedPopcount(ctypes.Structure):
 import array
 def reorder_fingerprints(fingerprints):
     ordering = (ChemFPOrderedPopcount*len(fingerprints))()
-    popcounts = array.array("i", (0,)*(fingerprints.header.num_bits+1))
+    popcounts = array.array("i", (0,)*(fingerprints.metadata.num_bits+1))
 
     new_arena = _chemfp.reorder_by_popcount(
-        fingerprints.header.num_bits, fingerprints.storage_size,
+        fingerprints.metadata.num_bits, fingerprints.storage_size,
         fingerprints.arena, fingerprints.start, fingerprints.end, ordering, popcounts)
 
     new_ids = [fingerprints.ids[item.index] for item in ordering]
-    return FingerprintArena(fingerprints.header, fingerprints.storage_size,
+    return FingerprintArena(fingerprints.metadata, fingerprints.storage_size,
                             new_arena, popcounts.tostring(), new_ids)
                                 
 
 
-def fps_to_arena(fps_reader, header=None, sort=True):
-    if header is None:
-        header = fps_reader.header
-    num_bits = header.num_bits
+def fps_to_arena(fps_reader, metadata=None, sort=True):
+    if metadata is None:
+        metadata = fps_reader.metadata
+    num_bits = metadata.num_bits
     assert num_bits
 
     ids = []
@@ -327,7 +323,7 @@ def fps_to_arena(fps_reader, header=None, sort=True):
     unsorted_fps.close()
     unsorted_fps = None
 
-    fingerprints = FingerprintArena(header, header.num_bytes_per_fp,
+    fingerprints = FingerprintArena(metadata, metadata.num_bytes,
                                     unsorted_arena, "", ids)
 
     if sort:
