@@ -96,7 +96,7 @@ parser.add_argument(
     "-o", "--output", metavar="FILENAME",
     help="save the fingerprints to FILENAME (default=stdout)")
 parser.add_argument(
-    "filenames", nargs="*", help="input structure files (default is stdin)", default=None)
+    "filenames", nargs="*", help="input structure files (default is stdin)")
 
 
 #######
