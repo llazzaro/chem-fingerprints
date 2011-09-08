@@ -36,7 +36,7 @@ def log_parse_errors(msg, loc):
 
 def strict_parse_errors(msg, loc):
     raise SDFParseError(msg + " " + loc.where(),
-                        loc.lineno, log.name)
+                        loc.lineno, loc.name)
 
 _parse_error_handlers = {
     "ignore": ignore_parse_errors,
