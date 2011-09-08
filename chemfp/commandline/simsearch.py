@@ -13,9 +13,12 @@ def write_count_magic(outfile):
 
 def write_simsearch_header(outfile, d):
     lines = []
-    for name in ("num_bits", "software", "type", "query_source", "target_source"):
+    for name in ("num_bits", "software", "type"):
         value = d.get(name, None)
         if value is not None:
+            lines.append("#%s=%s\n" % (name, value))
+    for name in ("query_sources", "target_sources"):
+        for value in d.get(name, []):
             lines.append("#%s=%s\n" % (name, value))
     outfile.writelines(lines)
 
@@ -135,16 +138,16 @@ def main(args=None):
             query_fp = args.hex_query.decode("hex")
         except ValueError, err:
             parser.error("--hex-query is not a hex string: %s" % (err,))
-        compatible = io.check_compatibility(fp=query_fp, header=targets.header)
 
-        query_num_bits = len(query_fp) * 8
-        target_num_bits = targets.header.num_bits
-        
-        if not compatible:
-            parser.error("--hex-query with %d bits is not compatible with targets with %d bits" %
-                         (query_num_bits, target_num_bits))
-        
-        queries = chemfp.Fingerprints(io.Header(num_bits=target_num_bits),
+        for (severity, error, msg_template) in chemfp.check_fp_problems(query_fp, targets.metadata):
+            if severity == "error":
+                parser.error(msg_template % dict(fp="query", metadata=repr(target_filename)))
+            
+        num_bits = targets.metadata.num_bits
+        if num_bits is None:
+            num_bits = len(query_fp) * 8
+        query_metadata = chemfp.Metadata(num_bits=num_bits, num_bytes=len(query_fp))
+        queries = chemfp.Fingerprints(query_metadata,
                                       [(query_id, query_fp)])
 
     else:
@@ -163,7 +166,7 @@ def main(args=None):
     # above values are 0.00024 and 0.00049.
     # This also prevents the results from being shown
     # in scientific notation.
-    num_digits = int(math.log10(queries.header.num_bits)) + 2
+    num_digits = int(math.log10(targets.metadata.num_bytes*8)) + 2
     float_formatter = "%." + str(num_digits) + "f"
 
     import time
@@ -189,15 +192,13 @@ def main(args=None):
     else:
         targets = chemfp.load_fingerprints(targets)
 
-    if queries.header.num_bits is not None and targets.header.num_bits is not None:
-        if queries.header.num_bits != targets.header.num_bits:
-            sys.stderr.write("WARNING: query has %d bits and target has %d\n" %
-                             (queries.header.num_bits, targets.header.num_bits))
-    if queries.header.type and targets.header.type:
-        if queries.header.type != targets.header.type:
-            sys.stderr.write("WARNING: fingerprints have incompatible headers\n")
-            sys.stderr.write("  query: %s\n" % (queries.header.type,))
-            sys.stderr.write(" target: %s\n" % (targets.header.type,))
+    problems = chemfp.check_metadata_problems(queries.metadata, targets.metadata)
+    for (severity, error, msg_template) in problems:
+        msg = msg_template % dict(metadata1="queries", metadata2="targets")
+        if severity == "error":
+            parser.error(msg)
+        elif severity == "warning":
+            sys.stderr.write("WARNING: " + msg + "\n")
 
     t2 = time.time()
     outfile = io.open_output(args.output)
@@ -213,11 +214,11 @@ def main(args=None):
             write_simsearch_magic(outfile)
             
         write_simsearch_header(outfile, {
-            "num_bits": targets.header.num_bits,
+            "num_bits": targets.metadata.num_bits,
             "software": SOFTWARE,
             "type": type,
-            "query_source": queries.header.source,
-            "target_source": targets.header.source})
+            "query_source": queries.metadata.sources,
+            "target_source": targets.metadata.sources})
 
         if first_query_arena:
             query_arenas = itertools.chain([first_query_arena],
