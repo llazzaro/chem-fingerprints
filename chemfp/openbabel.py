@@ -118,7 +118,7 @@ def _init():
     n = _ob_get_fingerprint["FP2"][0].Getbitsperint()
     if n != 32:
         raise AssertionError(
-            "The chemfp.ob module assumes OB fingerprints have 32 bits per integer")
+            "The chemfp.ob module assumes OB fingerprints have 32 bit integers")
             
 _init()
 
@@ -204,6 +204,20 @@ _check_for_maccs()
 
 #########
 
+def is_valid_format(format):
+    if format is None:
+        return True
+    try:
+        format_name, compression = io.normalize_format(None, format, ("smi", ""))
+    except ValueError:
+        return False
+    if compression not in ("", ".gz"):
+        return False
+    obconversion = ob.OBConversion()
+    if not obconversion.SetInFormat(format_name):
+        return False
+    return True
+
 def _get_ob_error(log):
     msgs = log.GetMessagesOfLevel(ob.obError)
     return "".join(msgs)
@@ -223,12 +237,12 @@ def read_structures(filename=None, format=None, id_tag=None):
     format_name, compression = io.normalize_format(filename, format,
                                                    default=("smi", ""))
     if compression not in ("", ".gz"):
-        raise TypeError("Unsupported compression type for %r" % (filename,))
+        raise ValueError("Unsupported compression type for %r" % (filename,))
 
     # OpenBabel auto-detects gzip compression.
 
     if not obconversion.SetInFormat(format_name):
-        raise TypeError("Unknown structure format %r" % (format_name,))
+        raise ValueError("Unknown structure format %r" % (format_name,))
     
     obmol = ob.OBMol()
 
@@ -289,10 +303,7 @@ def _open_stdin(obconversion, obmol):
     # information on stdin, and once that's happened, call OpenBabel.
 
     import select
-    try:
-        select.select([sys.stdin], [], [sys.stdin])
-    except KeyboardInterrupt:
-        raise SystemExit()
+    select.select([sys.stdin], [], [sys.stdin])
 
     # There's data. Pass parsing control into OpenBabel.
     return obconversion.ReadFile(obmol, "/dev/stdin")
@@ -338,7 +349,7 @@ class _OpenBabelFingerprinter(types.Fingerprinter):
     @staticmethod
     def _read_structures(source, format, id_tag, aromaticity):
         if aromaticity is not None:
-            raise TypeError("OpenBabel does not support alternate aromaticity models")
+            raise ValueError("OpenBabel does not support alternate aromaticity models")
         return read_structures(source, format, id_tag)
 
     @classmethod
