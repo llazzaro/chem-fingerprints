@@ -35,13 +35,16 @@ def normalize_format(source, format, default=("fps", "")):
         # This is a Python file object
         filename = getattr(source, "name", None)
     else:
-        raise TypeError("Unknown source type %r" % (source,))
+        raise ValueError("Unknown source type %r" % (source,))
     
     if format is not None:
         # This must be of the form <name> [. <compression> ]
         m = _format_pat.match(format)
         if m is None:
-            raise TypeError("Unknown format %r" % (format,))
+            if "." in format:
+                if _format_pat.match(format.split(".")[0]):
+                    raise ValueError("Unsupported compression in format %r" % (format,))
+            raise ValueError("Incorrect format syntax %r" % (format,))
 
         if m.group(2):
             # This is a compression
