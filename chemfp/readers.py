@@ -121,8 +121,7 @@ class FPSReader(object):
             for line in block.splitlines(True):
                 err = _chemfp.fps_line_validate(expected_hex_len, line)
                 if err:
-                    XXXX
-                    raise Exception(errcode, expected_hex_len, line)
+                    raise FPSParseError(err, lineno, self._filename)
                 yield line.split("\t")
                 lineno += 1
 
