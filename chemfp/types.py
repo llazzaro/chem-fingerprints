@@ -163,6 +163,10 @@ class Fingerprinter(object):
         structure_reader = self._read_structures(source, format, id_tag, aromaticity)
         fingerprinter = self._get_fingerprinter(**self.fingerprinter_kwargs)
         source_filename = io.get_filename(source)
+        if source_filename is None:
+            sources = []
+        else:
+            sources = [source_filename]
 
         def fingerprint_reader(structure_reader, fingerprinter):
             for (id, mol) in structure_reader:
@@ -170,7 +174,7 @@ class Fingerprinter(object):
         reader = fingerprint_reader(structure_reader, fingerprinter)
         
         return FingerprintIterator(Metadata(num_bits = self.num_bits,
-                                            sources = [source_filename],
+                                            sources = sources,
                                             software = self.software,
                                             type = self.get_type(),
                                             date = io.utcnow(),
