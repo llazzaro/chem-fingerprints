@@ -65,7 +65,7 @@ parser.add_argument(
     "-o", "--output", metavar="FILENAME",
     help="save the fingerprints to FILENAME (default=stdout)")
 parser.add_argument(
-    "filename", nargs="?", help="input structure file (default is stdin)", default=None)
+    "filenames", nargs="*", help="input structure files (default is stdin)", default=None)
 
 
 def main(args=None):
@@ -105,13 +105,17 @@ def main(args=None):
         opener = types.get_fingerprint_family("ChemFP-Substruct-RDKit")()
     elif args.rdmaccs:
         opener = types.get_fingerprint_family("RDMACCS-RDKit")()
-    try:
-        reader = opener.read_structure_fingerprints(args.filename, args.format, args.id_tag)
-    except (TypeError, IOError), err:
-        sys.stderr.write("Cannot read structure fingerprints: %s\n" % err)
-        raise SystemExit(1)
 
-    io.write_fps1_output(reader, args.output)
+    if not rdkit.is_valid_format(args.format):
+        parser.error("Unsupported format specifier: %r" % (args.format,))
+
+    if not cmdsupport.is_valid_tag(args.id_tag):
+        parser.error("Invalid id tag: %r" % (args.id_tag,))
+
+    metadata, reader = cmdsupport.read_multifile_structure_fingerprints(
+        opener, args.filenames, args.format, args.id_tag, None)
+
+    io.write_fps1_output(reader, args.output, metadata)
 
 if __name__ == "__main__":
     main()

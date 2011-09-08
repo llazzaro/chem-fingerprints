@@ -1,4 +1,8 @@
+from __future__ import absolute_import
+import os
 import itertools
+
+from .. import ChemFPError
 
 def mutual_exclusion(parser, args, default, groups):
     true_groups = []
@@ -16,7 +20,7 @@ def mutual_exclusion(parser, args, default, groups):
 def sys_exit_opener(opener, source, format, id_tag, aromaticity):
     try:
         return opener.read_structure_fingerprints(source, format, id_tag, aromaticity)
-    except (IOError, oe.UnknownFormat, TypeError), err:
+    except (IOError, ChemFPError), err:
         raise SystemExit("Cannot read structure fingerprints: %s\n" % err)
 
 def iter_all_sources(opener, filenames, format, id_tag, aromaticity):
@@ -37,4 +41,20 @@ def read_multifile_structure_fingerprints(opener, filenames, format, id_tag, aro
     reader = sys_exit_opener(opener, filenames[0], format, id_tag, aromaticity)
     reader.metadata.sources = filenames
     return reader.metadata, itertools.chain(reader, iter_all_sources(opener, filenames[1:], format, id_tag, aromaticity))
+
+def is_valid_tag(tag):
+    if tag is None:
+        return True
+    for c in "<>\r\n":
+        if c in tag:
+            return False
+    return True
+
+def check_filenames(filenames):
+    if not filenames:
+        return None
+    for filename in filenames:
+        if not os.path.exists(filename):
+            return filename
+    return None
 

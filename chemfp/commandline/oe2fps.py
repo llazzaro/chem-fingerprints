@@ -139,7 +139,16 @@ def main(args=None):
         opener = types.get_fingerprint_family("RDMACCS-OpenEye")()
         
     else:
-        parser.error("???")
+        parser.error("ERROR: fingerprint not specified?")
+
+    if not oe.is_valid_format(args.format):
+        parser.error("Unsupported format specifier: %r" % (args.format,))
+
+    if not oe.is_valid_aromaticity(args.aromaticity):
+        parser.error("Unsupported aromaticity specifier: %r" % (args.aromaticity,))
+
+    if not cmdsupport.is_valid_tag(args.id_tag):
+        parser.error("Invalid id tag: %r" % (args.id_tag,))
 
     # Ready the input reader/iterator
     metadata, reader = cmdsupport.read_multifile_structure_fingerprints(
