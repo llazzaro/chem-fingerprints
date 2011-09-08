@@ -14,8 +14,11 @@ from rdkit import Chem
 import rdkit.rdBase
 from rdkit.Chem.MACCSkeys import GenMACCSKeys
 
+from . import sdf_reader
+from . import decoders
+from . import io
+from . import types
 
-from . import sdf_reader, decoders, error_handlers, io, types
 
 # These are the things I consider to be public
 __all__ = ["read_structures", "iter_smiles_molecules", "iter_sdf_molecules"]
@@ -70,7 +73,7 @@ def iter_smiles_molecules(fileobj, name=None, errors="strict"):
     """
     if name is None:
         name = getattr(fileobj, "name", None)
-    error_handler = error_handlers.get_parse_error_handler(errors)
+    error_handler = sdf_reader.get_parse_error_handler(errors)
 
     loc = SmilesFileLocation(name)
     for lineno, line in enumerate(fileobj):
@@ -103,7 +106,7 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
     if name is None:
         name = getattr(fileobj, "name", None)
     loc = sdf_reader.FileLocation(name)
-    error = error_handlers.get_parse_error_handler(errors)
+    error = sdf_reader.get_parse_error_handler(errors)
     if id_tag is None:
         for i, text in enumerate(sdf_reader.iter_sdf_records(fileobj, errors, loc)):
             mol = Chem.MolFromMolBlock(text)
@@ -166,6 +169,16 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
 ##     if compressed:
 ##         return gzip.GzipFile(filename, "r")
 ##     return open(filename, "rU")
+
+def is_valid_format(format):
+    if format is None:
+        return True
+    try:
+        format_name, compression = io.normalize_format(None, format, ("smi", None))
+    except ValueError:
+        return False
+    format_name = _format_extensions.get(format_name, format_name)
+    return format_name in ("sdf", "smi")
     
 
 def read_structures(source, format=None, id_tag=None, aromaticity=None, errors="strict"):
@@ -222,7 +235,11 @@ def read_structures(source, format=None, id_tag=None, aromaticity=None, errors="
         return iter_smiles_molecules(fileobj, None, errors)
 
     else:
-        raise TypeError("Unsupported format %r" % (format,))
+        if format is None:
+            raise ValueError("Unknown structure filename extension: %r" % (source,))
+        else:
+            raise ValueError("Unsupported format: %r" % (format_name,))
+        
 
 ########### The topological fingerprinter
 
@@ -241,13 +258,13 @@ assert USE_HS == 1, "Don't make this 0 unless you know what you are doing"
 def make_rdk_fingerprinter(minPath=MIN_PATH, maxPath=MAX_PATH, fpSize=NUM_BITS,
                            nBitsPerHash=BITS_PER_HASH, useHs=USE_HS):
     if not (fpSize > 0):
-        raise TypeError("fpSize must be positive")
+        raise ValueError("fpSize must be positive")
     if not (minPath > 0):
-        raise TypeError("minPath must be positive")
+        raise ValueError("minPath must be positive")
     if not (maxPath >= minPath):
-        raise TypeError("maxPath cannot be smaller than minPath")
+        raise ValueError("maxPath cannot be smaller than minPath")
     if not (nBitsPerHash > 0):
-        raise TypeError("nBitsPerHash must be positive")
+        raise ValueError("nBitsPerHash must be positive")
 
     def rdk_fingerprinter(mol):
         fp = Chem.RDKFingerprint(
