@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
-from chemfp.commandline.oe2fps import main
-
-main()
+try:
+    from chemfp.commandline.oe2fps import main
+    main()
+except KeyboardInterrupt:
+    raise SystemExit()
