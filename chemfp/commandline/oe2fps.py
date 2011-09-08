@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import sys
+import itertools
 import textwrap
 
 from .. import argparse, types, io
@@ -95,14 +96,13 @@ parser.add_argument(
     "-o", "--output", metavar="FILENAME",
     help="save the fingerprints to FILENAME (default=stdout)")
 parser.add_argument(
-    "filename", nargs="?", help="input structure file (default is stdin)", default=None)
+    "filenames", nargs="*", help="input structure files (default is stdin)", default=None)
 
 
 #######
 
 def main(args=None):
     args = parser.parse_args(args)
-    outfile = sys.stdout
 
     cmdsupport.mutual_exclusion(parser, args, "path",
                                 ("maccs166", "path", "substruct", "rdmaccs"))
@@ -142,14 +142,10 @@ def main(args=None):
         parser.error("???")
 
     # Ready the input reader/iterator
-    try:
-        reader = opener.read_structure_fingerprints(args.filename, args.format,
-                                                    args.id_tag, args.aromaticity)
-    except (IOError, oe.UnknownFormat), err:
-        sys.stderr.write("Cannot read structure fingerprints: %s\n" % err)
-        raise SystemExit(1)
-
-    io.write_fps1_output(reader, args.output)
-
+    metadata, reader = cmdsupport.read_multifile_structure_fingerprints(
+        opener, args.filenames, args.format, args.id_tag, args.aromaticity)
+    
+    io.write_fps1_output(reader, args.output, metadata)
+    
 if __name__ == "__main__":
     main()
