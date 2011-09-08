@@ -596,7 +596,7 @@ fps_knearest_tanimoto_search_feed(PyObject *self, PyObject *args) {
   int target_block_size, target_start, target_end;
   int err;
 
-  if (!PyArg_ParseTuple(args, "w#t#",
+  if (!PyArg_ParseTuple(args, "w#t#ii",
 			&knearest_search, &knearest_search_size,
 			&target_block, &target_block_size, &target_start, &target_end))
     return NULL;
