@@ -180,7 +180,7 @@ def decode_path_parameters(parameters):
     fingerprinter_kwargs = _maccs_defaults.copy()
     for name, value in parameters:
         if name not in _maccs_decoders:
-            raise TypeError("Unknown OpenEye-Path paramter %r" % (name,))
+            raise ValueError("Unknown OpenEye-Path parameter %r" % (name,))
         decoder = _maccs_decoders[name]
         fingerprinter_kwargs[name] = decoder(value)
     return fingerprinter_kwargs
@@ -220,11 +220,11 @@ def get_path_fingerprinter(numbits, minbonds, maxbonds, atype, btype):
     # Extra level of error checking since I expect people will think
     # of this as part of the public API.
     if not (16 <= numbits <= 65536):
-        raise TypeError("numbits must be between 16 and 65536 (inclusive)")
+        raise ValueError("numbits must be between 16 and 65536 (inclusive)")
     if not (0 <= minbonds):
-        raise TypeError("minbonds must be 0 or greater")
+        raise ValueError("minbonds must be 0 or greater")
     if not (minbonds <= maxbonds):
-        raise TypeError("maxbonds must not be smaller than minbonds")
+        raise ValueError("maxbonds must not be smaller than minbonds")
 
     # XXX validate the atype and type values?
     # It's a simple mask against the | of all possible value, then test for 0.
@@ -323,17 +323,8 @@ def _get_format_setter(format=None):
         fmt = fmt[:-3]  # Should be something like ".sdf" or "sdf" or "smi"
 
     format_flag = _formats.get(fmt, None)
-    if format_flag is None and fmt.startswith("."):
-        # Some OE tools allow ".sdf" as the format. In the interests
-        # of compatibility, I support that as well as the more
-        # acceptable "sdf".
-        format_flag = _formats.get(fmt[1:], None)
-        if format_flag is not None:
-            warnings.warn("format name %(format)r should be written %(better)r" %
-                          dict(format=format, better=format[1:]), DeprecationWarning)
-
     if format_flag is None:
-        raise UnknownFormat(format)
+        raise ValueError("Unsupported format %r" % (format,))
 
     def set_format(ifs):
         ifs.SetFormat(format_flag)
@@ -374,10 +365,22 @@ _aromaticity_sorted = (
     )
 _aromaticity_flavors = dict(_aromaticity_sorted)
 _aromaticity_flavor_names = [pair[0] for pair in _aromaticity_sorted]
+_aromaticity_flavors[None] = OEIFlavor_Generic_OEAroModelOpenEye
 del _aromaticity_sorted, pair
 
 # If unspecified, use "openeye" (this is what OEChem does internally)
 _aromaticity_flavors[None] = _aromaticity_flavors["openeye"]   # Allow "None"
+
+def is_valid_format(format):
+    try:
+        _get_format_setter(format)
+        return True
+    except ValueError:
+        return False
+
+def is_valid_aromaticity(aromaticity):
+    return aromaticity in _aromaticity_flavors
+        
 
 # Part of the code (parameter checking, opening the file) are eager.
 # Actually reading the structures is lazy.
@@ -388,7 +391,7 @@ def read_structures(filename=None, format=None, id_tag=None, aromaticity=None):
     try:
         aromaticity_flavor = _aromaticity_flavors[aromaticity]
     except KeyError:
-        raise TypeError("Unsupported aromaticity name %r" % (aromaticity,))
+        raise ValueError("Unsupported aromaticity name %r" % (aromaticity,))
 
     # Input is from a file
     if filename is not None:
