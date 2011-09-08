@@ -4,7 +4,11 @@ from __future__ import with_statement
 import sys
 import re
 
-from .. import argparse, decoders, sdf_reader, io
+from .. import Metadata
+from .. import argparse
+from .. import decoders
+from .. import sdf_reader
+from .. import io
 
 
 def _check_num_bits(num_bits,  # from the user
@@ -197,18 +201,18 @@ def main(args=None):
             expected_fp_num_bits = fp_num_bits
             expected_num_bytes = num_bytes
 
-            header = io.Header(num_bits = num_bits,
-                               software = args.software,
-                               type = args.type,
-                               source = args.filename,
-                               date = io.utcnow())
+            metadata = Metadata(num_bits = num_bits,
+                                software = args.software,
+                                type = args.type,
+                                sources = args.filename,
+                                date = io.utcnow())
             
             # Now I know num_bits and num_bytes
             # Time to create output!
             outfile = io.open_output(args.output)
             with io.ignore_pipe_errors:
                 io.write_fps1_magic(outfile)
-                io.write_fps1_header(outfile, header)
+                io.write_fps1_header(outfile, metadata)
 
         else:
             if (fp_num_bits != expected_fp_num_bits or
