@@ -19,10 +19,10 @@ Documentation? Not yet. Try:
   oe2fps --help
   sdf2fps --help
 
-and if you are really adventerous (it's the least tested code)
+and if you are really adventerous (these are the least tested code)
 
   simsearch --help
-
+  fpsmerge --help
 
 There are tests.
 

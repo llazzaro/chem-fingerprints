@@ -1,3 +1,43 @@
+What's new in 1.0
+==================
+
+The chemfp format is now a tab-delimited format. I talked with two
+people who have spaces in their ids: one in their corporate ids and
+the other wants to use IUPAC names. In discussion with others, having
+a pure tab-delimited format would not be a problem with the primary
+audience.
+
+The simsearch output format is also tab delimited.
+
+Completely redeveloped the in-memory search interface. The core data
+structure is a "FingerprintArena", which can optionally hold
+population count information.
+
+The similarity searches use a compressed row representation,
+which is a more efficient use of memory and reduces the number
+Python-to-C calls I need to make.
+
+The FPS knearest search is push oriented, and keeps track of the
+identifiers at the C level.
+
+Major restructuring of the API so that public functions are at the top
+of the "chemfp" package. Made high-level functions for the expected
+common tasks of searching an FPSReader and a FingerprintArena.
+
+The oe2fps, ob2fps, and rdkit2fps readers now support multiple
+structure filenames. Each filename is listed on its own "source" line.
+
+New --id-tag to use one of the SD tag fields rather than the title
+line. This is needed for ChEBI where you should use --id-tag "ChEBI ID"
+to get ids like "CHEBI:776".
+
+New --aromaticity option for oe2fps, and a corresponding "aromaticity"
+field in the FPS header.
+
+Improved docstring comments.
+
+Improved error reporting.
+
 What's new in 0.95
 ==================
 
