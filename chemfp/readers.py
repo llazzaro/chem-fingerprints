@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import absolute_import
 
 from cStringIO import StringIO
 from __builtin__ import open as _builtin_open
