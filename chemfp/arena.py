@@ -119,7 +119,6 @@ def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
 
 def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     require_matching_sizes(query_arena, target_arena)
-    check_compatibility(query_arena, target_arena)
     num_bits = target_arena.num_bits
 
     num_queries = len(query_arena)

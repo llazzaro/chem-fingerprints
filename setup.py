@@ -15,6 +15,7 @@ setup(name = "chemfp",
                                ["src/bitops.c", "src/chemfp.c",
                                 "src/heapq.c", "src/fps.c",
                                 "src/searches.c",
-                                "src/python_api.c"])],
+                                "src/python_api.c"],
+                               extra_compile_args = ["-std=c89"])],
      )
 
