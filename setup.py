@@ -9,7 +9,7 @@ setup(name = "chemfp",
       author_email = 'dalke@dalkescientific.com',
       url = "http://code.google.com/p/chem-fingerprints/",
       packages = ["chemfp", "chemfp.commandline"],
-      scripts = ["ob2fps", "oe2fps", "rdkit2fps", "sdf2fps", "simsearch"],
+      scripts = ["ob2fps", "oe2fps", "rdkit2fps", "sdf2fps", "simsearch", "fpsmerge"],
 
       ext_modules = [Extension("_chemfp",
                                ["src/bitops.c", "src/chemfp.c",
