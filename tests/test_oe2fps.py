@@ -277,7 +277,7 @@ TestIO = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestIO)
 class TestArgErrors(unittest2.TestCase):
     def _run(self, cmd, expect):
         msg = run_exit(cmd)
-        self.assertEquals(expect in msg, True, msg)
+        self.assertIn(expect, msg)
 
     def test_two_fp_types(self):
         self._run("--maccs166 --path", "Cannot specify both --maccs166 and --path")
@@ -332,10 +332,10 @@ class TestHeaderOutput(unittest2.TestCase):
     def test_software(self):
         result = self._field("", "#software")
         self.assertEquals("#software=OEGraphSim/" in result, True, result)
-        self.assertEquals("(" in result, True, result)
-        self.assertEquals(")" in result, True, result)
+        self.assertIn("(", result)
+        self.assertIn(")", result)
         result = self._field("--maccs166", "#software")
-        self.assertEquals("#software=OEGraphSim/" in result, True, result)
+        self.assertIn("#software=OEGraphSim/", result)
 
     def test_type(self):
         result = self._field("", "#type")
@@ -357,19 +357,19 @@ class TestHeaderOutput(unittest2.TestCase):
         
     def test_atype_flags(self):
         result = self._field("--atype FormalCharge|FormalCharge", "#type") + " "
-        self.assertEquals(" atype=FormalCharge " in result, True, result)
+        self.assertIn(" atype=FormalCharge ", result)
     
     def test_btype_flags(self):
         result = self._field("--btype Chiral|BondOrder", "#type") + " "
-        self.assertEquals(" btype=DefaultBond " in result, True, result)
+        self.assertIn(" btype=DefaultBond ", result)
         result = self._field("--btype BondOrder|Chiral", "#type") + " "
-        self.assertEquals(" btype=DefaultBond " in result, True, result)
+        self.assertIn(" btype=DefaultBond ", result)
     
     def test_pipe_or_comma(self):
         result = self._field("--atype HvyDegree,FormalCharge --btype Chiral,BondOrder",
                              "#type") + " "
-        self.assertEquals(" atype=FormalCharge|HvyDegree " in result, True, result)
-        self.assertEquals(" btype=DefaultBond " in result, True, result)
+        self.assertIn(" atype=FormalCharge|HvyDegree ", result)
+        self.assertIn(" btype=DefaultBond ", result)
         
     
     def test_maccs_header(self):

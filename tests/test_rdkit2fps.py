@@ -68,37 +68,37 @@ class TestRDKFingerprints(unittest2.TestCase):
         
     def test_default(self):
         result = runner.run_fps("", 19)
-        self.assertEquals(result[0], _fp1 + " 9425004")
+        self.assertEquals(result[0], _fp1 + "\t9425004")
         self.assertNotEquals(result[1].split()[0], _fp1)
         # All must have the same length (since the fp lengths and ids lengths are the same
         self.assertEquals(len(set(map(len, result))), 1, set(map(len, result)))
 
     def test_as_rdk(self):
         result = runner.run_fps("--RDK", 19)
-        self.assertEquals(result[0], _fp1 + " 9425004")
+        self.assertEquals(result[0], _fp1 + "\t9425004")
         self.assertNotEquals(result[1].split()[0], _fp1)
         # All must have the same length (since the fp lengths and ids lengths are the same
         self.assertEquals(len(set(map(len, result))), 1, set(map(len, result)))
 
     def test_num_bits_default(self):
         result = runner.run_fps("--fpSize 2048", 19)
-        self.assertEquals(result[0], _fp1 + " 9425004")
+        self.assertEquals(result[0], _fp1 + "\t9425004")
         self.assertNotEquals(result[1].split()[0], _fp1)
 
     def test_num_bits_64(self):
         field, first = get_field_and_first("--fpSize 16", "#num_bits=")
         self.assertEquals(field, "#num_bits=16")
-        self.assertEquals(first, "ffff 9425004")
+        self.assertEquals(first, "ffff\t9425004")
 
     def test_num_bits_1(self):
         field, first = get_field_and_first("--fpSize 1", "#num_bits=")
         self.assertEquals(field, "#num_bits=1")
-        self.assertEquals(first, "01 9425004")
+        self.assertEquals(first, "01\t9425004")
 
     def test_num_bits_2(self):
         field, first = get_field_and_first("--fpSize 2", "#num_bits=")
         self.assertEquals(field, "#num_bits=2")
-        self.assertEquals(first, "03 9425004")
+        self.assertEquals(first, "03\t9425004")
 
     def test_num_bits_too_small(self):
         result = runner.run_exit("--fpSize 0")
@@ -188,11 +188,11 @@ class TestIO(unittest2.TestCase):
         while result and result[0].startswith("#"):
             del result[0]
         self.assertEquals(len(result), 19)
-        self.assertEquals(result[0], _fp1 + " 9425004\n")
+        self.assertEquals(result[0], _fp1 + "\t9425004\n")
 
     def test_bad_format(self):
         result = runner.run_exit("--in spam")
-        self.assertEquals(result, "Cannot read structure fingerprints: Unsupported format 'spam'\n")
+        self.assertIn("Unsupported format specifier: 'spam'", result)
 
 TestIO = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestIO)
 
