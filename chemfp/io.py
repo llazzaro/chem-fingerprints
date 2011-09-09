@@ -262,4 +262,10 @@ def write_fps1_output(reader, destination, metadata=None):
             write_fps1_header(outfile, metadata)
 
             for (id, fp) in reader:
+                if "\t" in id:
+                    raise ValueError("fingerprint ids must not contain a tab: %r" % (id,))
+                if "\n" in id:
+                    raise ValueError("fingerprint ids must not contain a newline: %r" % (id,))
+                if not id:
+                    raise ValueError("fingerprint ids must contain characters: %r" % (id,))
                 outfile.write("%s\t%s\n" % (hexlify(fp), id))
