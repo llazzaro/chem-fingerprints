@@ -11,7 +11,7 @@ enum {ADD_TO_HEAP, REPLACE_IN_HEAP, MAXED_OUT_HEAP};
 
 /* Internal function to find the id field in an FPS line */
 /* (Which means the fingerprint field is from line to *id_start-1 ) */
-/* The line MUST match /^[0-9A-Fa-f]+\t\S+/ */
+/* The line MUST match /^[0-9A-Fa-f]+\t[^\t\r\n]+/ */
 /* REQUIRED: the line MUST end with a newline (this is not checked) */
 int chemfp_fps_find_id(
         int hex_size,  /* The expected length of the hex field, or -1 if unknown
