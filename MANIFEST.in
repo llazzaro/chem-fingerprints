@@ -1,6 +1,8 @@
 recursive-include chemfp *.py
 recursive-include tests *.py
 prune tests/chemfp
+prune chemfp/indigo.py
+prune chemfp/commandline/indigo2fps.py
 
 recursive-include src *.c
 recursive-include src *.h
