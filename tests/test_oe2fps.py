@@ -262,12 +262,11 @@ class TestIO(unittest2.TestCase):
 
     def test_unknown_format(self):
         msg = run_exit("--in blah")
-        self.assertEquals("Unknown format 'blah'" in msg, True, msg)
+        self.assertEquals("Unsupported format specifier: 'blah'" in msg, True, msg)
 
     def test_file_does_not_exist(self):
         msg = run_exit("", source="/asdfaserwe.does.not.exist")
-        self.assertEquals("No such file or directory" in msg, True, repr(msg))
-        self.assertEquals("asdfaserwe.does.not.exist" in msg, True, repr(msg))
+        self.assertEquals("Structure file '/asdfaserwe.does.not.exist' does not exist" in msg, True, repr(msg))
 
 # XXX how to test that this generates a warning?
 #    def test_specify_input_format_with_dot(self):
