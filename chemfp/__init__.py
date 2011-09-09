@@ -152,7 +152,7 @@ def open(source, format=None):
     raise TypeError("Unable to determine fingerprint format type from %r" % (source,))
 
 
-def load_fingerprints(reader, metadata=None, sort=True):
+def load_fingerprints(reader, metadata=None, reorder=True):
     """Load all of the fingerprints into an in-memory FingerprintArena data structure
 
     The FingerprintArena data structure reads all of the fingerprints and
@@ -165,14 +165,14 @@ def load_fingerprints(reader, metadata=None, sort=True):
     attribute.
 
     The loader may reorder the fingerprints by for better search performance.
-    To prevent ordering, use `sort`=False.
+    To prevent ordering, use `reorder`=False.
 
     :param reader: An iterator over (id, fingerprint) pairs
     :type reader: FingerprintReader or any iterator
     :param metadata: The metadata for the arena, if other than reader.metadata
     :type metadata: Metadata
-    :param sort: Specify if fingerprints should be reordered for better performance
-    :type sort: True or False
+    :param reorder: Specify if fingerprints should be reordered for better performance
+    :type reorder: True or False
     :returns: FingerprintArena
     """
     if isinstance(reader, basestring):
@@ -181,7 +181,7 @@ def load_fingerprints(reader, metadata=None, sort=True):
         metadata = reader.metadata
 
     from . import arena
-    return arena.fps_to_arena(reader, metadata=metadata, sort=sort)
+    return arena.fps_to_arena(reader, metadata=metadata, reorder=reorder)
 
 ##### High-level search interfaces
 
@@ -466,7 +466,7 @@ class FingerprintReader(object):
         :type arena_size: positive integer, or None
         """
         if arena_size is None:
-            yield load_fingerprints(self, self.metadata, sort=False)
+            yield load_fingerprints(self, self.metadata, reorder=False)
             return
 
         if arena_size < 1:
@@ -476,7 +476,7 @@ class FingerprintReader(object):
         it = iter(self)
         while 1:
             slice = itertools.islice(it, 0, arena_size)
-            arena = load_fingerprints(slice, self.metadata, sort=False)
+            arena = load_fingerprints(slice, self.metadata, reorder=False)
             if not arena:
                 break
             yield arena

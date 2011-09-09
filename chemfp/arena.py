@@ -341,7 +341,7 @@ def reorder_fingerprints(fingerprints):
                                 
 
 
-def fps_to_arena(fps_reader, metadata=None, sort=True):
+def fps_to_arena(fps_reader, metadata=None, reorder=True):
     if metadata is None:
         metadata = fps_reader.metadata
     num_bits = metadata.num_bits
@@ -362,7 +362,7 @@ def fps_to_arena(fps_reader, metadata=None, sort=True):
     fingerprints = FingerprintArena(metadata, metadata.num_bytes,
                                     unsorted_arena, "", ids)
 
-    if sort:
+    if reorder:
         return reorder_fingerprints(fingerprints)
     else:
         return fingerprints
