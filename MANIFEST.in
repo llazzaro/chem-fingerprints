@@ -1,8 +1,8 @@
 recursive-include chemfp *.py
 recursive-include tests *.py
 prune tests/chemfp
-prune chemfp/indigo.py
-prune chemfp/commandline/indigo2fps.py
+exclude chemfp/indigo.py
+exclude chemfp/commandline/indigo2fps.py
 
 recursive-include src *.c
 recursive-include src *.h
@@ -13,6 +13,10 @@ include tests/testall
 include tests/*.sdf
 include tests/*.smi
 include tests/pubchem.*sdf*
+
+include tests/queries.fps
+include tests/targets.fps
+include tests/simple.fps
 
 prune src/CMakeFiles
 
