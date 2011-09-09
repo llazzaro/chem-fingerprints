@@ -315,6 +315,8 @@ def _file_reader(obconversion, obmol, success, id_tag):
             if not success:
                 break
             id = obmol.GetTitle()
+            if "\t" in id:
+                id = id.replace("\t", "")
             if not id:
                 id = "Record_%d" % i
 
@@ -334,6 +336,8 @@ def _file_reader(obconversion, obmol, success, id_tag):
                 id = obj.GetValue()
                 if "\n" in id:
                     id = id.splitlines()[0]
+                if "\t" in id:
+                    id = id.replace("\t", "")
                 if not id:
                     id = "Record_%d" % i
             
