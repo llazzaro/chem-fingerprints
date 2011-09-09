@@ -20,14 +20,14 @@ enum chemfp_errors {
 
 /* This gives compile-time version information. */
 /* Use "chemfp_version" for run-time version information */
-#define CHEMFP_MAJOR_VERSION 0
-#define CHEMFP_MINOR_VERSION 9
+#define CHEMFP_MAJOR_VERSION 1
+#define CHEMFP_MINOR_VERSION 0
 #define CHEMFP_PATCHLEVEL 0
 
 /* This is of the form (\d+\.\d+) (\.\d)? ((a|b|pre)\d+)
      for examples:  0.9, 1.0.4, 1.0pre2.
  The "a"lpha, "b"eta, and "pre"view suffixes will never be seen in production releases */
-#define CHEMFP_VERSION_STRING "0.9a1"
+#define CHEMFP_VERSION_STRING "1.0b1"
 
 /* Return the CHEMFP_VERSION.  */
 const char *chemfp_version(void);
