@@ -29,6 +29,23 @@ def _chemfp_error(err, lineno, filename):
         # This shouldn't happen
         return RuntimeError(_chemfp.strerror(err))
 
+def require_matching_sizes(query_arena, target_reader):
+    query_num_bits = query_arena.metadata.num_bits
+    assert query_num_bits is not None, "arenas must define num_bits"
+    target_num_bits = target_reader.metadata.num_bits
+    if (target_num_bits is not None):
+        if query_num_bits != target_num_bits:
+            raise ValueError("query_arena has %d bits while target_reader has %d bits" % (query_num_bits, target_num_bits))
+
+    query_num_bytes = query_arena.metadata.num_bytes
+    assert query_num_bytes is not None, "arenas must define num_bytes"
+    target_num_bytes = target_reader.metadata.num_bytes
+    if target_num_bytes is None:
+        raise ValueError("target_reader missing num_bytes metadata")
+    if query_num_bytes != target_num_bytes:
+        raise ValueError("query_arena uses %d bytes while target_reader uses %d bytes" % (query_num_bytes, target_num_bytes))
+
+
 def report_errors(problem_report):
     for (severity, error, msg_template) in problem_report:
         if severity == "error":
@@ -46,14 +63,14 @@ def count_tanimoto_hits_fp(query_fp, target_reader, threshold):
     return count_tanimoto_hits_arena(_fp_to_arena(query_fp, target_reader.metadata), threshold)[0]
 
 def count_tanimoto_hits_arena(query_arena, target_reader, threshold):
+    require_matching_sizes(query_arena, target_reader)
     counts = array.array("i", (0 for i in xrange(len(query_arena))))
 
     lineno = target_reader._first_fp_lineno
-    num_bits = target_reader.metadata.num_bits
 
     for block in target_reader.iter_blocks():
         err, num_lines = _chemfp.fps_count_tanimoto_hits(
-            num_bits, query_arena.storage_size, query_arena.arena, 0, -1,
+            query_arena.metadata.num_bits, query_arena.storage_size, query_arena.arena, 0, -1,
             block, 0, -1,
             threshold, counts)
         lineno += num_lines
@@ -105,6 +122,7 @@ def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
     return hits
 
 def threshold_tanimoto_search_all(query_arena, target_reader, threshold):
+    require_matching_sizes(query_arena, target_reader)
     all_hits = [[] for i in xrange(len(query_arena))]
     if not all_hits:
         return []
@@ -168,27 +186,19 @@ def _make_knearest_search(num_queries, k):
     return KNearestSearch()
 
 
-def check_num_bits_compatibility(query_arena, target_reader):
-    num_bits = query_arena.metadata.num_bits
-    if num_bits != target_reader.metadata.num_bits:
-        raise TypeError("The query fingerprints have %d bits while the targets have %d" %
-                        (num_bits, target_reader.metadata.num_bits))
-    return num_bits
-
 def knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
     query_arena = _fp_to_arena(query_fp, target_reader.metadata)
     return knearest_tanimoto_search_all(query_arena, target_reader, k, threshold)[0]
 
 def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
-    report_errors(check_metadata_problems(query_arena.metadata, target_reader.metadata))
-    num_bits = query_arena.metadata.num_bits
+    require_matching_sizes(query_arena, target_reader)
 
     num_queries = len(query_arena)
     search = _make_knearest_search(num_queries, k)
 
     _chemfp.fps_knearest_search_init(
         search,
-        num_bits, query_arena.storage_size, query_arena.arena, 0, -1,
+        query_arena.metadata.num_bits, query_arena.storage_size, query_arena.arena, 0, -1,
         k, threshold)
 
     try:
