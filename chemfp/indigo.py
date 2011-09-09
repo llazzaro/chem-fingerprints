@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+raise NotImplementedError("This module has not been updated to the current chemfp API")
+
 # WARNING! This is a first attempt at Indigo support. There are known problems
 import warnings
 warnings.warn("Indigo support is incomplete, experimental, and not to be trusted!")
@@ -95,6 +97,7 @@ def read_structures(filename=None, format=None):
     reader = reader_factory(filename)
     def indigo_structure_reader(reader):
         for mol in reader:
+            # TODO: support multiple aromacitices, and using an id_tag
             mol.aromatize()
             yield mol.name(), mol
 
