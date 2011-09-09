@@ -186,6 +186,7 @@ def read_header(f, filename, warn=warn_to_stderr):
                     i = m.end()-1 # Back up from the whitespace
                     if i % 2 == 1:
                         raise TypeError(block)
+                    # If you don't specify the number of bits then I'll do it for you.
                     metadata.num_bits = i * 4
                     metadata.num_bytes = i // 2
                     
