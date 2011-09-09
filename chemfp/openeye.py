@@ -411,6 +411,8 @@ def _iter_structures(ifs, id_tag):
     if id_tag is None:
         for i, mol in enumerate(ifs.GetOEGraphMols()):
             id = mol.GetTitle()
+            if "\t" in id:
+                id = id.replace("\t", "")
             if not id:
                 id = "Record_%d" % (i+1)
             yield id, mol
@@ -422,6 +424,8 @@ def _iter_structures(ifs, id_tag):
             if "\n" in id:
                 id = id.splitlines()[0]
                 # (In theory this must have content. I don't trust that.)
+            if "\t" in id:
+                id = id.replace("\t", "")
 
             if not id:
                 id = "Mol_%d" % i
