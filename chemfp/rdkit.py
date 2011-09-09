@@ -116,6 +116,8 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
             id = mol.GetProp("_Name")
             if "\n" in id:
                 id = id.split("\n")[0]
+            if "\t" in id:
+                id = id.replace("\t", "")
             if not id:
                 id = "Record_%d" % (i+1)
             yield id, mol
@@ -134,6 +136,8 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
                 id = ""
             elif "\n" in id:
                 id = id.split("\n")[0]
+            if "\t" in id:
+                id = id.replace("\t", "")
             if not id:
                 id = "Record_%d" % (i+1)
             yield id, mol
