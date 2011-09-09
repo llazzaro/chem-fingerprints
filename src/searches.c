@@ -2,7 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
-#include <stdio.h> // XXX remove
+#include <stdio.h>
 #include <stdlib.h>
 #include "heapq.h"
 #include "chemfp.h"
