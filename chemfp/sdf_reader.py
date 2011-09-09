@@ -17,12 +17,12 @@ import chemfp
 
 class SDFParseError(ChemFPError):
     def __init__(self, msg, filename, lineno):
-        super(SDFFormatError, self).__init__(msg, filename, lineno)
+        super(SDFParseError, self).__init__(msg, filename, lineno)
         self.msg = msg
         self.filename = filename
         self.lineno = lineno
     def __repr__(self):
-        return "SDFFormatError(%r, %r, %r)" % (self.msg, self.filename, self.lineno)
+        return "SDFParseError(%r, %r, %r)" % (self.msg, self.filename, self.lineno)
     def __str__(self):
         return self.msg
 
