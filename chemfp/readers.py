@@ -108,7 +108,7 @@ class FPSReader(object):
         while 1:
             arena = load_fingerprints(itertools.islice(id_fps, 0, arena_size),
                                       metadata = self.metadata,
-                                      sort = False)
+                                      reorder = False)
             if not arena:
                 break
             yield arena
