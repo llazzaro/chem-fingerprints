@@ -12,9 +12,13 @@ include tests/*.sdf
 include tests/*.smi
 include tests/pubchem.*sdf*
 
+prune src/CMakeFiles
 
-
-include *2fps
+include oe2fps
+include ob2fps
+include rdkit2fps
+include simsearch
+include fpsmerge
 
 include TODO
 include THANKS
