@@ -39,9 +39,7 @@ int chemfp_fps_find_id(
   case '\t': break;  /* The only legal option. Everything else improves the error code */
   case '\n': return CHEMFP_MISSING_ID;
   case '\r': if (s[1] == '\n') return CHEMFP_MISSING_ID; /* else fallthrough */
-  case ' ':
-  case '\v':
-  case '\f': return CHEMFP_UNSUPPORTED_WHITESPACE;
+  case ' ': return CHEMFP_UNSUPPORTED_WHITESPACE;
   default: return CHEMFP_BAD_FINGERPRINT;
   }
   s++;
@@ -49,11 +47,9 @@ int chemfp_fps_find_id(
   /* You must pass in a newline-terminated string to this function.
      Therefore, this function will finish while inside the string.
      Note that I'm also checking for illegal whitespace here. */
-  id_len = strcspn(s, "\t\n\v\f\r");
+  id_len = strcspn(s, "\t\n\r");
   switch (s[id_len]) {
   case '\0': return CHEMFP_BAD_ID;
-  case '\v':
-  case '\f': return CHEMFP_UNSUPPORTED_WHITESPACE;
   case '\r': if (s[id_len+1] != '\n') return CHEMFP_UNSUPPORTED_WHITESPACE;
     break;
   }
