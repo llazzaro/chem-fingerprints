@@ -6,15 +6,24 @@ from cStringIO import StringIO
 from chemfp import _THRESHOLD, _K, FingerprintReader, check_fp_problems, check_metadata_problems
 import _chemfp
 
-def report_errors(problem_report):
-    for (severity, error, msg_template) in problem_report:
-        if severity == "error":
-            raise TypeError(msg_template % dict(metadata1 = "query",
-                                                metadata2 = "target"))
+def require_matching_fp_size(query_fp, target_arena):
+    if len(query_fp) != target_arena.metadata.num_bytes:
+        raise ValueError("query_fp uses %d bytes while target_arena uses %d bytes" % (
+            len(query_fp), target_arena.metadata.num_bytes))
+
+def require_matching_sizes(query_arena, target_arena):
+    assert query_arena.metadata.num_bits is not None, "arenas must define num_bits"
+    assert target_arena.metadata.num_bits is not None, "arenas must define num_bits"
+    if query_arena.metadata.num_bits != target_arena.metadata.num_bits:
+        raise ValueError("query_arena has %d bits while target_arena has %d bits" % (
+            query_arena.metadata.num_bits, target_arena.metadata.num_bits))
+    if query_arena.metadata.num_bytes != target_arena.metadata.num_bytes:
+        raise ValueError("query_arena uses %d bytes while target_arena uses %d bytes" % (
+            query_arena.metadata.num_bytes, target_arena.metadata.num_bytes))
+    
 
 def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
-    report_errors(check_fp_problems(query_fp, target_arena.metadata))
-
+    require_matching_fp_size(query_fp, target_arena)
     counts = array.array("i", (0 for i in xrange(len(query_fp))))
     _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
                                  len(query_fp), query_fp, 0, -1,
@@ -26,7 +35,7 @@ def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
 
 
 def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
-    report_errors(check_metadata_problems(query_arena.metadata, target_arena.metadata))
+    require_matching_sizes(query_arena, target_arena)
 
     counts = (ctypes.c_int*len(query_arena))()
     _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
@@ -78,22 +87,22 @@ class SearchHits(object):
             yield target_id, zip(indicies[start:end], scores[start:end])
             start = end
 
-def threshold_tanimoto_search_fp_indicies(query_fp, targets, threshold):
-    report_errors(check_fp_problems(query_fp, targets.metadata))
-    num_bits = targets.num_bits
+def threshold_tanimoto_search_fp_indicies(query_fp, target_arena, threshold):
+    require_matching_sizes(query_arena, target_arena)
+    num_bits = target_arena.num_bits
 
     offsets = (ctypes.c_int * 2)()
     offsets[0] = 0
     
-    num_cells = len(targets)
+    num_cells = len(target_arena)
     indicies = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
 
     num_added = _chemfp.threshold_tanimoto_arena(
         threshold, num_bits,
         len(query_fp), query_fp, 0, -1,
-        targets.storage_size, targets.arena, targets.start, targets.end,
-        targets.popcount_indicies,
+        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+        target_arena.popcount_indicies,
         offsets, 0,
         indicies, scores)
 
@@ -102,68 +111,70 @@ def threshold_tanimoto_search_fp_indicies(query_fp, targets, threshold):
     end = offsets[1]
     return [(indicies[i], scores[i]) for i in xrange(end)]
 
-def threshold_tanimoto_search_fp(query_fp, targets, threshold):
-    result = threshold_tanimoto_search_fp_indicies(query_fp, targets, threshold)
-    return [(targets.ids[index], score) for (index, score) in result]
+def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
+    require_matching_fp_size(query_fp, target_arena)
+    result = threshold_tanimoto_search_fp_indicies(query_fp, target_arena, threshold)
+    return [(target_arena.ids[index], score) for (index, score) in result]
 
 
-def threshold_tanimoto_search_arena(queries, targets, threshold):
-    check_compatibility(queries, targets)
-    num_bits = targets.num_bits
+def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
+    require_matching_sizes(query_arena, target_arena)
+    check_compatibility(query_arena, target_arena)
+    num_bits = target_arena.num_bits
 
-    num_queries = len(queries)
+    num_queries = len(query_arena)
 
     offsets = (ctypes.c_int * (num_queries+1))()
     offsets[0] = 0
 
-    num_cells = min(100, len(queries)) * len(targets)
+    num_cells = min(100, num_queries) * len(target_arena)
     indicies = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
     
-    query_start = queries.start
-    query_end = queries.end
+    query_start = query_arena.start
+    query_end = query_arena.end
 
 
     def add_rows(query_start, offset_start):
         return _chemfp.threshold_tanimoto_arena(
             threshold, num_bits,
-            queries.storage_size, queries.arena, query_start, query_end,
-            targets.storage_size, targets.arena, targets.start, targets.end,
-            targets.popcount_indicies,
+            query_arena.storage_size, query_arena.arena, query_start, query_end,
+            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+            target_arena.popcount_indicies,
             offsets, offset_start, # XXX should query_start=0?
             indicies, scores)
 
     return _search(query_start, query_end, offsets, indicies, scores, add_rows,
-                   queries.ids, targets.ids)
+                   query_arena.ids, target_arena.ids)
 
-def knearest_tanimoto_search_arena(queries, targets, k, threshold):
-    check_compatibility(queries, targets)
-    num_bits = queries.metadata.num_bits
+def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
+    require_matching_sizes(query_arena, target_arena)
+    num_bits = query_arena.metadata.num_bits
 
-    num_queries = len(queries)
+    num_queries = len(query_arena)
 
     offsets = (ctypes.c_int * (num_queries+1))()
     offsets[0] = 0
 
-    num_cells = min(100, len(queries))*k
+    num_cells = min(100, len(query_arena))*k
 
     indicies = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
 
-    query_start = queries.start
-    query_end = queries.end
+    query_start = query_arena.start
+    query_end = query_arena.end
 
     def add_rows(query_start, offset_start):
         return _chemfp.knearest_tanimoto_arena(
             k, threshold, num_bits,
-            queries.storage_size, queries.arena, query_start, query_end,
-            targets.storage_size, targets.arena, targets.start, targets.end,
-            targets.popcount_indicies,
+            query_arena.storage_size, query_arena.arena, query_start, query_end,
+            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+            target_arena.popcount_indicies,
             offsets, offset_start,
             indicies, scores)
 
     return _search(query_start, query_end, offsets, indicies, scores, add_rows,
-                   queries.ids, targets.ids)
+                   query_arena.ids, target_arena.ids)
 
 
 # Core of the Tanimoto search routine
@@ -220,6 +231,10 @@ class FingerprintLookup(object):
 class FingerprintArena(FingerprintReader):
     def __init__(self, metadata, storage_size, arena, popcount_indicies, ids,
                  start=0, end=None):
+        if metadata.num_bits is None:
+            raise TypeError("Missing metadata num_bits information")
+        if metadata.num_bytes is None:
+            raise TypeError("Missing metadata num_bytes information")
         self.metadata = metadata
         self.num_bits = metadata.num_bits
         self.storage_size = storage_size
