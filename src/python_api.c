@@ -316,7 +316,7 @@ static int
 bad_offsets(int num_queries, int size, int start) {
   int num_offsets = size/sizeof(int);
 
-  // There must be enough space for num_queries, plus 1 for the end
+  /* There must be enough space for num_queries, plus 1 for the end */
   char msg[100];
   if (start < 0) {
     PyErr_SetString(PyExc_TypeError, "result offsets start must not be negative");
@@ -383,7 +383,7 @@ bad_hex_size(int hex_size) {
   return 0;
 }
 
-// Is this something I really need? Peering into a block might be better
+/* Is this something I really need? Peering into a block might be better */
 static PyObject *
 fps_line_validate(PyObject *self, PyObject *args) {
   int hex_size, line_size;
@@ -486,7 +486,7 @@ fps_count_tanimoto_hits(PyObject *self, PyObject *args) {
     return NULL;
   }
   if (target_start >= target_end) {
-    // start of next byte to process, num lines processed, num cells
+    /* start of next byte to process, num lines processed, num cells */
     return Py_BuildValue("iiii", CHEMFP_OK, 0);
   }
   err = chemfp_fps_count_tanimoto_hits(
@@ -537,7 +537,7 @@ fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
     return NULL;
   }
   if (target_start >= target_end) {
-    // start of next byte to process, num lines processed, num cells
+    /* start of next byte to process, num lines processed, num cells */
     return Py_BuildValue("iiii", CHEMFP_OK, target_end, 0, 0);
   }
   err = chemfp_fps_threshold_tanimoto_search(
@@ -675,8 +675,8 @@ reorder_by_popcount(PyObject *self, PyObject *args) {
     PyErr_SetString(PyExc_TypeError, "allocated ordering space is too small");
     return NULL;
   }
-  // TODO: compute the counts first. If everything is in order then
-  // there's no need to allocate a new arena string.
+  /* TODO: compute the counts first. If everything is in order then */
+  /* there's no need to allocate a new arena string. */
   if (end <= start) {
     py_arena = PyString_FromStringAndSize("", 0);
   } else {
@@ -911,7 +911,7 @@ static PyMethodDef chemfp_methods[] = {
   {"byte_contains", byte_contains, METH_VARARGS,
    "byte_contains(super_fp, sub_fp)\n\nReturn 1 if the on bits of sub_fp are also 1 bits in super_fp"},
 
-  // FPS
+  /* FPS */
   {"fps_line_validate", fps_line_validate, METH_VARARGS,
    "fps_line_validate (TODO: document)"},
   {"fps_parse_id_fp", fps_parse_id_fp, METH_VARARGS,

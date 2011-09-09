@@ -98,7 +98,7 @@ int chemfp_byte_contains(int len, const unsigned char *query_fp,
    additional fields. The fps block must end with a newline. */
 
 /* Return 0 if string is a valid fps fingerprint line, otherwise an error code */
-int chemfp_fps_line_validate(int hex_size,  // use -1 if not known
+int chemfp_fps_line_validate(int hex_size,  /* use -1 if not known */
                              int line_size, const char *line_start);
 int chemfp_fps_find_id(int hex_size, const char *line,
 		       const char **id_start, const char **id_end);

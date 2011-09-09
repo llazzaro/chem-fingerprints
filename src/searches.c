@@ -12,13 +12,12 @@ typedef struct {
   double *scores;
 } IndexScoreData;
 
-// XXX Check that heapq preserves order
 static int double_score_lt(IndexScoreData *data, int i, int j) {
   if (data->scores[i] < data->scores[j])
     return 1;
   if (data->scores[i] > data->scores[j])
     return 0;
-  // Sort in descending order by index. (XXX immportant or overkill?)
+  /* Sort in descending order by index. (XXX important or overkill?) */
   return (data->indicies[i] >= data->indicies[j]);
 }
 static void double_score_swap(IndexScoreData *data, int i, int j) {
@@ -135,7 +134,6 @@ static int next_popcount(PopcountSearchOrder *popcount_order, double threshold) 
   case UP_OR_DOWN:
     up_score = UP_SCORE(popcount_order);
     down_score = DOWN_SCORE(popcount_order);
-    //printf("up %f down %f\n", up_score, down_score);
     if (up_score >= down_score) {
       popcount_order->popcount = (popcount_order->up_popcount)++;
       popcount_order->score = up_score;
@@ -171,9 +169,6 @@ static int next_popcount(PopcountSearchOrder *popcount_order, double threshold) 
     return 0;
   }
 
-  //  printf("count and score %d %f (%f)\n",
-  // popcount_order->popcount, popcount_order->score, threshold);
-
   /* If the best possible score is under the threshold then we're done. */
   if (popcount_order->score < threshold) {
     popcount_order->direction = FINISHED;
@@ -188,12 +183,10 @@ check_bounds(PopcountSearchOrder *popcount_order,
 	     int *start, int *end, int target_start, int target_end) {
   if (*start > target_end) {
     ordering_no_higher(popcount_order);
-    //printf("  -- no higher\n");
     return 0;
   }
   if (*end < target_start) {
     ordering_no_lower(popcount_order);
-    //printf("  -- no lower\n");
     return 0;
   };
 
@@ -263,7 +256,7 @@ int chemfp_count_tanimoto_arena(
     for (query_index = query_start; query_index < query_end;
 	 query_index++, query_fp += query_storage_size) {
       target_fp = target_arena + (target_start * target_storage_size);
-      // Handle the popcount(query) == 0 special case?
+      /* Handle the popcount(query) == 0 special case? */
       count = 0;
 
       for (target_index = target_start; target_index < target_end;
@@ -395,7 +388,7 @@ int chemfp_threshold_tanimoto_arena(
     for (query_index = query_start; query_index < query_end;
 	 query_index++, query_fp += query_storage_size) {
       target_fp = target_arena + (target_start * target_storage_size);
-      // Handle the popcount(query) == 0 special case?
+      /* Handle the popcount(query) == 0 special case? */
       count = 0;
       for (target_index = target_start; target_index < target_end;
 	   target_index++, target_fp += query_storage_size) {
@@ -549,7 +542,7 @@ knearest_tanimoto_arena_no_popcounts(
 	  chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
 			       (chemfp_heapq_swap) double_score_swap);
 	  query_threshold = heap.scores[0];
-	  // Since we leave the loop early, I need to advance the pointers
+	  /* Since we leave the loop early, I need to advance the pointers */
 	  target_index++;
 	  target_fp += target_storage_size;
 	  break;
@@ -585,14 +578,12 @@ knearest_tanimoto_arena_no_popcounts(
     
     /* Pass back the query results */
     result_offset += heap_size;
-    //printf("Adding %d %p\n", result_offset, result_offsets);
+
     *result_offsets++ = result_offset;
     memcpy(result_indicies, heap.indicies, heap_size * sizeof(int));
     memcpy(result_scores, heap.scores, heap_size * sizeof(double));
 
     /* Move the pointers so I can report the next results */
-    //    printf("Adding %d\n", heap_size);
-    //    printf("scores %f %f\n", heap.scores[0], heap.scores[1]);
     result_indicies += heap_size;
     result_scores += heap_size;
     num_cells -= heap_size;
@@ -669,7 +660,6 @@ int chemfp_knearest_tanimoto_arena(
   query_fp = query_arena + (query_start * query_storage_size);
   for (query_index = query_start; query_index < query_end;
        query_index++, query_fp += query_storage_size) {
-    //    printf("Query index %d\n", query_index);
     if (num_cells < k) {
       /* Not enough space to store everything, so stop here. */
       return query_index-query_start;
@@ -697,7 +687,6 @@ int chemfp_knearest_tanimoto_arena(
     while (next_popcount(&popcount_order, query_threshold)) {
       target_popcount = popcount_order.popcount;
       best_possible_score = popcount_order.score;
-      //printf("popcount %d %f\n", target_popcount, best_possible_score);
 
       /* If we can't beat the query threshold then we're done with the targets */
       if (best_possible_score < query_threshold) {
@@ -707,12 +696,10 @@ int chemfp_knearest_tanimoto_arena(
       /* Scan through the targets which have the given popcount */
       start = target_popcount_indicies[target_popcount];
       end = target_popcount_indicies[target_popcount+1];
-      //printf("  start %d end %d\n", start, end);
       
       if (!check_bounds(&popcount_order, &start, &end, target_start, target_end)) {
 	continue;
       }
-      //printf("  (adjusted) start %d end %d\n", start, end);
 
       /* Iterate over the target fingerprints */
       target_fp = target_arena + start*target_storage_size;
@@ -725,8 +712,6 @@ int chemfp_knearest_tanimoto_arena(
 	for (; target_index<end; target_index++, target_fp += target_storage_size) {
 	  intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
 	  score = intersect_popcount / (popcount_sum - intersect_popcount);
-	  //printf("  testing %d score %f from %d %d %d\n", target_index, score,
-	  //	 intersect_popcount, query_popcount, target_popcount);
 
 	  /* The heap isn't full; only check if we're at or above the query threshold */
 	  if (score >= query_threshold) {
@@ -737,8 +722,8 @@ int chemfp_knearest_tanimoto_arena(
 	      chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
 				   (chemfp_heapq_swap) double_score_swap);
 	      query_threshold = heap.scores[0];
-	      // We're going to jump to the "heap is full" section
-	      // Since we leave the loop early, I need to advance the pointers
+	      /* We're going to jump to the "heap is full" section */
+	      /* Since we leave the loop early, I need to advance the pointers */
 	      target_index++;
 	      target_fp += target_storage_size;
 	      goto heap_replace;
@@ -765,8 +750,6 @@ int chemfp_knearest_tanimoto_arena(
 	intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
 	score = intersect_popcount / (popcount_sum - intersect_popcount);
 
-	//printf("  full testing %d score %f from %d %d %d\n", target_index, score,
-	//       intersect_popcount, query_popcount, target_popcount);
 	/* We need to be strictly *better* than what's in the heap */
 	if (score > query_threshold) {
 	  heap.indicies[0] = target_index;
@@ -868,16 +851,16 @@ chemfp_reorder_by_popcount(
 	*popcount_indicies++ = i;
 	popcount++;
 	if (popcount == num_bits) {
-	  // We are at or above the limit. We can stop now.
+	  /* We are at or above the limit. We can stop now. */
 	  i = num_fingerprints+1;
 	  break;
-	  // Note: with corrupted data it is possible
-	  // that ->popcount can be > num_bits. This is
-	  // undefined behavior. I get to do what I want.
-	  // I decided to treat them as having "max_popcount" bits.
-	  // After all, I don't want corrupt data to crash the
-	  // system, and no one is going to validate the input
-	  // fingerprints for correctness each time.
+	  /* Note: with corrupted data it is possible
+	     that ->popcount can be > num_bits. This is
+	     undefined behavior. I get to do what I want.
+	     I decided to treat them as having "max_popcount" bits.
+	     After all, I don't want corrupt data to crash the
+	     system, and no one is going to validate the input
+	     fingerprints for correctness each time.  */
 	}
       }
     }

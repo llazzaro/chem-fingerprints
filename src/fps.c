@@ -154,8 +154,8 @@ int chemfp_fps_threshold_tanimoto_search(
   }
   num_queries = query_end - query_start;
   if (end[-1] != '\n') {
-    // There's no guarantee that the missing newline is on "stopped_at"
-    // In the Python API there's no way to trigger this through normal code.
+    /* There's no guarantee that the missing newline is on "stopped_at" */
+    /* In the Python API there's no way to trigger this through normal code. */
     retval = CHEMFP_MISSING_NEWLINE;
     goto finish;
   }
@@ -206,7 +206,7 @@ static int fps_heap_lt(chemfp_fps_heap *heap, int i, int j) {
     return 1;
   if (heap->scores[i] > heap->scores[j])
     return 0;
-  // break ties on a first-come basis
+  /* break ties on a first-come basis */
   return (heap->indicies[i] > heap->indicies[j]);
 }
 

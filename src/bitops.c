@@ -168,12 +168,12 @@ double chemfp_hex_tanimoto(int len, const char *sfp1, const char *sfp2) {
   for (; i<len; i++) {
     w1 = hex_to_value[fp1[i]];
     w2 = hex_to_value[fp2[i]];
-    // Check for illegal characters
+    /* Check for illegal characters */
     union_w |= (w1|w2);
-    // The largest possible index is (16 | 15) == 31
-    // (and only when the input isn't a legal hex character)
+    /* The largest possible index is (16 | 15) == 31 */
+    /* (and only when the input isn't a legal hex character) */
     union_popcount += _popcount[w1|w2];
-    // The largest possible index is (16 & 16) == 16
+    /* The largest possible index is (16 & 16) == 16 */
     intersect_popcount += _popcount[w1&w2];
   }
   /* Check for illegal character */
