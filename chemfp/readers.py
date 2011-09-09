@@ -39,8 +39,8 @@ def open_fps(source, format=None):
     infile = io.open_compressed_input_universal(source, compression)
     filename = io.get_filename(source)
 
-    header, lineno, block = read_header(infile, filename)
-    return FPSReader(infile, header, lineno, block)
+    metadata, lineno, block = read_header(infile, filename)
+    return FPSReader(infile, metadata, lineno, block)
 
 
 # This never buffers
@@ -187,6 +187,7 @@ def read_header(f, filename, warn=warn_to_stderr):
                     if i % 2 == 1:
                         raise TypeError(block)
                     metadata.num_bits = i * 4
+                    metadata.num_bytes = i // 2
                     
                 return metadata, lineno, block
 
@@ -217,6 +218,7 @@ def read_header(f, filename, warn=warn_to_stderr):
             if key == "num_bits":
                 try:
                     metadata.num_bits = int(value)
+                    metadata.num_bytes = (metadata.num_bits + 7)//8
                     if not (metadata.num_bits > 0):
                         raise ValueError
                 except ValueError:
