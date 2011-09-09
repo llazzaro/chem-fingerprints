@@ -15,7 +15,7 @@ enum chemfp_errors {
   CHEMFP_UNEXPECTED_FINGERPRINT_LENGTH = -33,
   CHEMFP_MISSING_ID = -34,
   CHEMFP_BAD_ID = -35,
-  CHEMFP_MISSING_NEWLINE = -36,
+  CHEMFP_MISSING_NEWLINE = -36
 };
 
 /* This gives compile-time version information. */
@@ -119,27 +119,6 @@ int chemfp_fps_count_tanimoto_hits(
 	const char *target_block, int target_block_end,
         double threshold,
 	int *counts, int *num_lines_processed);
-#if 0
-/* Compute Tanimoto scores for each line in the fps block and report all
-   scores which are greater than or equal to the specified threshold. Callers
-   must preallocate enough space in id_starts, id_lens, and scores for the
-   results. */
-int chemfp_fps_tanimoto(
-    int hex_len, char *hex_query,   // The query fingerprint, in hex
-
-    // Target block data, in fps format. Last character must be a newline.
-    int target_block_len, char *target_block,  
-
-    double threshold,    // Report only those values >= threshold
-    int *num_found,      // Will be set to the number of fingerprints which matched
-    int *id_starts, int *id_ends,     // id locations in the current block
-    double *scores,      // Corresponding Tanimoto similarity score
-
-    // (optional) track the line number. The caller must initialize the
-    // number if not NULL. All this function does is increment the count
-    int *lineno
-  );
-#endif
 
 
 typedef struct {
