@@ -258,7 +258,26 @@ class FingerprintArena(FingerprintReader):
         start_offset = arena_i * self._storage_size
         end_offset = start_offset + self.metadata.num_bytes
         return self.ids[i], self.arena[start_offset:end_offset]
-        
+
+
+    def save(self, destination):
+        from . import io
+        need_close = False
+        if isinstance(destination, basestring):
+            need_close = True
+            output = io.open_output(destination)
+        else:
+            output = destination
+
+        try:
+            io.write_fps1_magic(output)
+            io.write_fps1_header(output, self.metadata)
+            for id, fp in self:
+                io.write_fps1_fingerprint(output, fp, id)
+        finally:
+            if need_close:
+                output.close()
+                
     def reset(self):
         pass
 
