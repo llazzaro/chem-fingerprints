@@ -16,6 +16,7 @@ setup(name = "chemfp",
                                 "src/heapq.c", "src/fps.c",
                                 "src/searches.c",
                                 "src/python_api.c"],
-                               extra_compile_args = ["-std=c89"])],
+                               extra_compile_args = ["-O3"],
+                               )],
      )
 
