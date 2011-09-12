@@ -26,17 +26,17 @@ class SDFParseError(ChemFPError):
     def __str__(self):
         return self.msg
 
-def ignore_parse_errors(msg, loc):
+def ignore_parse_errors(msg, location):
     pass
 
-def log_parse_errors(msg, loc):
+def log_parse_errors(msg, location):
     import logging
     logger = logging.getLogger("chemfp")
-    logger.error("%s %s" % (msg, loc.where()))
+    logger.error("%s %s" % (msg, location.where()))
 
-def strict_parse_errors(msg, loc):
-    raise SDFParseError(msg + " " + loc.where(),
-                        loc.lineno, loc.name)
+def strict_parse_errors(msg, location):
+    raise SDFParseError(msg + " " + location.where(),
+                        location.lineno, location.name)
 
 _parse_error_handlers = {
     "ignore": ignore_parse_errors,
@@ -103,13 +103,13 @@ class FileLocation(object):
     def info(self):
         return dict(name=self.name, lineno=self.lineno, title=self.title)
 
-def open_sdf(source=None, decompressor="auto", errors="strict", loc=None):
+def open_sdf(source=None, decompressor="auto", errors="strict", location=None):
     """Open an SD file and return an iterator over the SD records, as blocks of text
 
     source - input source. Can be None (for sys.stdin), the input filename
         as a string, or a file object.
     errors - one of "strict" (default), "log", or "ignore". Other values are experimental
-    loc - experimental location tracking.
+    location - experimental location tracking.
     """
     # XXX Adapater until I remove the old decompressor code
     if decompressor == "auto":
@@ -124,24 +124,24 @@ def open_sdf(source=None, decompressor="auto", errors="strict", loc=None):
         raise AssertionError(decompressor)
     format_name, compression = io.normalize_format(source, format)
     fileobj = io.open_compressed_input_universal(source, compression)
-    return iter_sdf_records(fileobj, errors, loc)
+    return iter_sdf_records(fileobj, errors, location)
 
 # My original implementation used a slow line-oriented parser.  That
 # was decently fast, but this version, which reads a block at a time
 # and works directly on those blocks, is over 3 times as fast. It's
 # also a lot more complicated
 
-def iter_sdf_records(fileobj, errors="strict", loc=None):
+def iter_sdf_records(fileobj, errors="strict", location=None):
     """Iterate over records in an SD file, returning records as blocks of text
 
     fileobj - input stream. If fileobj.name exists then use it in error messages
     errors - one of "strict" (default), "log", or "ignore". Other values are experimental
-    loc - experimental location tracking
+    location - experimental location tracking
     """
-    if loc is None:
-        loc = FileLocation()
-    if loc.name is None:
-        loc.name = getattr(fileobj, "name", None)
+    if location is None:
+        location = FileLocation()
+    if location.name is None:
+        location.name = getattr(fileobj, "name", None)
     error = get_parse_error_handler(errors)
     pushback_buffer = ''
     records = None
@@ -158,14 +158,14 @@ def iter_sdf_records(fileobj, errors="strict", loc=None):
                         # (Is that a problem? It's not supposed to be one.)
                         pushback_buffer += "\n"
                     else:
-                        loc._record = None
-                        if loc.lineno == 1:
+                        location._record = None
+                        if location.lineno == 1:
                             # No records read. Wrong format.
-                            error("Could not find a valid SD record", loc)
+                            error("Could not find a valid SD record", location)
                         else:
                             error(
    "unexpected content at the end of the file (perhaps the last record is truncated?)",
-                                loc)
+                                location)
                         break
                 else:
                     # We're done!
@@ -187,22 +187,22 @@ def iter_sdf_records(fileobj, errors="strict", loc=None):
             # images or other large data in the SD tags.
             # To prevent timing problems, don't allow huge records.
             if len(pushback_buffer) > 200000:
-                loc._record = None
-                error("record is too large for this reader", loc)
+                location._record = None
+                error("record is too large for this reader", location)
                 return
         else:
             # We have a set of records, one string per record. Pass them back.
             for record in records:
                 # A simple, quick check that it looks about right
                 if not _sdf_check_pat.match(record):
-                    loc._record = record
-                    error("incorrectly formatted record", loc)
+                    location._record = record
+                    error("incorrectly formatted record", location)
                     # If the error callback returns then just skip the record
                 else:
                     record += "\n$$$$\n"  # restore the split text
-                    loc._record = record
+                    location._record = record
                     yield record
-                loc.lineno += record.count("\n")
+                location.lineno += record.count("\n")
             records = None
 
 
