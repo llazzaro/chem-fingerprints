@@ -163,9 +163,9 @@ def calc_MACCS(mol, fp=None,
     return _pack_256(*fp)[:21]
 
 
-# Pre 2.3 versions of OpenBabel did not have MACCS.
-# Version 2.3.0 contained a buggy MACCS implementation.
-# That was soon fixed in version control.
+# OpenBabel version up to 2.3.0 contained errors in the
+# translation of the MACCS patterns from RDKit.
+# Post-2.3.0 fixed in version control.
 # MACCS might also be missing if BABEL_DATADIR doesn't exist.
 HAS_MACCS = False
 MACCS_VERSION = 0
