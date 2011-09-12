@@ -191,13 +191,16 @@ def write_fps1_header(outfile, metadata):
     if metadata.num_bits is not None:
         lines.append("#num_bits=%d\n" % metadata.num_bits)
 
+    if metadata.type is not None:
+        assert "\n" not in metadata.type
+        lines.append("#type=" + metadata.type.encode("ascii")+"\n") # type cannot contain non-ASCII characters
+
     if metadata.software is not None:
         assert "\n" not in metadata.software
         lines.append("#software=" + metadata.software.encode("utf8")+"\n")
 
-    if metadata.type is not None:
-        assert "\n" not in metadata.type
-        lines.append("#type=" + metadata.type.encode("ascii")+"\n") # type cannot contain non-ASCII characters
+    if metadata.aromaticity is not None:
+        lines.append("#aromaticity=" + metadata.aromaticity.encode("ascii") + "\n")
 
     for source in metadata.sources:
         # Ignore newlines in the source filename, if present
@@ -207,9 +210,6 @@ def write_fps1_header(outfile, metadata):
     if metadata.date is not None:
         lines.append("#date=" + metadata.date.encode("ascii")+"\n") # date cannot contain non-ASCII characters
 
-    if metadata.aromaticity is not None:
-        lines.append("#aromaticity=" + metadata.aromaticity.encode("ascii") + "\n")
-        
     outfile.writelines(lines)
 
 class _IgnorePipeErrors(object):
