@@ -19,9 +19,12 @@ import errno
 from openeye.oechem import *
 from openeye.oegraphsim import *
 
+from . import ParseError
+from . import types
+from . import io
+
 __all__ = ["read_structures", "get_path_fingerprinter", "get_maccs_fingerprinter"]
 
-from . import types
 
 class UnknownFormat(KeyError):
     def __str__(self):
@@ -392,7 +395,19 @@ def is_valid_format(format):
 
 def is_valid_aromaticity(aromaticity):
     return aromaticity in _aromaticity_flavors
-        
+
+def ignore_parse_errors(msg):
+    pass
+def report_parse_errors(msg):
+    sys.stderr.write("ERROR: %s. Skipping.\n" % (msg,))
+def strict_parse_errors(msg):
+    raise ParseError(msg)
+
+_error_handlers = {
+    "ignore": ignore_parse_errors,
+    "report": report_parse_errors,
+    "strict": strict_parse_errors,
+    }
 
 # Part of the code (parameter checking, opening the file) are eager.
 # Actually reading the structures is lazy.
@@ -405,44 +420,54 @@ def read_structures(filename=None, format=None, id_tag=None, aromaticity=None, e
     except KeyError:
         raise ValueError("Unsupported aromaticity name %r" % (aromaticity,))
 
+    try:
+        error_handler = _error_handlers[errors]
+    except KeyError:
+        raise ValueError("'errors' must be one of %s" % ", ".join(sorted(_error_handlers)))
+
     # Input is from a file
     if filename is None:
         ifs = _open_stdin(set_format, aromaticity_flavor)
+        filename_repr = "<stdin>"
     else:
         ifs = _open_ifs(filename, set_format, aromaticity_flavor)
+        filename_repr = repr(filename)
 
     # Only SD files can take the id_tag
     if ifs.GetFormat() != OEFormat_SDF:
         id_tag = None
 
     # Lazy structure reader
-    return _iter_structures(ifs, id_tag)
+    return _iter_structures(ifs, id_tag, filename_repr, error_handler)
 
-def _iter_structures(ifs, id_tag):
+def _iter_structures(ifs, id_tag, filename_repr, error_handler):
+    def where():
+        return " for record #%d of %s" % (recno+1, filename_repr)
+        
     if id_tag is None:
-        for i, mol in enumerate(ifs.GetOEGraphMols()):
-            id = mol.GetTitle()
-            if "\t" in id:
-                id = id.replace("\t", "")
+        for recno, mol in enumerate(ifs.GetOEGraphMols()):
+            title = mol.GetTitle()
+            id = io.remove_special_characters_from_id(title)
             if not id:
-                yield None, mol
-            else:
-                yield id, mol
+                if title:
+                    msg = "Title (%r) contains unsupportable characters" % (title,)
+                else:
+                    msg = "Missing title"
+                error_handler(msg + where())
+                continue
+            yield id, mol
     else:
-        for i, mol in enumerate(ifs.GetOEGraphMols()):
-            id = OEGetSDData(mol, id_tag)
-            # Use the first line if it's a multi-line value
-            # (this should be rare)
-            if "\n" in id:
-                id = id.splitlines()[0]
-                # (In theory this must have content. I don't trust that.)
-            if "\t" in id:
-                id = id.replace("\t", "")
-
+        for recno, mol in enumerate(ifs.GetOEGraphMols()):
+            dirty_id = OEGetSDData(mol, id_tag)
+            id = io.remove_special_characters_from_id(dirty_id)
             if not id:
-                yield None, mol
-            else:
-                yield id, mol
+                if dirty_id:
+                    msg = "Id tag %r (%r) contains unsupportable characters" % (id_tag, dirty_id)
+                else:
+                    msg = "Empty tag %r" % (id_tag,)
+                error_handler(msg + where())
+                continue
+            yield id, mol
 
 
 def _read_fingerprints(structure_reader, fingerprinter):

@@ -21,7 +21,7 @@ def sys_exit_opener(opener, source, format, id_tag, aromaticity, errors):
     try:
         return opener.read_structure_fingerprints(source, format, id_tag, aromaticity, errors)
     except (IOError, ChemFPError), err:
-        raise SystemExit("Problem reading structure fingerprints: %s\n" % err)
+        raise SystemExit("Problem reading structure fingerprints: %s. Quitting.\n" % err)
 
 def iter_all_sources(opener, filenames, format, id_tag, aromaticity, errors):
     for filename in filenames:
