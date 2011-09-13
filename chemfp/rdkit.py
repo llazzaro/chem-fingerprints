@@ -114,13 +114,15 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
                 # This was not a molecule?
                 error("Could not parse molecule block", loc)
                 continue
-            id = mol.GetProp("_Name")
-            if "\n" in id:
-                id = id.split("\n")[0]
-            if "\t" in id:
-                id = id.replace("\t", "")
+            title = mol.GetProp("_Name")
+            id = io.remove_special_characters_from_id(title)
             if not id:
-                id = None
+                if title:
+                    msg = "Title (%r) contains unsupportable characters" % (title,)
+                else:
+                    msg = "Missing title"
+                error(msg, loc)
+                continue
             yield id, mol
     else:
         # According to
@@ -135,13 +137,12 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
                 error("Could not parse molecule block", loc)
                 continue
             if id is None:
-                id = ""
-            elif "\n" in id:
-                id = id.split("\n")[0]
-            if "\t" in id:
-                id = id.replace("\t", "")
+                error("Empty id tag %r" % (id_tag,), loc)
+                continue
+            id = io.remove_special_characters_from_id(id)
             if not id:
-                id = "Record_%d" % (i+1)
+                error("Id tag %r (%r) contains unsupportable characters" % (id_tag, dirty_id))
+                continue
             yield id, mol
             
 # this class helps the case when someone is entering structure
