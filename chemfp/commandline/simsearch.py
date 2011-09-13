@@ -64,9 +64,9 @@ def int_or_all(s):
 parser = argparse.ArgumentParser(
     description="Search an FPS file for similar fingerprints")
 parser.add_argument("-k" ,"--k-nearest", help="select the k nearest neighbors (use 'all' for all neighbors)",
-                    default=3, type=int_or_all)
+                    default=None, type=int_or_all)
 parser.add_argument("-t" ,"--threshold", help="minimum similarity score threshold",
-                    default=0.7, type=float)
+                    default=None, type=float)
 parser.add_argument("-q", "--queries", help="filename containing the query fingerprints")
 parser.add_argument("--hex-query", help="query in hex")
 parser.add_argument("--query-id", default="Query1",
@@ -99,8 +99,27 @@ parser.add_argument("target_filename", nargs=1, help="target filename", default=
 def main(args=None):
     args = parser.parse_args(args)
     target_filename = args.target_filename[0]
-    threshold = args.threshold
 
+    threshold = args.threshold
+    k = args.k_nearest
+
+    # People should not use this without setting parameters.  On the
+    # other hand, I don't want an error message if there are no
+    # parameters. This solution seems to make sense.
+
+    if threshold is None:
+        if k is None:
+            # If nothing is set, use defaults of --thresdhold 0.7 -k 3            
+            threshold = 0.7
+            k = 3
+        else:
+            # only k is set; search over all possible matches
+            threshold = 0.0
+    else:
+        if k is None:
+            # only threshold is set; search for all hits above that threshold
+            k = "all"
+    
     if args.scan and args.memory:
         parser.error("Cannot specify both --scan and --memory")
     
@@ -116,12 +135,12 @@ def main(args=None):
                              (name,))
             
 
-    if args.k_nearest == "all":
+    if k == "all":
         pass
-    elif args.k_nearest < 0:
+    elif k < 0:
         parser.error("--k-nearest must non-negative or 'all'")
 
-    if not (0.0 <= args.threshold <= 1.0):
+    if not (0.0 <= threshold <= 1.0):
         parser.error("--threshold must be between 0.0 and 1.0, inclusive")
 
     if args.batch_size < 1:
@@ -204,11 +223,11 @@ def main(args=None):
     outfile = io.open_output(args.output)
     with io.ignore_pipe_errors:
         type = "Tanimoto k=%(k)s threshold=%(threshold)s" % dict(
-            k=args.k_nearest, threshold=threshold, max_score=1.0)
+            k=k, threshold=threshold, max_score=1.0)
 
         if args.count:
             type = "Count threshold=%(threshold)s" % dict(
-                threshold=args.threshold)
+                threshold=threshold)
             write_count_magic(outfile)
         else:
             write_simsearch_magic(outfile)
@@ -226,14 +245,14 @@ def main(args=None):
 
             if args.count:
                 report_counts(outfile, query_arenas, targets,
-                              threshold = args.threshold)
-            elif args.k_nearest == "all":
+                              threshold = threshold)
+            elif k == "all":
                 report_threshold(outfile, float_formatter, query_arenas, targets,
-                                 threshold = args.threshold)
+                                 threshold = threshold)
             else:
                 report_knearest(outfile, float_formatter, query_arenas, targets,
-                                k = args.k_nearest,
-                                threshold = args.threshold)
+                                k = k, threshold = threshold)
+                                
                 
                     
     t3 = time.time()
