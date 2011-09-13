@@ -338,7 +338,7 @@ def _file_reader(obconversion, obmol, success, id_tag, filename_repr, error_hand
                     if dirty_id:
                         msg = "Id tag %r (%r) contains unsupportable characters" % (id_tag, dirty_id)
                     else:
-                        msg = "Empty tag %r" % (id_tag,)
+                        msg = "Empty id tag %r" % (id_tag,)
                     error_handler(msg + where())
                 else:
                     yield id, obmol

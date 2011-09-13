@@ -464,7 +464,7 @@ def _iter_structures(ifs, id_tag, filename_repr, error_handler):
                 if dirty_id:
                     msg = "Id tag %r (%r) contains unsupportable characters" % (id_tag, dirty_id)
                 else:
-                    msg = "Empty tag %r" % (id_tag,)
+                    msg = "Empty id tag %r" % (id_tag,)
                 error_handler(msg + where())
                 continue
             yield id, mol
