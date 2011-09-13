@@ -7,8 +7,24 @@ import binascii
 
 from datetime import datetime
 
+if sys.platform.startswith("win"):
+    DEV_STDIN = "CON"
+else:
+    if os.path.exists("/dev/stdin"):
+        DEV_STDIN = "/dev/stdin"
+    else:
+        DEV_STDIN = None
+
 def utcnow():
     return datetime.utcnow().isoformat().split(".", 1)[0]
+
+# XXX should this be here?
+def remove_special_characters_from_id(id):
+    if "\n" in id:
+        id = id.splitlines()[0]
+    if "\t" in id:
+        id = id.replace("\t", "")
+    return id
 
 ####
     

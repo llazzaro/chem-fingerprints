@@ -7,15 +7,16 @@
 
 
 from __future__ import absolute_import
-from . import ChemFPError
+from . import ParseError
 from . import io
 
 __all__ = ["open_sdf", "iter_sdf_records", "iter_two_tags", "iter_title_and_tag"]
 
+import sys
 import re
 import chemfp
 
-class SDFParseError(ChemFPError):
+class SDFParseError(ParseError):
     def __init__(self, msg, filename, lineno):
         super(SDFParseError, self).__init__(msg, filename, lineno)
         self.msg = msg
@@ -29,10 +30,8 @@ class SDFParseError(ChemFPError):
 def ignore_parse_errors(msg, location):
     pass
 
-def log_parse_errors(msg, location):
-    import logging
-    logger = logging.getLogger("chemfp")
-    logger.error("%s %s" % (msg, location.where()))
+def report_parse_errors(msg, location):
+    sys.stderr.write("ERROR: %s %s\n" % (msg, location.where()))
 
 def strict_parse_errors(msg, location):
     raise SDFParseError(msg + " " + location.where(),
@@ -40,7 +39,7 @@ def strict_parse_errors(msg, location):
 
 _parse_error_handlers = {
     "ignore": ignore_parse_errors,
-    "log": log_parse_errors,
+    "report": report_parse_errors,
     "strict": strict_parse_errors,
     }
 
@@ -96,8 +95,8 @@ class FileLocation(object):
         if self.name is not None:
             s += " of %r" % (self.name,)
         title = self.title
-        if title is not None:
-            s += " (%s)" % (title,)
+        if title:
+            s += " (title=%r)" % (title,)
         return s
 
     def info(self):
@@ -186,7 +185,7 @@ def iter_sdf_records(fileobj, errors="strict", location=None):
             # you are really stretching and doing things like storing
             # images or other large data in the SD tags.
             # To prevent timing problems, don't allow huge records.
-            if len(pushback_buffer) > 200000:
+            if len(pushback_buffer) > 2000000:
                 location._record = None
                 error("record is too large for this reader", location)
                 return

@@ -12,7 +12,6 @@ from __future__ import absolute_import
 import sys
 import os
 import errno
-import select
 import ctypes
 import warnings
 import errno
@@ -332,6 +331,19 @@ def _get_format_setter(format=None):
             ifs.Setgz(is_compressed)
     return set_format
 
+
+def _open_stdin(set_format, aromaticity_flavor):
+    ifs = oemolistream()
+    ifs.open()
+    set_format(ifs)
+    
+    if aromaticity_flavor is not None:
+        flavor = ifs.GetFlavor(ifs.GetFormat())
+        flavor |= aromaticity_flavor
+        ifs.SetFlavor(ifs.GetFormat(), flavor)
+
+    return ifs
+
 def _open_ifs(filename, set_format, aromaticity_flavor):
     ifs = oemolistream()
     set_format(ifs)
@@ -385,7 +397,7 @@ def is_valid_aromaticity(aromaticity):
 # Part of the code (parameter checking, opening the file) are eager.
 # Actually reading the structures is lazy.
 
-def read_structures(filename=None, format=None, id_tag=None, aromaticity=None):
+def read_structures(filename=None, format=None, id_tag=None, aromaticity=None, errors="strict"):
     # Check that that the format is known
     set_format = _get_format_setter(format)
     try:
@@ -394,11 +406,10 @@ def read_structures(filename=None, format=None, id_tag=None, aromaticity=None):
         raise ValueError("Unsupported aromaticity name %r" % (aromaticity,))
 
     # Input is from a file
-    if filename is not None:
-        ifs = _open_ifs(filename, set_format, aromaticity_flavor)
-    else:
-        # Input is from stdin
+    if filename is None:
         ifs = _open_stdin(set_format, aromaticity_flavor)
+    else:
+        ifs = _open_ifs(filename, set_format, aromaticity_flavor)
 
     # Only SD files can take the id_tag
     if ifs.GetFormat() != OEFormat_SDF:
@@ -414,8 +425,9 @@ def _iter_structures(ifs, id_tag):
             if "\t" in id:
                 id = id.replace("\t", "")
             if not id:
-                id = "Record_%d" % (i+1)
-            yield id, mol
+                yield None, mol
+            else:
+                yield id, mol
     else:
         for i, mol in enumerate(ifs.GetOEGraphMols()):
             id = OEGetSDData(mol, id_tag)
@@ -428,35 +440,9 @@ def _iter_structures(ifs, id_tag):
                 id = id.replace("\t", "")
 
             if not id:
-                id = "Mol_%d" % i
-            yield id, mol
-
-# The reason for this is to allow ^C to work if there hasn't yet been
-# any input. Why? When Python calls out to a C++ function it blocks
-# control-C. It's not possible to get a KeyboardInterrupt until the
-# C++ function returns. Consider someone using this script who omitted
-# a filename by accident. If OEChem has control of stdin then ^C does
-# not work. I found that frustrating, so this is a workaround. When
-# reading from stdin, don't dispatch to OEChem until there's input.
-
-_USE_SELECT = True
-def _open_stdin(set_format, aromaticity_flavor):
-    if _USE_SELECT:
-        try:
-            select.select([sys.stdin], [], [sys.stdin])
-        except KeyboardInterrupt:
-            raise SystemExit()
-    ifs = oemolistream()
-    ifs.open()
-    set_format(ifs)
-    
-    if aromaticity_flavor is not None:
-        flavor = ifs.GetFlavor(ifs.GetFormat())
-        flavor |= aromaticity_flavor
-        ifs.SetFlavor(ifs.GetFormat(), flavor)
-
-    return ifs
-        
+                yield None, mol
+            else:
+                yield id, mol
 
 
 def _read_fingerprints(structure_reader, fingerprinter):

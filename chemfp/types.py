@@ -159,8 +159,8 @@ class Fingerprinter(object):
     def _get_fingerprinter(self, **fingerprinter_kwargs):
         raise NotImplementedError("Subclasses must implement _get_fingerprinter")
     
-    def read_structure_fingerprints(self, source, format=None, id_tag=None, aromaticity=None):
-        structure_reader = self._read_structures(source, format, id_tag, aromaticity)
+    def read_structure_fingerprints(self, source, format=None, id_tag=None, aromaticity=None, errors="strict"):
+        structure_reader = self._read_structures(source, format, id_tag, aromaticity, errors)
         fingerprinter = self._get_fingerprinter(**self.fingerprinter_kwargs)
         source_filename = io.get_filename(source)
         if source_filename is None:

@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# Allow ^C to kill the process.
+import signal
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
 try:
     from chemfp.commandline.oe2fps import main
     main()

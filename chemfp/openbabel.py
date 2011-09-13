@@ -14,6 +14,7 @@ import itertools
 import sys
 import openbabel as ob
 
+from . import ParseError
 from . import io
 from . import types
 
@@ -222,7 +223,20 @@ def _get_ob_error(log):
     msgs = log.GetMessagesOfLevel(ob.obError)
     return "".join(msgs)
 
-def read_structures(filename=None, format=None, id_tag=None):
+def ignore_parse_errors(msg):
+    pass
+def report_parse_errors(msg):
+    sys.stderr.write("ERROR: %s. Skipping.\n" % (msg,))
+def strict_parse_errors(msg):
+    raise ParseError(msg)
+
+_error_handlers = {
+    "ignore": ignore_parse_errors,
+    "report": report_parse_errors,
+    "strict": strict_parse_errors,
+    }
+
+def read_structures(filename=None, format=None, id_tag=None, errors="strict"):
     """read_structures(filename, format) -> (id, OBMol) iterator 
     
     Iterate over structures from filename, returning the structure
@@ -232,6 +246,10 @@ def read_structures(filename=None, format=None, id_tag=None):
     """
     if not (filename is None or isinstance(filename, basestring)):
         raise TypeError("'filename' must be None or a string")
+    try:
+        error_handler = _error_handlers[errors]
+    except KeyError:
+        raise VauleError("'errors' must be one of %s" % ", ".join(sorted(_error_handlers)))
     
     obconversion = ob.OBConversion()
     format_name, compression = io.normalize_format(filename, format,
@@ -247,13 +265,12 @@ def read_structures(filename=None, format=None, id_tag=None):
     obmol = ob.OBMol()
 
     if not filename:
-        # OpenBabel's Python libary has no way to read from std::cin
-        # Fake it through /dev/stdin for those OSes which support it.
-        if not os.path.exists("/dev/stdin"):
-            raise TypeError("Unable to read from stdin on this platform")
-
-        success = _open_stdin(obconversion, obmol)
-
+        filename = io.DEV_STDIN
+        if filename is None:
+            raise NotImplementedError("Unable to read from stdin on this operating system")
+        success = obconversion.ReadFile(obmol, filename)
+        filename_repr = "<stdin>"
+         
     else:
         
         # Deal with OpenBabel's logging
@@ -263,6 +280,7 @@ def read_structures(filename=None, format=None, id_tag=None):
             ob.obErrorLog.SetOutputLevel(-1) # Suppress messages to stderr
 
         success = obconversion.ReadFile(obmol, filename)
+        filename_repr = repr(filename)
 
         errmsg = None
         if HAS_ERROR_LOG:
@@ -282,66 +300,49 @@ def read_structures(filename=None, format=None, id_tag=None):
                 raise IOError(5, errmsg, filename)
 
     # We've opened the file. Switch to the iterator.
-    return _file_reader(obconversion, obmol, success, id_tag)
+    return _file_reader(obconversion, obmol, success, id_tag, filename_repr, error_handler)
 
-def _open_stdin(obconversion, obmol):
-    "This is an internal function"
-    # Read structures from stdin.
-
-    # The current release of scripting for OpenBabel doesn't let me
-    # use C++'s std::cin as the input stream so I need to fake it
-    # using "/dev/stdin". That works on Macs, Linux, and FreeBSD but
-    # not Windows.
-
-    # Python says that it's in charge of checking for ^C. When I pass
-    # control over to OpenBabel, Python is still in charge of checking
-    # for ^C, but it won't do anything until control returns to Python.
-
-    # I found it annoying that if I started the program, which by
-    # default expects SMILES from stdin, then I couldn't hit ^C to
-    # stop it. My solution was to stay in Python until there's
-    # information on stdin, and once that's happened, call OpenBabel.
-
-    import select
-    select.select([sys.stdin], [], [sys.stdin])
-
-    # There's data. Pass parsing control into OpenBabel.
-    return obconversion.ReadFile(obmol, "/dev/stdin")
-
-def _file_reader(obconversion, obmol, success, id_tag):
+def _file_reader(obconversion, obmol, success, id_tag, filename_repr, error_handler):
+    def where():
+        return " for record #%d of %s" % (recno, filename_repr)
+    
     # How do I detect if the input contains a failure?
+    recno = 0
     if id_tag is None:
-        for i in itertools.count(1):
-            if not success:
-                break
-            id = obmol.GetTitle()
-            if "\t" in id:
-                id = id.replace("\t", "")
+        while success:
+            recno += 1
+            title = obmol.GetTitle()
+            id = io.remove_special_characters_from_id(title)
             if not id:
-                id = "Record_%d" % i
-
-            yield id, obmol
+                if title:
+                    msg = "Title (%r) contains unsupportable characters" % (title,)
+                else:
+                    msg = "Missing title"
+                error_handler(msg + where())
+            else:
+                yield id, obmol
+                
             obmol.Clear()
             success = obconversion.Read(obmol)
 
     else:
-        for i in itertools.count(1):
-            if not success:
-                break
-        
+        while success:
+            recno += 1
             obj = obmol.GetData(id_tag)
             if obj is None:
-                id = "Record_%d" % i
+                error_handler("Missing id tag %r%s" % (id_tag, where()))
             else:
-                id = obj.GetValue()
-                if "\n" in id:
-                    id = id.splitlines()[0]
-                if "\t" in id:
-                    id = id.replace("\t", "")
+                dirty_id = obj.GetValue()
+                id = io.remove_special_characters_from_id(dirty_id)
                 if not id:
-                    id = "Record_%d" % i
-            
-            yield id, obmol
+                    if dirty_id:
+                        msg = "Id tag %r (%r) contains unsupportable characters" % (id_tag, dirty_id)
+                    else:
+                        msg = "Empty tag %r" % (id_tag,)
+                    error_handler(msg + where())
+                else:
+                    yield id, obmol
+                    
             obmol.Clear()
             success = obconversion.Read(obmol)
 
@@ -351,10 +352,10 @@ class _OpenBabelFingerprinter(types.Fingerprinter):
     software = SOFTWARE
 
     @staticmethod
-    def _read_structures(source, format, id_tag, aromaticity):
+    def _read_structures(source, format, id_tag, aromaticity, errors):
         if aromaticity is not None:
-            raise ValueError("OpenBabel does not support alternate aromaticity models")
-        return read_structures(source, format, id_tag)
+            raise ValueError("Open Babel does not support alternate aromaticity models")
+        return read_structures(source, format, id_tag, errors)
 
     @classmethod
     def _get_fingerprinter(cls):

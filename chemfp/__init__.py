@@ -38,6 +38,9 @@ _THRESHOLD = 0.7
 class ChemFPError(Exception):
     pass
 
+class ParseError(ChemFPError):
+    pass
+
 def read_structure_fingerprints(type, source=None, format=None, id_tag=None, aromaticity=None):
     """Read structures from `source` and return the corresponding ids and fingerprints
 
@@ -95,7 +98,10 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, aro
 
     """ # ' # emacs cruft
     from . import types
-    return types.read_structure_fingerprints(type, source, format, id_tag, aromaticity)
+    for i, (id, fp) in enumerate(types.read_structure_fingerprints(type, source, format, id_tag, aromaticity)):
+        if id is None:
+            id = "Mol_%d" % i
+        yield id, fp
     
 # Low-memory, forward-iteration, or better
 def open(source, format=None):

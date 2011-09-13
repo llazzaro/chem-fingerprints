@@ -163,13 +163,7 @@ def main(args=None):
                 location.lineno = 1
                 yield sdf_reader.open_sdf(filename, args.decompress, location=location)
 
-    # Set up the error messages for missing id and fingerprints.
-    if args.id_tag is None:
-        MISSING_ID = "Missing title line for the record starting at line %s. Skipping.\n"
-    else:
-        MISSING_ID = "Missing id tag %s, " % (args.id_tag,)
-        MISSING_ID += "in the record starting at line %s. Skipping.\n"
-
+    # Set up the error messages for missing fingerprints.
     MISSING_FP = ("Missing fingerprint tag %(tag)s in record %(id)r line %(lineno)s. "
                   "Skipping.\n")
 
@@ -180,10 +174,7 @@ def main(args=None):
             for sdf_iter in sdf_iters:
                 for (id, encoded_fp), i in itertools.izip(sdf_reader.iter_title_and_tag(sdf_iter, args.fp_tag),
                                                           counter):
-                    if "\t" in id:
-                        id = id.replace("\t", "")
-                    if not id:
-                        id = "Mol_%d" % (i,)
+                    id = cmdsupport.make_structure_id(id, i)
                     yield id, encoded_fp
     else:
         def iter_encoded_fingerprints(sdf_iters):
@@ -192,11 +183,7 @@ def main(args=None):
                 for (id, encoded_fp), i in itertools.izip(
                     sdf_reader.iter_two_tags(sdf_iter, args.id_tag, args.fp_tag),
                     counter):
-
-                    if "\t" in id:
-                        id = id.replace("\t", "")
-                    if not id:
-                        id = "Mol_%d" % (i,)
+                    id = io.make_structure_id(id, i)
                     yield id, encoded_fp
 
 
@@ -224,11 +211,6 @@ def main(args=None):
         id = fp = None
         expected_num_bits = None
         for id, encoded_fp in encoded_fp_reader:
-            # If either of these is missing, complain but keep on going.
-            if not id:
-                sys.stderr.write(MISSING_ID % (location.lineno,))
-                skip()
-                continue
             if not encoded_fp:
                 sys.stderr.write(MISSING_FP % dict(
                     tag=args.fp_tag, id=location.title, lineno=location.lineno))

@@ -64,6 +64,11 @@ parser.add_argument(
 parser.add_argument(
     "-o", "--output", metavar="FILENAME",
     help="save the fingerprints to FILENAME (default=stdout)")
+
+parser.add_argument(
+    "--errors", choices=["strict", "report", "ignore"], default="strict",
+    help="how should structure parse errors be handled? (default=strict)")
+
 parser.add_argument(
     "filenames", nargs="*", help="input structure files (default is stdin)")
 
@@ -113,7 +118,8 @@ def main(args=None):
         parser.error("Invalid id tag: %r" % (args.id_tag,))
 
     metadata, reader = cmdsupport.read_multifile_structure_fingerprints(
-        opener, args.filenames, args.format, args.id_tag, None)
+        opener, args.filenames, format=args.format,
+        id_tag=args.id_tag, aromaticity=None, errors=args.errors)
 
     io.write_fps1_output(reader, args.output, metadata)
 

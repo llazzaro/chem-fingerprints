@@ -90,7 +90,7 @@ def iter_smiles_molecules(fileobj, name=None, errors="strict"):
             continue
         
         if len(words) == 1:
-            yield "Record_%d" % (lineno+1), mol
+            yield None, mol
         else:
             yield words[1], mol
 
@@ -108,18 +108,19 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
     loc = sdf_reader.FileLocation(name)
     error = sdf_reader.get_parse_error_handler(errors)
     if id_tag is None:
-        for i, text in enumerate(sdf_reader.iter_sdf_records(fileobj, errors, loc)):
+        for text in sdf_reader.iter_sdf_records(fileobj, errors, loc):
             mol = Chem.MolFromMolBlock(text)
             if mol is None:
                 # This was not a molecule?
                 error("Could not parse molecule block", loc)
+                continue
             id = mol.GetProp("_Name")
             if "\n" in id:
                 id = id.split("\n")[0]
             if "\t" in id:
                 id = id.replace("\t", "")
             if not id:
-                id = "Record_%d" % (i+1)
+                id = None
             yield id, mol
     else:
         # According to
@@ -132,6 +133,7 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
             if mol is None:
                 # This was not a molecule?
                 error("Could not parse molecule block", loc)
+                continue
             if id is None:
                 id = ""
             elif "\n" in id:
