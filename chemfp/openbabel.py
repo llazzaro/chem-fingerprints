@@ -249,7 +249,7 @@ def read_structures(filename=None, format=None, id_tag=None, errors="strict"):
     try:
         error_handler = _error_handlers[errors]
     except KeyError:
-        raise VauleError("'errors' must be one of %s" % ", ".join(sorted(_error_handlers)))
+        raise ValueError("'errors' must be one of %s" % ", ".join(sorted(_error_handlers)))
     
     obconversion = ob.OBConversion()
     format_name, compression = io.normalize_format(filename, format,
