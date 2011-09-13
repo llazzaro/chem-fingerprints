@@ -3,6 +3,7 @@ import sys
 import itertools
 import textwrap
 
+from .. import ParseError
 from .. import argparse, types, io
 from .. import openeye as oe
 from . import cmdsupport
@@ -163,7 +164,10 @@ def main(args=None):
     metadata, reader = cmdsupport.read_multifile_structure_fingerprints(
         opener, args.filenames, args.format, args.id_tag, args.aromaticity, args.errors)
     
-    io.write_fps1_output(reader, args.output, metadata)
+    try:
+        io.write_fps1_output(reader, args.output, metadata)
+    except ParseError, err:
+        raise SystemExit("ERROR: %s. Exiting." % (err,))
     
 if __name__ == "__main__":
     main()
