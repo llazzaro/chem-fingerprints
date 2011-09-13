@@ -1,6 +1,8 @@
 # Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 import sys
-from chemfp import argparse, io, rdkit, types
+
+from .. import ParseError
+from .. import argparse, io, rdkit, types
 from . import cmdsupport
 
 ########### Configure the command-line parser
@@ -121,7 +123,10 @@ def main(args=None):
         opener, args.filenames, format=args.format,
         id_tag=args.id_tag, aromaticity=None, errors=args.errors)
 
-    io.write_fps1_output(reader, args.output, metadata)
+    try:
+        io.write_fps1_output(reader, args.output, metadata)
+    except ParseError, err:
+        raise SystemExit("ERROR: %s. Exiting." % (err,))
 
 if __name__ == "__main__":
     main()
