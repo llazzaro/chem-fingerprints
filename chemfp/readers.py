@@ -14,7 +14,11 @@ from . import load_fingerprints, Metadata
 from . import fps_search
 from . import io
 
-BLOCKSIZE = 20000
+# I tried a wide range of sizes for my laptop, with both compressed
+# and uncompressed files, and found that the best size was around
+# 2**17. Actually, 2**16.8 was the absolute best, which gives
+BLOCKSIZE=11400
+# (BTW, the compressed time took 1.3x the uncompressed time)
 
 class FPSParseError(Exception):
     def __init__(self, errcode, lineno, filename):
