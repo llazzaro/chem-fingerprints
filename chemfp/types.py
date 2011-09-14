@@ -152,12 +152,12 @@ class Fingerprinter(object):
         return self.name + " " + encoded
 
     # Subclasses must hook into this
-    def _read_structures(self, source, format, id_tag, aromaticity):
-        raise NotImplementedError("Subclasses must implement _read_structures")
+    def _read_structures(self, source, format, id_tag, aromaromaticity, errors):
+        raise NotImplementedError("Subclass %r must implement _read_structures" % (self.__class__.__name__,))
 
     # Subclasses must hook into this
     def _get_fingerprinter(self, **fingerprinter_kwargs):
-        raise NotImplementedError("Subclasses must implement _get_fingerprinter")
+        raise NotImplementedError("Subclasses %r must implement _get_fingerprinter" % (self.__class__.__name__,))
     
     def read_structure_fingerprints(self, source, format=None, id_tag=None, aromaticity=None, errors="strict"):
         structure_reader = self._read_structures(source, format, id_tag, aromaticity, errors)
