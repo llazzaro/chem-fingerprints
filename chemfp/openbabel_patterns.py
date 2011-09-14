@@ -160,25 +160,6 @@ class _CachedFingerprinters(dict):
         return fingerprinter
 _cached_fingerprinters = _CachedFingerprinters()
 
-
-def _read_fingerprints(pattern_name, source, format, kwargs):
-    assert not kwargs
-    fingerprinter = _cached_fingerprinters[pattern_name].fingerprint
-    structure_reader = openbabel.read_structures(source, format)
-
-    def read_pattern_fingerprints():
-        for (title, mol) in structure_reader:
-            yield fingerprinter(mol), title
-
-    return read_pattern_fingerprints()
-    
-
-def read_substruct_fingerprints_v1(source=None, format=None, kwargs={}):
-    return _read_fingerprints("substruct", source, format, kwargs)
-
-def read_rdmaccs_fingerprints_v1(source=None, format=None, kwargs={}):
-    return _read_fingerprints("rdmaccs", source, format, kwargs)
-
 # XXX Why are there two "Fingerprinter" classes?
 # XX Shouldn't they be merged?
 
@@ -195,13 +176,19 @@ class _PatternFingerprinter(types.Fingerprinter):
     def describe(self, bitno):
         return self._fingerprinter.describe(bitno)
 
+    def _read_structures(self, filename, format, id_tag, aromaticity, errors):
+        if aromaticity is not None:
+            raise ValueError("Open Babel does not support alternate aromaticity models")
+        return openbabel.read_structures(filename, format, id_tag = id_tag, errors = errors)
+
 class SubstructOpenBabelFingerprinter_v1(_PatternFingerprinter):
     name = "ChemFP-Substruct-OpenBabel/1"
     num_bits = 881
     _pattern_name = "substruct"
     software = SOFTWARE
 
-    _get_reader = staticmethod(read_substruct_fingerprints_v1)
+    def _get_fingerprinter(self):
+        return _cached_fingerprinters["substruct"].fingerprint
 
 class RDMACCSOpenBabelFingerprinter_v1(_PatternFingerprinter):
     name = "RDMACCS-OpenBabel/1"
@@ -209,5 +196,5 @@ class RDMACCSOpenBabelFingerprinter_v1(_PatternFingerprinter):
     _pattern_name = "rdmaccs"
     software = SOFTWARE
 
-    _get_reader = staticmethod(read_rdmaccs_fingerprints_v1)
-
+    def _get_fingerprinter(self):
+        return _cached_fingerprinters["rdmaccs"].fingerprint

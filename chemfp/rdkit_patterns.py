@@ -142,27 +142,6 @@ class _CachedFingerprinters(dict):
         return fingerprinter
 _cached_fingerprinters = _CachedFingerprinters()
 
-def _read_fingerprints(pattern_name, source, format, kwargs):
-    assert not kwargs
-    # The OEChem interface only handles stdin and filenames
-    if not (isinstance(source, basestring) or source is None):  # Why is the check here?
-        raise NotImplementedError
-
-    fingerprinter = _cached_fingerprinters[pattern_name].fingerprint
-    structure_reader = rdkit.read_structures(source, format)
-
-    def read_pattern_fingerprints():
-        for (title, mol) in structure_reader:
-            yield fingerprinter(mol), title
-
-    return read_pattern_fingerprints()
-    
-
-def read_substruct_fingerprints_v1(source=None, format=None, kwargs={}):
-    return _read_fingerprints("substruct", source, format, kwargs)
-
-def read_rdmaccs_fingerprints_v1(source=None, format=None, kwargs={}):
-    return _read_fingerprints("rdmaccs", source, format, kwargs)
 
 
 # XXX Why are there two "Fingerprinter" classes?
@@ -186,7 +165,9 @@ class SubstructRDKitFingerprinter_v1(_PatternFingerprinter):
     _pattern_name = "substruct"
     software = SOFTWARE
 
-    _get_reader = staticmethod(read_substruct_fingerprints_v1)
+    def _get_fingerprinter(self):
+        return _cached_fingerprinters["substruct"].fingerprint
+    _read_structures = staticmethod(rdkit.read_structures)
 
 class RDMACCSRDKitFingerprinter_v1(_PatternFingerprinter):
     name = "RDMACCS-RDKit/1"
@@ -194,4 +175,6 @@ class RDMACCSRDKitFingerprinter_v1(_PatternFingerprinter):
     _pattern_name = "rdmaccs"
     software = SOFTWARE
 
-    _get_reader = staticmethod(read_rdmaccs_fingerprints_v1)
+    def _get_fingerprinter(self):
+        return _cached_fingerprinters["rdmaccs"].fingerprint
+    _read_structures = staticmethod(rdkit.read_structures)

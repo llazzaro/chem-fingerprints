@@ -207,34 +207,6 @@ class _CachedFingerprinters(dict):
         return fingerprinter
 _cached_fingerprinters = _CachedFingerprinters()
         
-#def load_substruct_fingerprinter_v1():
-#    return _cached_fingerprinters["substruct"]
-#
-#def load_rdmaccs_fingerprinter_v1():
-#    return _cached_fingerprinters["rdmaccs"]
-
-def _read_fingerprints(pattern_name, source, format, kwargs):
-    assert not kwargs
-    # The OEChem interface only handles stdin and filenames
-    if not (isinstance(source, basestring) or source is None):  # Why is the check here?
-        raise NotImplementedError
-
-    fingerprinter = _cached_fingerprinters[pattern_name].fingerprint
-    structure_reader = openeye.read_structures(source, format)
-
-    def read_pattern_fingerprints():
-        for (title, mol) in structure_reader:
-            yield fingerprinter(mol), title
-
-    return read_pattern_fingerprints()
-    
-
-def read_substruct_fingerprints_v1(source=None, format=None, kwargs={}):
-    return _read_fingerprints("substruct", source, format, kwargs)
-
-def read_rdmaccs_fingerprints_v1(source=None, format=None, kwargs={}):
-    return _read_fingerprints("rdmaccs", source, format, kwargs)
-
 
 # XXX include ChemFP version information? Probably
 SOFTWARE = "OEChem/%(release)s (%(version)s)" % dict(
@@ -263,7 +235,9 @@ class SubstructOpenEyeFingerprinter_v1(_PatternFingerprinter):
     num_bits = 881
     _pattern_name = "substruct"
 
-    _get_reader = staticmethod(read_substruct_fingerprints_v1)
+    def _get_fingerprinter(self):
+        return _cached_fingerprinters["rdmaccs"].fingerprint
+    _read_structures = staticmethod(openeye.read_structures)
 
 
 class RDMACCSOpenEyeFingerprinter_v1(_PatternFingerprinter):
@@ -271,4 +245,6 @@ class RDMACCSOpenEyeFingerprinter_v1(_PatternFingerprinter):
     num_bits = 166
     _pattern_name = "rdmaccs"
 
-    _get_reader = staticmethod(read_rdmaccs_fingerprints_v1)
+    def _get_fingerprinter(self):
+        return _cached_fingerprinters["rdmaccs"].fingerprint
+    _read_structures = staticmethod(openeye.read_structures)
