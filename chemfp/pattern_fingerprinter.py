@@ -149,10 +149,10 @@ def _build_matchers(patterns, pattern_definitions, compile_pattern):
 
         matcher = compile_pattern(pattern, largest_count)
         if isinstance(matcher, LimitedMatcher):
-            max_supported = matcher.max_suppported
+            max_supported = matcher.max_supported
             new_count_info = []
             for count_info in count_info_tuple:
-                if count_info.count <= max_suppported:
+                if count_info.count <= max_supported:
                     new_count_info.append(count_info)
                 else:
                     not_implemented.add(count_info.bit)
