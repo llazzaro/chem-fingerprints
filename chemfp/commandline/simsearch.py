@@ -13,7 +13,7 @@ def write_count_magic(outfile):
 
 def write_simsearch_header(outfile, d):
     lines = []
-    for name in ("num_bits", "software", "type"):
+    for name in ("num_bits", "type", "software", "queries", "targets"):
         value = d.get(name, None)
         if value is not None:
             lines.append("#%s=%s\n" % (name, value))
@@ -103,6 +103,9 @@ def main(args=None):
     threshold = args.threshold
     k = args.k_nearest
 
+    if args.count and k is not None and k != "all":
+        parser.error("--count search does not support --k-nearest")
+
     # People should not use this without setting parameters.  On the
     # other hand, I don't want an error message if there are no
     # parameters. This solution seems to make sense.
@@ -129,6 +132,7 @@ def main(args=None):
         query_id = args.query_id
         for c, name in ( ("\t", "tab"),
                          ("\n", "newline"),
+                         ("\r", "control-return"),
                          ("\0", "NUL")):
             if c in query_id:
                 parser.error("--query-id must not contain the %s character" %
@@ -168,9 +172,10 @@ def main(args=None):
         query_metadata = chemfp.Metadata(num_bits=num_bits, num_bytes=len(query_fp))
         queries = chemfp.Fingerprints(query_metadata,
                                       [(query_id, query_fp)])
-
+        query_filename = None
     else:
-        queries = chemfp.open(args.queries, format=args.query_format)
+        query_filename = args.queries
+        queries = chemfp.open(query_filename, format=args.query_format)
 
     query_arena_iter = queries.iter_arenas(batch_size)
     
@@ -231,13 +236,15 @@ def main(args=None):
             write_count_magic(outfile)
         else:
             write_simsearch_magic(outfile)
-            
+
         write_simsearch_header(outfile, {
             "num_bits": targets.metadata.num_bits,
             "software": SOFTWARE,
             "type": type,
-            "query_source": queries.metadata.sources,
-            "target_source": targets.metadata.sources})
+            "queries": query_filename,
+            "targets": target_filename,
+            "query_sources": queries.metadata.sources,
+            "target_sources": targets.metadata.sources})
 
         if first_query_arena:
             query_arenas = itertools.chain([first_query_arena],
