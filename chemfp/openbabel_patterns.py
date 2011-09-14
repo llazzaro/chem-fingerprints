@@ -8,11 +8,20 @@ from . import types
 
 SOFTWARE = openbabel.SOFTWARE
 
+# HasMatch was added to OpenBabel 2.3 .
+_HAS_HASMATCH = hasattr(OBSmartsPattern(), "HasMatch")
+
 class Matcher(object):
     def __init__(self, ob_matcher):
         self.ob_matcher = ob_matcher
-    def HasMatch(self, mol):
-        return self.ob_matcher.HasMatch(mol)
+
+    if _HAS_HASMATCH:
+        def HasMatch(self, mol):
+            return self.ob_matcher.HasMatch(mol)
+    else:
+        def HasMatch(self, mol):
+            return self.ob_matcher.Match(mol, True)
+        
     def NumUniqueMatches(self, mol):
         self.ob_matcher.Match(mol)
         return sum(1 for x in self.ob_matcher.GetUMapList())
@@ -48,8 +57,13 @@ class AromaticRings(object):
         self._single_matcher = OBSmartsPattern()
         assert self._single_matcher.Init("[aR]")
         
-    def HasMatch(self, mol):
-        return self._single_matcher.HasMatch(mol)
+    if _HAS_HASMATCH:
+        def HasMatch(self, mol):
+            return self._single_matcher.HasMatch(mol)
+    else:
+        def HasMatch(self, mol):
+            return self._single_matcher.Match(mol, True)
+        
 
     def NumUniqueMatches(self, mol):
         num_rings = 0
@@ -70,9 +84,14 @@ class HeteroAromaticRings(object):
         # in a ring then there's a hetero-aromatic ring
         self._single_matcher = OBSmartsPattern()
         assert self._single_matcher.Init("[aR;!#6]")
+
+    if _HAS_HASMATCH:
+        def HasMatch(self, mol):
+            return self._single_matcher.HasMatch(mol)
+    else:
+        def HasMatch(self, mol):
+            return self._single_matcher.Match(mol, True)
         
-    def HasMatch(self, mol):
-        return self._single_matcher.HasMatch(mol)
 
     def NumUniqueMatches(self, mol):
         num_rings = 0
