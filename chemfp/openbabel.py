@@ -17,6 +17,7 @@ import openbabel as ob
 from . import ParseError
 from . import io
 from . import types
+from . import error_handlers
 
 
 # OpenBabel really wants these two variables. I get a segfault if
