@@ -88,8 +88,7 @@ class SearchHits(object):
             start = end
 
 def threshold_tanimoto_search_fp_indicies(query_fp, target_arena, threshold):
-    require_matching_sizes(query_arena, target_arena)
-    num_bits = target_arena.num_bits
+    require_matching_fp_size(query_fp, target_arena)
 
     offsets = (ctypes.c_int * 2)()
     offsets[0] = 0
@@ -99,7 +98,7 @@ def threshold_tanimoto_search_fp_indicies(query_fp, target_arena, threshold):
     scores = (ctypes.c_double * num_cells)()
 
     num_added = _chemfp.threshold_tanimoto_arena(
-        threshold, num_bits,
+        threshold, target_arena.num_bits,
         len(query_fp), query_fp, 0, -1,
         target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
         target_arena.popcount_indicies,
@@ -145,6 +144,29 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
 
     return _search(query_start, query_end, offsets, indicies, scores, add_rows,
                    query_arena.ids, target_arena.ids)
+
+def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
+    result = knearest_tanimoto_search_fp_indicies(query_fp, target_arena, k, threshold)
+    return [(target_arena.ids[index], score) for (index, score) in result]
+
+def knearest_tanimoto_search_fp_indicies(query_fp, target_arena, k, threshold):
+    require_matching_fp_size(query_fp, target_arena)
+
+    offsets = (ctypes.c_int * 2)()
+    offsets[0] = 0
+    indicies = (ctypes.c_int * k)()
+    scores = (ctypes.c_double * k)()
+
+    num_added = _chemfp.knearest_tanimoto_arena(
+        k, threshold, target_arena.num_bits,
+        len(query_fp), query_fp, 0, 1,
+        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+        target_arena.popcount_indicies,
+        offsets, 0,
+        indicies, scores)
+    assert num_added > 0, num_added
+    end = offsets[1]
+    return [(indicies[i], scores[i]) for i in xrange(end)]
 
 def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
     require_matching_sizes(query_arena, target_arena)
@@ -254,7 +276,7 @@ class FingerprintArena(FingerprintReader):
     def __getitem__(self, i):
         i = self._range_check[i]
         arena_i = i + self.start
-        start_offset = arena_i * self._storage_size
+        start_offset = arena_i * self.storage_size
         end_offset = start_offset + self.metadata.num_bytes
         return self.ids[i], self.arena[start_offset:end_offset]
 

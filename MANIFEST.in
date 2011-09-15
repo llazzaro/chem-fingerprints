@@ -7,6 +7,8 @@ exclude chemfp/commandline/indigo2fps.py
 recursive-include src *.c
 recursive-include src *.h
 
+include chemfp/rdmaccs.patterns
+include chemfp/substruct.patterns
 include src/CMakeLists.txt
 include tests/unit2
 include tests/testall

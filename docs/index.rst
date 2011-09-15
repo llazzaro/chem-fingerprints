@@ -6,7 +6,7 @@ fingerprints in the FPS format.
 
 Most people will use the command-line programs to generate and search
 fingerprint files. ob2fps, oe2fps, and rdkit2fps use respectively the
-OpenBabel, OpenEye, and RDKit chemistry toolkits to convert structure
+Open Babel, OpenEye, and RDKit chemistry toolkits to convert structure
 files into fingerprint files. sdf2fps extracts fingerprints encoded in
 SD tags to make the fingerprint file. simsearch finds targets in a
 fingerprint file which are sufficiently similar to the queries.
@@ -32,7 +32,7 @@ support Python 2.7 so you will need to download Python 2.6 from ...)
 
 The core chemfp functionality does not depend on a third-party library
 but you will need a chemistry toolkit in order to generate new
-fingerprints from structure files. chemfp supports the free OpenBabel
+fingerprints from structure files. chemfp supports the free Open Babel
 and RDKit toolkits and the proprietary OEChem toolkit. Make sure you
 install the Python libraries for the toolkit(s) you select.
 
@@ -145,7 +145,7 @@ The first 20 lines of output from this are:
     #Simsearch/1
     #num_bits=881
     #type=Tanimoto k=all threshold=0.738
-    #software=chemfp/1.0b1
+    #software=chemfp/1.0
     #queries=pubchem_queries.fps
     #targets=pubchem_targets.fps
     #query_sources=Compound_027575001_027600000.sdf.gz
@@ -187,7 +187,7 @@ similar to the query fingerprint. The output from the above starts:
     #Simsearch/1
     #num_bits=881
     #type=Tanimoto k=3 threshold=0.7
-    #software=chemfp/1.0b1
+    #software=chemfp/1.0
     #queries=pubchem_queries.fps
     #targets=pubchem_targets.fps
     #query_sources=Compound_027575001_027600000.sdf.gz
@@ -220,7 +220,7 @@ ChEBI - Working with a toolkit
 ===================
 
 In this section I'll show you how to create a fingerprint file using a
-chemistry toolkit. chemfp includes support for OpenBabel, OpenEye, and
+chemistry toolkit. chemfp includes support for Open Babel, OpenEye, and
 RDKit.
 
 We'll work with data from ChEBI http://www.ebi.ac.uk/chebi/ which
@@ -274,10 +274,10 @@ To use the ChEBI Name as the primary chemfp identifier, use:
     --id-tag "ChEBI Name"
 
 
-Generating fingerprints with OpenBabel
+Generating fingerprints with Open Babel
 --------------------------------
 
-If you have the OpenBabel Python library installed then you can use
+If you have the Open Babel Python library installed then you can use
 ob2fps to generate fingerprints.
 
     ob2fps --id-tag "ChEBI ID" ChEBI_lite.sdf.gz -o ob_chebi.fps
@@ -289,7 +289,7 @@ The default uses the FP2 fingerprints, so the above is the same as
     ob2fps --FP2 --id-tag "ChEBI ID" ChEBI_lite.sdf.gz -o ob_chebi.fps
 
 ob2fps can generate several other types of fingerprints. (See XXX for
-details). For example, to generate the OpenBabel implementation of the
+details). For example, to generate the Open Babel implementation of the
 MACCS definition use:
 
     ob2fps --MACCS --id-tag "ChEBI ID" ChEBI_lite.sdf.gz -o chebi_maccs.fps
@@ -370,23 +370,185 @@ chemfp supports neither count fingerprints nor sparse fingerprints so
 cannot generate RDKit's circular fingerprints.
 
 
-chemfp substructure fingerprints
+"--rdmaccs" and "--substruct" substructure fingerprints
 ====================
 
-Each of the supported chemistry toolkits implements its own
-fingerprint 
+chemfp implements two platform-independent fingerprints meant for
+substructure filters but which are also used for similarity
+searches. One is based on the MACCS implementation in RDKit and the
+other comes from the PubChem/CACTVS substructure fingerprints.
+
+
+All three of the supported toolkits have built-in support to generate
+MACCS fingerprints. What you might not know is that they have
+different interpretation of those bits. Open Babel's implementation
+derives from RDKit's but OpenEye has a completely different
+implementation and gives different results for some cases.
+
+It seems there's no real published definition of those bits, at least
+not in a way that's unambiguous. There's also no comprehensive test
+suite. What a sad state of affairs that this is the most widely used
+fingerprint scheme in our field.
+
+Well, it's time for a change. chemfp includes a set of pattern
+definitions derived from RDKit and implementations of those patterns
+for each of the supported toolkits. They are called the "rdmaccs"
+fingerprints because they owe so much to RDKit. You can use them to
+compare MACCS keys from two different toolkits ... and STILL get
+different fingerprints.
+
+See, each toolkit perceives chemistry differently. Open Babel before
+2.3 didn't support chirality so chiral-based bits will never be
+set. Each toolkit uses a different definition of aromaticity, so a bit
+which is set when there are "two or more aromatic rings" will be
+toolkit dependent.
+
+The code is still experimental but feel free to try it out by asking
+for the "--rdmaccs" fingerprint from the command-line tools.
+
+Even more experimental is support for the 881 bit fingerprints derived
+from the PubChem/CACTVS substructure keys. If you want to try those
+out, ask for the "--substruct" fingerprint from the command-line tools.
+
 
 
 Using the chemfp Python library
 =================
 
 The chemfp command-line programs use a Python library called
-chemfp. The parts of the library which are open for general use are
-documented in XXX.
+chemfp. Many parts of the API are in flux and subject to change. The
+stable portions of the API which are open for general use are
+documented XXX.
 
-This section will show you examples of how to use the API.
+In this section I'll show you examples of how to use the API. I'll use
+the "pubchem_targets.fps" file created in XXX. For reference, the
+first ten lines of that file are:
+
+    #FPS1
+    #num_bits=881
+    #type=CACTVS-E_SCREEN/1.0 extended=2
+    #software=CACTVS/unknown
+    #source=Compound_014550001_014575000.sdf.gz
+    #date=2011-09-14T12:10:34
+    034e1c000200000000000000000000000000000000000c000000000000000080000000
+    7820201000003030a51b400d630108421081402442c200410000044408141100603651
+    106c444589c9010e00260388141be00d03047000020002001000000001000100080000
+    000000000000	14550001
+    034e0c000200000000000000000000000000000000000c000000000000000080000000
+    7820081000003030a51b400d6301024010014024420200410000044408101100603611
+    106c444589c9010e00260b88141be00d03047000020002001000000001000100080000
+    000000000000	14550002
+    034e04000200000000000000000000000000000000000c000000000000000080000000
+    7820081000003030a11b004d6301024010014024420200410000044408101100603611
+    1064444589c9010e00260b88101be00d03047000020002001000000001000100080000
+    000000000000	14550003
+    010e1c000006000000000000000000000000000000000c0600000000000000830a0000
+    58000000000030000119000c10030000001140044b1000400000240000101180001013
+    10644c01a808018c002403801091e111130f7103004000000800000100200000040000
+    000000000000	14550005
+
+One of the fingerprint collection types is called a
+FingerprintArena. It stores all fingerprints in-memory. I'll use
+"load_library" to open a fingerprint file and create an arena with its
+contents:
+
+    >>> targets = chemfp.load_fingerprints("pubchem_targets.fps")
+    >>> len(targets)
+    3119
+    >>> 
+
+This says there are 3119 fingerprints in the arena. The "metadata"
+attribute stores information about the contents of the arena.
+
+    >>> targets.metadata
+    Metadata(num_bits=881, num_bytes=111, software=u'CACTVS/unknown', type
+    ='CACTVS-E_SCREEN/1.0 extended=2', sources=['Compound_014550001_014575
+    000.sdf.gz'], date='2011-09-14T12:10:34', aromaticity=None)
+    >>> targets.metadata.num_bits
+    881
+    >>> targets.metadata.type
+    'CACTVS-E_SCREEN/1.0 extended=2'
+    >>> 
+
+All arenas support iteration through the contents of the arena as (id,
+fingerprint) pairs, where the fingerprint is a byte string. Here's a
+(slow) linear scan to find the fingerprint for id 14550005.
+
+    >>> for (id, fp) in targets:
+    ...   if id == "14550005":
+    ...     print id, fp[:5].encode("hex"), repr(fp[:5])
+    ... 
+    14550005 010e1c0000 '\x01\x0e\x1c\x00\x00'
+    >>> 
+
+The arenas offer no faster way to look up a fingerprint given its
+identifier but you can do it yourself because the identifers are
+available in iteration order as the "id" attribute and because arenas
+support index lookup to return the (id, fingerprint) pair.
+
+    >>> target_id_index = dict( (id, i) for (i, id) in enumerate(targets.ids) )
+    >>> targets[target_id_index["14550005"]]
+    ('14550005', '\x01\x0e\x1c\x00\x00\x06\x00\x00 ... ')
+    >>>
 
 
+
+
+
+All pubchem fingerprint collections support an interface called a
+"FingerprintReader". One type of FingerprintReader is an FPSReader,
+which reads fingerprints from an FPS file.
+
+    >>> import chemfp
+    >>> reader = chemfp.open("pubchem_targets.fps")
+    >>> reader
+   <chemfp.readers.FPSReader object at 0x100547590>
+   >>>
+
+All readers have a "metadata" attribute. For the FPSReader the
+metadata comes from the header of the fingerprint file.
+
+    >>> reader.metadata.num_bits
+    881
+    >>> reader.metadata.type
+    'CACTVS-E_SCREEN/1.0 extended=2'
+    >>>
+   >>> reader.metadata
+    Metadata(num_bits=881, num_bytes=111, software=u'CACTVS/unknown', type
+    ='CACTVS-E_SCREEN/1.0 extended=2', sources=['Compound_014550001_014575
+    000.sdf.gz'], date='2011-09-14T12:10:34', aromaticity=None)
+   >>> print reader.metadata
+    #num_bits=881
+    #type=CACTVS-E_SCREEN/1.0 extended=2
+    #software=CACTVS/unknown
+    #source=Compound_014550001_014575000.sdf.gz
+    #date=2011-09-14T12:10:34
+    
+    >>> 
+
+If you iterate over a reader you get (id, fingerprint) pairs. For
+example:
+
+    >>> for id, fp in reader:
+    ...   print id, fp[:5].encode("hex"), repr(fp[:5])
+    ...   if id == "14550003":
+    ...     break
+    ... 
+    14550001 034e1c0002 '\x03N\x1c\x00\x02'
+    14550002 034e0c0002 '\x03N\x0c\x00\x02'
+    14550003 034e040002 '\x03N\x04\x00\x02'
+    >>> 
+
+Some FingerprintReaders allow multiple iterators but others only
+support forward iteration. For example, the FPSReader reads
+fingerprints from a file and supports neither multiple iterators nor
+resets to the start of the file.
+
+
+
+
+
+Another fingerprint collection type is called a FingerprintArena.
 
 
 
