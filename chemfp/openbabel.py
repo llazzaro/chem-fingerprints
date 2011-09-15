@@ -223,19 +223,6 @@ def _get_ob_error(log):
     msgs = log.GetMessagesOfLevel(ob.obError)
     return "".join(msgs)
 
-def ignore_parse_errors(msg):
-    pass
-def report_parse_errors(msg):
-    sys.stderr.write("ERROR: %s. Skipping.\n" % (msg,))
-def strict_parse_errors(msg):
-    raise ParseError(msg)
-
-_error_handlers = {
-    "ignore": ignore_parse_errors,
-    "report": report_parse_errors,
-    "strict": strict_parse_errors,
-    }
-
 def read_structures(filename=None, format=None, id_tag=None, errors="strict"):
     """read_structures(filename, format) -> (id, OBMol) iterator 
     
@@ -246,10 +233,7 @@ def read_structures(filename=None, format=None, id_tag=None, errors="strict"):
     """
     if not (filename is None or isinstance(filename, basestring)):
         raise TypeError("'filename' must be None or a string")
-    try:
-        error_handler = _error_handlers[errors]
-    except KeyError:
-        raise ValueError("'errors' must be one of %s" % ", ".join(sorted(_error_handlers)))
+    error_handler = error_handlers.get_parse_error_handler(errors)
     
     obconversion = ob.OBConversion()
     format_name, compression = io.normalize_format(filename, format,
