@@ -46,15 +46,22 @@ def run_split_stdin(input, cmdline, expect_length=None, source=SIMPLE_FPS):
 class TestOptions(unittest2.TestCase):
     def test_default(self):
         header, lines = run_split("--hex-query deadbeef -t 0.1", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
-                           "#type": "Tanimoto k=3 threshold=0.1"})
-        self.assertEquals(lines,
-                          ["3\tQuery1\tdeadbeef\t1.000\tDeaf Beef\t0.960\tDEADdead\t0.840"])
+                           "#type": "Tanimoto k=all threshold=0.1"})
+        self.assertEquals(len(lines), 1, lines)
+        fields = lines[0].split("\t")
+        self.assertEquals(fields[:2], ["4", "Query1"])
+        hits = zip(fields[2::2], fields[3::2])
+        hits.sort()
+        self.assertEquals(hits, [("DEADdead", "0.840"), ("Deaf Beef", "0.960"),
+                                 ("deadbeef", "1.000"), ('several', '0.240')])
 
     def test_k_3(self):
         header, lines = run_split("--hex-query deadbeef -k 3 --threshold 0.8", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
@@ -64,6 +71,7 @@ class TestOptions(unittest2.TestCase):
 
     def test_k_2(self):
         header, lines = run_split("--hex-query deadbeef -k 2 --threshold 0.9", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
@@ -73,6 +81,7 @@ class TestOptions(unittest2.TestCase):
 
     def test_k_1(self):
         header, lines = run_split("--hex-query deadbeef -k 1 -t 0.0", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
@@ -82,16 +91,18 @@ class TestOptions(unittest2.TestCase):
 
     def test_knearest_1(self):
         header, lines = run_split("--hex-query deadbeef --k-nearest 1", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
-                           "#type": "Tanimoto k=1 threshold=0.7"})
+                           "#type": "Tanimoto k=1 threshold=0.0"})
         self.assertEquals(lines,
                           ["1\tQuery1\tdeadbeef\t1.000"])
 
     def test_k_10(self):
         # Asked for 10 but only 7 are available
         header, lines = run_split("--hex-query deadbeef -k 10 --threshold 0.0", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
@@ -102,15 +113,17 @@ class TestOptions(unittest2.TestCase):
 
     def test_threshold(self):
         header, lines = run_split("--hex-query deadbeef --threshold 0.9", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
-                           "#type": "Tanimoto k=3 threshold=0.9"})
+                           "#type": "Tanimoto k=all threshold=0.9"})
         self.assertEquals(lines,
                           ["2\tQuery1\tdeadbeef\t1.000\tDeaf Beef\t0.960"])
 
     def test_threshold_and_k(self):
         header, lines = run_split("--hex-query deadbeef -t 0.9 -k 1", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
@@ -120,6 +133,7 @@ class TestOptions(unittest2.TestCase):
     
     def test_stdin(self):
         header, lines = run_split_stdin("deadbeef\tspam\n", "", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
@@ -129,7 +143,8 @@ class TestOptions(unittest2.TestCase):
 
     def test_stdin2(self):
         header, lines = run_split_stdin("deadbeef\tspam\nDEADBEEF\teggs\n",
-                                        "--threshold 0.6", 2, SIMPLE_FPS)
+                                        "-k 3 --threshold 0.6", 2, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
@@ -140,7 +155,8 @@ class TestOptions(unittest2.TestCase):
 
     def test_stdin3(self):
         header, lines = run_split_stdin("deadbeef\tspam\n87654321\tcountdown\n",
-                                        "--threshold 0.9", 2, SIMPLE_FPS)
+                                        "-k 3 --threshold 0.9", 2, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
         self.assertEquals(header,
                           {"#num_bits": "32",
                            "#software": SOFTWARE,
@@ -152,7 +168,7 @@ class TestOptions(unittest2.TestCase):
 class _AgainstSelf:
     def test_with_threshold(self):
         header, lines = run_split(
-            ["--queries", SIMPLE_FPS, "--threshold", "0.8"] + self.extra_arg,
+            ["--queries", SIMPLE_FPS, "-k", "3", "--threshold", "0.8"] + self.extra_arg,
             7, SIMPLE_FPS)
         self.assertEquals(lines,
                           ["0\tzeros",
