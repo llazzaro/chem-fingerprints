@@ -195,7 +195,7 @@ def open_compressed_input_universal(source, compression):
     if compression == ".xz":
         raise NotImplementedError("xz decompression not supported")
 
-    raise TypeError("unknown compression typ %r" % (compression,))
+    raise TypeError("unknown compression type %r" % (compression,))
 
 
 
