@@ -79,7 +79,7 @@ class TestReadRecords(unittest2.TestCase):
     def test_handles_loc(self):
         loc = sdf_reader.FileLocation()
         results = []
-        for x in open_sdf(PUBCHEM_SDF_GZ, loc=loc):
+        for x in open_sdf(PUBCHEM_SDF_GZ, location=loc):
             if sys.version_info[:3] > (2, 5, 4):
                 # Earlier versions of the gzip library didn't
                 # keep track of the .name attribute
@@ -150,11 +150,11 @@ class TestBoundaryConditions(unittest2.TestCase):
         self.assertEquals(n, 19)
     def test_exact_record_boundary_reads(self):
         loc = sdf_reader.FileLocation()
-        titles = [loc.title for x in open_sdf(ReadReturnsOneRecord(), loc=loc)]
+        titles = [loc.title for x in open_sdf(ReadReturnsOneRecord(), location=loc)]
         self.assertEquals(titles, expected_identifiers)
     def test_two_record_boundary_reads(self):
         loc = sdf_reader.FileLocation()
-        titles = [loc.title for x in open_sdf(ReadReturnsTwoRecords(), loc=loc)]
+        titles = [loc.title for x in open_sdf(ReadReturnsTwoRecords(), location=loc)]
         self.assertEquals(titles, expected_identifiers)
 
 class TestReadErrors(unittest2.TestCase):
@@ -168,13 +168,13 @@ class TestReadErrors(unittest2.TestCase):
             self.assertEquals("line 1" in str(err), True, str(err))
             
     def test_record_too_large(self):
-        f = SIO( (tryptophan * ((200000 // len(tryptophan)) + 1)).replace("$$$$", "1234"))
+        f = SIO( (tryptophan * ((2000000 // len(tryptophan)) + 1)).replace("$$$$", "1234"))
         try:
             for x in open_sdf(f):
                 raise AssertionError("should not be able to read the first record")
         except sdf_reader.SDFParseError, err:
-            self.assertEquals("too large" in str(err), True, str(err))
-            self.assertEquals("at line 1" in str(err), True, str(err))
+            self.assertIn("too large", str(err))
+            self.assertIn("at line 1", str(err))
 
     def test_has_extra_data(self):
         f = SIO(tryptophan + tryptophan + "blah")
@@ -183,10 +183,10 @@ class TestReadErrors(unittest2.TestCase):
                 if i > 1:
                     raise AssertionError("bad record count")
         except sdf_reader.SDFParseError, err:
-            self.assertEquals("unexpected content" in str(err), True)
+            self.assertIn("unexpected content", str(err))
             expected_lineno = (tryptophan.count("\n")*2) + 1
             expected_lineno_msg = "at line %d" % expected_lineno
-            self.assertEquals(expected_lineno_msg in str(err), True, str(err))
+            self.assertIn(expected_lineno_msg, str(err))
 
     def test_bad_format(self):
         f = SIO(tryptophan + tryptophan.replace("V2000", "V4000"))
@@ -195,8 +195,8 @@ class TestReadErrors(unittest2.TestCase):
                 if i > 0:
                     raise AssertionError("bad record count")
         except sdf_reader.SDFParseError, err:
-            self.assertEquals("incorrectly formatted record" in str(err), True, str(err))
-            self.assertEquals("at line 70" in str(err), True, str(err))
+            self.assertIn("incorrectly formatted record", str(err))
+            self.assertIn("at line 70", str(err))
 
     def test_my_error_handler(self):
         class CaptureErrors(object):
@@ -207,7 +207,7 @@ class TestReadErrors(unittest2.TestCase):
         my_error_handler = CaptureErrors()
         loc = sdf_reader.FileLocation()
         f = SIO(tryptophan + tryptophan.replace("V2000", "V4000") + tryptophan)
-        titles = [loc.lineno for rec in open_sdf(f, loc=loc,
+        titles = [loc.lineno for rec in open_sdf(f, location=loc,
                                                     errors=my_error_handler)]
         self.assertEquals(titles, [1, 137])
         self.assertEquals(my_error_handler.errors, [("incorrectly formatted record",
