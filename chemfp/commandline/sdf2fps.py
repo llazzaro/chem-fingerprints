@@ -4,11 +4,12 @@ import sys
 import re
 import itertools
 
-from .. import Metadata, FingerprintIterator
+from .. import Metadata, FingerprintIterator, ParseError
 from .. import argparse
 from .. import decoders
 from .. import sdf_reader
 from .. import io
+from .. import error_handlers
 
 from . import cmdsupport
 
@@ -76,6 +77,10 @@ parser.add_argument("--num-bits", metavar="INT", type=int,
                     help="use the first INT bits of the input. Use only when the "
                     "last 1-7 bits of the last byte are not part of the fingerprint. "
                     "Unexpected errors will occur if these bits are not all zero.")
+
+parser.add_argument(
+    "--errors", choices=["strict", "report", "ignore"], default="strict",
+    help="how should structure parse errors be handled? (default=strict)")
 
 parser.add_argument("-o", "--output", metavar="FILENAME",
                     help="save the fingerprints to FILENAME (default=stdout)")
@@ -145,6 +150,8 @@ def main(args=None):
         parser.error("--%(attr)s description may not contain the character %(c)r" % dict(
                 attr=attr, c = m.group(0)))
 
+    error_handler = error_handlers.get_parse_error_handler(args.errors)
+
     # What follows is a bit tricky. I set up a chain of iterators:
     #   - iterate through the SDF iterators
     #   -   iterate through the (id, encoded_fp) pairs in each SDF iterator
@@ -164,28 +171,31 @@ def main(args=None):
                 location.lineno = 1
                 yield sdf_reader.open_sdf(filename, args.decompress, location=location)
 
-    # Set up the error messages for missing fingerprints.
-    MISSING_FP = ("Missing fingerprint tag %(tag)s in record %(id)r line %(lineno)s. "
-                  "Skipping.\n")
+    # Set up the error messages for missing id or fingerprints.
+    if args.id_tag is None:
+        MISSING_ID = "Missing title in record %(where)s"
+        MISSING_FP = "Missing fingerprint tag <%(tag)s> in record %(where)s"
+    else:
+        MISSING_ID = "Missing id tag <%(tag)s> in record %(where)s"
+        MISSING_FP = "Missing fingerprint tag <%(tag)s> in record %(id)r %(where)s"
 
     # For each SDF iterator, yield the (id, encoded_fp) pairs
     if args.id_tag is None:
         def iter_encoded_fingerprints(sdf_iters):
             counter = itertools.count(1)
             for sdf_iter in sdf_iters:
-                for (id, encoded_fp), i in itertools.izip(sdf_reader.iter_title_and_tag(sdf_iter, args.fp_tag),
-                                                          counter):
-                    id = cmdsupport.make_structure_id(id, i)
-                    yield id, encoded_fp
+                for id, fp in sdf_reader.iter_title_and_tag(sdf_iter, args.fp_tag):
+                    if id:
+                       id = io.remove_special_characters_from_id(id)
+                    yield id, fp
     else:
         def iter_encoded_fingerprints(sdf_iters):
             counter = itertools.count(1)
             for sdf_iter in sdf_iters:
-                for (id, encoded_fp), i in itertools.izip(
-                    sdf_reader.iter_two_tags(sdf_iter, args.id_tag, args.fp_tag),
-                    counter):
-                    id = io.make_structure_id(id, i)
-                    yield id, encoded_fp
+                for id, fp in sdf_reader.iter_two_tags(sdf_iter, args.id_tag, args.fp_tag):
+                    if id:
+                       id = io.remove_special_characters_from_id(id)
+                    yield id, fp
 
 
     # This is either None or a user-specified integer
@@ -196,66 +206,56 @@ def main(args=None):
     outfile = None       # Don't open it until I'm ready to write the first record
     num_bytes = None     # Will need to get (or at least check) the fingerprint byte length
 
-    # I decided that while a few records might not have fingerprints,
-    # it would be strange of the first 100 records did not have
-    # fingerprints. I call that an error.
-    skip_count=[0]
-    def skip():
-        if skip_count[0] > 100:
-            raise SystemExit(
-                "ERROR: No fingerprints found in the first 100 records. Exiting.")
-        skip_count[0] += 1
-
     # Decoded encoded fingerprints, yielding (id, fp, num_bits)
     
-    def decode_fingerprints(encoded_fp_reader):
+    def decode_fingerprints(encoded_fp_reader, error_handler):
         id = fp = None
         expected_num_bits = -1
         expected_fp_size = None
         for id, encoded_fp in encoded_fp_reader:
+            if not id:
+                msg = MISSING_ID % dict(id=id, where=location.where(),
+                                        tag=args.id_tag)
+                error_handler(msg)
+                continue
+            
             if not encoded_fp:
-                sys.stderr.write(MISSING_FP % dict(
-                    tag=args.fp_tag, id=location.title, lineno=location.lineno))
-                skip()
+                msg = MISSING_FP % dict(id=id, where=location.where(),
+                                        tag=args.fp_tag)
+                error_handler(msg)
                 continue
 
             # Decode the fingerprint, and complain if it isn't decodeable.
             try:
                 num_bits, fp = fp_decoder(encoded_fp)
             except TypeError, err:
-                sys.stderr.write(
-                    ("Could not %(decoder_name)s decode <%(tag)s> value %(encoded_fp)r: %(err)s\n"
-                     "  Skipping record %(message)s\n") % dict(
-                        decoder_name=fp_decoder_name, tag=args.fp_tag,
-                        message=location.where(), err=err, encoded_fp=encoded_fp))
-                skip()
+                msg = ("Could not %(decoder_name)s decode <%(tag)s> value %(encoded_fp)r: %(err)s %(where)s" %
+                       dict(decoder_name=fp_decoder_name, tag=args.fp_tag,
+                            where=location.where(), err=err, encoded_fp=encoded_fp))
+                error_handler(msg)
                 continue
 
             if num_bits != expected_num_bits:
                 if expected_num_bits == -1:
                     expected_num_bits = num_bits
                 else:
-                    # I can think of no good reason to skip this error. Exit instead.
-                    raise SystemExit(
-                        "ERROR: <%(tag)s> value %(encoded_fp)r has %(got)d bits but expected %(expected)d\n"
-                        " Stopping at record %(message)s\n" % dict(
-                        tag=args.fp_tag, encoded_fp=encoded_fp,
-                        got=num_bits, expected=expected_num_bits,
-                        message=location.where()
-                        ))
+                    msg = ("<%(tag)s> value %(encoded_fp)r has %(got)d bits but expected %(expected)d %(where)s" %
+                           dict(tag=args.fp_tag, encoded_fp=encoded_fp,
+                                got=num_bits, expected=expected_num_bits,
+                                where=location.where()))
+                    error_handler(msg)
+                    continue
 
             if len(fp) != expected_fp_size:
                 if expected_fp_size is None:
                     expected_fp_size = len(fp)
                 else:
-                    # I can think of no good reason to skip this error. Exit instead.
-                    raise SystemExit(
-                        "ERROR: <%(tag)s> value %(encoded_fp)r has %(got)d bytes but expected %(expected)d\n"
-                        " Stopping at record %(message)s\n" % dict(
-                        tag=args.fp_tag, encoded_fp=encoded_fp,
-                        got=len(fp), expected=expected_fp_size,
-                        message=location.where()
-                        ))
+                    msg = ("<%(tag)s> value %(encoded_fp)r has %(got)d bytes but expected %(expected)d %(where)s" %
+                           dict(tag=args.fp_tag, encoded_fp=encoded_fp,
+                                got=len(fp), expected=expected_fp_size,
+                                where=location.where()))
+                    error_handler(msg)
+                    continue
 
             yield id, fp, num_bits
 
@@ -272,10 +272,19 @@ def main(args=None):
 
     sdf_iters = get_sdf_iters()
     encoded_fps = iter_encoded_fingerprints(sdf_iters)
-    decoded_fps = decode_fingerprints(encoded_fps)
+    decoded_fps = decode_fingerprints(encoded_fps, error_handler)
 
-    # Use this trick to get the first element from the decoded fingerprint stream
-    for id, fp, num_bits in decoded_fps:
+    try:
+        id, fp, num_bits = next(decoded_fps)
+    except ParseError, err:
+        raise SystemExit("ERROR: %s. Exiting." % (err,))
+    except StopIteration:
+        # No fingerprints? Make a new empty stream
+        metadata = Metadata(date = io.utcnow())
+        chained_reader = iter([])
+
+    else:
+        # Got the first fingerprint
         expected_num_bytes = len(fp)
 
         # Verify that they match
@@ -288,12 +297,7 @@ def main(args=None):
                             type = args.type,
                             sources = args.filenames,
                             date = io.utcnow())
-        break
-    else:
-        # No fingerprints? Make a new empty stream
-        metadata = Metadata(date = io.utcnow())
-        chained_reader = iter([])
-
+        
     io.write_fps1_output(chained_reader, args.output, metadata)
 
 if __name__ == "__main__":
