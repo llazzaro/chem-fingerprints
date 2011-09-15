@@ -13,6 +13,14 @@ from .. import error_handlers
 
 from . import cmdsupport
 
+# Backwards compatibility support for Python 2.5
+try:
+    next
+except NameError:
+    def next(it):
+        return it.next()
+    
+
 def _check_num_bits(num_bits,  # from the user
                     fp_num_bits, # not None if the fp decoder know it exactly
                     num_bytes, # length of decoded fp in bytes
@@ -173,11 +181,11 @@ def main(args=None):
 
     # Set up the error messages for missing id or fingerprints.
     if args.id_tag is None:
-        MISSING_ID = "Missing title in record %(where)s"
-        MISSING_FP = "Missing fingerprint tag <%(tag)s> in record %(where)s"
+        MISSING_ID = "Missing title in the record starting %(where)s"
+        MISSING_FP = "Missing fingerprint tag <%(tag)s> in record starting %(where)s"
     else:
-        MISSING_ID = "Missing id tag <%(tag)s> in record %(where)s"
-        MISSING_FP = "Missing fingerprint tag <%(tag)s> in record %(id)r %(where)s"
+        MISSING_ID = "Missing id tag <%(tag)s> in the record starting %(where)s"
+        MISSING_FP = "Missing fingerprint tag <%(tag)s> in record %(id)r starting %(where)s"
 
     # For each SDF iterator, yield the (id, encoded_fp) pairs
     if args.id_tag is None:
@@ -209,9 +217,9 @@ def main(args=None):
     # Decoded encoded fingerprints, yielding (id, fp, num_bits)
     
     def decode_fingerprints(encoded_fp_reader, error_handler):
-        id = fp = None
         expected_num_bits = -1
         expected_fp_size = None
+        
         for id, encoded_fp in encoded_fp_reader:
             if not id:
                 msg = MISSING_ID % dict(id=id, where=location.where(),
@@ -259,15 +267,6 @@ def main(args=None):
 
             yield id, fp, num_bits
 
-        # We're at the end of all input.
-        # Check if we never found a fingerprint
-        if expected_num_bits == -1:
-            # In that case, either there was never a record
-            if fp is None:
-                return
-            else:
-                # Or none of the records contained a fingerprint
-                raise SystemExit("ERROR: None of the records contained a fingerprint")
 
 
     sdf_iters = get_sdf_iters()
@@ -297,8 +296,11 @@ def main(args=None):
                             type = args.type,
                             sources = args.filenames,
                             date = io.utcnow())
-        
-    io.write_fps1_output(chained_reader, args.output, metadata)
+
+    try:
+        io.write_fps1_output(chained_reader, args.output, metadata)
+    except ParseError, err:
+        raise SystemExit("ERROR: %s. Exiting." % (err,))
 
 if __name__ == "__main__":
     main()
