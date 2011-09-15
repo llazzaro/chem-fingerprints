@@ -42,9 +42,12 @@ def run_failure(s):
 def run_warning(s):
     sys.stderr = stderr = SIO()
     try:
-        run(s)
-    finally:
-        sys.stderr = real_stderr
+        try:
+            run(s)
+        finally:
+            sys.stderr = real_stderr
+    except SystemExit, e:
+        raise AssertionError("unexpected SystemExit: %r and %r" % (e, stderr.getvalue()))
     return stderr.getvalue()
 
 def run_fps(s, expect_length=None):
@@ -152,84 +155,83 @@ class TestDecoderFlags(unittest2.TestCase):
 
     def test_bad_decoding(self):
         msg = run_warning("--base64 --fp-tag binary17")
-        self.assertEquals("Could not base64 decode <binary17> value" in msg, True, msg)
-        self.assertEquals("Skipping record" in msg, True, msg)
+        self.assertIn("Could not base64 decode <binary17> value", msg)
+        self.assertIn("Skipping record", msg)
 
 class TestBitSizes(unittest2.TestCase):
     def test_exact_fingerprint_bits(self):
         result = run("--binary --fp-tag binary3")
-        self.assertEquals("#num_bits=3" in result, True, result)
+        self.assertIn("#num_bits=3", result)
         
     def test_user_bits_match_fingerprint_bits(self):
         result = run("--binary --fp-tag binary3 --num-bits 3")
-        self.assertEquals("#num_bits=3" in result, True, result)
-        self.assertEquals("04\t9425004" in result, True, result)
-        self.assertEquals("03\t9425009" in result, True, result)
+        self.assertIn("#num_bits=3", result)
+        self.assertIn("04\t9425004", result)
+        self.assertIn("03\t9425009", result)
 
     def test_user_bits_disagree_with_fingerprint_bits(self):
         errmsg = run_failure("--binary --fp-tag binary3 --num-bits 2")
-        self.assertEquals("has 3 bits" in errmsg, True)
-        self.assertEquals(" 2" in errmsg, True)
+        self.assertIn("has 3 bits", errmsg)
+        self.assertIn(" 2", errmsg)
 
     def test_implied_from_fingerprint_bytes(self):
         result = run("--hex --fp-tag hex2")
-        self.assertEquals("#num_bits=8" in result, True, result)
+        self.assertIn("#num_bits=8", result)
 
     def test_user_bits_matches_fingerprint_bytes(self):
         result = run("--hex --fp-tag hex2 --num-bits 8")
-        self.assertEquals("#num_bits=8" in result, True, result)
+        self.assertIn("#num_bits=8", result)
 
     def test_user_bits_too_large_for_bytes(self):
         result = run_failure("--hex --fp-tag hex2 --num-bits 9")
-        self.assertEquals("1 <= num-bits <= 8, not 9" in result, True, result)
+        self.assertIn("1 <= num-bits <= 8, not 9", result)
 
     def test_user_bits_acceptably_smaller_than_bytes(self):
         result = run("--hex --fp-tag hex2 --num-bits 6")
-        self.assertEquals("#num_bits=6" in result, True, result)
+        self.assertIn("#num_bits=6", result)
 
     def test_user_bits_too_much_smaller_than_bytes(self):
         result = run_failure("--hex --fp-tag hex16 --num-bits 56")
-        self.assertEquals("57 <= num-bits <= 64, not 56" in result, True, result)
+        self.assertIn("57 <= num-bits <= 64, not 56", result)
 
 class TestTitleProcessing(unittest2.TestCase):
     def test_title_from_title_tag(self):
-        result = run("--hex --fp-tag hex2 --title-tag binary3")
-        self.assertEquals("ab\t001" in result, True, result)
+        result = run("--hex --fp-tag hex2 --id-tag binary3")
+        self.assertIn("ab\t001", result)
 
     def test_missing_title_from_title_line(self):
-        warning = run_warning("--hex --fp-tag hex2 --title-tag FAKE_TITLE")
-        self.assertEquals("Missing title tag FAKE_TITLE, in the record starting at line 146." in warning,
-                          True, warning)
+        warning = run_warning("--hex --fp-tag hex2 --id-tag FAKE_TITLE")
+        self.assertIn("Missing title tag FAKE_TITLE, in the record starting at line 146.", warning)
 
     def test_missing_all_titles(self):
-        warning = run_warning("--hex --fp-tag hex2 --title-tag DOES_NOT_EXIST")
-        self.assertEquals("Missing title tag DOES_NOT_EXIST" in warning, True, warning)
-        self.assertEquals("No input records contained fingerprints" in warning, True, warning)
+        warning = run_warning("--hex --fp-tag hex2 --id-tag DOES_NOT_EXIST")
+        self.assertIn("Missing title tag DOES_NOT_EXIST", warning)
+        self.assertIn("No input records contained fingerprints", warning)
 
 class TestShortcuts(unittest2.TestCase):
     def test_pubchem(self):
         result = run("--pubchem")
-        self.assertEquals("#num_bits=881" in result, True, result)
-        self.assertEquals("#software=CACTVS/unknown" in result, True, result)
-        self.assertEquals("#type=CACTVS-E_SCREEN/1.0 extended=2" in result, True, result)
-        self.assertEquals("07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000\t9425004" in result, True)
-        self.assertEquals("07de0d000000000000000000000000000080460300000c0000000000000000800f0000780038000000301083f920cc09695e0800d5c0e44e6e00492190844145dc1f841d261911164d039b8f29251026b9401313e0ec01007000000000000000000000000000000000000000000000\t9425009" in result, True)
+        self.assertIn("#num_bits=881", result)
+        self.assertIn("#software=CACTVS/unknown", result)
+        self.assertIn("#type=CACTVS-E_SCREEN/1.0 extended=2", result)
+        self.assertIn("07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000\t9425004", result)
+        self.assertIn("07de0d000000000000000000000000000080460300000c0000000000000000800f0000780038000000301083f920cc09695e0800d5c0e44e6e00492190844145dc1f841d261911164d039b8f29251026b9401313e0ec01007000000000000000000000000000000000000000000000\t9425009", result)
 
 class TestBadArgs(unittest2.TestCase):
     def test_missing_fp_tag(self):
         msg = run_failure("")
-        self.assertEquals("argument --fp-tag is required" in msg, True, msg)
+        self.assertIn("argument --fp-tag is required", msg)
 
     def test_num_bits_positive(self):
         msg = run_failure("--fp-tag SPAM --num-bits 0")
-        self.assertEquals("--num-bits must be a positive integer" in msg, True, msg)
+        self.assertIn("--num-bits must be a positive integer", msg)
         msg = run_failure("--fp-tag SPAM --num-bits -1")
-        self.assertEquals("--num-bits must be a positive integer" in msg, True, msg)
+        self.assertIn("--num-bits must be a positive integer", msg)
 
     def test_bad_char(self):
         msg = run_failure("--fp-tag SPAM --software this\bthat")
-        self.assertEquals("--software" in msg, True, msg)
-        self.assertEquals("'\\x08'" in msg, True, msg)
+        self.assertIn("--software", msg)
+        self.assertIn("'\\x08'", msg)
         
         
 if __name__ == "__main__":
