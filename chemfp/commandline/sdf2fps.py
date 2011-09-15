@@ -36,7 +36,8 @@ def _check_num_bits(num_bits,  # from the user
                  "is not the same as the --num-bits value of %(num_bits)s") % dict(
                     num_bits=num_bits, fp_num_bits=fp_num_bits))
             raise AssertionError("should not get here")
-        return fp_num_bits
+        
+        return num_bits
 
     # If the number of bits isn't specified, assume it's exactly
     # enough to fill up the fingerprint bytes.
@@ -209,7 +210,8 @@ def main(args=None):
     
     def decode_fingerprints(encoded_fp_reader):
         id = fp = None
-        expected_num_bits = None
+        expected_num_bits = -1
+        expected_fp_size = None
         for id, encoded_fp in encoded_fp_reader:
             if not encoded_fp:
                 sys.stderr.write(MISSING_FP % dict(
@@ -229,11 +231,8 @@ def main(args=None):
                 skip()
                 continue
 
-            if num_bits is None:
-                num_bits = len(fp) * 8
-            # Make sure the fingerprints are always the same size
-            if expected_num_bits != num_bits:
-                if expected_num_bits is None:
+            if num_bits != expected_num_bits:
+                if expected_num_bits == -1:
                     expected_num_bits = num_bits
                 else:
                     # I can think of no good reason to skip this error. Exit instead.
@@ -244,11 +243,25 @@ def main(args=None):
                         got=num_bits, expected=expected_num_bits,
                         message=location.where()
                         ))
+
+            if len(fp) != expected_fp_size:
+                if expected_fp_size is None:
+                    expected_fp_size = len(fp)
+                else:
+                    # I can think of no good reason to skip this error. Exit instead.
+                    raise SystemExit(
+                        "ERROR: <%(tag)s> value %(encoded_fp)r has %(got)d bytes but expected %(expected)d\n"
+                        " Stopping at record %(message)s\n" % dict(
+                        tag=args.fp_tag, encoded_fp=encoded_fp,
+                        got=len(fp), expected=expected_fp_size,
+                        message=location.where()
+                        ))
+
             yield id, fp, num_bits
 
         # We're at the end of all input.
         # Check if we never found a fingerprint
-        if expected_num_bits is None:
+        if expected_num_bits == -1:
             # In that case, either there was never a record
             if fp is None:
                 return
@@ -263,8 +276,11 @@ def main(args=None):
 
     # Use this trick to get the first element from the decoded fingerprint stream
     for id, fp, num_bits in decoded_fps:
-        expected_num_bits = num_bits
         expected_num_bytes = len(fp)
+
+        # Verify that they match
+        expected_num_bits = _check_num_bits(args.num_bits, num_bits, expected_num_bytes, parser)
+        
 
         chained_reader = itertools.chain( [(id, fp)], (x[:2] for x in decoded_fps) )
         metadata = Metadata(num_bits = expected_num_bits,
