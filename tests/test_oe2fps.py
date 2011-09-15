@@ -246,7 +246,7 @@ class TestIO(unittest2.TestCase):
         # with the "Unknown file format ... " warning, and then this
         # string about a SMILES parse error.
         try:
-            run("", source=PUBCHEM_ANOTHER_EXT)
+            run("--errors ignore", source=PUBCHEM_ANOTHER_EXT)
         except AssertionError, x:
             self.assertEquals("Problem parsing SMILES" in str(x), True, str(x))
             
