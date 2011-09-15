@@ -57,7 +57,7 @@ def report_errors(problem_report):
 def _fp_to_arena(query_fp, metadata):
     assert len(query_fp) == metadata.num_bytes
     from . import arena
-    return arena.Library(metadata, len(query_fp), query_fp, "", [None])
+    return arena.FingerprintArena(metadata, len(query_fp), query_fp, "", [None])
 
 def count_tanimoto_hits_fp(query_fp, target_reader, threshold):
     return count_tanimoto_hits_arena(_fp_to_arena(query_fp, target_reader.metadata), threshold)[0]
