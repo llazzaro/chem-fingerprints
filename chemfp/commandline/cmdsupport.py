@@ -58,13 +58,3 @@ def check_filenames(filenames):
         if not os.path.exists(filename):
             return filename
     return None
-
-
-def make_structure_id(id, i):
-    if id is None:
-        return "Mol_%d" % (i,)
-    if "\t" in id:
-        id = id.replace("\t", "")
-    if not id:
-        return "Mol_%d" % (i,)
-    return id
