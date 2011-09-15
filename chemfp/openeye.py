@@ -474,8 +474,13 @@ def _read_fingerprints(structure_reader, fingerprinter):
     for (id, mol) in structure_reader:
         yield id, fingerprinter(mol)
 
-
-class OpenEyePathFingerprinter_v1(types.Fingerprinter):
+class OpenEyeFingerprinter(types.Fingerprinter):
+    @staticmethod
+    def _read_structures(metadata, source, format, id_tag, errors):
+        return read_structures(source, format, id_tag=id_tag,
+                               aromaticity=metadata.aromaticity, errors=errors)
+    
+class OpenEyePathFingerprinter_v1(OpenEyeFingerprinter):
     name = "OpenEye-Path/1"
     format_string = ("numbits=%(numbits)s minbonds=%(minbonds)s "
                      "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s")
@@ -492,23 +497,10 @@ class OpenEyePathFingerprinter_v1(types.Fingerprinter):
         return encode_path_parameters(self.fingerprinter_kwargs)
 
     _get_fingerprinter = staticmethod(get_path_fingerprinter)
-    _read_structures = staticmethod(read_structures)
     
-class OpenEyeMACCSFingerprinter_v1(types.Fingerprinter):
+class OpenEyeMACCSFingerprinter_v1(OpenEyeFingerprinter):
     name = "OpenEye-MACCS166/1"
     num_bits = 166
     software = SOFTWARE
 
     _get_fingerprinter = staticmethod(get_maccs_fingerprinter)
-    _read_structures = staticmethod(read_structures)
-    @staticmethod
-    def _get_reader(source, format, id_tag, aromaticity, fingerprinter_kwargs):
-        # The OEChem interface only handles stdin and filenames
-        if not (isinstance(source, basestring) or source is None):
-            raise NotImplementedError
-        if fingerprinter_kwargs:
-            raise TypeError
-        fingerprinter = get_maccs_fingerprinter()
-        structure_reader = read_structures(source, format, id_tag, aromaticity)
-        return _read_fingerprints(structure_reader, fingerprinter)
-

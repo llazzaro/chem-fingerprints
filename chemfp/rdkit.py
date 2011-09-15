@@ -188,7 +188,7 @@ def is_valid_format(format):
     return format_name in ("sdf", "smi")
     
 
-def read_structures(source, format=None, id_tag=None, aromaticity=None, errors="strict"):
+def read_structures(source, format=None, id_tag=None, errors="strict"):
     """Iterate the records in the input source as (title, RDKit.Chem.Mol) pairs
 
     'source' is a filename, a file object, or None for stdin
@@ -310,7 +310,15 @@ def make_maccs166_fingerprinter():
 
 ####################
 
-class RDKitMACCSFingerprinter_v1(types.Fingerprinter):
+class _RDKitFingerprinter(types.Fingerprinter):
+    @staticmethod
+    def _read_structures(metadata, source, format, id_tag, errors):
+        if metadata.aromaticity is not None:
+            raise ValueError("RDKit does not support alternate aromaticity models "
+                             "(want aromaticity=%r)" % metadata.aromaticity)
+        return read_structures(source, format, id_tag=id_tag, errors=errors)
+
+class RDKitMACCSFingerprinter_v1(_RDKitFingerprinter):
     name = "RDKit-MACCS166/1"
     num_bits = 166
     software = SOFTWARE
@@ -318,10 +326,9 @@ class RDKitMACCSFingerprinter_v1(types.Fingerprinter):
     def _get_fingerprinter(self):
         return maccs166_fingerprinter
 
-    _read_structures = staticmethod(read_structures)
     _get_fingerprinter = staticmethod(make_maccs166_fingerprinter)
 
-class RDKitFingerprinter_v1(types.Fingerprinter):
+class RDKitFingerprinter_v1(_RDKitFingerprinter):
     name = "RDKit-Fingerprint/1"
     format_string = (
              "minPath=%(minPath)s maxPath=%(maxPath)s fpSize=%(fpSize)s "
@@ -337,4 +344,3 @@ class RDKitFingerprinter_v1(types.Fingerprinter):
         return cls(kwargs)
 
     _get_fingerprinter = staticmethod(make_rdk_fingerprinter)
-    _read_structures = staticmethod(read_structures)

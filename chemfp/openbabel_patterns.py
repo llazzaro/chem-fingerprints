@@ -182,11 +182,10 @@ _cached_fingerprinters = _CachedFingerprinters()
 # XXX Why are there two "Fingerprinter" classes?
 # XX Shouldn't they be merged?
 
-class _PatternFingerprinter(types.Fingerprinter):
+class _PatternFingerprinter(openbabel._OpenBabelFingerprinter):
     software = SOFTWARE
     def __init__(self, kwargs):
         self._fingerprinter = _cached_fingerprinters[self._pattern_name]
-        
         super(_PatternFingerprinter, self).__init__(kwargs)
 
     def fingerprint(self, mol):
@@ -194,11 +193,6 @@ class _PatternFingerprinter(types.Fingerprinter):
 
     def describe(self, bitno):
         return self._fingerprinter.describe(bitno)
-
-    def _read_structures(self, filename, format, id_tag, aromaticity, errors):
-        if aromaticity is not None:
-            raise ValueError("Open Babel does not support alternate aromaticity models")
-        return openbabel.read_structures(filename, format, id_tag = id_tag, errors = errors)
 
 class SubstructOpenBabelFingerprinter_v1(_PatternFingerprinter):
     name = "ChemFP-Substruct-OpenBabel/1"

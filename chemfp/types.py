@@ -152,15 +152,15 @@ class Fingerprinter(object):
         return self.name + " " + encoded
 
     # Subclasses must hook into this
-    def _read_structures(self, source, format, id_tag, aromaromaticity, errors):
+    def _read_structures(self, metadata, source, format, id_tag, errors):
         raise NotImplementedError("Subclass %r must implement _read_structures" % (self.__class__.__name__,))
 
     # Subclasses must hook into this
     def _get_fingerprinter(self, **fingerprinter_kwargs):
         raise NotImplementedError("Subclasses %r must implement _get_fingerprinter" % (self.__class__.__name__,))
     
-    def read_structure_fingerprints(self, source, format=None, id_tag=None, aromaticity=None, errors="strict"):
-        structure_reader = self._read_structures(source, format, id_tag, aromaticity, errors)
+    def read_structure_fingerprints(self, metadata, source, format=None, id_tag=None, errors="strict"):
+        structure_reader = self._read_structures(metadata, source, format, id_tag, errors)
         fingerprinter = self._get_fingerprinter(**self.fingerprinter_kwargs)
         source_filename = io.get_filename(source)
         if source_filename is None:
@@ -178,7 +178,7 @@ class Fingerprinter(object):
                                             software = self.software,
                                             type = self.get_type(),
                                             date = io.utcnow(),
-                                            aromaticity = aromaticity),
+                                            aromaticity = metadata.aromaticity),
                                    reader)
     
     def describe(self, bitno):
@@ -190,13 +190,13 @@ class Fingerprinter(object):
 def parse_type(type):
     terms = type.split()
     if not terms:
-        raise TypeError("missing name")
+        raise ValueError("missing name")
 
     name = terms[0]
     try:
         family = get_fingerprint_family(name)
     except KeyError:
-        raise TypeError(name)
+        raise ValueError(name)
 
     seen = set()
     parameters = []
@@ -204,16 +204,11 @@ def parse_type(type):
         try:
             left, right = term.split("=")
         except ValueError:
-            raise TypeError("Term %r of type %r must have one and only one '='" %
-                            (term, type))
+            raise ValueError("Term %r of type %r must have one and only one '='" %
+                             (term, type))
         if left in seen:
-            raise TypeError("Duplicate name %r in type %r" % (left, type))
+            raise ValueError("Duplicate name %r in type %r" % (left, type))
         seen.add(left)
         parameters.append((left, right))
 
     return family.from_parameters(parameters)
-
-
-def read_structure_fingerprints(type, source=None, format=None, options={}):
-    structure_fingerprinter = parse_type(type)
-    return structure_fingerprinter.read_structure_fingerprints(source, format, options)

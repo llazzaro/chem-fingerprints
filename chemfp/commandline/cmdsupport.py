@@ -2,7 +2,7 @@ from __future__ import absolute_import
 import os
 import itertools
 
-from .. import ChemFPError
+from .. import ChemFPError, Metadata
 
 def mutual_exclusion(parser, args, default, groups):
     true_groups = []
@@ -17,30 +17,31 @@ def mutual_exclusion(parser, args, default, groups):
     else:
         parser.error("Cannot specify both --%s and --%s" % (true_groups[0], true_groups[1]))
 
-def sys_exit_opener(opener, source, format, id_tag, aromaticity, errors):
+def sys_exit_opener(opener, metadata, source, format, id_tag, errors):
     try:
-        return opener.read_structure_fingerprints(source, format, id_tag, aromaticity, errors)
+        return opener.read_structure_fingerprints(metadata, source, format, id_tag, errors)
     except (IOError, ChemFPError), err:
         raise SystemExit("Problem reading structure fingerprints: %s. Exiting.\n" % err)
 
-def iter_all_sources(opener, filenames, format, id_tag, aromaticity, errors):
+def iter_all_sources(opener, metadata, filenames, format, id_tag, errors):
     for filename in filenames:
-        reader = sys_exit_opener(opener, filename, format, id_tag, aromaticity, errors)
+        reader = sys_exit_opener(opener, metadata, filename, format, id_tag, errors)
         for x in reader:
             yield x
 
 def read_multifile_structure_fingerprints(opener, filenames, format, id_tag, aromaticity, errors):
+    metadata = Metadata(aromaticity=aromaticity)
     if not filenames:
-        reader = sys_exit_opener(opener, None, format, id_tag, aromaticity, errors)
+        reader = sys_exit_opener(opener, metadata, None, format, id_tag, errors)
         return reader.metadata, reader
 
-    reader = sys_exit_opener(opener, filenames[0], format, id_tag, aromaticity, errors)
+    reader = sys_exit_opener(opener, metadata, filenames[0], format, id_tag, errors)
     if len(filenames) == 1:
         return reader.metadata, reader
 
-    reader = sys_exit_opener(opener, filenames[0], format, id_tag, aromaticity, errors)
+    reader = sys_exit_opener(opener, metadata, filenames[0], format, id_tag, errors)
     reader.metadata.sources = filenames
-    multi_reader = itertools.chain(reader, iter_all_sources(opener, filenames[1:], format, id_tag, aromaticity, errors))
+    multi_reader = itertools.chain(reader, iter_all_sources(opener, metadata, filenames[1:], format, id_tag, errors))
     return reader.metadata, multi_reader
 
 def is_valid_tag(tag):

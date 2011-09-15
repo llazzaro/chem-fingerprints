@@ -41,7 +41,7 @@ class ChemFPError(Exception):
 class ParseError(ChemFPError):
     pass
 
-def read_structure_fingerprints(type, source=None, format=None, id_tag=None, aromaticity=None):
+def read_structure_fingerprints(type, source=None, format=None, id_tag=None):
     """Read structures from `source` and return the corresponding ids and fingerprints
 
     This returns a FingerprintReader which can be iterated over to get
@@ -50,9 +50,13 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, aro
     read from `source`, which can either be the structure filename, or
     None to read from stdin.
 
-    `type` is a format string. Examples are "OpenBabel-FP2/1", "OpenEye-Path", and
+    `type` contains the information about how to turn a structure
+    into a fingerprint. It can be a string or a metadata instance.
+    String values look like "OpenBabel-FP2/1", "OpenEye-Path", and
     "OpenEye-Path/1 min_bonds=0 max_bonds=5 atype=DefaultAtom btype=DefaultBond".
-    Default values are used for unspecified parameters.
+    Default values are used for unspecified parameters. Use a
+    Metadata instance with 'type' and 'aromaticity' values set
+    in order to pass aromaticity information to OpenEye.
 
     If `format` is None then the structure file format and compression
     are determined by the filename's extension(s), defaulting to
@@ -64,7 +68,7 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, aro
     which are available to fingerprint types which use those formats.
     
     If `id_tag` is None, then the record id is based on the title
-    field for the given format. If the input type is "sdf" then `id_tag`
+    field for the given format. If the input format is "sdf" then `id_tag`
     specifies the tag field containing the identifier. (Only the first
     line is used for multi-line values.) For example, ChEBI omits the
     title from the SD files and stores the id after the ">  <ChEBI ID>"
@@ -81,8 +85,8 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, aro
            print id, repr(fp)
 
 
-    :param type: The fingerprint type string. Example: 'OpenBabel-FP2/1'
-    :type type: string
+    :param type: information about how to convert the input structure into a fingerprint
+    :type type: string or Metadata
     :param source: The structure data source.
     :type source: A filename (as a string), a file object, or None to read from stdin.
     :param format: The file format and optional compression.
@@ -94,14 +98,21 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, aro
     :param aromaticity: The aromaticity perception name (only valid for OEChem). Example: 'openeye'
     :type aromaticity: string, or None for the toolkit's default aromaticity
 
-    :returns: an FingerprintReader
+    :returns: a FingerprintReader
 
     """ # ' # emacs cruft
     from . import types
-    for i, (id, fp) in enumerate(types.read_structure_fingerprints(type, source, format, id_tag, aromaticity)):
-        if id is None:
-            id = "Mol_%d" % i
-        yield id, fp
+    if isinstance(type, basestring):
+        metadata = Metadata(type=type)
+    else:
+        metadata = type
+        if metadata.type is None:
+            raise ValueError("Missing fingerprint type information in metadata")
+    try:
+        structure_fingerprinter = types.parse_type(metadata.type)
+    except ValueError, err:
+        raise ValueError("Cannot parse fingerprint type %r: %s" % (metadata.type, err))
+    return structure_fingerprinter.read_structure_fingerprints(metadata, source, format, id_tag)
     
 # Low-memory, forward-iteration, or better
 def open(source, format=None):

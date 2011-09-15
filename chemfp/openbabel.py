@@ -337,9 +337,10 @@ class _OpenBabelFingerprinter(types.Fingerprinter):
     software = SOFTWARE
 
     @staticmethod
-    def _read_structures(source, format, id_tag, aromaticity, errors):
-        if aromaticity is not None:
-            raise ValueError("Open Babel does not support alternate aromaticity models")
+    def _read_structures(metadata, source, format, id_tag, errors):
+        if metadata.aromaticity is not None:
+            raise ValueError("Open Babel does not support alternate aromaticity models "
+                             "(want aromaticity=%r)" % metadata.aromaticity)
         return read_structures(source, format, id_tag, errors)
 
     @classmethod
