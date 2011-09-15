@@ -425,6 +425,15 @@ class Metadata(object):
         self.date = date
         self.aromaticity = aromaticity
 
+    def __repr__(self):
+        return "Metadata(num_bits={self.num_bits}, num_bytes={self.num_bytes}, software={self.software!r}, type={self.type!r}, sources={self.sources!r}, date={self.date!r}, aromaticity={self.aromaticity!r})".format(self=self)
+
+    def __str__(self):
+        from cStringIO import StringIO
+        from . import io
+        f = StringIO()
+        io.write_fps1_header(f, self)
+        return f.getvalue()
 
 class FingerprintReader(object):
     """Base class for all chemfp objects holding fingerprint data
