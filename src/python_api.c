@@ -44,7 +44,7 @@ hex_intersect_popcount(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "s#s#:hex_intersect_popcount", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
-    PyErr_SetString(PyExc_TypeError,
+    PyErr_SetString(PyExc_ValueError,
                     "hex fingerprints must have the same length");
     return NULL;
   }
@@ -58,7 +58,7 @@ hex_tanimoto(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "s#s#:hex_tanimoto", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
-    PyErr_SetString(PyExc_TypeError,
+    PyErr_SetString(PyExc_ValueError,
                     "hex fingerprints must have the same length");
     return NULL;
   }
@@ -72,7 +72,7 @@ hex_contains(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "s#s#:hex_contains", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
-    PyErr_SetString(PyExc_TypeError,
+    PyErr_SetString(PyExc_ValueError,
                     "hex fingerprints must have the same length");
     return NULL;
   }
@@ -97,7 +97,7 @@ byte_intersect_popcount(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "s#s#:byte_intersect_popcount", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
-    PyErr_SetString(PyExc_TypeError,
+    PyErr_SetString(PyExc_ValueError,
                     "byte fingerprints must have the same length");
     return NULL;
   }
@@ -111,7 +111,7 @@ byte_tanimoto(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "s#s#:byte_tanimoto", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
-    PyErr_SetString(PyExc_TypeError,
+    PyErr_SetString(PyExc_ValueError,
                     "byte fingerprints must have the same length");
     return NULL;
   }
@@ -125,7 +125,7 @@ byte_contains(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "s#s#:byte_contains", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
-    PyErr_SetString(PyExc_TypeError,
+    PyErr_SetString(PyExc_ValueError,
                     "byte fingerprints must have the same length");
     return NULL;
   }
@@ -137,7 +137,7 @@ byte_contains(PyObject *self, PyObject *args) {
 static int
 bad_num_bits(int num_bits) {
   if (num_bits <= 0) {
-    PyErr_SetString(PyExc_TypeError, "num_bits must be positive");
+    PyErr_SetString(PyExc_ValueError, "num_bits must be positive");
     return 1;
   }
   return 0;
@@ -146,7 +146,7 @@ bad_num_bits(int num_bits) {
 static int
 bad_k(int k) {
   if (k < 0) {
-    PyErr_SetString(PyExc_TypeError, "k must not be negative");
+    PyErr_SetString(PyExc_ValueError, "k must not be negative");
     return 1;
   }
   return 0;
@@ -155,7 +155,7 @@ bad_k(int k) {
 static int
 bad_threshold(double threshold) {
   if (threshold < 0.0 || threshold > 1.0) {
-    PyErr_SetString(PyExc_TypeError, "threshold must between 0.0 and 1.0, inclusive");
+    PyErr_SetString(PyExc_ValueError, "threshold must between 0.0 and 1.0, inclusive");
     return 1;
   }
   return 0;
@@ -168,13 +168,13 @@ bad_arena_size(const char *which, int num_bits, int storage_size) {
   int fp_size = (num_bits+7) / 8;
   if (storage_size < 0) {
     sprintf(msg, "%sstorage_size must be positive", which);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
   if (fp_size > storage_size) {
     sprintf(msg, "num_bits of %d (%d bytes) does not fit into %sstorage_size of %d",
             num_bits, fp_size, which, storage_size);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
   return 0;
@@ -188,7 +188,7 @@ bad_fps_cells(int *num_cells, int cells_size, int num_queries) {
   if (*num_cells < num_queries) {
     sprintf(msg, "%d queries requires at least %d cells, not %d",
             num_queries, num_queries, *num_cells);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
   return 0;
@@ -197,7 +197,7 @@ bad_fps_cells(int *num_cells, int cells_size, int num_queries) {
 static int
 bad_knearest_search_size(int knearest_search_size) {
   if (knearest_search_size < sizeof(chemfp_fps_knearest_search)) {
-    PyErr_SetString(PyExc_TypeError,
+    PyErr_SetString(PyExc_ValueError,
 		    "Not enough space allocated for a chemfp_fps_knearest_search");
     return 1;
   }
@@ -208,13 +208,13 @@ bad_knearest_search_size(int knearest_search_size) {
 static int
 bad_block_limits(int block_size, int *start, int *end) {
   if (*start < 0) {
-    PyErr_SetString(PyExc_TypeError, "block start must not be negative");
+    PyErr_SetString(PyExc_ValueError, "block start must not be negative");
     return 1;
   }
   if (*end == -1 || *end > block_size) {
     *end = block_size;
   } else if (*end < 0) {
-    PyErr_SetString(PyExc_TypeError, "block end must either be -1 or non-negative");
+    PyErr_SetString(PyExc_ValueError, "block end must either be -1 or non-negative");
     return 1;
   }
 
@@ -232,12 +232,12 @@ bad_arena_limits(const char *which, int arena_size, int storage_size, int *start
   if (arena_size % storage_size != 0) {
     sprintf(msg, "%sarena size (%d) is not a multiple of its storage size (%d)",
             which, arena_size, storage_size);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
   if (*start < 0) {
     sprintf(msg, "%sstart must not be negative", which);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
   max_index = arena_size / storage_size;
@@ -248,7 +248,7 @@ bad_arena_limits(const char *which, int arena_size, int storage_size, int *start
     *end = max_index;
   } else if (*end < 0) {
     sprintf(msg, "%send must either be -1 or non-negative", which);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
   return 0;
@@ -277,7 +277,7 @@ bad_popcount_indicies(const char *which, int check_indicies, int num_bits,
     sprintf(msg,
             "%spopcount indicies length (%d) is not a multiple of the native integer size",
             which, popcount_indicies_size);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
 
@@ -286,7 +286,7 @@ bad_popcount_indicies(const char *which, int check_indicies, int num_bits,
   if (num_bits > num_popcounts - 1) {
     sprintf(msg, "%d bits requires at least %d %spopcount indicies, not %d",
             num_bits, num_bits+1, which, num_popcounts);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
 
@@ -294,14 +294,14 @@ bad_popcount_indicies(const char *which, int check_indicies, int num_bits,
     popcount_indicies = *popcount_indicies_ptr;
     if (popcount_indicies[0] != 0) {
       sprintf(msg, "%s popcount indicies[0] must be 0", which);
-      PyErr_SetString(PyExc_TypeError, "%spopcount_indicies[0] must be 0");
+      PyErr_SetString(PyExc_ValueError, "%spopcount_indicies[0] must be 0");
       return 1;
     }
     prev = 0;
     for (i=1; i<num_popcounts; i++) {
       if (popcount_indicies[i] < prev) {
         sprintf(msg, "%spopcount indicies must never decrease", which);
-        PyErr_SetString(PyExc_TypeError, msg);
+        PyErr_SetString(PyExc_ValueError, msg);
         return 1;
       }
       prev = popcount_indicies[i];
@@ -319,17 +319,17 @@ bad_offsets(int num_queries, int size, int start) {
   /* There must be enough space for num_queries, plus 1 for the end */
   char msg[100];
   if (start < 0) {
-    PyErr_SetString(PyExc_TypeError, "result offsets start must not be negative");
+    PyErr_SetString(PyExc_ValueError, "result offsets start must not be negative");
     return 1;
   }
   if (start > num_offsets) {
     sprintf(msg, "result offsets start (%d) is too large", start);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
   if ((num_queries+1) < (num_offsets - start)) {
     sprintf(msg, "Insuffient space to store %d result offsets", num_queries);
-    PyErr_SetString(PyExc_TypeError, msg);
+    PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
   return 0;
@@ -341,11 +341,11 @@ bad_cells(int min_row_size,int indicies_size, int scores_size, int *num_cells) {
   int num_scores = scores_size / sizeof(double);
 
   if (num_indicies < min_row_size) {
-    PyErr_SetString(PyExc_TypeError, "Insufficient space to store indicies for a row");
+    PyErr_SetString(PyExc_ValueError, "Insufficient space to store indicies for a row");
     return 1;
   }
   if (num_scores < min_row_size) {
-    PyErr_SetString(PyExc_TypeError, "Insufficient space to store scores for a row");
+    PyErr_SetString(PyExc_ValueError, "Insufficient space to store scores for a row");
     return 1;
   }
   if (num_indicies < num_scores) {
@@ -359,7 +359,7 @@ bad_cells(int min_row_size,int indicies_size, int scores_size, int *num_cells) {
 static int
 bad_counts(int count_size, int num_queries) {
   if (count_size / sizeof(int) < num_queries) {
-    PyErr_SetString(PyExc_TypeError, "Insufficient space to store all of the counts");
+    PyErr_SetString(PyExc_ValueError, "Insufficient space to store all of the counts");
     return 1;
   }
   return 0;
@@ -373,11 +373,11 @@ bad_hex_size(int hex_size) {
     return 0;
   }
   if (hex_size < 1) {
-    PyErr_SetString(PyExc_TypeError, "hex_size must be positive or -1");
+    PyErr_SetString(PyExc_ValueError, "hex_size must be positive or -1");
     return 1;
   }
   if (hex_size % 2 != 0) {
-    PyErr_SetString(PyExc_TypeError, "hex_size must be a multiple of 2");
+    PyErr_SetString(PyExc_ValueError, "hex_size must be a multiple of 2");
     return 1;
   }
   return 0;
@@ -582,7 +582,7 @@ fps_knearest_search_init(PyObject *self, PyObject *args) {
 	  query_arena, query_start, query_end,
 	  k, threshold);
   if (err) {
-    PyErr_SetString(PyExc_TypeError, chemfp_strerror(err));
+    PyErr_SetString(PyExc_ValueError, chemfp_strerror(err));
     return NULL;
   }
   return Py_BuildValue("");
@@ -672,7 +672,7 @@ reorder_by_popcount(PyObject *self, PyObject *args) {
     return NULL;
   }
   if ((ordering_size / sizeof(ChemFPOrderedPopcount)) < (end-start)) {
-    PyErr_SetString(PyExc_TypeError, "allocated ordering space is too small");
+    PyErr_SetString(PyExc_ValueError, "allocated ordering space is too small");
     return NULL;
   }
   /* TODO: compute the counts first. If everything is in order then */
@@ -742,7 +742,7 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
   }
 
   if (result_counts_size < (query_end - query_start)*sizeof(int)) {
-    PyErr_SetString(PyExc_TypeError, "not enough space allocated for result_counts");
+    PyErr_SetString(PyExc_ValueError, "not enough space allocated for result_counts");
     return NULL;
   }
 

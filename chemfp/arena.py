@@ -310,7 +310,7 @@ class FingerprintArena(FingerprintReader):
                                                      self.end*storage_size, storage_size)):
             yield id, arena[start_offset:start_offset+target_fp_size]
 
-    def iter_arenas(self, arena_size):
+    def iter_arenas(self, arena_size = 1000):
         if arena_size is None:
             yield self
             return
