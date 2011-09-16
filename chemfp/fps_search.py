@@ -60,7 +60,7 @@ def _fp_to_arena(query_fp, metadata):
     return arena.FingerprintArena(metadata, len(query_fp), query_fp, "", [None])
 
 def count_tanimoto_hits_fp(query_fp, target_reader, threshold):
-    return count_tanimoto_hits_arena(_fp_to_arena(query_fp, target_reader.metadata), threshold)[0]
+    return count_tanimoto_hits_arena(_fp_to_arena(query_fp, target_reader.metadata), target_reader, threshold)[0]
 
 def count_tanimoto_hits_arena(query_arena, target_reader, threshold):
     require_matching_sizes(query_arena, target_reader)
