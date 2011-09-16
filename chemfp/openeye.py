@@ -22,6 +22,7 @@ from openeye.oegraphsim import *
 from . import ParseError
 from . import types
 from . import io
+from . import error_handlers
 
 __all__ = ["read_structures", "get_path_fingerprinter", "get_maccs_fingerprinter"]
 
@@ -398,34 +399,24 @@ def is_valid_format(format):
 def is_valid_aromaticity(aromaticity):
     return aromaticity in _aromaticity_flavors
 
-def ignore_parse_errors(msg):
-    pass
-def report_parse_errors(msg):
-    sys.stderr.write("ERROR: %s. Skipping.\n" % (msg,))
-def strict_parse_errors(msg):
-    raise ParseError(msg)
-
-_error_handlers = {
-    "ignore": ignore_parse_errors,
-    "report": report_parse_errors,
-    "strict": strict_parse_errors,
-    }
-
 # Part of the code (parameter checking, opening the file) are eager.
 # Actually reading the structures is lazy.
 
 def read_structures(filename=None, format=None, id_tag=None, aromaticity=None, errors="strict"):
-    # Check that that the format is known
-    set_format = _get_format_setter(format)
     try:
         aromaticity_flavor = _aromaticity_flavors[aromaticity]
     except KeyError:
         raise ValueError("Unsupported aromaticity name %r" % (aromaticity,))
+    error_handler = error_handlers.get_parse_error_handler(errors)
 
-    try:
-        error_handler = _error_handlers[errors]
-    except KeyError:
-        raise ValueError("'errors' must be one of %s" % ", ".join(sorted(_error_handlers)))
+    # Check that that the format is known
+    format_name, compression = io.normalize_format(filename, format,
+                                                   default=("smi", ""))
+
+    if compression not in ("", ".gz"):
+        raise ValueError("Unsupported compression type for %r" % (filename,))
+
+    set_format = _get_format_setter(format_name + compression)
 
     # Input is from a file
     if filename is None:
@@ -473,13 +464,13 @@ def _read_fingerprints(structure_reader, fingerprinter):
     for (id, mol) in structure_reader:
         yield id, fingerprinter(mol)
 
-class OpenEyeFingerprinter(types.Fingerprinter):
+class _OpenEyeFingerprinter(types.Fingerprinter):
     @staticmethod
     def _read_structures(metadata, source, format, id_tag, errors):
         return read_structures(source, format, id_tag=id_tag,
                                aromaticity=metadata.aromaticity, errors=errors)
     
-class OpenEyePathFingerprinter_v1(OpenEyeFingerprinter):
+class OpenEyePathFingerprinter_v1(_OpenEyeFingerprinter):
     name = "OpenEye-Path/1"
     format_string = ("numbits=%(numbits)s minbonds=%(minbonds)s "
                      "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s")
@@ -497,7 +488,7 @@ class OpenEyePathFingerprinter_v1(OpenEyeFingerprinter):
 
     _get_fingerprinter = staticmethod(get_path_fingerprinter)
     
-class OpenEyeMACCSFingerprinter_v1(OpenEyeFingerprinter):
+class OpenEyeMACCSFingerprinter_v1(_OpenEyeFingerprinter):
     name = "OpenEye-MACCS166/1"
     num_bits = 166
     software = SOFTWARE
