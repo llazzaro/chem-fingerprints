@@ -349,12 +349,6 @@ def _open_stdin(set_format, aromaticity_flavor):
 
 def _open_ifs(filename, set_format, aromaticity_flavor):
     ifs = oemolistream()
-    set_format(ifs)
-
-    if aromaticity_flavor is not None:
-        flavor = ifs.GetFlavor(ifs.GetFormat())
-        flavor |= aromaticity_flavor
-        ifs.SetFlavor(ifs.GetFormat(), flavor)
 
     if not ifs.open(filename):
         # Let Python try to do better error reporting.
@@ -363,6 +357,14 @@ def _open_ifs(filename, set_format, aromaticity_flavor):
         # (Did manual coverage testing for this. The test cases I can
         # think of, like tricky timing, are too tricky.)
         raise IOError(errno.EIO, "OEChem cannot open the file", filename)
+
+    set_format(ifs)
+
+    if aromaticity_flavor is not None:
+        flavor = ifs.GetFlavor(ifs.GetFormat())
+        flavor |= aromaticity_flavor
+        ifs.SetFlavor(ifs.GetFormat(), flavor)
+    
     return ifs
 
 # This code is a bit strange. It needs to do eager error checking but
