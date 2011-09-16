@@ -217,7 +217,7 @@ SOFTWARE = "OEChem/%(release)s (%(version)s)" % dict(
 # XXX Why are there two "Fingerprinter" classes?
 # XX Shouldn't they be merged?
 
-class _PatternFingerprinter(types.Fingerprinter):
+class _PatternFingerprinter(openeye._OpenEyeFingerprinter):
     software = SOFTWARE
     def __init__(self, kwargs):
         self._fingerprinter = _cached_fingerprinters[self._pattern_name]
@@ -237,7 +237,6 @@ class SubstructOpenEyeFingerprinter_v1(_PatternFingerprinter):
 
     def _get_fingerprinter(self):
         return _cached_fingerprinters["rdmaccs"].fingerprint
-    _read_structures = staticmethod(openeye.read_structures)
 
 
 class RDMACCSOpenEyeFingerprinter_v1(_PatternFingerprinter):
@@ -247,4 +246,3 @@ class RDMACCSOpenEyeFingerprinter_v1(_PatternFingerprinter):
 
     def _get_fingerprinter(self):
         return _cached_fingerprinters["rdmaccs"].fingerprint
-    _read_structures = staticmethod(openeye.read_structures)
