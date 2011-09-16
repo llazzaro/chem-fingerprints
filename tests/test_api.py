@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 import unittest2
 
 import chemfp
@@ -8,15 +8,16 @@ from support import fullpath
 CHEBI_TARGETS = fullpath("chebi_rdmaccs.fps")
 CHEBI_QUERIES = fullpath("chebi_queries.fps.gz")
 
-QUERY_ARENA = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        
 # Backwards compatibility for Python 2.5
 try:
     next
 except NameError:
     def next(it):
         return it.next()
-    
+
+QUERY_ARENA = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        
+
 
 class CommonReaderAPI(object):
     _open = None
