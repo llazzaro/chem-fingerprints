@@ -119,6 +119,10 @@ def main(args=None):
     if not cmdsupport.is_valid_tag(args.id_tag):
         parser.error("Invalid id tag: %r" % (args.id_tag,))
 
+    missing = cmdsupport.check_filenames(args.filenames)
+    if missing:
+        parser.error("Structure file %r does not exist" % (missing,))
+
     metadata, reader = cmdsupport.read_multifile_structure_fingerprints(
         opener, args.filenames, format=args.format,
         id_tag=args.id_tag, aromaticity=None, errors=args.errors)
