@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import os
+import sys
 import itertools
 
 from .. import ChemFPError, Metadata
@@ -21,7 +22,8 @@ def sys_exit_opener(opener, metadata, source, format, id_tag, errors):
     try:
         return opener.read_structure_fingerprints(metadata, source, format, id_tag, errors)
     except (IOError, ChemFPError), err:
-        raise SystemExit("Problem reading structure fingerprints: %s. Exiting.\n" % err)
+        sys.stderr.write("Problem reading structure fingerprints: %s. Exiting.\n" % err)
+        raise SystemExit(1)
 
 def iter_all_sources(opener, metadata, filenames, format, id_tag, errors):
     for filename in filenames:

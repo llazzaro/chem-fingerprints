@@ -30,11 +30,12 @@ def main(args=None):
                     msg = msg_template.format(metadata1 = repr(args.filenames[0]),
                                               metadata2 = repr(filename))
                     if severity == "warning":
-                        sys.stderr.write("WARNING: " + msg)
+                        sys.stderr.write("WARNING: " + msg + "\n")
                     elif severity == "error":
-                        raise SystemExit("ERROR: " + msg)
+                        sys.stderr.write("ERRORR: " + msg + "\n")
+                        raise SystemExit(1)
                     elif severity == "info":
-                        sys.stderr.write("INFO: " + msg)
+                        sys.stderr.write("INFO: " + msg + "\n")
                     else:
                         raise AssertionError(severity)
         sources.extend(fps_reader.metadata.sources)

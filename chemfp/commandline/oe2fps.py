@@ -167,7 +167,8 @@ def main(args=None):
     try:
         io.write_fps1_output(reader, args.output, metadata)
     except ParseError, err:
-        raise SystemExit("ERROR: %s. Exiting." % (err,))
+        sys.stderr.write("ERROR: %s. Exiting." % (err,))
+        raise SystemExit(1)
     
 if __name__ == "__main__":
     main()

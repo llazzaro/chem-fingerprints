@@ -276,7 +276,8 @@ def main(args=None):
     try:
         id, fp, num_bits = next(decoded_fps)
     except ParseError, err:
-        raise SystemExit("ERROR: %s. Exiting." % (err,))
+        sys.stderr.write("ERROR: %s. Exiting." % (err,))
+        raise SystemExit(1)
     except StopIteration:
         # No fingerprints? Make a new empty stream
         metadata = Metadata(date = io.utcnow())
@@ -300,7 +301,8 @@ def main(args=None):
     try:
         io.write_fps1_output(chained_reader, args.output, metadata)
     except ParseError, err:
-        raise SystemExit("ERROR: %s. Exiting." % (err,))
+        sys.stderr.write("ERROR: %s. Exiting." % (err,))
+        raise SystemExit(1)
 
 if __name__ == "__main__":
     main()
