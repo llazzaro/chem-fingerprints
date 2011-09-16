@@ -8,6 +8,8 @@ from support import fullpath
 CHEBI_TARGETS = fullpath("chebi_rdmaccs.fps")
 CHEBI_QUERIES = fullpath("chebi_queries.fps.gz")
 
+QUERY_ARENA = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        
 # Backwards compatibility for Python 2.5
 try:
     next
@@ -167,31 +169,27 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
     def test_count_tanimoto_arena_default(self):
         targets = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        hits = targets.count_tanimoto_hits_arena(query_arena)
+        hits = targets.count_tanimoto_hits_arena(QUERY_ARENA)
         self.assertEquals(hits, [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
 
     def test_count_tanimoto_arena_set_default(self):
         targets = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        hits = targets.count_tanimoto_hits_arena(query_arena, threshold=0.7)
+        hits = targets.count_tanimoto_hits_arena(QUERY_ARENA, threshold=0.7)
         self.assertEquals(hits, [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
 
     def test_count_tanimoto_arena_set_threshold(self):
         targets = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        hits = targets.count_tanimoto_hits_arena(query_arena, threshold=0.9)
+        hits = targets.count_tanimoto_hits_arena(QUERY_ARENA, threshold=0.9)
         self.assertEquals(hits, [0, 97, 7, 1, 0, 1, 1, 0, 1, 1])
 
     def test_count_tanimoto_hits_arena_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.count_tanimoto_hits_arena(query_arena, threshold = 1.1)
+            reader.count_tanimoto_hits_arena(QUERY_ARENA, threshold = 1.1)
                                           
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.count_tanimoto_hits_arena(query_arena, threshold = -0.00001)
+            reader.count_tanimoto_hits_arena(QUERY_ARENA, threshold = -0.00001)
         
         
     #
@@ -257,8 +255,7 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
     def test_threshold_tanimoto_arena_default(self):
         targets = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        hits = targets.threshold_tanimoto_search_arena(query_arena)
+        hits = targets.threshold_tanimoto_search_arena(QUERY_ARENA)
         self.assertEquals(map(len, hits), [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
         self.assertEquals(hits[0], [('CHEBI:16148', 0.7142857142857143), ('CHEBI:17034', 0.8571428571428571),
                                     ('CHEBI:17302', 0.8571428571428571), ('CHEBI:17539', 0.72222222222222221)])
@@ -266,8 +263,7 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
     def test_threshold_tanimoto_arena_set_default(self):
         targets = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        hits = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.7)
+        hits = targets.threshold_tanimoto_search_arena(QUERY_ARENA, threshold=0.7)
         self.assertEquals(map(len, hits), [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
         self.assertEquals(hits[-1], [('CHEBI:15621', 0.8571428571428571), ('CHEBI:15882', 0.83333333333333337),
                                      ('CHEBI:16008', 0.80000000000000004), ('CHEBI:16193', 0.80000000000000004),
@@ -277,8 +273,7 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
     def test_threshold_tanimoto_arena_set_threshold(self):
         targets = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        hits = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.9)
+        hits = targets.threshold_tanimoto_search_arena(QUERY_ARENA, threshold=0.9)
         self.assertEquals(map(len, hits), [0, 97, 7, 1, 0, 1, 1, 0, 1, 1])
         self.assertEquals(hits[2], [('CHEBI:15895', 1.0), ('CHEBI:16165', 1.0),
                                     ('CHEBI:16292', 0.93333333333333335), ('CHEBI:16392', 0.93333333333333335),
@@ -288,13 +283,12 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
     def test_threshold_tanimoto_search_arena_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.threshold_tanimoto_search_arena(query_arena, threshold = 1.1)
+            reader.threshold_tanimoto_search_arena(QUERY_ARENA, threshold = 1.1)
                                           
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.threshold_tanimoto_search_arena(query_arena, threshold = -0.00001)
+            reader.threshold_tanimoto_search_arena(QUERY_ARENA, threshold = -0.00001)
         
         
     #
@@ -366,8 +360,7 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
     def test_knearest_tanimoto_arena_default(self):
         targets = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        hits = targets.knearest_tanimoto_search_arena(query_arena)
+        hits = targets.knearest_tanimoto_search_arena(QUERY_ARENA)
         self.assertEquals(map(len, hits), [3, 3, 3, 3, 1, 3, 3, 3, 3, 3])
         if hits[0][0][0] == 'CHEBI:17302':
             self.assertEquals(hits[0], [('CHEBI:17302', 0.8571428571428571),
@@ -380,8 +373,7 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
     def test_knearest_tanimoto_arena_set_default(self):
         targets = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        hits = targets.knearest_tanimoto_search_arena(query_arena, k=3, threshold=0.7)
+        hits = targets.knearest_tanimoto_search_arena(QUERY_ARENA, k=3, threshold=0.7)
         self.assertEquals(map(len, hits), [3, 3, 3, 3, 1, 3, 3, 3, 3, 3])
         self.assertEquals(hits[-1], [('CHEBI:16207', 1.0), ('CHEBI:15621', 0.8571428571428571),
                                      ('CHEBI:15882', 0.83333333333333337)])
@@ -389,8 +381,7 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
     def test_knearest_tanimoto_arena_set_threshold(self):
         targets = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
-        hits = targets.knearest_tanimoto_search_arena(query_arena, threshold=0.8)
+        hits = targets.knearest_tanimoto_search_arena(QUERY_ARENA, threshold=0.8)
         self.assertEquals(map(len, hits), [2, 3, 3, 3, 1, 1, 3, 3, 3, 3])
         self.assertEquals(hits[6], [('CHEBI:16834', 0.90909090909090906),
                                     ('CHEBI:17061', 0.875),
@@ -400,13 +391,12 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
     def test_knearest_tanimoto_search_arena_knearest_range_error(self):
         reader = self._open(CHEBI_TARGETS)
-        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.knearest_tanimoto_search_arena(query_arena, threshold = 1.1)
+            reader.knearest_tanimoto_search_arena(QUERY_ARENA, threshold = 1.1)
                                           
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.knearest_tanimoto_search_arena(query_arena, threshold = -0.00001)
+            reader.knearest_tanimoto_search_arena(QUERY_ARENA, threshold = -0.00001)
         
 
 
