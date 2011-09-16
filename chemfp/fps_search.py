@@ -192,6 +192,8 @@ def knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
 
 def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
     require_matching_sizes(query_arena, target_reader)
+    if k < 0:
+        raise ValueError("k must be non-negative")
 
     num_queries = len(query_arena)
     search = _make_knearest_search(num_queries, k)
