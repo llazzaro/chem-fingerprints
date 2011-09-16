@@ -1,6 +1,7 @@
 import sys
 import os
 from cStringIO import StringIO
+import tempfile
 
 # Ignore the close. io.write_fps1_output() auto-closes its output.
 class SIO(object):
@@ -278,3 +279,31 @@ class TestIdAndErrors(object):
         ids = [fp.split("\t")[1] for fp in fps]
         self.assertEquals(ids, ["ThreeTabs", "tabseparated", "twotabs"])
 
+    #
+    # Handling bad files
+    #
+
+    def test_handles_missing_filename(self):
+        errmsg = self._runner.run_exit("this_file_does_not_exist.sdf", PUBCHEM_SDF)
+        self.assertIn("Structure file '", errmsg)
+        self.assertIn("this_file_does_not_exist.sdf", errmsg)
+        self.assertIn("' does not exist", errmsg)
+        self.assertNotIn("pubchem", errmsg)
+
+    def test_handles_missing_filename_at_end(self):
+        errmsg = self._runner.run_exit([PUBCHEM_SDF, "this_file_does_not_exist.sdf"])
+        self.assertIn("Structure file '", errmsg)
+        self.assertIn("this_file_does_not_exist.sdf", errmsg)
+        self.assertIn("' does not exist", errmsg)
+        self.assertNotIn("pubchem", errmsg)
+
+    def test_unreadable_file(self):
+        tf = tempfile.NamedTemporaryFile(suffix="unreadable.sdf")
+        try:
+            os.chmod(tf.name, 0222)
+            errmsg = self._runner.run_exit([PUBCHEM_SDF, tf.name])
+            self.assertIn("Problem reading structure fingerprints", errmsg)
+            self.assertIn("unreadable.sdf", errmsg)
+            self.assertNotIn("pubchem", errmsg)
+        finally:
+            tf.close()
