@@ -297,6 +297,117 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
             reader.threshold_tanimoto_search_arena(query_arena, threshold = -0.00001)
         
         
+    #
+    # K-nearest tanimoto search using a fingerprint
+    # 
+
+    def test_knearest_tanimoto_search_fp_default(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"))
+        self.assertEqual(hits, [('CHEBI:15523', 1.0), ('CHEBI:15483', 0.98913043478260865),
+                                ('CHEBI:15480', 0.98913043478260865)])
+
+
+    def test_knearest_tanimoto_search_fp_set_default(self):
+        # This is set to the default values
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                   k = 3, threshold = 0.7)
+        self.assertEqual(hits, [('CHEBI:15523', 1.0), ('CHEBI:15483', 0.98913043478260865),
+                                ('CHEBI:15480', 0.98913043478260865)])
+        
+    def test_knearest_tanimoto_search_fp_set_knearest(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                 k = 7, threshold = 0.8)
+        self.assertEqual(hits, [('CHEBI:15523', 1.0), ('CHEBI:15483', 0.98913043478260865),
+                                ('CHEBI:15480', 0.98913043478260865), ('CHEBI:15478', 0.98901098901098905),
+                                ('CHEBI:15486', 0.97802197802197799), ('CHEBI:15488', 0.96739130434782605),
+                                ('CHEBI:15508', 0.96739130434782605)])
+
+
+    def test_knearest_tanimoto_search_fp_set_max_threshold(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                   threshold = 1.0)
+        self.assertEqual(hits, [('CHEBI:15523', 1.0)])
+
+    def test_knearest_tanimoto_search_fp_set_knearest_1(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                   k = 1)
+        self.assertEqual(hits, [('CHEBI:15523', 1.0)])
+
+    def test_knearest_tanimoto_search_fp_set_knearest_0(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                   k = 0)
+        self.assertEqual(hits, [])
+
+    def test_knearest_tanimoto_search_fp_knearest_threshold_range_error(self):
+        reader = self._open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive"):
+            reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                          threshold = 1.1)
+        reader = self._open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive"):
+            reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                          threshold = -0.00001)
+
+    def test_knearest_tanimoto_search_fp_knearest_k_range_error(self):
+        reader = self._open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "k must be non-negative") as e:
+            reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                               k = -1)
+
+    #
+    # K-nearest tanimoto search using an arena
+    #
+
+    def test_knearest_tanimoto_arena_default(self):
+        targets = self._open(CHEBI_TARGETS)
+        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        hits = targets.knearest_tanimoto_search_arena(query_arena)
+        self.assertEquals(map(len, hits), [3, 3, 3, 3, 1, 3, 3, 3, 3, 3])
+        if hits[0][0][0] == 'CHEBI:17302':
+            self.assertEquals(hits[0], [('CHEBI:17302', 0.8571428571428571),
+                                        ('CHEBI:17034', 0.8571428571428571),
+                                        ('CHEBI:17539', 0.72222222222222221)])
+        else:
+            self.assertEquals(hits[0], [('CHEBI:17034', 0.8571428571428571),
+                                        ('CHEBI:17302', 0.8571428571428571),
+                                        ('CHEBI:17539', 0.72222222222222221)])
+
+    def test_knearest_tanimoto_arena_set_default(self):
+        targets = self._open(CHEBI_TARGETS)
+        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        hits = targets.knearest_tanimoto_search_arena(query_arena, k=3, threshold=0.7)
+        self.assertEquals(map(len, hits), [3, 3, 3, 3, 1, 3, 3, 3, 3, 3])
+        self.assertEquals(hits[-1], [('CHEBI:16207', 1.0), ('CHEBI:15621', 0.8571428571428571),
+                                     ('CHEBI:15882', 0.83333333333333337)])
+
+
+    def test_knearest_tanimoto_arena_set_threshold(self):
+        targets = self._open(CHEBI_TARGETS)
+        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        hits = targets.knearest_tanimoto_search_arena(query_arena, threshold=0.8)
+        self.assertEquals(map(len, hits), [2, 3, 3, 3, 1, 1, 3, 3, 3, 3])
+        self.assertEquals(hits[6], [('CHEBI:16834', 0.90909090909090906),
+                                    ('CHEBI:17061', 0.875),
+                                    ('CHEBI:16319', 0.84848484848484851)])
+
+
+
+    def test_knearest_tanimoto_search_arena_knearest_range_error(self):
+        reader = self._open(CHEBI_TARGETS)
+        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
+            reader.knearest_tanimoto_search_arena(query_arena, threshold = 1.1)
+                                          
+        reader = self._open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
+            reader.knearest_tanimoto_search_arena(query_arena, threshold = -0.00001)
+        
 
 
 class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
