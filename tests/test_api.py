@@ -194,6 +194,108 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
             reader.count_tanimoto_hits_arena(query_arena, threshold = -0.00001)
         
         
+    #
+    # Threshold tanimoto search using a fingerprint
+    # 
+
+    def test_threshold_tanimoto_search_fp_default(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"))
+        self.assertEqual(len(hits), 176)
+        self.assertEqual(hits[:6], [('CHEBI:3139', 0.72277227722772275), ('CHEBI:4821', 0.71134020618556704),
+                                    ('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
+                                    ('CHEBI:15351', 0.96703296703296704), ('CHEBI:15371', 0.96703296703296704)])
+        self.assertEquals(hits[-6:], [('CHEBI:17383', 0.72164948453608246), ('CHEBI:17422', 0.73913043478260865),
+                                      ('CHEBI:17439', 0.81000000000000005), ('CHEBI:17469', 0.72631578947368425),
+                                      ('CHEBI:17510', 0.70526315789473681), ('CHEBI:17552', 0.71578947368421053)])
+
+
+    def test_threshold_tanimoto_search_fp_set_default(self):
+        # This is set to the default value
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                   threshold = 0.7)
+        self.assertEqual(len(hits), 176)
+        self.assertEqual(hits[:6], [('CHEBI:3139', 0.72277227722772275), ('CHEBI:4821', 0.71134020618556704),
+                                    ('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
+                                    ('CHEBI:15351', 0.96703296703296704), ('CHEBI:15371', 0.96703296703296704)])
+        self.assertEquals(hits[-6:], [('CHEBI:17383', 0.72164948453608246), ('CHEBI:17422', 0.73913043478260865),
+                                      ('CHEBI:17439', 0.81000000000000005), ('CHEBI:17469', 0.72631578947368425),
+                                      ('CHEBI:17510', 0.70526315789473681), ('CHEBI:17552', 0.71578947368421053)])
+
+    def test_threshold_tanimoto_search_fp_set_threshold(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                 threshold = 0.8)
+        self.assertEqual(len(hits), 108)
+        self.assertEqual(hits[:6], [('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
+                                    ('CHEBI:15351', 0.96703296703296704), ('CHEBI:15371', 0.96703296703296704),
+                                    ('CHEBI:15380', 0.92391304347826086), ('CHEBI:15448', 0.92391304347826086)])
+        self.assertEqual(hits[-6:], [('CHEBI:15982', 0.81818181818181823), ('CHEBI:16304', 0.81000000000000005),
+                                     ('CHEBI:16625', 0.94565217391304346), ('CHEBI:17068', 0.90526315789473688),
+                                     ('CHEBI:17157', 0.94505494505494503), ('CHEBI:17439', 0.81000000000000005)])
+
+    def test_threshold_tanimoto_search_fp_set_max_threshold(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                   threshold = 1.0)
+        self.assertEqual(hits, [('CHEBI:15523', 1.0)])
+
+    def test_threshold_tanimoto_search_fp_threshold_range_error(self):
+        reader = self._open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
+            reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                          threshold = 1.1)
+        reader = self._open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
+            reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                          threshold = -0.00001)
+
+    #
+    # Threshold tanimoto search using an arena
+    #
+
+    def test_threshold_tanimoto_arena_default(self):
+        targets = self._open(CHEBI_TARGETS)
+        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        hits = targets.threshold_tanimoto_search_arena(query_arena)
+        self.assertEquals(map(len, hits), [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
+        self.assertEquals(hits[0], [('CHEBI:16148', 0.7142857142857143), ('CHEBI:17034', 0.8571428571428571),
+                                    ('CHEBI:17302', 0.8571428571428571), ('CHEBI:17539', 0.72222222222222221)])
+
+
+    def test_threshold_tanimoto_arena_set_default(self):
+        targets = self._open(CHEBI_TARGETS)
+        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        hits = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.7)
+        self.assertEquals(map(len, hits), [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
+        self.assertEquals(hits[-1], [('CHEBI:15621', 0.8571428571428571), ('CHEBI:15882', 0.83333333333333337),
+                                     ('CHEBI:16008', 0.80000000000000004), ('CHEBI:16193', 0.80000000000000004),
+                                     ('CHEBI:16207', 1.0), ('CHEBI:17231', 0.76923076923076927),
+                                     ('CHEBI:17450', 0.75)])
+
+
+    def test_threshold_tanimoto_arena_set_threshold(self):
+        targets = self._open(CHEBI_TARGETS)
+        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        hits = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.9)
+        self.assertEquals(map(len, hits), [0, 97, 7, 1, 0, 1, 1, 0, 1, 1])
+        self.assertEquals(hits[2], [('CHEBI:15895', 1.0), ('CHEBI:16165', 1.0),
+                                    ('CHEBI:16292', 0.93333333333333335), ('CHEBI:16392', 0.93333333333333335),
+                                    ('CHEBI:17100', 0.93333333333333335), ('CHEBI:17242', 0.90000000000000002),
+                                    ('CHEBI:17464', 1.0)])
+
+
+    def test_threshold_tanimoto_search_arena_threshold_range_error(self):
+        reader = self._open(CHEBI_TARGETS)
+        query_arena = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
+        with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
+            reader.threshold_tanimoto_search_arena(query_arena, threshold = 1.1)
+                                          
+        reader = self._open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
+            reader.threshold_tanimoto_search_arena(query_arena, threshold = -0.00001)
+        
         
 
 
