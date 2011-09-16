@@ -126,7 +126,7 @@ class FPSReader(object):
                 err = _chemfp.fps_line_validate(expected_hex_len, line)
                 if err:
                     raise FPSParseError(err, lineno, self._filename)
-                yield line.split("\t")
+                yield line[:-1].split("\t")
                 lineno += 1
 
     def __iter__(self):
