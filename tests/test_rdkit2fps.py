@@ -23,6 +23,8 @@ if has_rdkit:
     from chemfp.commandline import rdkit2fps
 
     runner = support.Runner(rdkit2fps.main)
+else:
+    runner = None
 
 MACCS_SMI = support.fullpath("maccs.smi")
 
@@ -157,7 +159,8 @@ class TestRDKFingerprints(unittest2.TestCase):
 
 TestRDKFingerprints = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestRDKFingerprints)
 
-class TestIO(unittest2.TestCase):
+class TestIO(unittest2.TestCase, support.TestIdAndErrors):
+    _runner = runner
     def test_input_format(self):
         def without_source_header(cmdline, source):
             return [line for line in runner.run(cmdline, source)

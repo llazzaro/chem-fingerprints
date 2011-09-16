@@ -182,10 +182,10 @@ def main(args=None):
     # Set up the error messages for missing id or fingerprints.
     if args.id_tag is None:
         MISSING_ID = "Missing title in the record starting %(where)s"
-        MISSING_FP = "Missing fingerprint tag <%(tag)s> in record starting %(where)s"
+        MISSING_FP = "Missing fingerprint tag %(tag)r in record starting %(where)s"
     else:
-        MISSING_ID = "Missing id tag <%(tag)s> in the record starting %(where)s"
-        MISSING_FP = "Missing fingerprint tag <%(tag)s> in record %(id)r starting %(where)s"
+        MISSING_ID = "Missing id tag %(tag)r in the record starting %(where)s"
+        MISSING_FP = "Missing fingerprint tag %(tag)r in record %(id)r starting %(where)s"
 
     # For each SDF iterator, yield the (id, encoded_fp) pairs
     if args.id_tag is None:
@@ -237,7 +237,7 @@ def main(args=None):
             try:
                 num_bits, fp = fp_decoder(encoded_fp)
             except TypeError, err:
-                msg = ("Could not %(decoder_name)s decode <%(tag)s> value %(encoded_fp)r: %(err)s %(where)s" %
+                msg = ("Could not %(decoder_name)s decode %(tag)r value %(encoded_fp)r: %(err)s %(where)s" %
                        dict(decoder_name=fp_decoder_name, tag=args.fp_tag,
                             where=location.where(), err=err, encoded_fp=encoded_fp))
                 error_handler(msg)
@@ -247,7 +247,7 @@ def main(args=None):
                 if expected_num_bits == -1:
                     expected_num_bits = num_bits
                 else:
-                    msg = ("<%(tag)s> value %(encoded_fp)r has %(got)d bits but expected %(expected)d %(where)s" %
+                    msg = ("Tag %(tag)r value %(encoded_fp)r has %(got)d bits but expected %(expected)d %(where)s" %
                            dict(tag=args.fp_tag, encoded_fp=encoded_fp,
                                 got=num_bits, expected=expected_num_bits,
                                 where=location.where()))
@@ -258,7 +258,7 @@ def main(args=None):
                 if expected_fp_size is None:
                     expected_fp_size = len(fp)
                 else:
-                    msg = ("<%(tag)s> value %(encoded_fp)r has %(got)d bytes but expected %(expected)d %(where)s" %
+                    msg = ("Tag %(tag)r value %(encoded_fp)r has %(got)d bytes but expected %(expected)d %(where)s" %
                            dict(tag=args.fp_tag, encoded_fp=encoded_fp,
                                 got=len(fp), expected=expected_fp_size,
                                 where=location.where()))

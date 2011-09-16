@@ -28,6 +28,8 @@ PUBCHEM_SDF = fullpath("pubchem.sdf")
 PUBCHEM_SDF_GZ = fullpath("pubchem.sdf.gz")
 PUBCHEM_ANOTHER_EXT = fullpath("pubchem.should_be_sdf_but_is_not")
 
+MISSING_TITLE = fullpath("missing_title.sdf")
+
 real_stdin = sys.stdin
 real_stdout = sys.stdout
 real_stderr = sys.stderr
@@ -115,6 +117,17 @@ class Runner(object):
             sys.stderr = real_stderr
         return stderr.getvalue()
 
+    def run_split_capture(self, cmdline, expect_length=None, source=PUBCHEM_SDF):
+        sys.stderr = stderr = SIO()
+        try:
+            try:
+                headers, fps = self.run_split(cmdline, expect_length, source)
+            except SystemExit:
+                raise AssertionError("unexpected SystemExit")
+        finally:
+            sys.stderr = real_stderr
+        return headers, fps, stderr.getvalue()
+        
 
 ####
 
@@ -129,3 +142,139 @@ def set_bit(n):
     bytes = [0, 0, 0]
     bytes[n//8] = 1<<(n%8)
     return "%02x%02x%02x" % tuple(bytes)
+
+class TestIdAndErrors(object):
+    #
+    # One of the records doesn't have an XLOGP field
+    #
+    def test_missing_id_tag(self):
+        errmsg = self._runner.run_exit("--id-tag PUBCHEM_CACTVS_XLOGP")
+        self.assertIn("ERROR: Missing id tag 'PUBCHEM_CACTVS_XLOGP' for record #7 ", errmsg)
+        self.assertIn("pubchem.sdf", errmsg)
+
+    # Should be the same as the previous code.
+    def test_missing_id_strict(self):
+        errmsg = self._runner.run_exit("--id-tag PUBCHEM_CACTVS_XLOGP --errors strict")
+        self.assertIn("ERROR: Missing id tag 'PUBCHEM_CACTVS_XLOGP' for record #7 ", errmsg)
+        self.assertIn("pubchem.sdf", errmsg)
+    
+
+    def test_missing_id_tag_report(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--id-tag PUBCHEM_CACTVS_XLOGP --errors report", 18)
+        self.assertIn("ERROR: Missing title for record #1", errmsg)
+        self.assertIn("missing_title.sdf", errmsg)
+        self.assertEquals(fps[-1], "")
+
+    def test_missing_id_tag_ignore(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--id-tag PUBCHEM_CACTVS_XLOGP --errors ignore", 18)
+        self.assertNotIn("ERROR: Missing title for record #1", errmsg)
+        self.assertNotIn("missing_title.sdf", errmsg)
+        ids = [fp.split("\t")[1] for fp in fps]
+        self.assertEquals(ids, ['2.8', '1.9', '1', '3.3', '1.5', '2.6', '-0.9', '2', '2.1', 
+                                '2.9', '1.7', '-1.5', '0.4', '0.6', '0.4', '0.4', '2', '2.5'])
+
+
+    #
+    # Various ways of having a strange title
+    #
+
+    def test_missing_title(self):
+        errmsg = self._runner.run_exit("", MISSING_TITLE)
+        self.assertIn("ERROR: Missing title for record #1", errmsg)
+
+    def test_missing_title_strict(self):
+        errmsg = self._runner.run_exit("--errors strict", MISSING_TITLE)
+        self.assertIn("ERROR: Missing title for record #1", errmsg)
+
+    def test_missing_title_report(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--errors report", 1, MISSING_TITLE)
+        self.assertIn("ERROR: Missing title for record #1", errmsg)
+        self.assertNotIn("ERROR: Missing title for record #2", errmsg)
+        self.assertIn("ERROR: Missing title for record #3", errmsg)
+        self.assertEquals(len(fps), 1)
+        self.assertEquals(fps[0].split("\t")[1], "Good")
+
+    def test_missing_title_ignore(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--errors ignore", 1, MISSING_TITLE)
+        self.assertNotIn("ERROR: Missing title for record #1", errmsg)
+        self.assertNotIn("ERROR: Missing title for record #2", errmsg)
+        self.assertNotIn("ERROR: Missing title for record #3", errmsg)
+        self.assertEquals(len(fps), 1)
+        self.assertEquals(fps[0].split("\t")[1], "Good")
+
+    #
+    # Various ways of handling a missing id in a tag
+    #
+
+    def test_missing_id_tag(self):
+        errmsg = self._runner.run_exit("--id-tag Blank", MISSING_TITLE)
+        self.assertIn("ERROR: Empty id tag 'Blank' for record #1", errmsg)
+
+    def test_missing_id_tag_strict(self):
+        errmsg = self._runner.run_exit("--id-tag Blank --errors strict", MISSING_TITLE)
+        self.assertIn("ERROR: Empty id tag 'Blank' for record #1", errmsg)
+        self.assertIn("missing_title.sdf", errmsg)
+
+    def test_missing_id_tag_report(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--id-tag Blank --errors report", 1, MISSING_TITLE)
+        self.assertIn("ERROR: Empty id tag 'Blank' for record #1", errmsg)
+        self.assertIn("ERROR: Empty id tag 'Blank' for record #2", errmsg)
+        self.assertNotIn("ERROR: Empty id tag 'Blank' for record #3", errmsg)
+        self.assertEquals(fps[0].split("\t")[1], "This is not Blank")
+
+    def test_missing_id_tag_ignore(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--id-tag Blank --errors ignore", 1, MISSING_TITLE)
+        self.assertNotIn("ERROR: Empty id tag 'Blank' for record #1", errmsg)
+        self.assertNotIn("ERROR: Empty id tag 'Blank' for record #2", errmsg)
+        self.assertNotIn("ERROR: Empty id tag 'Blank' for record #3", errmsg)
+        self.assertEquals(fps[0].split("\t")[1], "This is not Blank")
+
+    #
+    # Various ways of handling a tab characters in an id tag
+    #
+
+    def test_tab_id_tag(self):
+        errmsg = self._runner.run_exit("--id-tag Tab", MISSING_TITLE)
+        self.assertIn("ERROR: Empty id tag 'Tab' for record #2", errmsg)
+
+    def test_tab_id_tag_strict(self):
+        errmsg = self._runner.run_exit("--id-tag Tab --errors strict", MISSING_TITLE)
+        self.assertIn("ERROR: Empty id tag 'Tab' for record #2", errmsg)
+        self.assertIn("missing_title.sdf", errmsg)
+
+    def test_tab_id_tag_report(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--id-tag Tab --errors report", 2, MISSING_TITLE)
+        self.assertIn("ERROR: Empty id tag 'Tab' for record #2", errmsg)
+        self.assertEquals(fps[0].split("\t")[1], "Leading tab")
+        self.assertEquals(fps[1].split("\t")[1], "This does not")
+
+    def test_tab_id_tag_ignore(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--id-tag Tab --errors ignore", 2, MISSING_TITLE)
+        self.assertNotIn("ERROR: Empty id tag 'Tab'", errmsg)
+        self.assertEquals(fps[0].split("\t")[1], "Leading tab")
+        self.assertEquals(fps[1].split("\t")[1], "This does not")
+
+
+    def test_contains_tab_id_tag(self):
+        headers, fps = self._runner.run_split("--id-tag ContainsTab", 3, MISSING_TITLE)
+        ids = [fp.split("\t")[1] for fp in fps]
+        self.assertEquals(ids, ["ThreeTabs", "tabseparated", "twotabs"])
+
+    def test_contains_tab_id_tag_strict(self):
+        headers, fps = self._runner.run_split("--id-tag ContainsTab --errors strict", 3, MISSING_TITLE)
+        ids = [fp.split("\t")[1] for fp in fps]
+        self.assertEquals(ids, ["ThreeTabs", "tabseparated", "twotabs"])
+
+    def test_contains_tab_id_tag_report(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--id-tag ContainsTab --errors report", 3, MISSING_TITLE)
+        self.assertNotIn("ContainsTab", errmsg)
+        self.assertNotIn("ERROR", errmsg)
+        ids = [fp.split("\t")[1] for fp in fps]
+        self.assertEquals(ids, ["ThreeTabs", "tabseparated", "twotabs"])
+
+    def test_contains_tab_id_tag_ignore(self):
+        headers, fps, errmsg = self._runner.run_split_capture("--id-tag ContainsTab --errors ignore", 3, MISSING_TITLE)
+        self.assertNotIn("ERROR: Empty id tag 'ContainsTab'", errmsg)
+        ids = [fp.split("\t")[1] for fp in fps]
+        self.assertEquals(ids, ["ThreeTabs", "tabseparated", "twotabs"])
+

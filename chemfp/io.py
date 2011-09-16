@@ -24,6 +24,8 @@ def remove_special_characters_from_id(id):
         id = id.splitlines()[0]
     if "\t" in id:
         id = id.replace("\t", "")
+    if " " in id:
+        id = id.strip()
     return id
 
 ####

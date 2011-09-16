@@ -32,6 +32,7 @@ if has_openbabel:
     HAS_MACCS = chemfp.openbabel.HAS_MACCS
 else:
     HAS_MACCS = False
+    runner = None
 
 class TestFingerprintTypes(unittest2.TestCase):
     def test_unspecified(self):
@@ -77,11 +78,29 @@ class TestFingerprintTypes(unittest2.TestCase):
     def test_MACCS_does_not_exist(self):
         run_exit("--MACCS")
 
+
+    def test_rdmaccs(self):
+        headers, fps = run_split("--rdmaccs", 19)
+        self.assertEquals(headers["#type"], "RDMACCS-OpenBabel/1")
+        self.assertEquals(fps[0], "000000000002080019c444eacd6c981baea178ef1f\t9425004")
+        self.assertEquals(fps[1], "000000002000082159d404eea968b81b8ea17eef1f\t9425009")
+        self.assertEquals(fps[2], "000000000000080159c404efa9689a1b8eb1faef1b\t9425012")
+        self.assertEquals(fps[3], "000000000000082019c404ee8968b81b8ea1ffef1f\t9425015")
+        self.assertEquals(fps[4], "000000000000088419c6b5fa8968981b8eb37aef1f\t9425018")
+
+    def test_substruct(self):
+        headers, fps = run_split("--substruct", 19)
+        self.assertEquals(headers["#type"], "ChemFP-Substruct-OpenBabel/1")
+        self.assertEquals(fps[0], "07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000\t9425004")
+        self.assertEquals(fps[1], "07de0d000000000000000000000000000080460300000c0000000000000000800f0000780038000000301083f920cc09695e0800d5c0e44e6e00492190844145dc1f841d261911164d039b8f29251026b9401313e0ec01007000000000000000000000000000000000000000000000\t9425009")
+        
+
 TestFingerprintTypes = unittest2.skipIf(skip_openbabel, "OpenBabel not installed")(
     TestFingerprintTypes)
 
 
-class TestIO(unittest2.TestCase):
+class TestIO(unittest2.TestCase, support.TestIdAndErrors):
+    _runner = runner
     def test_compressed_auto(self):
         header, fps = run_split("--FP3", 19, support.PUBCHEM_SDF_GZ)
         self.assertEquals(fps[0], "0400000000b001\t9425004")
@@ -117,6 +136,7 @@ class TestIO(unittest2.TestCase):
         errmsg = run_exit("--FP2 --in xyzzy")
         self.assertIn("Unsupported format specifier", errmsg)
         self.assertIn("xyzzy", errmsg)
+
         
 TestIO = unittest2.skipIf(skip_openbabel, "OpenBabel not installed")(TestIO)
 

@@ -449,22 +449,19 @@ def _iter_structures(ifs, id_tag, filename_repr, error_handler):
             title = mol.GetTitle()
             id = io.remove_special_characters_from_id(title)
             if not id:
-                if title:
-                    msg = "Title (%r) contains unsupportable characters" % (title,)
-                else:
-                    msg = "Missing title"
-                error_handler(msg + where())
+                error_handler("Missing title" + where())
                 continue
             yield id, mol
     else:
         for recno, mol in enumerate(ifs.GetOEGraphMols()):
             dirty_id = OEGetSDData(mol, id_tag)
+            if not dirty_id:
+                if not OEHasSDData(mol, id_tag):
+                    error_handler("Missing id tag %r%s" % (id_tag, where()))
+                    continue
             id = io.remove_special_characters_from_id(dirty_id)
             if not id:
-                if dirty_id:
-                    msg = "Id tag %r (%r) contains unsupportable characters" % (id_tag, dirty_id)
-                else:
-                    msg = "Empty id tag %r" % (id_tag,)
+                msg = "Empty id tag %r" % (id_tag,)
                 error_handler(msg + where())
                 continue
             yield id, mol

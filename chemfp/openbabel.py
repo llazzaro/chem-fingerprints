@@ -299,11 +299,7 @@ def _file_reader(obconversion, obmol, success, id_tag, filename_repr, error_hand
             title = obmol.GetTitle()
             id = io.remove_special_characters_from_id(title)
             if not id:
-                if title:
-                    msg = "Title (%r) contains unsupportable characters" % (title,)
-                else:
-                    msg = "Missing title"
-                error_handler(msg + where())
+                error_handler("Missing title" + where())
             else:
                 yield id, obmol
                 
@@ -320,10 +316,7 @@ def _file_reader(obconversion, obmol, success, id_tag, filename_repr, error_hand
                 dirty_id = obj.GetValue()
                 id = io.remove_special_characters_from_id(dirty_id)
                 if not id:
-                    if dirty_id:
-                        msg = "Id tag %r (%r) contains unsupportable characters" % (id_tag, dirty_id)
-                    else:
-                        msg = "Empty id tag %r" % (id_tag,)
+                    msg = "Empty id tag %r" % (id_tag,)
                     error_handler(msg + where())
                 else:
                     yield id, obmol

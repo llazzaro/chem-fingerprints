@@ -113,6 +113,8 @@ if has_oechem:
     run_stdin = runner.run_stdin
     run_fps = runner.run_fps
     run_exit = runner.run_exit
+else:
+    runner = None
 
 def headers(lines):
     assert lines[0] == "FPS1"
@@ -236,7 +238,8 @@ class TestPath(unittest2.TestCase):
 
 TestPath = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestPath)
 
-class TestIO(unittest2.TestCase):
+class TestIO(unittest2.TestCase, support.TestIdAndErrors):
+    _runner = runner
     def test_compressed_input(self):
         result = run_fps("", source=PUBCHEM_SDF_GZ)
     def test_unknown_extension(self):

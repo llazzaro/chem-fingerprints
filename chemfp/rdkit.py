@@ -108,7 +108,7 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
     loc = sdf_reader.FileLocation(name)
     error = sdf_reader.get_parse_error_handler(errors)
     if id_tag is None:
-        for text in sdf_reader.iter_sdf_records(fileobj, errors, loc):
+        for i, text in enumerate(sdf_reader.iter_sdf_records(fileobj, errors, loc)):
             mol = Chem.MolFromMolBlock(text)
             if mol is None:
                 # This was not a molecule?
@@ -117,11 +117,7 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
             title = mol.GetProp("_Name")
             id = io.remove_special_characters_from_id(title)
             if not id:
-                if title:
-                    msg = "Title (%r) contains unsupportable characters" % (title,)
-                else:
-                    msg = "Missing title"
-                error(msg, loc)
+                error("Missing title for record #%d" % (i+1), loc)
                 continue
             yield id, mol
     else:
@@ -137,11 +133,11 @@ def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
                 error("Could not parse molecule block", loc)
                 continue
             if id is None:
-                error("Empty id tag %r" % (id_tag,), loc)
+                error("Missing id tag %r for record #%d" % (id_tag, i+1), loc)
                 continue
             id = io.remove_special_characters_from_id(id)
             if not id:
-                error("Id tag %r (%r) contains unsupportable characters" % (id_tag, dirty_id))
+                error("Empty id tag %r for record #%d" % (id_tag, i+1), loc)
                 continue
             yield id, mol
             
