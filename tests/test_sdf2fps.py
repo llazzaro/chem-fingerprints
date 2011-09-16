@@ -155,7 +155,7 @@ class TestDecoderFlags(unittest2.TestCase):
 
     def test_bad_decoding(self):
         msg = run_warning("--base64 --fp-tag binary17 --errors report")
-        self.assertIn("Could not base64 decode <binary17> value", msg)
+        self.assertIn("Could not base64 decode 'binary17' value", msg)
         self.assertIn("Skipping.", msg)
 
 class TestBitSizes(unittest2.TestCase):
@@ -201,14 +201,14 @@ class TestTitleProcessing(unittest2.TestCase):
 
     def test_missing_title_from_title_line(self):
         warning = run_warning("--hex --fp-tag hex2 --id-tag FAKE_TITLE --errors report")
-        self.assertIn("Missing id tag <FAKE_TITLE> in the record starting at line 146 of ", warning)
+        self.assertIn("Missing id tag 'FAKE_TITLE' in the record starting at line 146 of ", warning)
         self.assertIn("decoder.sdf", warning)
         self.assertIn("title='9425009'", warning)
         self.assertIn("Skipping.", warning)
 
     def test_missing_all_titles(self):
         warning = run_warning("--hex --fp-tag hex2 --id-tag DOES_NOT_EXIST --errors report")
-        self.assertIn("Missing id tag <DOES_NOT_EXIST>", warning)
+        self.assertIn("Missing id tag 'DOES_NOT_EXIST'", warning)
         self.assertIn("line 1 of", warning)
         self.assertIn("line 146 of", warning)
 
