@@ -66,8 +66,10 @@ class SearchHits(object):
         return self.offsets[i+1]-self.offsets[i]
     
     def __getitem__(self, i):
+        i = xrange(len(self.offsets)-1)[i]  # Use this trick to support negative index lookups
         start, end = self.offsets[i:i+2]
-        return zip(self.indicies[start:end], self.scores[start:end])
+        ids = self.target_ids
+        return zip((ids[idx] for idx in self.indicies[start:end]), self.scores[start:end])
 
     def __iter__(self):
         target_ids = self.target_ids
@@ -151,6 +153,8 @@ def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
 
 def knearest_tanimoto_search_fp_indicies(query_fp, target_arena, k, threshold):
     require_matching_fp_size(query_fp, target_arena)
+    if k < 0:
+        raise ValueError("k must be non-negative")
 
     offsets = (ctypes.c_int * 2)()
     offsets[0] = 0
