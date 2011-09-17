@@ -228,7 +228,7 @@ int chemfp_count_tanimoto_arena(
   const unsigned char *query_fp, *target_fp;
   int start, end;
   int count;
-  int fp_size = num_bits / 8;
+  int fp_size = (num_bits+7) / 8;
   double score, popcount_sum;
   int query_popcount, start_target_popcount, end_target_popcount;
   int target_popcount;
@@ -239,8 +239,8 @@ int chemfp_count_tanimoto_arena(
     return 0;
   }
   /* Prevent overflow if someone uses a threshold of, say, 1E-80 */
-  if (threshold < 1.0/num_bits) {
-    threshold = 0.0;
+  if (threshold > 0.0 && threshold < 1.0/num_bits) {
+    threshold = 0.5/num_bits;
   }
   if ((target_start >= target_end) || threshold > 1.0) {
     for (query_index = query_start; query_index < query_end; query_index++) {
@@ -649,7 +649,7 @@ int chemfp_knearest_tanimoto_arena(
   if (target_popcount_indicies == NULL) {
     /* precomputed targets aren't available. Use the slower algorithm. */
     return knearest_tanimoto_arena_no_popcounts(
-	k, threshold, fp_size,
+	k, threshold, num_bits,
 	query_storage_size, query_arena, query_start, query_end,
 	target_storage_size, target_arena, target_start, target_end,
 	result_offsets, num_cells, result_indicies, result_scores);
