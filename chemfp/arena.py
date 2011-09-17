@@ -240,6 +240,8 @@ class FingerprintLookup(object):
         self._range_check = xrange(len(self))
 
     def __len__(self):
+        if not self._storage_size:
+            return 0
         return len(self._arena) / self._storage_size
 
     def __iter__(self):
@@ -269,7 +271,10 @@ class FingerprintArena(FingerprintReader):
         self.fingerprints = FingerprintLookup(metadata.num_bytes, storage_size, arena)
         self.start = start
         if end is None:
-            end = len(arena) // self.metadata.num_bytes
+            if self.metadata.num_bytes:
+                end = len(arena) // self.metadata.num_bytes
+            else:
+                end = 0
         self.end = end
         assert end >= start
         self._range_check = xrange(end-start)
@@ -308,6 +313,8 @@ class FingerprintArena(FingerprintReader):
 
     def __iter__(self):
         storage_size = self.storage_size
+        if not storage_size:
+            return
         target_fp_size = self.metadata.num_bytes
         arena = self.arena
         for id, start_offset in zip(self.ids, xrange(self.start*storage_size,
@@ -372,7 +379,7 @@ def fps_to_arena(fps_reader, metadata=None, reorder=True):
     num_bits = metadata.num_bits
     if not num_bits:
         num_bits = metadata.num_bytes * 8
-    assert num_bits
+    #assert num_bits
 
     ids = []
     unsorted_fps = StringIO()
@@ -387,7 +394,7 @@ def fps_to_arena(fps_reader, metadata=None, reorder=True):
     fingerprints = FingerprintArena(metadata, metadata.num_bytes,
                                     unsorted_arena, "", ids)
 
-    if reorder:
+    if reorder and metadata.num_bits:
         return reorder_fingerprints(fingerprints)
     else:
         return fingerprints
