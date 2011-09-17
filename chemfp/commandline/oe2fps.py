@@ -147,8 +147,13 @@ def main(args=None):
     else:
         parser.error("ERROR: fingerprint not specified?")
 
-    if not oe.is_valid_format(args.format):
-        parser.error("Unsupported format specifier: %r" % (args.format,))
+    if args.format is not None:
+        if args.filenames:
+            filename = args.filenames[0]
+        else:
+            filename = None
+        if not oe.is_valid_format(filename, args.format):
+            parser.error("Unsupported format specifier: %r" % (args.format,))
 
     if not oe.is_valid_aromaticity(args.aromaticity):
         parser.error("Unsupported aromaticity specifier: %r" % (args.aromaticity,))
