@@ -2,11 +2,31 @@ from __future__ import absolute_import, with_statement
 import unittest2
 
 import chemfp
+try:
+    import openbabel
+    has_openbabel = True
+except ImportError:
+    has_openbabel = False
 
-from support import fullpath
+try:
+    # I need to import 'oechem' to make sure I load the shared libries
+    # XXX Check for license?
+    from openeye import oechem
+    has_openeye = False
+except ImportError:
+    has_openeye = False
+
+try:
+    from rdkit import Chem
+    has_rdkit = True
+except ImportError:
+    has_rdkit = False
+
+from support import fullpath, PUBCHEM_SDF, PUBCHEM_SDF_GZ
 
 CHEBI_TARGETS = fullpath("chebi_rdmaccs.fps")
 CHEBI_QUERIES = fullpath("chebi_queries.fps.gz")
+MACCS_SMI = fullpath("maccs.smi")
 
 # Backwards compatibility for Python 2.5
 try:
@@ -406,7 +426,142 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
     def _open(self, name):
         return chemfp.load_fingerprints(name, reorder=False)
     
+
+SDF_IDS = ['9425004', '9425009', '9425012', '9425015', '9425018',
+           '9425021', '9425030', '9425031', '9425032', '9425033',
+           '9425034', '9425035', '9425036', '9425037', '9425040',
+           '9425041', '9425042', '9425045', '9425046']
+
+class ReadStructureFingerprints(object):
+    def _read_ids(self, *args, **kwargs):
+        reader = chemfp.read_structure_fingerprints(*args, **kwargs)
+        self.assertEquals(reader.metadata.num_bits, self.num_bits)
+        ids = [id for (id, fp) in reader]
+        self.assertEquals(len(fp), self.fp_size)
+        return ids
+        
+    def test_read_simple(self):
+        ids = self._read_ids(self.type, source=PUBCHEM_SDF)
+        self.assertEquals(ids, SDF_IDS)
+
+    def test_read_simple_compressed(self):
+        ids = self._read_ids(self.type, source=PUBCHEM_SDF_GZ)
+        self.assertEquals(ids, SDF_IDS)
+
+    def test_read_missing_filename(self):
+        with self.assertRaises(IOError):
+            self._read_ids(self.type, "this_file_does_not_exist.sdf")
+
+    def test_read_metadata(self):
+        metadata = chemfp.Metadata(type=self.type)
+        ids = self._read_ids(metadata, source=PUBCHEM_SDF_GZ)
+        self.assertEquals(ids, SDF_IDS)
+
+    def test_read_sdf_gz(self):
+        ids = self._read_ids(self.type, source=PUBCHEM_SDF_GZ, format="sdf.gz")
+        self.assertEquals(ids, SDF_IDS)
+
+    def test_read_sdf(self):
+        ids = self._read_ids(self.type, source=PUBCHEM_SDF, format="sdf")
+        self.assertEquals(ids, SDF_IDS)
+
+    def test_read_bad_format(self):
+        with self.assertRaisesRegexp(ValueError, "Unknown (structure )?format 'xyzzy'"):
+            self._read_ids(self.type, source=PUBCHEM_SDF, format="xyzzy")
+
+    def test_read_bad_compression(self):
+        with self.assertRaisesRegexp(ValueError, "Unsupported compression in format 'sdf.Z'"):
+            self._read_ids(self.type, source=PUBCHEM_SDF, format="sdf.Z")
+        
+
+    def test_read_id_tag(self):
+        ids = self._read_ids(self.type, source=PUBCHEM_SDF, id_tag = "PUBCHEM_MOLECULAR_FORMULA")
+        self.assertEquals(ids, ["C16H16ClFN4O2", "C18H20N6O3", "C14H19N5O3", "C23H24N4O3", 
+                                "C18H23N5O3S", "C19H21ClN4O4", "C18H31N6O4S+", "C18H30N6O4S",
+                                "C16H20N4O2", "C19H21N5O3S", "C18H22N4O2", "C18H20ClN5O3",
+                                "C16H20N8O2", "C15H17ClN6O3", "C19H21N5O4", "C17H19N5O4",
+                                "C17H19N5O4", "C19H23N5O2S", "C15H17BrN4O3"])
+
+# I decided to not check this. The failure is that you'll get a "can't find id" error. Oh well.
+#    def test_read_invalid_id_tag(self):
+#        self._read_ids(self.type, PUBCHEM_SDF, id_tag = "This\tis\ninvalid>")
+
+    def test_read_smiles(self):
+        # Need at least one test with some other format
+        ids = self._read_ids(self.type, source=MACCS_SMI)
+        self.assertEquals(ids, ["3->bit_2", "4->bit_3", "5->bit_4", "6->bit_5", 
+                                "10->bit_9", "11->bit_10", "17->bit_16"] )
+
+    def test_read_unknown_format(self):
+        # XXX Fix this - figure out the right way to handle filename-extension/format-option
+        with self.assertRaisesRegexp(ValueError, "Unknown structure (format|filename extension).*should_be_sdf_but_is_not"):
+            self._read_ids(self.type, fullpath("pubchem.should_be_sdf_but_is_not"))
+
+    def test_read_known_format(self):
+        ids = self._read_ids(self.type, fullpath("pubchem.should_be_sdf_but_is_not"), "sdf")
+        self.assertEquals(ids, SDF_IDS)
+
+    def test_read_errors(self):
+        with self.assertRaisesRegexp(chemfp.ParseError, "Missing title for record #1 .*missing_title.sdf"):
+            self._read_ids(self.type, fullpath("missing_title.sdf"))
+
+    def test_read_errors_strict(self):
+        with self.assertRaisesRegexp(chemfp.ParseError, "Missing title for record #1 .*missing_title.sdf"):
+            self._read_ids(self.type, fullpath("missing_title.sdf"), errors="strict")
+
+    def test_read_errors_ignore(self):
+        ids = self._read_ids(self.type, fullpath("missing_title.sdf"), errors="ignore")
+        self.assertEquals(ids, ["Good"])
+
+    def test_read_errors_report(self):
+        import sys
+        from cStringIO import StringIO
+        old_stderr = sys.stderr
+        sys.stderr = new_stderr = StringIO()
+        try:
+            ids = self._read_ids(self.type, fullpath("missing_title.sdf"), errors="report")
+        finally:
+            sys.stderr = old_stderr
+            errmsg = new_stderr.getvalue()
             
+        self.assertEquals(ids, ["Good"])
+        self.assertIn("ERROR: Missing title for record #1", errmsg)
+        self.assertNotIn("record #2", errmsg)
+        self.assertIn("ERROR: Missing title for record #3", errmsg)
+        self.assertIn("Skipping.\n", errmsg)
+
+    def test_read_errors_wrong_setting(self):
+        with self.assertRaisesRegexp(ValueError, "'errors' must be one of ignore, report, strict"):
+            self._read_ids(self.type, PUBCHEM_SDF, errors="this-is-not.a.valid! setting")
+
+        
+
+class TestOpenBabelReadStructureFingerprints(unittest2.TestCase, ReadStructureFingerprints):
+    type = "OpenBabel-FP2/1"
+    num_bits = 1021
+    fp_size = 128
+
+TestOpenBabelReadStructureFingerprints = (
+  unittest2.skipUnless(has_openbabel, "Open Babel not available")(TestOpenBabelReadStructureFingerprints)
+)
+
+class TestOpenEyeReadStructureFingerprints(unittest2.TestCase, ReadStructureFingerprints):
+    type = "OpenEye-Path/1"
+    num_bits = 1024
+    fp_size = 128
+
+TestOpenEyeReadStructureFingerprints = (
+  unittest2.skipUnless(has_openeye, "OpenEye not available")(TestOpenEyeReadStructureFingerprints)
+)
+
+class TestRDKitReadStructureFingerprints(unittest2.TestCase, ReadStructureFingerprints):
+    type = "RDKit-Fingerprint/1"
+    num_bits = 2048
+    fp_size = 256
+
+TestRDKitReadStructureFingerprints = (
+  unittest2.skipUnless(has_rdkit, "RDKit not available")(TestRDKitReadStructureFingerprints)
+)
 
 if __name__ == "__main__":
     unittest2.main()
