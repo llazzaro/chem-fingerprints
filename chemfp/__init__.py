@@ -476,7 +476,7 @@ class FingerprintReader(object):
         :raises: TypeError
         """
 
-    def iter_arenas(self, arena_size):
+    def iter_arenas(self, arena_size=1000):
         """iterate through `arena_size` fingerprints at a time
 
         This iterates through the fingerprints `arena_size` at a time,
