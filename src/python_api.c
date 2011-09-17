@@ -489,11 +489,13 @@ fps_count_tanimoto_hits(PyObject *self, PyObject *args) {
     /* start of next byte to process, num lines processed, num cells */
     return Py_BuildValue("iiii", CHEMFP_OK, 0);
   }
+  Py_BEGIN_ALLOW_THREADS;
   err = chemfp_fps_count_tanimoto_hits(
         num_bits, 
         query_storage_size, query_arena, query_start, query_end,
         target_block+target_start, target_end-target_start,
         threshold, counts, &num_lines_processed);
+  Py_END_ALLOW_THREADS;
 
   return Py_BuildValue("ii", err, num_lines_processed);
                        
@@ -540,6 +542,7 @@ fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
     /* start of next byte to process, num lines processed, num cells */
     return Py_BuildValue("iiii", CHEMFP_OK, target_end, 0, 0);
   }
+  Py_BEGIN_ALLOW_THREADS;
   err = chemfp_fps_threshold_tanimoto_search(
         num_bits, 
         query_storage_size, query_arena, query_start, query_end,
@@ -547,6 +550,7 @@ fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
         threshold,
         num_cells, cells,
         &stopped_at, &num_lines_processed, &num_cells_processed);
+  Py_END_ALLOW_THREADS;
 
   return Py_BuildValue("iiii", err, stopped_at - target_block,
                        num_lines_processed, num_cells_processed);
@@ -577,10 +581,12 @@ fps_knearest_search_init(PyObject *self, PyObject *args) {
       bad_threshold(threshold)) {
     return NULL;
   }
+  Py_BEGIN_ALLOW_THREADS;
   err = chemfp_fps_knearest_search_init(
 	  knearest_search, num_bits, query_storage_size, 
 	  query_arena, query_start, query_end,
 	  k, threshold);
+  Py_END_ALLOW_THREADS;
   if (err) {
     PyErr_SetString(PyExc_ValueError, chemfp_strerror(err));
     return NULL;
@@ -605,7 +611,9 @@ fps_knearest_tanimoto_search_feed(PyObject *self, PyObject *args) {
       bad_block_limits(target_block_size, &target_start, &target_end))
     return NULL;
 
+  Py_BEGIN_ALLOW_THREADS;
   err = chemfp_fps_knearest_tanimoto_search_feed(knearest_search, target_block_size, target_block);
+  Py_END_ALLOW_THREADS;
   return PyInt_FromLong(err);
 }
 
@@ -620,7 +628,10 @@ fps_knearest_search_finish(PyObject *self, PyObject *args) {
   if (bad_knearest_search_size(knearest_search_size))
     return NULL;
 
+  Py_BEGIN_ALLOW_THREADS;
   chemfp_fps_knearest_search_finish(knearest_search);
+  Py_END_ALLOW_THREADS;
+
   return Py_BuildValue("");
 }
 
@@ -636,7 +647,10 @@ fps_knearest_search_free(PyObject *self, PyObject *args) {
   if (bad_knearest_search_size(knearest_search_size))
     return NULL;
 
+  Py_BEGIN_ALLOW_THREADS;
   chemfp_fps_knearest_search_free(knearest_search);
+  Py_END_ALLOW_THREADS;
+
   return Py_BuildValue("");
 }
 
@@ -685,10 +699,12 @@ reorder_by_popcount(PyObject *self, PyObject *args) {
   if (!py_arena)
     goto error;
 
+  Py_BEGIN_ALLOW_THREADS;
   chemfp_reorder_by_popcount(num_bits, storage_size,
                              arena, start, end,
                              (unsigned char *) PyString_AS_STRING(py_arena),
                              ordering, popcount_indicies);
+  Py_END_ALLOW_THREADS;
 
   return py_arena;
 
@@ -746,12 +762,15 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
     return NULL;
   }
 
+  Py_BEGIN_ALLOW_THREADS;
   chemfp_count_tanimoto_arena(threshold,
                               num_bits,
                               query_storage_size, query_arena, query_start, query_end,
                               target_storage_size, target_arena, target_start, target_end,
                               target_popcount_indicies,
                               result_counts);
+  Py_END_ALLOW_THREADS;
+
   Py_RETURN_NONE;
 }
     
@@ -807,6 +826,7 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
     return NULL;
   }
 
+  Py_BEGIN_ALLOW_THREADS;
   result = chemfp_threshold_tanimoto_arena(
         threshold,
         num_bits,
@@ -815,6 +835,7 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
         target_popcount_indicies,
         result_offsets+result_offsets_start,
         num_cells, result_indicies, result_scores);
+  Py_END_ALLOW_THREADS;
 
   return PyInt_FromLong(result);
 }
@@ -871,6 +892,7 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
     return NULL;
   }
 
+  Py_BEGIN_ALLOW_THREADS;
   result = chemfp_knearest_tanimoto_arena(
         k, threshold,
         num_bits,
@@ -879,6 +901,7 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
         target_popcount_indicies,
         result_offsets+result_offsets_start,
         num_cells, result_indicies, result_scores);
+  Py_END_ALLOW_THREADS;
 
   return PyInt_FromLong(result);
 }
