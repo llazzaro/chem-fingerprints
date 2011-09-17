@@ -1,7 +1,9 @@
 from __future__ import absolute_import, with_statement
 import unittest2
+from cStringIO import StringIO
 
 import chemfp
+from chemfp import bitops
 try:
     import openbabel
     has_openbabel = True
@@ -23,6 +25,10 @@ except ImportError:
     has_rdkit = False
 
 from support import fullpath, PUBCHEM_SDF, PUBCHEM_SDF_GZ
+
+
+DBL_MIN = 2.2250738585072014e-308 # Assumes 64 bit doubles
+assert DBL_MIN > 0.0
 
 CHEBI_TARGETS = fullpath("chebi_rdmaccs.fps")
 CHEBI_QUERIES = fullpath("chebi_queries.fps.gz")
@@ -72,9 +78,10 @@ class CommonReaderAPI(object):
         self.assertEqual(num, 154)
 
     def test_iteration(self):
+        assert not self.reorder, "not appropriate for sorted arenas"
         reader = iter(self._open(CHEBI_TARGETS))
         fields = [next(reader) for i in range(5)]
-        self.assertEqual(fields, 
+        self.assertEqual(X(fields), 
                           [("CHEBI:776", "00000000000000008200008490892dc00dc4a7d21e".decode("hex")),
                            ("CHEBI:1148", "000000000000200080000002800002040c0482d608".decode("hex")),
                            ("CHEBI:1734", "0000000000000221000800111601017000c1a3d21e".decode("hex")),
@@ -82,12 +89,14 @@ class CommonReaderAPI(object):
                            ("CHEBI:2303", "0000000002001021820a00011681015004cdb3d21e".decode("hex"))])
 
       
-    def test_iter_arenas_default_sizes(self):
+    def test_iter_arenas_default_size(self):
+        assert not self.reorder, "not appropriate for sorted arenas"
         reader = self._open(CHEBI_TARGETS)
         count = 0
         for arena in reader.iter_arenas():
             self._check_target_metadata(arena.metadata)
             if count == 0:
+                # Check the values of the first arena
                 self.assertEqual(arena.ids[-5:],
                                   ['CHEBI:16316', 'CHEBI:16317', 'CHEBI:16318', 'CHEBI:16319', 'CHEBI:16320'])
                 
@@ -98,6 +107,7 @@ class CommonReaderAPI(object):
                           ['CHEBI:17578', 'CHEBI:17579', 'CHEBI:17580', 'CHEBI:17581', 'CHEBI:17582'])
 
     def test_iter_arenas_select_size(self):
+        assert not self.reorder, "not appropriate for sorted arenas"
         reader = self._open(CHEBI_TARGETS)
         count = 0
         for arena in reader.iter_arenas(100):
@@ -105,7 +115,7 @@ class CommonReaderAPI(object):
             if count == 0:
                 self.assertEqual(arena.ids[-5:],
                                   ['CHEBI:5280', 'CHEBI:5445', 'CHEBI:5706', 'CHEBI:5722', 'CHEBI:5864'])
-            self.assertEqual(len(arena), 100)  # There should be two of these
+            self.assertEqual(len(arena), 100)
             count += 1
         self.assertEqual(count, 20)
         self.assertEqual(arena.ids[:5],
@@ -138,6 +148,13 @@ class CommonReaderAPI(object):
         num_hits = reader.count_tanimoto_hits_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                  threshold = 1.0)
         self.assertEqual(num_hits, 1)
+
+    def test_count_tanimoto_hits_fp_set_min_threshold(self):
+        reader = self._open(CHEBI_TARGETS)
+        num_hits = reader.count_tanimoto_hits_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                 threshold = DBL_MIN)
+        # It isn't 2000 since there are some scores of 0.0
+        self.assertEqual(num_hits, 1993)
 
     def test_count_tanimoto_hits_fp_0(self):
         reader = self._open(CHEBI_TARGETS)
@@ -195,12 +212,18 @@ class CommonReaderAPI(object):
         reader = self._open(CHEBI_TARGETS)
         hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"))
         self.assertEqual(len(hits), 176)
-        self.assertEqual(hits[:6], [('CHEBI:3139', 0.72277227722772275), ('CHEBI:4821', 0.71134020618556704),
-                                    ('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
-                                    ('CHEBI:15351', 0.96703296703296704), ('CHEBI:15371', 0.96703296703296704)])
-        self.assertEqual(hits[-6:], [('CHEBI:17383', 0.72164948453608246), ('CHEBI:17422', 0.73913043478260865),
-                                      ('CHEBI:17439', 0.81000000000000005), ('CHEBI:17469', 0.72631578947368425),
-                                      ('CHEBI:17510', 0.70526315789473681), ('CHEBI:17552', 0.71578947368421053)])
+        first_hits = [('CHEBI:3139', 0.72277227722772275), ('CHEBI:4821', 0.71134020618556704),
+                      ('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
+                      ('CHEBI:15351', 0.96703296703296704), ('CHEBI:15371', 0.96703296703296704)]
+        last_hits = [('CHEBI:17383', 0.72164948453608246), ('CHEBI:17422', 0.73913043478260865),
+                     ('CHEBI:17439', 0.81000000000000005), ('CHEBI:17469', 0.72631578947368425),
+                     ('CHEBI:17510', 0.70526315789473681), ('CHEBI:17552', 0.71578947368421053)]
+        if self.hit_order is not sorted:
+            self.assertEqual(hits[:6], first_hits)
+            self.assertEqual(hits[-6:], last_hits)
+        else:
+            for x in first_hits + last_hits:
+                self.assertIn(x, hits)
 
 
     def test_threshold_tanimoto_search_fp_set_default(self):
@@ -209,30 +232,66 @@ class CommonReaderAPI(object):
         hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    threshold = 0.7)
         self.assertEqual(len(hits), 176)
-        self.assertEqual(hits[:6], [('CHEBI:3139', 0.72277227722772275), ('CHEBI:4821', 0.71134020618556704),
-                                    ('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
-                                    ('CHEBI:15351', 0.96703296703296704), ('CHEBI:15371', 0.96703296703296704)])
-        self.assertEqual(hits[-6:], [('CHEBI:17383', 0.72164948453608246), ('CHEBI:17422', 0.73913043478260865),
-                                      ('CHEBI:17439', 0.81000000000000005), ('CHEBI:17469', 0.72631578947368425),
-                                      ('CHEBI:17510', 0.70526315789473681), ('CHEBI:17552', 0.71578947368421053)])
+        first_hits = [('CHEBI:3139', 0.72277227722772275), ('CHEBI:4821', 0.71134020618556704),
+                      ('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
+                      ('CHEBI:15351', 0.96703296703296704), ('CHEBI:15371', 0.96703296703296704)]
+        last_hits = [('CHEBI:17383', 0.72164948453608246), ('CHEBI:17422', 0.73913043478260865),
+                     ('CHEBI:17439', 0.81000000000000005), ('CHEBI:17469', 0.72631578947368425),
+                     ('CHEBI:17510', 0.70526315789473681), ('CHEBI:17552', 0.71578947368421053)]
+        if self.hit_order is not sorted:
+            self.assertEqual(hits[:6], first_hits)
+            self.assertEqual(hits[-6:], last_hits)
+        else:
+            for x in first_hits + last_hits:
+                self.assertIn(x, hits)
 
     def test_threshold_tanimoto_search_fp_set_threshold(self):
         reader = self._open(CHEBI_TARGETS)
         hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                  threshold = 0.8)
         self.assertEqual(len(hits), 108)
-        self.assertEqual(hits[:6], [('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
-                                    ('CHEBI:15351', 0.96703296703296704), ('CHEBI:15371', 0.96703296703296704),
-                                    ('CHEBI:15380', 0.92391304347826086), ('CHEBI:15448', 0.92391304347826086)])
-        self.assertEqual(hits[-6:], [('CHEBI:15982', 0.81818181818181823), ('CHEBI:16304', 0.81000000000000005),
-                                     ('CHEBI:16625', 0.94565217391304346), ('CHEBI:17068', 0.90526315789473688),
-                                     ('CHEBI:17157', 0.94505494505494503), ('CHEBI:17439', 0.81000000000000005)])
+        first_hits = [('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
+                      ('CHEBI:15351', 0.96703296703296704), ('CHEBI:15371', 0.96703296703296704),
+                      ('CHEBI:15380', 0.92391304347826086), ('CHEBI:15448', 0.92391304347826086)]
+        last_hits = [('CHEBI:15982', 0.81818181818181823), ('CHEBI:16304', 0.81000000000000005),
+                     ('CHEBI:16625', 0.94565217391304346), ('CHEBI:17068', 0.90526315789473688),
+                     ('CHEBI:17157', 0.94505494505494503), ('CHEBI:17439', 0.81000000000000005)]
+        if self.hit_order is not sorted:
+            self.assertEqual(hits[:6], first_hits)
+            self.assertEqual(hits[-6:], last_hits)
+        else:
+            for x in first_hits + last_hits:
+                self.assertIn(x, hits)
 
     def test_threshold_tanimoto_search_fp_set_max_threshold(self):
         reader = self._open(CHEBI_TARGETS)
         hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    threshold = 1.0)
         self.assertEqual(hits, [('CHEBI:15523', 1.0)])
+
+    def test_threshold_tanimoto_search_fp_set_min_threshold(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                   threshold = DBL_MIN)
+        # It isn't 2000 since there are some scores of 0.0
+        self.assertEqual(len(hits), 1993)
+
+    def test_threshold_tanimoto_search_fp_0_on_0(self):
+        zeros = ("0000\tfirst\n"
+                 "0010\tsecond\n"
+                 "0000\tthird\n")
+        f = StringIO(zeros)
+        reader = self._open(f)
+        hits = reader.threshold_tanimoto_search_fp("0000".decode("hex"), threshold=0.0)
+        self.assertEquals(self.hit_order(hits),
+                          self.hit_order([ ("first", 0.0), ("second", 0.0), ("third", 0.0) ]))
+
+    def test_threshold_tanimoto_search_fp_0(self):
+        reader = self._open(CHEBI_TARGETS)
+        hits = reader.threshold_tanimoto_search_fp("000000000000000000000000000000000000000000".decode("hex"),
+                                                   threshold = 1./1000)
+        self.assertEqual(hits, [])
+
 
     def test_threshold_tanimoto_search_fp_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
@@ -260,21 +319,38 @@ class CommonReaderAPI(object):
         targets = self._open(CHEBI_TARGETS)
         hits = targets.threshold_tanimoto_search_arena(QUERY_ARENA, threshold=0.7)
         self.assertEqual(map(len, hits), [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
-        self.assertEqual(hits[-1], [('CHEBI:15621', 0.8571428571428571), ('CHEBI:15882', 0.83333333333333337),
-                                     ('CHEBI:16008', 0.80000000000000004), ('CHEBI:16193', 0.80000000000000004),
-                                     ('CHEBI:16207', 1.0), ('CHEBI:17231', 0.76923076923076927),
-                                     ('CHEBI:17450', 0.75)])
+        self.assertEqual(self.hit_order(hits[-1]),
+                         self.hit_order([('CHEBI:15621', 0.8571428571428571), ('CHEBI:15882', 0.83333333333333337),
+                                         ('CHEBI:16008', 0.80000000000000004), ('CHEBI:16193', 0.80000000000000004),
+                                         ('CHEBI:16207', 1.0), ('CHEBI:17231', 0.76923076923076927),
+                                         ('CHEBI:17450', 0.75)]))
 
 
     def test_threshold_tanimoto_arena_set_threshold(self):
         targets = self._open(CHEBI_TARGETS)
         hits = targets.threshold_tanimoto_search_arena(QUERY_ARENA, threshold=0.9)
         self.assertEqual(map(len, hits), [0, 97, 7, 1, 0, 1, 1, 0, 1, 1])
-        self.assertEqual(hits[2], [('CHEBI:15895', 1.0), ('CHEBI:16165', 1.0),
-                                    ('CHEBI:16292', 0.93333333333333335), ('CHEBI:16392', 0.93333333333333335),
-                                    ('CHEBI:17100', 0.93333333333333335), ('CHEBI:17242', 0.90000000000000002),
-                                    ('CHEBI:17464', 1.0)])
+        self.assertEqual(self.hit_order(hits[2]),
+                         self.hit_order([('CHEBI:15895', 1.0), ('CHEBI:16165', 1.0),
+                                         ('CHEBI:16292', 0.93333333333333335), ('CHEBI:16392', 0.93333333333333335),
+                                         ('CHEBI:17100', 0.93333333333333335), ('CHEBI:17242', 0.90000000000000002),
+                                         ('CHEBI:17464', 1.0)]))
 
+    def test_threshold_tanimoto_search_0_on_0(self):
+        zeros = ("0000\tfirst\n"
+                 "0010\tsecond\n"
+                 "0000\tthird\n")
+        query_arena = next(chemfp.open(StringIO(zeros)).iter_arenas())
+        self.assertEqual(query_arena.ids, ["first", "second", "third"])
+
+        targets = self._open(StringIO(zeros))
+        hits = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.0)
+        self.assertEquals(map(len, hits), [3, 3, 3])
+
+        targets = self._open(StringIO(zeros))
+        hits = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.000001)
+        self.assertEquals(map(len, hits), [0, 1, 0])
+        
 
     def test_threshold_tanimoto_search_arena_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
@@ -403,6 +479,7 @@ class CommonReaderAPI(object):
         
     
 class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
+    hit_order = lambda x: x
     _open = staticmethod(chemfp.open)
 
     def test_row_iteration(self):
@@ -438,16 +515,79 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
 
 class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
+    hit_order = lambda x: x
     # Hook to handle the common API
     def _open(self, name):
         return chemfp.load_fingerprints(name, reorder=False)
 
+# Use this to verify the other implementations
 from chemfp.slow import SlowFingerprints
 class TestSlowFingerprints(unittest2.TestCase, CommonReaderAPI):
+    hit_order = lambda x: x
     def _open(self, name):
         reader = chemfp.open(name)
         return SlowFingerprints(reader.metadata, list(reader))
-    
+
+class TestLoadFingerprintsOrdered(unittest2.TestCase, CommonReaderAPI):
+    hit_order = sorted
+    # Hook to handle the common API
+    def _open(self, name):
+        return chemfp.load_fingerprints(name, reorder=True)
+
+    def test_iteration(self):
+        expected = [("CHEBI:776", "00000000000000008200008490892dc00dc4a7d21e".decode("hex")),
+                    ("CHEBI:1148", "000000000000200080000002800002040c0482d608".decode("hex")),
+                    ("CHEBI:1734", "0000000000000221000800111601017000c1a3d21e".decode("hex")),
+                    ("CHEBI:1895", "00000000000000000000020000100000000400951e".decode("hex")),
+                    ("CHEBI:2303", "0000000002001021820a00011681015004cdb3d21e".decode("hex"))]
+        found = []
+        for x in self._open(CHEBI_TARGETS):
+            try:
+                found.append(expected.index(x))
+            except ValueError:
+                pass
+        self.assertEquals(sorted(found), [0, 1, 2, 3, 4])
+        
+
+    def test_arena_is_ordered_by_popcount(self):
+        arena = self._open(CHEBI_TARGETS)
+        prev = 0
+        for id, fp in arena:
+            popcount = bitops.byte_popcount(fp)
+            self.assertTrue(prev <= popcount, (prev, popcount))
+            prev = popcount
+
+    def test_iter_arenas_default_size(self):
+        arena = self._open(CHEBI_TARGETS)
+        ids = [id for (id, fp) in arena]
+        for subarena in arena.iter_arenas():
+            self.assertEquals(len(subarena), 1000)
+            subids = [id for (id, fp) in subarena]
+            self.assertEquals(ids[:1000], subids)
+            del ids[:1000]
+        self.assertFalse(ids)
+
+    def test_iter_arenas_select_size(self):
+        arena = self._open(CHEBI_TARGETS)
+        ids = [id for (id, fp) in arena]
+        prev = 0
+        for subarena in arena.iter_arenas(100):
+            self._check_target_metadata(subarena.metadata)
+            self.assertEqual(len(subarena), 100)
+            subids = []
+            for id, fp in subarena:
+                subids.append(id)
+                popcount = bitops.byte_popcount(fp)
+                self.assertTrue(prev <= popcount, (prev, popcount))
+                prev = popcount
+            
+            self.assertEquals(ids[:100], subids)
+            del ids[:100]
+
+        self.assertFalse(ids)
+
+        
+        
 
 SDF_IDS = ['9425004', '9425009', '9425012', '9425015', '9425018',
            '9425021', '9425030', '9425031', '9425032', '9425033',
