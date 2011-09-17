@@ -239,8 +239,9 @@ int chemfp_count_tanimoto_arena(
     return 0;
   }
   /* Prevent overflow if someone uses a threshold of, say, 1E-80 */
+  /* (Not really needed unless you trap IEE 754 overflow errors) */
   if (threshold > 0.0 && threshold < 1.0/num_bits) {
-    threshold = 0.5/num_bits;
+    threshold = 0.5 / num_bits;
   }
   if ((target_start >= target_end) || threshold > 1.0) {
     for (query_index = query_start; query_index < query_end; query_index++) {
@@ -371,8 +372,9 @@ int chemfp_threshold_tanimoto_arena(
   }
 
   /* Prevent overflow if someone uses a threshold of, say, 1E-80 */
-  if (threshold < 1.0/num_bits) {
-    threshold = 0.0;
+  /* (Not really needed unless you trap IEE 754 overflow errors) */
+  if (threshold > 0.0 && threshold < 1.0/num_bits) {
+    threshold = 0.5 / num_bits;
   }
   if ((target_start >= target_end) || threshold > 1.0) {
     for (query_index = query_start; query_index < query_end; query_index++) {
