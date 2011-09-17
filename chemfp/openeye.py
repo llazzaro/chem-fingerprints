@@ -389,9 +389,13 @@ del _aromaticity_sorted, pair
 # If unspecified, use "openeye" (this is what OEChem does internally)
 _aromaticity_flavors[None] = _aromaticity_flavors["openeye"]   # Allow "None"
 
-def is_valid_format(format):
+def is_valid_format(filename, format):
+    format_name, compression = io.normalize_format(filename, format,
+                                                   default=("smi", ""))
+    if compression not in ("", ".gz"):
+        return False
     try:
-        _get_format_setter(format)
+        _get_format_setter(format_name + compression)
         return True
     except ValueError:
         return False
