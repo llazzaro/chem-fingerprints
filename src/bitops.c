@@ -271,7 +271,7 @@ double chemfp_byte_tanimoto(int len, const unsigned char *fp1,
   }
   /* Special case for when neither fingerprint has any bytes set */
   if (union_popcount == 0) {
-    return 1.0;
+    return 0.0;
   }
   return (intersect_popcount + 0.0) / union_popcount;  /* +0.0 to coerce to double */
 }
