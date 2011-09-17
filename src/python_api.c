@@ -956,28 +956,6 @@ static PyMethodDef chemfp_methods[] = {
   {"fps_knearest_search_free", fps_knearest_search_free, METH_VARARGS,
    "fps_knearest_search_free (TODO: document)"},
 
-
-#if 0
-  {"fps_tanimoto", fps_tanimoto, METH_VARARGS,
-   "Calculate Tanimoto scores against a block of FPS lines (TODO: document)"},
-  {"fps_tanimoto_count", fps_tanimoto_count, METH_VARARGS,
-   "Count Tanimoto scores (TODO: document)"},
-
-  {"fps_heap_init", fps_heap_init, METH_VARARGS, "init heap (TODO: document)"},
-  {"fps_heap_update_tanimoto", fps_heap_update_tanimoto, METH_VARARGS, 
-   "update heap (TODO: document)"},
-  {"fps_heap_finish_tanimoto", fps_heap_finish_tanimoto, METH_VARARGS,
-   "finish heap (TODO: document)"},
-
-  {"nlargest_tanimoto_block", nlargest_tanimoto_block, METH_VARARGS,
-   "nlargest_tanimoto_block (TODO: document)"},
-  {"hex_nlargest_tanimoto_block", hex_nlargest_tanimoto_block, METH_VARARGS,
-   "hex_nlargest_tanimoto_block (TODO: document)"},
-
-  {"intersect_popcount_count", intersect_popcount_count, METH_VARARGS,
-   "intersect_popcount_count (TODO: document)"},
-#endif
-
   {"count_tanimoto_arena", count_tanimoto_arena, METH_VARARGS,
    "count_tanimoto_arena (TODO: document)"},
 
