@@ -41,7 +41,7 @@ class ChemFPError(Exception):
 class ParseError(ChemFPError):
     pass
 
-def read_structure_fingerprints(type, source=None, format=None, id_tag=None):
+def read_structure_fingerprints(type, source=None, format=None, id_tag=None, errors="strict"):
     """Read structures from `source` and return the corresponding ids and fingerprints
 
     This returns a FingerprintReader which can be iterated over to get
@@ -112,7 +112,7 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None):
         structure_fingerprinter = types.parse_type(metadata.type)
     except ValueError, err:
         raise ValueError("Cannot parse fingerprint type %r: %s" % (metadata.type, err))
-    return structure_fingerprinter.read_structure_fingerprints(metadata, source, format, id_tag)
+    return structure_fingerprinter.read_structure_fingerprints(metadata, source, format, id_tag, errors)
     
 # Low-memory, forward-iteration, or better
 def open(source, format=None):
