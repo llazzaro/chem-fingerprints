@@ -31,7 +31,7 @@ def ignore_parse_errors(msg, location):
     pass
 
 def report_parse_errors(msg, location):
-    sys.stderr.write("ERROR: %s %s\n" % (msg, location.where()))
+    sys.stderr.write("ERROR: %s %s. Skipping.\n" % (msg, location.where()))
 
 def strict_parse_errors(msg, location):
     raise SDFParseError(msg + " " + location.where(),
@@ -44,11 +44,10 @@ _parse_error_handlers = {
     }
 
 def get_parse_error_handler(name_or_callable="strict"):
-    if name_or_callable is None:
-        return strict_parse_errors
-    if isinstance(name_or_callable, basestring):
+    try:
         return _parse_error_handlers[name_or_callable]
-    return name_or_callable
+    except KeyError:
+        raise ValueError("'errors' must be one of %s" % ", ".join(sorted(_parse_error_handlers)))
 
 
 
@@ -141,7 +140,10 @@ def iter_sdf_records(fileobj, errors="strict", location=None):
         location = FileLocation()
     if location.name is None:
         location.name = getattr(fileobj, "name", None)
-    error = get_parse_error_handler(errors)
+    if isinstance(errors, basestring):
+        error = get_parse_error_handler(errors)
+    else:
+        error = errors
     pushback_buffer = ''
     records = None
     while 1:
@@ -241,7 +243,7 @@ def _find_tag_data(rec, tag_substr):
 
 # These are not legal tag characters (while others may be against the
 # SD file spec, these will break the parser)
-_bad_char = re.compile(r"[<>\n\r\t]")
+_bad_char = re.compile(r"[<>\n\r\t\0]")
 
 def iter_two_tags(sdf_iter, tag1, tag2):
     """Iterate over SD records to get the data lines for tag1 and tag2
