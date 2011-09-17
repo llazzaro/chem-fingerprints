@@ -272,12 +272,13 @@ def import_decoder(path):
     # I've imported as deep as possible.
     # Now start from the top and work down with getattr calls
     obj = __import__(terms[0], level=0)
-    for subattr in terms[1:]:
+    for i, subattr in enumerate(terms[1:]):
        obj = getattr(obj, subattr, None)
        if obj is None:
+           failure_path = ".".join(terms[:i+2])
            raise TypeError(("Unable to import a decoder: "
-                            "stopped at %(attr)r in %(path)r") %
-                           dict(attr=subattr, path=path))
+                            "Could not find %(attr)r from %(path)r") %
+                           dict(attr=failure_path, path=path))
 
     return obj
 
