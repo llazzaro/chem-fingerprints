@@ -428,10 +428,12 @@ int chemfp_threshold_tanimoto_arena(
 	  *result_scores++ = 0.0;
 	}
 	count = (target_index - target_start);
-	result_offset += count;
-	num_cells -= count;
-	*result_offsets++ = result_offset;
+      } else {
+	count = 0;
       }
+      result_offset += count;
+      num_cells -= count;
+      *result_offsets++ = result_offset;
       continue;
     }
     /* Figure out which fingerprints to search */
