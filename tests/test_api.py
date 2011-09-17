@@ -78,19 +78,19 @@ class CommonReaderAPI(object):
         self.assertEqual(num, 154)
 
     def test_iteration(self):
-        assert not self.reorder, "not appropriate for sorted arenas"
+        assert self.hit_order is not sorted, "not appropriate for sorted arenas"
         reader = iter(self._open(CHEBI_TARGETS))
         fields = [next(reader) for i in range(5)]
-        self.assertEqual(X(fields), 
-                          [("CHEBI:776", "00000000000000008200008490892dc00dc4a7d21e".decode("hex")),
-                           ("CHEBI:1148", "000000000000200080000002800002040c0482d608".decode("hex")),
-                           ("CHEBI:1734", "0000000000000221000800111601017000c1a3d21e".decode("hex")),
-                           ("CHEBI:1895", "00000000000000000000020000100000000400951e".decode("hex")),
-                           ("CHEBI:2303", "0000000002001021820a00011681015004cdb3d21e".decode("hex"))])
+        self.assertEqual(fields, 
+                         [("CHEBI:776", "00000000000000008200008490892dc00dc4a7d21e".decode("hex")),
+                          ("CHEBI:1148", "000000000000200080000002800002040c0482d608".decode("hex")),
+                          ("CHEBI:1734", "0000000000000221000800111601017000c1a3d21e".decode("hex")),
+                          ("CHEBI:1895", "00000000000000000000020000100000000400951e".decode("hex")),
+                          ("CHEBI:2303", "0000000002001021820a00011681015004cdb3d21e".decode("hex"))])
 
       
     def test_iter_arenas_default_size(self):
-        assert not self.reorder, "not appropriate for sorted arenas"
+        assert self.hit_order is not sorted, "not appropriate for sorted arenas"
         reader = self._open(CHEBI_TARGETS)
         count = 0
         for arena in reader.iter_arenas():
@@ -107,7 +107,7 @@ class CommonReaderAPI(object):
                           ['CHEBI:17578', 'CHEBI:17579', 'CHEBI:17580', 'CHEBI:17581', 'CHEBI:17582'])
 
     def test_iter_arenas_select_size(self):
-        assert not self.reorder, "not appropriate for sorted arenas"
+        assert self.hit_order is not sorted, "not appropriate for sorted arenas"
         reader = self._open(CHEBI_TARGETS)
         count = 0
         for arena in reader.iter_arenas(100):
@@ -120,6 +120,32 @@ class CommonReaderAPI(object):
         self.assertEqual(count, 20)
         self.assertEqual(arena.ids[:5],
                           ['CHEBI:17457', 'CHEBI:17458', 'CHEBI:17459', 'CHEBI:17460', 'CHEBI:17464'])
+
+    def test_read_from_file_object(self):
+        f = StringIO("""\
+#FPS1
+#num-bits=8
+F0\tsmall
+""")
+        reader = self._open(f)
+        self.assertEqual(sum(1 for x in reader), 1)
+        self.assertEqual(reader.metadata.num_bits, 8)
+
+    def test_read_from_empty_file_object(self):
+        f = StringIO("")
+        reader = self._open(f)
+        self.assertEqual(sum(1 for x in reader), 0)
+        self.assertEqual(reader.metadata.num_bits, 0)
+
+    def test_read_from_header_only_file_object(self):
+        f = StringIO("""\
+#FPS1
+#num_bits=100
+""")
+        reader = self._open(f)
+        self.assertEqual(sum(1 for x in reader), 0)
+        self.assertEqual(reader.metadata.num_bits, 100)
+
 
     #
     # Count tanimoto hits using a fingerprint
@@ -479,7 +505,7 @@ class CommonReaderAPI(object):
         
     
 class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
-    hit_order = lambda x: x
+    hit_order = staticmethod(lambda x: x)
     _open = staticmethod(chemfp.open)
 
     def test_row_iteration(self):
@@ -515,7 +541,7 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
 
 
 class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
-    hit_order = lambda x: x
+    hit_order = staticmethod(lambda x: x)
     # Hook to handle the common API
     def _open(self, name):
         return chemfp.load_fingerprints(name, reorder=False)
@@ -523,13 +549,13 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
 # Use this to verify the other implementations
 from chemfp.slow import SlowFingerprints
 class TestSlowFingerprints(unittest2.TestCase, CommonReaderAPI):
-    hit_order = lambda x: x
+    hit_order = staticmethod(lambda x: x)
     def _open(self, name):
         reader = chemfp.open(name)
         return SlowFingerprints(reader.metadata, list(reader))
 
 class TestLoadFingerprintsOrdered(unittest2.TestCase, CommonReaderAPI):
-    hit_order = sorted
+    hit_order = staticmethod(sorted)
     # Hook to handle the common API
     def _open(self, name):
         return chemfp.load_fingerprints(name, reorder=True)
