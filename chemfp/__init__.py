@@ -194,6 +194,8 @@ def load_fingerprints(reader, metadata=None, reorder=True):
     """
     if isinstance(reader, basestring):
         reader = open(reader)
+    elif hasattr(reader, "read"):
+        reader = open(reader)
     if metadata is None:
         metadata = reader.metadata
 
