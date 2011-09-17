@@ -1,4 +1,4 @@
-"Create OpenBabel fingerprints"
+"Create Open Babel fingerprints"
 
 # Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 # See the contents of "__init__.py" for full license details.
