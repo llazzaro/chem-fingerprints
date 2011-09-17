@@ -241,7 +241,7 @@ def read_structures(source, format=None, id_tag=None, errors="strict"):
         if format is None:
             raise ValueError("Unknown structure filename extension: %r" % (source,))
         else:
-            raise ValueError("Unsupported format: %r" % (format_name,))
+            raise ValueError("Unknown structure format %r" % (format_name,))
         
 
 ########### The topological fingerprinter
@@ -282,15 +282,20 @@ _fingerprint_decoders = {"minPath": int,
                          "fpSize": int,
                          "nBitsPerHash": int,
                          "useHs": int}
+_fingerprint_defaults = {"minPath": 1,
+                         "maxPath": 7,
+                         "fpSize": 2048,
+                         "nBitsPerHash": 4,
+                         "useHs": 1}
 
 def decode_fingerprint_parameters(parameters):
-    assert len(parameters) == len(_fingerprint_decoders)
-    kwargs = {}
-    for name, decoder in _maccs_decoders.items():
-        value = parameters[name]
-        kwargs[name] = decoder(value)
-    return kwargs
-
+    fingerprinter_kwargs = _fingerprint_defaults.copy()
+    for name, value in parameters:
+        if name not in _fingerprint_decoders:
+            raise ValueError("Unknown RDKit-Fingerprint parameter %r" % (name,))
+        decoder = _fingerprint_decoders[name]
+        fingerprinter_kwargs[name] = decoder(value)
+    return fingerprinter_kwargs
 
 ########### The MACCS fingerprinter
 
