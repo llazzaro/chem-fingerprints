@@ -302,6 +302,7 @@ class CommonReaderAPI(object):
         reader = self._open(CHEBI_TARGETS)
         hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    k = 3, threshold = 0.7)
+        self.assertEquals(len(hits), 3)
         if hits[1][0] == "CHEBI:15483":
             self.assertEqual(hits, [('CHEBI:15523', 1.0), ('CHEBI:15483', 0.98913043478260865),
                                     ('CHEBI:15480', 0.98913043478260865)])
