@@ -1,17 +1,24 @@
 import heapq
-from . import bitops
+import operator
 
-def tanimoto_count_fp(query_fp, targets, threshold):
+from . import bitops
+from . import Fingerprints
+
+def count_tanimoto_hits_fp(query_fp, targets, threshold):
     return sum(1 for target in targets
                    if bitops.byte_tanimoto(query_fp, target[1]) >= threshold)
 
-def iter_tanimoto_count(queries, targets, threshold):
-    for query_id, query_fp in queries:
-        yield query_id, sum(1 for target in targets
-                               if bitops.byte_tanimoto(query_fp, target[1]) >= threshold)
+## def iter_count_tanimoto_hits(queries, targets, threshold):
+##     for query_id, query_fp in queries:
+##         yield query_id, sum(1 for target in targets
+##                                if bitops.byte_tanimoto(query_fp, target[1]) >= threshold)
 
-def tanimoto_count(queries, targets, threshold):
-    return list(iter_tanimoto_count(queries, targets, threshold))
+def count_tanimoto_hits(queries, targets, threshold):
+    results = []
+    for query_id, query_fp in queries:
+        results.append(sum(1 for target in targets
+                           if bitops.byte_tanimoto(query_fp, target[1]) >= threshold))
+    return results
 
 def tanimoto_count_once(queries, targets, threshold):
     results = [0] * len(queries)
@@ -24,7 +31,7 @@ def tanimoto_count_once(queries, targets, threshold):
 
 ##########
 
-def tanimoto_search_fp(query_fp, targets, threshold):
+def threshold_tanimoto_search_fp(query_fp, targets, threshold):
     results = []
     for target_id, target_fp in targets:
         score = bitops.byte_tanimoto(query_fp, target_fp)
@@ -32,12 +39,12 @@ def tanimoto_search_fp(query_fp, targets, threshold):
             results.append( (target_id, score) )
     return results
 
-def tanimoto_search_iter(queries, targets, threshold):
+def iter_threshold_tanimoto_search(queries, targets, threshold):
     for query_id, query_fp in queries:
-        yield (query_id, tanimoto_search_fp(query_fp, targets, threshold))
+        yield threshold_tanimoto_search_fp(query_fp, targets, threshold)
 
-def tanimoto_search(queries, targets, threshold):
-    return list(tanimoto_search_iter(queries, targets, threshold))
+def threshold_tanimoto_search(queries, targets, threshold):
+    return list(iter_threshold_tanimoto_search(queries, targets, threshold))
 
 def tanimoto_search_all(queries, targets, threshold):
     results = [[] for i in xrange(len(queries))]
@@ -53,16 +60,15 @@ def tanimoto_search_all(queries, targets, threshold):
 
 
 def knearest_tanimoto_search_fp(query_fp, targets, k, threshold):
-    return heapq.nlargest(k, tanimoto_search_fp(query_fp, targets, threshold),
+    return heapq.nlargest(k, threshold_tanimoto_search_fp(query_fp, targets, threshold),
                           key = operator.itemgetter(1))
 
-def knearest_tanimoto_search_iter(queries, targets, k, threshold):
-    for id, hits in tanimoto_search_iter(queries, targets, threshold):
-        print id, hits
-        yield id, heapq.nlargest(k, hits, key = operator.itemgetter(1))
+def iter_knearest_tanimoto_search(queries, targets, k, threshold):
+    for hits in iter_threshold_tanimoto_search(queries, targets, threshold):
+        yield heapq.nlargest(k, hits, key = operator.itemgetter(1))
 
 def knearest_tanimoto_search(queries, targets, k, threshold):
-    return list(knearest_tanimoto_search_iter(queries, targets, k, threshold))
+    return list(iter_knearest_tanimoto_search(queries, targets, k, threshold))
 
 # I am not going to optimize this.
 def knearest_tanimoto_search_all(queries, targets, k, threshold):
@@ -70,3 +76,31 @@ def knearest_tanimoto_search_all(queries, targets, k, threshold):
     for i, (id, hits) in enumerate(results):
         results[i] = (id, heapq.nlargest(k, hits, key = operator.itemgetter(1)))
     return results
+
+class SlowFingerprints(Fingerprints):
+    def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
+        if not (0.0 <= threshold <= 1.0): raise ValueError("threshold must between 0.0 and 1.0, inclusive")
+        return count_tanimoto_hits_fp(query_fp, self._id_fp_pairs, threshold)
+
+    def count_tanimoto_hits_arena(self, query_arena, threshold=0.7):
+        if not (0.0 <= threshold <= 1.0): raise ValueError("threshold must between 0.0 and 1.0, inclusive")
+        return count_tanimoto_hits(query_arena, self._id_fp_pairs, threshold)
+
+    def threshold_tanimoto_search_fp(self, fp, threshold=0.7):
+        if not (0.0 <= threshold <= 1.0): raise ValueError("threshold must between 0.0 and 1.0, inclusive")
+        return threshold_tanimoto_search_fp(fp, self._id_fp_pairs, threshold)
+
+    def threshold_tanimoto_search_arena(self, query_arena, threshold=0.7):
+        if not (0.0 <= threshold <= 1.0): raise ValueError("threshold must between 0.0 and 1.0, inclusive")
+        return threshold_tanimoto_search(query_arena, self._id_fp_pairs, threshold)
+
+    def knearest_tanimoto_search_fp(self, fp, k=3, threshold=0.7):
+        if k < 0: raise ValueError("k must be non-negative")
+        if not (0.0 <= threshold <= 1.0): raise ValueError("threshold must between 0.0 and 1.0, inclusive")
+        return knearest_tanimoto_search_fp(fp, self._id_fp_pairs, k, threshold)
+
+    def knearest_tanimoto_search_arena(self, query_arena, k=3, threshold=0.7):
+        if k < 0: raise ValueError("k must be non-negative")
+        if not (0.0 <= threshold <= 1.0): raise ValueError("threshold must between 0.0 and 1.0, inclusive")
+        return knearest_tanimoto_search(query_arena, self._id_fp_pairs, k, threshold)
+    
