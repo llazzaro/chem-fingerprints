@@ -160,6 +160,11 @@ class FPSReader(object):
     def knearest_tanimoto_search_arena(self, query_arena, k=3, threshold=0.7):
         return fps_search.knearest_tanimoto_search_all(query_arena, self, k, threshold)
 
+def _where(filename, lineno):
+    if filename is None:
+        return "line %d" % (lineno,)
+    else:
+        return "%r line %d" % (filename, lineno)
 
 # XXX Use Python's warning system
 def warn_to_stderr(filename, lineno, message):
@@ -213,9 +218,14 @@ def read_header(f, filename, warn=warn_to_stderr):
                 if line.rstrip() == "FPS1":
                     lineno += 1
                     continue
-                assert "=" not in line, line
-                
-            assert "=" in line, line
+
+            if line.startswith("x-") or line.startswith("X-"):
+                # Completely ignore the contents of 'experimental' lines
+                continue
+
+            if "=" not in line:
+                raise TypeError("header line must contain an '=': %r at %s" %
+                                (line, _where(filename, lineno)))
             key, value = line.split("=", 1)
             key = key.strip()
             value = value.strip()
@@ -253,5 +263,8 @@ def read_header(f, filename, warn=warn_to_stderr):
             lineno += 1
 
     # Reached the end of file. No fingerprint lines and nothing left to process.
-    return header, lineno, None
+    if metadata.num_bits is None:
+        metadata.num_bits = 0
+        metadata.num_bytes = 0
+    return metadata, lineno, None
 
