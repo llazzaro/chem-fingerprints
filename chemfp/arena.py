@@ -50,7 +50,7 @@ def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
 
 # Search results stored in a compressed sparse row form
 
-class SearchHits(object):
+class SearchResults(object):
     def __init__(self, offsets, indicies, scores, query_ids, target_ids):
         assert len(offsets) > 0
         self.offsets = offsets
@@ -81,12 +81,12 @@ class SearchHits(object):
                       scores[start:end])
             start = end
 
-    def iterhits():
+    def iter_hits(self):
         indicies = self.indicies
         scores = self.scores
         start = self.offsets[0]
         for end in self.offsets[1:]:
-            yield target_id, zip(indicies[start:end], scores[start:end])
+            yield zip(indicies[start:end], scores[start:end])
             start = end
 
 def threshold_tanimoto_search_fp_indicies(query_fp, target_arena, threshold):
@@ -126,8 +126,15 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
 
     offsets = (ctypes.c_int * (num_queries+1))()
     offsets[0] = 0
+    
+    product = num_queries*len(target_arena)
+    if product < 100:
+        num_rows = num_queries
+    else:
+        max_cells = min(10000, product // 4)
+        min_rows = max(2, max_cells // len(target_arena))
 
-    num_cells = min(100, num_queries) * len(target_arena)
+    num_cells = min_rows * len(target_arena)
     indicies = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
     
@@ -208,7 +215,7 @@ def _search(query_start, query_end, offsets, indicies, scores,
             add_rows, query_ids, target_ids):
     num_added = add_rows(query_start, 0)
     if num_added == query_end:
-        return SearchHits(offsets, indicies, scores, query_ids, target_ids)
+        return SearchResults(offsets, indicies, scores, query_ids, target_ids)
 
     query_start = query_start + num_added
     offset_start = num_added
@@ -225,9 +232,10 @@ def _search(query_start, query_end, offsets, indicies, scores,
         all_indicies[prev_last:] = indicies
         all_scores[prev_last:] = scores
 
+        offset_start += num_added
         query_start += num_added
 
-    return SearchHits(offsets, all_indicies, all_scores, query_ids, target_ids)
+    return SearchResults(offsets, all_indicies, all_scores, query_ids, target_ids)
 
 
 
