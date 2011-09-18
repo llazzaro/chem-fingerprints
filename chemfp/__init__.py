@@ -439,7 +439,7 @@ class Metadata(object):
         self.aromaticity = aromaticity
 
     def __repr__(self):
-        return "Metadata(num_bits={self.num_bits}, num_bytes={self.num_bytes}, software={self.software!r}, type={self.type!r}, sources={self.sources!r}, date={self.date!r}, aromaticity={self.aromaticity!r})".format(self=self)
+        return "Metadata(num_bits=%(num_bits)s, num_bytes=%(num_bytes)d, software=%(software)r, type=%(type)r, sources=%(sources)r, date=%(date)r aromaticity=%(aromaticity)r)" % self.__dict__
 
     def __str__(self):
         from cStringIO import StringIO
