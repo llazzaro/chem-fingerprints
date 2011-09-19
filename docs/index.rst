@@ -503,9 +503,9 @@ about the fingerprints. It comes from the header of the FPS file. You
 can view the metadata in Python repr format
 
     >>> reader.metadata
-    Metadata(num_bits=881, num_bytes=111, software=u'CACTVS/unknown', type
-    ='CACTVS-E_SCREEN/1.0 extended=2', sources=['Compound_014550001_014575
-    000.sdf.gz'], date='2011-09-14T12:10:34', aromaticity=None)
+    Metadata(num_bits=881, num_bytes=111, type='CACTVS-E_SCREEN/1.0 extend
+    ed=2', aromaticity=None, sources=['Compound_014550001_014575000.sdf.gz
+    '], software=u'CACTVS/unknown', date='2011-09-14T12:10:34')
 
 but I think it's easier to view it in string format, which matches the
 format of the FPS header
