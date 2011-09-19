@@ -147,7 +147,7 @@ _cached_fingerprinters = _CachedFingerprinters()
 # XXX Why are there two "Fingerprinter" classes?
 # XX Shouldn't they be merged?
 
-class _PatternFingerprinter(_rdkit.RDKitFingerprinter):
+class _PatternFingerprinter(rdkit._RDKitFingerprinter):
     software = SOFTWARE
     def __init__(self, kwargs):
         self._fingerprinter = _cached_fingerprinters[self._pattern_name]
