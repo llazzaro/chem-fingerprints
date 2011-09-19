@@ -129,7 +129,7 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     
     product = num_queries*len(target_arena)
     if product < 100:
-        num_rows = num_queries
+        min_rows = num_queries
     else:
         max_cells = min(10000, product // 4)
         min_rows = max(2, max_cells // len(target_arena))
