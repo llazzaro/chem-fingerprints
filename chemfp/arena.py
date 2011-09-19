@@ -1,10 +1,33 @@
+"""Algorithms and data structure for working with a FingerprintArena.
+
+NOTE: This module should not be used directly.
+
+A FingerprintArena stores the fingerprints as a contiguous byte
+string, called the `arena`. Each fingerprint takes `storage_size`
+bytes, which may be larger than `num_bytes` if the fingerprints have a
+specific memory alignment. The bytes for fingerprint i are
+  arena[i*storage_size:i*storage_size+num_bytes]
+Additional bytes must contain NUL bytes.
+
+The lookup for `ids[i]` contains the id for fingerprint `i`.
+
+A FingerprintArena has an optional `indicies` attribute. When
+available, it means that the arena fingerprints and corresponding ids
+are ordered by population count, and the fingerprints with popcount
+`p` start at index indicies[p] and end just before indicies[p+1].
+
+"""
+
 from __future__ import absolute_import
 
 import ctypes
 from cStringIO import StringIO
+import array
 
 from chemfp import FingerprintReader, check_fp_problems, check_metadata_problems
 import _chemfp
+
+__all__ = []
 
 def require_matching_fp_size(query_fp, target_arena):
     if len(query_fp) != target_arena.metadata.num_bytes:
@@ -51,6 +74,15 @@ def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
 # Search results stored in a compressed sparse row form
 
 class SearchResults(object):
+    """Contains the result of a Tanimoto threshold or k-nearest search
+
+    Each result contains a list of hits, where the hit is a
+    two-element tuple. If you iterate over the SearchResult then
+    you'll get the hits as (target_id, target_score) pairs.
+    tuples. If you iterate using the method `iter_hits()` then you'll
+    get the hits as (target_index, target_score) pairs.
+
+    """
     def __init__(self, offsets, indicies, scores, query_ids, target_ids):
         assert len(offsets) > 0
         self.offsets = offsets
@@ -60,18 +92,36 @@ class SearchResults(object):
         self.target_ids = target_ids
         
     def __len__(self):
+        """Number of search results"""
         return len(self.offsets)-1
 
     def size(self, i):
+        """The number of hits for result at position i
+
+        :param i: index into the search results
+        :type i: int
+        :returns: int
+        
+        """
+        i = xrange(len(self.offsets)-1)[i]  # Use this trick to support negative index lookups
         return self.offsets[i+1]-self.offsets[i]
     
     def __getitem__(self, i):
+        """The list of hits for result at position i
+
+        Each hit contains a (id, score) tuple.
+        """
         i = xrange(len(self.offsets)-1)[i]  # Use this trick to support negative index lookups
         start, end = self.offsets[i:i+2]
         ids = self.target_ids
         return zip((ids[idx] for idx in self.indicies[start:end]), self.scores[start:end])
 
     def __iter__(self):
+        """Iterate over the named hits for each result
+
+        Each term is a list of hits. A hit contains (id, score) tuples.
+        The order of the hits depends on the search algorithm.
+        """
         target_ids = self.target_ids
         indicies = self.indicies
         scores = self.scores
@@ -82,6 +132,11 @@ class SearchResults(object):
             start = end
 
     def iter_hits(self):
+        """Iterate over the indexed hits for each result
+
+        Each term is a list of hits. A hit contains (index, score) tuples.
+        The order of the hits depends on the search algorithm.
+        """
         indicies = self.indicies
         scores = self.scores
         start = self.offsets[0]
@@ -241,6 +296,7 @@ def _search(query_start, query_end, offsets, indicies, scores,
 
 
 class FingerprintLookup(object):
+    "This is an unpublished API and may be removed in the future"
     def __init__(self, fp_size, storage_size, arena):
         self._fp_size = fp_size
         self._storage_size = storage_size
@@ -264,6 +320,12 @@ class FingerprintLookup(object):
         return self._arena[start_offset:start_offset+self._fp_size]
 
 class FingerprintArena(FingerprintReader):
+    """Stores fingerprints in a contiguous block of memory
+
+    The only public members are:
+       metadata - `Metadata` about the fingerprints
+       ids - list of identifiers, ordered by position
+    """
     def __init__(self, metadata, storage_size, arena, popcount_indicies, ids,
                  start=0, end=None):
         if metadata.num_bits is None:
@@ -288,9 +350,11 @@ class FingerprintArena(FingerprintReader):
         self._range_check = xrange(end-start)
 
     def __len__(self):
+        """Number of fingerprint records in the FingerprintArena"""
         return self.end - self.start
 
     def __getitem__(self, i):
+        """Return the (id, fingerprint) at position i"""
         i = self._range_check[i]
         arena_i = i + self.start
         start_offset = arena_i * self.storage_size
@@ -299,6 +363,7 @@ class FingerprintArena(FingerprintReader):
 
 
     def save(self, destination):
+        """Save the arena contents to the given filename or file object"""
         from . import io
         need_close = False
         if isinstance(destination, basestring):
@@ -317,9 +382,11 @@ class FingerprintArena(FingerprintReader):
                 output.close()
                 
     def reset(self):
+        """This method is not documented"""
         pass
 
     def __iter__(self):
+        """Iterate over the (id, fingerprint) contents of the arena"""
         storage_size = self.storage_size
         if not storage_size:
             return
@@ -330,6 +397,20 @@ class FingerprintArena(FingerprintReader):
             yield id, arena[start_offset:start_offset+target_fp_size]
 
     def iter_arenas(self, arena_size = 1000):
+        """iterate through `arena_size` fingerprints at a time
+
+        This iterates through the fingerprints `arena_size` at a time,
+        yielding a FingerprintArena for each group. Working with
+        arenas is often faster than processing one fingerprint at a
+        time, and more memory efficient than processing all
+        fingerprints at once.
+
+        If arena_size=None then this makes an iterator containing
+        a single arena containing all of the input.
+        
+        :param arena_size: The number of fingerprints to put into an arena.
+        :type arena_size: positive integer, or None
+        """
         if arena_size is None:
             yield self
             return
@@ -344,21 +425,103 @@ class FingerprintArena(FingerprintReader):
             start = end
 
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
+        """Count the fingerprints which are similar enough to the query fingerprint
+
+        Return the number of fingerprints in this arena which are
+        at least `threshold` similar to the query fingerprint `query_fp`.
+
+        :param query_fp: query fingerprint
+        :type query_fp: byte string
+        :param threshold: minimum similarity threshold (default: 0.7)
+        :type threshold: float between 0.0 and 1.0, inclusive
+        :returns: integer count
+        """
         return count_tanimoto_hits_fp(query_fp, self, threshold)
 
     def count_tanimoto_hits_arena(self, query_arena, threshold=0.7):
+        """Count the fingerprints which are similar enough to each query fingerprint
+
+        For each fingerprint in the `query_arena`, count the number of
+        fingerprints in this arena with Tanimoto similarity of at
+        least `threshold`. The resulting list order is the same as the
+        query fingerprint order.
+        
+        :param query_fp: query arena
+        :type query_fp: FingerprintArena
+        :param threshold: minimum similarity threshold (default: 0.7)
+        :type threshold: float between 0.0 and 1.0, inclusive
+        :returns: list of integer counts
+        """
         return count_tanimoto_hits_arena(query_arena, self, threshold)
 
     def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
+        """Find the fingerprints which are similar enough to the query fingerprint
+
+        Find all of the fingerprints in this arena which are at least
+        `threshold` similar to the query fingerprint `query_fp`.
+        The hits are returned as a list containing (id, score) tuples
+        in arbitrary order.
+        
+        :param query_fp: query fingerprint
+        :type query_fp: byte string
+        :param threshold: minimum similarity threshold (default: 0.7)
+        :type threshold: float between 0.0 and 1.0, inclusive
+        :returns: list of (int, score) tuples
+        """
         return threshold_tanimoto_search_fp(query_fp, self, threshold)
 
     def threshold_tanimoto_search_arena(self, query_arena, threshold=0.7):
+        """Find the fingerprints which are similar to each of the query fingerprints
+
+        For each fingerprint in the `query_arena`, find all of the
+        fingerprints in this arena which are at least `threshold`
+        similar. The hits are returned as a `SearchResults` instance.
+        
+        :param query_arena: query arena
+        :type query_arena: FingerprintArena
+        :param threshold: minimum similarity threshold (default: 0.7)
+        :type threshold: float between 0.0 and 1.0, inclusive
+        :returns: SearchResults
+        """
         return threshold_tanimoto_search_arena(query_arena, self, threshold)
 
     def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
+        """Find the k-nearest fingerprints which are similar to the query fingerprint
+
+        Find the `k` fingerprints in this arena which are most similar
+        to the query fingerprint `query_fp` and which are at least `threshold`
+        similar to the query. The hits are returned as a list of
+        (id, score) tuples sorted with the highest similarity first.
+        Ties are broken arbitrarily.
+
+        :param query_fp: query fingerpring
+        :type query_fp: byte string
+        :param k: number of nearest neighbors to find (default: 3)
+        :type k: positive integer
+        :param threshold: minimum similarity threshold (default: 0.7)
+        :type threshold: float between 0.0 and 1.0, inclusive
+        :returns: SearchResults
+        """
         return knearest_tanimoto_search_fp(query_fp, self, k, threshold)
 
     def knearest_tanimoto_search_arena(self, query_arena, k=3, threshold=0.7):
+        """Find the k-nearest fingerprint which are similar to each of the query fingerprints
+
+        For each fingerprint in the `query_arena`, find the `k`
+        fingerprints in this arena which are most similar and which
+        are at least `threshold` similar to the query fingerprint.
+        The hits are returned as a SearchResult where the hits are
+        sorted with the highest similarity first. Ties are broken
+        arbitrarily.
+        
+        :param query_arena: query arena
+        :type query_arena: FingerprintArena
+        :param k: number of nearest neighbors to find (default: 3)
+        :type k: positive integer
+        :param threshold: minimum similarity threshold (default: 0.7)
+        :type threshold: float between 0.0 and 1.0, inclusive
+        :returns: SearchResult
+        """
         return knearest_tanimoto_search_arena(query_arena, self, k, threshold)
 
 
@@ -366,7 +529,6 @@ class ChemFPOrderedPopcount(ctypes.Structure):
     _fields_ = [("popcount", ctypes.c_int),
                 ("index", ctypes.c_int)]
 
-import array
 def reorder_fingerprints(fingerprints):
     ordering = (ChemFPOrderedPopcount*len(fingerprints))()
     popcounts = array.array("i", (0,)*(fingerprints.metadata.num_bits+1))
