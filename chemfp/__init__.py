@@ -32,9 +32,6 @@ import os
 import __builtin__
 import itertools
 
-_K = 3
-_THRESHOLD = 0.7
-
 class ChemFPError(Exception):
     pass
 
@@ -204,7 +201,7 @@ def load_fingerprints(reader, metadata=None, reorder=True):
 
 ##### High-level search interfaces
 
-def count_tanimoto_hits(queries, targets, threshold=_THRESHOLD, arena_size=100):
+def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     """Count the number of targets within `threshold` of each query term
 
     For each query in `queries`, count the number of targets in `targets`
@@ -250,7 +247,7 @@ def count_tanimoto_hits(queries, targets, threshold=_THRESHOLD, arena_size=100):
             yield item
     
 
-def threshold_tanimoto_search(queries, targets, threshold=_THRESHOLD, arena_size=100):
+def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
     """Find all targets within `threshold` of each query term
 
     For each query in `queries`, find all the targets in `targets` which
@@ -299,7 +296,7 @@ def threshold_tanimoto_search(queries, targets, threshold=_THRESHOLD, arena_size
         for item in zip(query_arena.ids, results):
             yield item
 
-def knearest_tanimoto_search(queries, targets, k=_K, threshold=_THRESHOLD, arena_size=100):
+def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
     """Find the k-nearest targets within `threshold` of each query term
 
     For each query in `queries`, find the k-nearest of all the targets

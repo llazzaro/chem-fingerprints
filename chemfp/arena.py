@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import ctypes
 from cStringIO import StringIO
 
-from chemfp import _THRESHOLD, _K, FingerprintReader, check_fp_problems, check_metadata_problems
+from chemfp import FingerprintReader, check_fp_problems, check_metadata_problems
 import _chemfp
 
 def require_matching_fp_size(query_fp, target_arena):
@@ -343,22 +343,22 @@ class FingerprintArena(FingerprintReader):
                                    self.popcount_indicies, ids, start, end)
             start = end
 
-    def count_tanimoto_hits_fp(self, query_fp, threshold=_THRESHOLD):
+    def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
         return count_tanimoto_hits_fp(query_fp, self, threshold)
 
-    def count_tanimoto_hits_arena(self, query_arena, threshold=_THRESHOLD):
+    def count_tanimoto_hits_arena(self, query_arena, threshold=0.7):
         return count_tanimoto_hits_arena(query_arena, self, threshold)
 
-    def threshold_tanimoto_search_fp(self, query_fp, threshold=_THRESHOLD):
+    def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
         return threshold_tanimoto_search_fp(query_fp, self, threshold)
 
-    def threshold_tanimoto_search_arena(self, query_arena, threshold=_THRESHOLD):
+    def threshold_tanimoto_search_arena(self, query_arena, threshold=0.7):
         return threshold_tanimoto_search_arena(query_arena, self, threshold)
 
-    def knearest_tanimoto_search_fp(self, query_fp, k=_K, threshold=_THRESHOLD):
+    def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
         return knearest_tanimoto_search_fp(query_fp, self, k, threshold)
 
-    def knearest_tanimoto_search_arena(self, query_arena, k=_K, threshold=_THRESHOLD):
+    def knearest_tanimoto_search_arena(self, query_arena, k=3, threshold=0.7):
         return knearest_tanimoto_search_arena(query_arena, self, k, threshold)
 
 
