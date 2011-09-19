@@ -43,9 +43,9 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, err
 
     This returns a FingerprintReader which can be iterated over to get
     the id and fingerprint for each read structure record. The
-    fingerprint generated depends on the `type` string. Structures are
-    read from `source`, which can either be the structure filename, or
-    None to read from stdin.
+    fingerprint generated depends on the value of `type`. Structures
+    are read from `source`, which can either be the structure
+    filename, or None to read from stdin.
 
     `type` contains the information about how to turn a structure
     into a fingerprint. It can be a string or a metadata instance.
@@ -59,10 +59,8 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, err
     are determined by the filename's extension(s), defaulting to
     uncompressed SMILES if that is not possible. Otherwise `format` may
     be "smi" or "sdf" optionally followed by ".gz" or "bz2" to indicate
-    compression.
-
-    Note that some toolkits support additional structure formats,
-    which are available to fingerprint types which use those formats.
+    compression. The OpenBabel and OpenEye toolkits also support
+    additional formats.
     
     If `id_tag` is None, then the record id is based on the title
     field for the given format. If the input format is "sdf" then `id_tag`
@@ -119,18 +117,15 @@ def open(source, format=None):
     `source` is a string then it is treated as a filename. If `source`
     is None then fingerprints are read from stdin. Otherwise, `source`
     must be a Python file object supporting 'read' and 'readline'.
-    (It must also support seek() and tell() for 'FPSReader.reset()' to
-    work.)
 
-    If `format` is None then the format and compression type are
-    derived from the source filename, or the name attribute of the
-    source file object if it exists. If the source is None then the
-    stdin is assumed to be uncompressed data in "fps" format.
+    If `format` is None then the fingerprint file format and
+    compression type are derived from the source filename, or from the
+    name attribute of the source file object. If the source is None
+    then the stdin is assumed to be uncompressed data in "fps" format.
 
-    Use a `format` string to specify the format type and compression
     The supported format strings are:
 
-       fps, fps.gz, fps.bz2  - fingerprints are in FPS format
+       fps, fps.gz  - fingerprints are in FPS format
     
     The result is an FPSReader. Here's an example of printing the
     contents of the file.
@@ -139,13 +134,6 @@ def open(source, format=None):
         for id, fp in reader:
             print id, fp.encode("hex")
         
-    If the `source` supports tell() and seek() then this resets
-    the reader to the start of the file and finds the number of
-    fingerprints in the source which are within 0.7 of the query.
-
-        reader.reset()
-        print reader.tanimoto_count_fp(query_fp)
-
     :param source: The fingerprint source.
     :type source: A filename string, a file object, or None.
     :param format: The file format and optional compression.
@@ -173,16 +161,16 @@ def load_fingerprints(reader, metadata=None, reorder=True):
     identifers from `reader` and stores them into an in-memory data
     structure which supports fast similarity searches.
 
-    `reader` is either an iterator over (id, fingerprint) pairs or the name
-    of a file containing fingerprints. `metadata` contains the metadata metadata
-    for the arena. If not specified then `reader` must contain a "metadata"
-    attribute.
+    If `reader` is a string or implements "read" then the contents will be
+    parsed with the `chemfp.open` function. Otherwise it must support
+    iteration returning (id, fingerprint) pairs. `metadata` contains the
+    metadata the arena. If not specified then `reader.metadata` is used.
 
-    The loader may reorder the fingerprints by for better search performance.
+    The loader may reorder the fingerprints for better search performance.
     To prevent ordering, use `reorder`=False.
 
     :param reader: An iterator over (id, fingerprint) pairs
-    :type reader: FingerprintReader or any iterator
+    :type reader: a string, file object, or (id, fingerprint) iterator
     :param metadata: The metadata for the arena, if other than reader.metadata
     :type metadata: Metadata
     :param reorder: Specify if fingerprints should be reordered for better performance
@@ -220,11 +208,12 @@ def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     processing latency, while a large batch size has better overall
     performance. Use arena_size=None to process the input as a single batch.
 
-    Note: `targets` must implement reset() to support multiple batches,
-    and file-based targets, like an FPSReader, are slower than an Arena.
+    Note: the FPSReader may be used as a target but it can only process
+    one batch, and searching a FingerprintArena is faster if you have more
+    than a few queries.
 
     :param queries: The query fingerprints.
-    :type queries: FingerprintReader
+    :type queries: any fingerprint container
     :param targets: The target fingerprints.
     :type targets: FingerprintArena or the slower FPSReader
     :param threshold: The minimum score threshold.
@@ -252,8 +241,8 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
 
     For each query in `queries`, find all the targets in `targets` which
     are at least `threshold` similar to the query. This function returns
-    an iterator containing the (query_id, hits) pairs, where hits is a
-    list of (target_id, score) pairs.
+    an iterator containing the (query_id, hits) pairs. The hits are stored
+    as a list of (target_id, score) pairs.
 
     Example:
 
@@ -269,11 +258,12 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
     processing latency, while a large batch size has better overall
     performance. Use arena_size=None to process the input as a single batch.
 
-    Note: `targets` must implement reset() to support multiple batches,
-    and file-based targets, like an FPSReader, are slower than an Arena.
+    Note: the FPSReader may be used as a target but it can only process
+    one batch, and searching a FingerprintArena is faster if you have more
+    than a few queries.
 
     :param queries: The query fingerprints.
-    :type queries: FingerprintReader
+    :type queries: any fingerprint container
     :param targets: The target fingerprints.
     :type targets: FingerprintArena or the slower FPSReader
     :param threshold: The minimum score threshold.
@@ -297,16 +287,16 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
             yield item
 
 def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
-    """Find the k-nearest targets within `threshold` of each query term
+    """Find the `k`-nearest targets within `threshold` of each query term
 
-    For each query in `queries`, find the k-nearest of all the targets
+    For each query in `queries`, find the `k`-nearest of all the targets
     in `targets` which are at least `threshold` similar to the query. Ties
     are broken arbitrarily and hits with scores equal to the smallest value
     may have been omitted.
     
     This function returns an iterator containing the (query_id, hits) pairs,
     where hits is a list of (target_id, score) pairs, sorted so that the
-    highest scores are first.
+    highest scores are first. The order of ties is arbitrary.
 
     Example:
 
@@ -326,11 +316,12 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
     processing latency, while a large batch size has better overall
     performance. Use arena_size=None to process the input as a single batch.
 
-    Note: `targets` must implement reset() to support multiple batches,
-    and file-based targets, like an FPSReader, are slower than an Arena.
+    Note: the FPSReader may be used as a target but it can only process
+    one batch, and searching a FingerprintArena is faster if you have more
+    than a few queries.
 
     :param queries: The query fingerprints.
-    :type queries: FingerprintReader
+    :type queries: any fingerprint container
     :param targets: The target fingerprints.
     :type targets: FingerprintArena or the slower FPSReader
     :param k: The maximum number of nearest neighbors to find.
@@ -341,7 +332,7 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
     :type arena_size: positive integer, or None
     :returns:
       An iterator containing (query_id, hits) pairs, one for each query.
-      `hits` contains a list of (target_id, score) pairs.
+      `hits` contains a list of (target_id, score) pairs, sorted by score.
     """
     if arena_size == 1:
         for (query_id, query_fp) in queries:
@@ -356,6 +347,7 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
             yield item
 
 def check_fp_problems(fp, metadata):
+    "This interface is not documented and may change in the future"
     if len(fp) != metadata.num_bytes:
         msg = ("%%(fp)s fingerprint contains %d bytes but %%(metadata)s has %d byte fingerprints" %
                (len(fp), metadata.num_bytes))
@@ -363,6 +355,7 @@ def check_fp_problems(fp, metadata):
     return []
 
 def check_metadata_problems(metadata1, metadata2):
+    "This interface is not documented and may change in the future"
     messages = []
     compared_num_bits = False
     if (metadata1.num_bits is not None and metadata2.num_bits is not None):
@@ -409,8 +402,18 @@ def check_metadata_problems(metadata1, metadata2):
     return messages
 
 class Metadata(object):
-    def __init__(self, num_bits=None, num_bytes=None, software=None, type=None,
-                 sources=None, date=None, aromaticity=None):
+    """Store information about a set of fingerprints
+
+    num_bits = number of bits in the fingerprint
+    num_bytes = number of bytes in the fingerprint
+    type = fingerprint type
+    aromaticity = aromaticity model (only used with OEChem)
+    software = software used to make the fingerprints
+    sources = list of sources used to make the fingerprint
+    date = timestamp of when the fingerprints were made
+    """
+    def __init__(self, num_bits=None, num_bytes=None, type=None, aromaticity=None,
+                 software=None, sources=None, date=None):
         if num_bytes is None:
             if num_bits is None:
                 pass
@@ -423,8 +426,9 @@ class Metadata(object):
             
         self.num_bits = num_bits
         self.num_bytes = num_bytes
-        self.software = software
         self.type = type
+        self.aromaticity = aromaticity
+        self.software = software
         if sources is None:
             self.sources = []
         elif isinstance(sources, basestring):
@@ -433,10 +437,9 @@ class Metadata(object):
         else:
             self.sources = sources
         self.date = date
-        self.aromaticity = aromaticity
 
     def __repr__(self):
-        return "Metadata(num_bits=%(num_bits)s, num_bytes=%(num_bytes)d, software=%(software)r, type=%(type)r, sources=%(sources)r, date=%(date)r aromaticity=%(aromaticity)r)" % self.__dict__
+        return "Metadata(num_bits=%(num_bits)s, num_bytes=%(num_bytes)d, type=%(type)r, aromaticity=%(aromaticity)r, sources=%(sources)r, software=%(software)r, date=%(date)r)" % self.__dict__
 
     def __str__(self):
         from cStringIO import StringIO
@@ -446,10 +449,12 @@ class Metadata(object):
         return f.getvalue()
 
 class FingerprintReader(object):
-    """Base class for all chemfp objects holding fingerprint data
+    """Base class for all chemfp objects holding fingerprint records
 
     All FingerprintReader instances have a `metadata` attribute
-    containing a Metadata.
+    containing a Metadata and can be iteratated over to get the (id,
+    fingerprint) for each record.
+    
     """
     def __init__(self, metadata):
         """initialize with a Metadata instance"""
@@ -461,6 +466,8 @@ class FingerprintReader(object):
     
     def reset(self):
         """restart any internal iterators
+
+        NOTE: method is likely to be removed in the future
 
         This is only relevant for fingerprint containers which have
         only one iterator. An example is the FPSReader, which uses
@@ -509,8 +516,9 @@ class FingerprintReader(object):
 class FingerprintIterator(FingerprintReader):
     """A FingerprintReader for an iterator of (id, fingerprint) pairs
 
-    This is most used used when reading files or using containers
-    which only support forward iteration.
+    This is often used as an adapter so that something which reads
+    the id and fingerprint data can be used as a query source.
+    
     """
     def __init__(self, metadata, id_fp_iterator):
         """initialize with a Metadata instance and the (id, fingerprint) iterator"""
@@ -529,11 +537,12 @@ class FingerprintIterator(FingerprintReader):
         if not self._at_start:
             raise TypeError("It is not possible to reset a FingerprintIterator once it is in use")
 
-    
 class Fingerprints(FingerprintReader):
     """A FingerprintReader contining a list of (id, fingerprint) pairs
 
-    This class add implementations for len() and []
+    This is often used as an adapter so that something which contains
+    the id and fingerprint data can be used as a query source.
+
     """
     def __init__(self, metadata, id_fp_pairs):
         """initialize with a Metadata instance and the (id, fingerprint) pair list"""
@@ -554,3 +563,4 @@ class Fingerprints(FingerprintReader):
         return self._id_fp_pairs[i]
 
     # Question: should I support other parts of the list API?
+    # I almost certainly want to support slice syntax ilke x[:5]
