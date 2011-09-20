@@ -84,7 +84,7 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, err
         fp_reader = read_structure_fingerprints("OpenBabel-FP4/1", "example.sdf.gz")
         print "Each fingerprint has", fps.metadata.num_bits, "bits"
         for (id, fp) in fp_reader:
-           print id, repr(fp)
+           print id, fp.encode("hex")
 
 
     :param type: information about how to convert the input structure into a fingerprint
@@ -97,9 +97,6 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, err
     :param id_tag: The tag containing the record id. Example: 'ChEBI ID'.
             Only valid for SD files.
     :type id_tag: string, or None to use the default title for the given format
-    :param aromaticity: The aromaticity perception name (only valid for OEChem). Example: 'openeye'
-    :type aromaticity: string, or None for the toolkit's default aromaticity
-
     :returns: a FingerprintReader
 
     """ # ' # emacs cruft
@@ -411,13 +408,22 @@ def check_metadata_problems(metadata1, metadata2):
 class Metadata(object):
     """Store information about a set of fingerprints
 
-    num_bits = number of bits in the fingerprint
-    num_bytes = number of bytes in the fingerprint
-    type = fingerprint type
-    aromaticity = aromaticity model (only used with OEChem)
-    software = software used to make the fingerprints
-    sources = list of sources used to make the fingerprint
-    date = timestamp of when the fingerprints were made
+    The metadata attributes are:
+      num_bits:
+        number of bits in the fingerprint
+      num_bytes:
+        number of bytes in the fingerprint
+      type:
+        fingerprint type
+      aromaticity:
+        aromaticity model (only used with OEChem)
+      software:
+        software used to make the fingerprints
+      sources:
+        list of sources used to make the fingerprint
+      date:
+        timestamp of when the fingerprints were made
+
     """
     def __init__(self, num_bits=None, num_bytes=None, type=None, aromaticity=None,
                  software=None, sources=None, date=None):
@@ -464,7 +470,7 @@ class FingerprintReader(object):
     
     """
     def __init__(self, metadata):
-        """initialize with a Metadata instance"""
+        """Initialize with a Metadata instance"""
         self.metadata = metadata
 
     def __iter__(self):
