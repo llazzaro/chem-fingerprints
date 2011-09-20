@@ -25,6 +25,17 @@ meant for public use, along with some examples.
 Remember: chemfp cannot generate fingerprints from a structure file
 without a third-party chemistry toolkit.
 
+
+.. toctree::
+   :maxdepth: 2
+
+   installing
+   using-tools
+   tool-help
+   using-api
+   api
+   
+
 License and advertisement
 =========================
 
@@ -108,16 +119,6 @@ But fundamentally, future work will be guided by what people want, and
 by funding. `Let me know <mailto:dalke@dalkescientific.com>`_ in
 either case.
 
-
-.. toctree::
-   :maxdepth: 2
-
-   installing
-   using-tools
-   tool-help
-   using-api
-   api
-   
 
 
 Indices and tables
