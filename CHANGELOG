@@ -38,6 +38,11 @@ Improved docstring comments.
 
 Improved error reporting.
 
+Added error handling options "strict", "report", and "ignore."
+
+More comprehensive test suite (which, yes, caught several errors).
+
+
 What's new in 0.95
 ==================
 
