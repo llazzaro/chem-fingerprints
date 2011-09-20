@@ -4,7 +4,7 @@ All FPF software is distributed under the terms of "the MIT
 license" which follows:
 
 =====================================================================
-Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
+Copyright (c) 2010-2011 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -27,5 +27,3 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 =====================================================================
 
-The FPF specifications are distributed under the terms of the IETF
-license, which is ....?
