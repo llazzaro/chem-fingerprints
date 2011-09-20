@@ -22,14 +22,25 @@ open
 
 {{ chemfp.open|docstring }}
 
+.. _chemfp_load_fingerprints:
+
+load_fingerprints
+=================
+
+.. py:function:: load_fingerprints(reader[, metadata=None][, reorder=True])
+
+{{ chemfp.load_fingerprints|docstring}}
+
+
 .. _chemfp_read_structure_fingerprints:
 
 read_structure_fingerprints
 ===========================
 
-.. py:function:: load_fingerprints(reader[, metadata=None][, reorder=True])
+.. py:function:: read_structure_fingerprints(type[, source=None][, format=None][, id_tag=None][, errors="strict"]):
 
-{{ chemfp.load_fingerprints|docstring}}
+{{ chemfp.read_structure_fingerprints|docstring}}
+
 
 .. _chemfp_count_tanimoto_hits:
 

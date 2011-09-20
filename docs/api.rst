@@ -50,10 +50,10 @@ contents of the file::
 
 :returns: an FPSReader
 
-.. _chemfp_read_structure_fingerprints:
+.. _chemfp_load_fingerprints:
 
-read_structure_fingerprints
-===========================
+load_fingerprints
+=================
 
 .. py:function:: load_fingerprints(reader[, metadata=None][, reorder=True])
 
@@ -78,6 +78,68 @@ To prevent ordering, use reorder=False.
 :param reorder: Specify if fingerprints should be reordered for better performance
 :type reorder: True or False
 :returns: FingerprintArena
+
+
+.. _chemfp_read_structure_fingerprints:
+
+read_structure_fingerprints
+===========================
+
+.. py:function:: read_structure_fingerprints(type[, source=None][, format=None][, id_tag=None][, errors="strict"]):
+
+Read structures from 'source' and return the corresponding ids and fingerprints
+
+This returns a FingerprintReader which can be iterated over to get
+the id and fingerprint for each read structure record. The
+fingerprint generated depends on the value of 'type'. Structures
+are read from 'source', which can either be the structure
+filename, or None to read from stdin.
+
+'type' contains the information about how to turn a structure
+into a fingerprint. It can be a string or a metadata instance.
+String values look like "OpenBabel-FP2/1", "OpenEye-Path", and
+"OpenEye-Path/1 min_bonds=0 max_bonds=5 atype=DefaultAtom btype=DefaultBond".
+Default values are used for unspecified parameters. Use a
+Metadata instance with 'type' and 'aromaticity' values set
+in order to pass aromaticity information to OpenEye.
+
+If 'format' is None then the structure file format and compression
+are determined by the filename's extension(s), defaulting to
+uncompressed SMILES if that is not possible. Otherwise 'format' may
+be "smi" or "sdf" optionally followed by ".gz" or "bz2" to indicate
+compression. The OpenBabel and OpenEye toolkits also support
+additional formats.
+
+If 'id_tag' is None, then the record id is based on the title
+field for the given format. If the input format is "sdf" then 'id_tag'
+specifies the tag field containing the identifier. (Only the first
+line is used for multi-line values.) For example, ChEBI omits the
+title from the SD files and stores the id after the ">  <ChEBI ID>"
+line. In that case, use id_tag = "ChEBI ID".
+
+'aromaticity' specifies the aromaticity model, and is only appropriate for
+OEChem. It must be a string like "openeye" or "daylight".
+
+Here is an example of using fingerprints generated from structure file::
+
+    fp_reader = read_structure_fingerprints("OpenBabel-FP4/1", "example.sdf.gz")
+    print "Each fingerprint has", fps.metadata.num_bits, "bits"
+    for (id, fp) in fp_reader:
+       print id, fp.encode("hex")
+
+
+:param type: information about how to convert the input structure into a fingerprint
+:type type: string or Metadata
+:param source: The structure data source.
+:type source: A filename (as a string), a file object, or None to read from stdin.
+:param format: The file format and optional compression.
+        Examples: 'smi' and 'sdf.gz'
+:type format: string, or None to autodetect based on the source
+:param id_tag: The tag containing the record id. Example: 'ChEBI ID'.
+        Only valid for SD files.
+:type id_tag: string, or None to use the default title for the given format
+:returns: a FingerprintReader
+
 
 .. _chemfp_count_tanimoto_hits:
 
@@ -228,13 +290,21 @@ Metadata
 
 Store information about a set of fingerprints
 
-num_bits = number of bits in the fingerprint
-num_bytes = number of bytes in the fingerprint
-type = fingerprint type
-aromaticity = aromaticity model (only used with OEChem)
-software = software used to make the fingerprints
-sources = list of sources used to make the fingerprint
-date = timestamp of when the fingerprints were made
+The metadata attributes are:
+  num_bits:
+    number of bits in the fingerprint
+  num_bytes:
+    number of bytes in the fingerprint
+  type:
+    fingerprint type
+  aromaticity:
+    aromaticity model (only used with OEChem)
+  software:
+    software used to make the fingerprints
+  sources:
+    list of sources used to make the fingerprint
+  date:
+    timestamp of when the fingerprints were made
 
 .. _chemfp_fingerprintreader:
 
