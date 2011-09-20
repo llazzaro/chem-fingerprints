@@ -355,6 +355,8 @@ chemfp.arena module
 The following classes are returned as part of the public API but
 should not be constructed directly.
 
+.. _chemfp_arena_fingerprintarena:
+
 .. py:module:: chemfp.arena
 
 FingerprintArena
