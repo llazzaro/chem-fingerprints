@@ -36,7 +36,7 @@ help:
 clean:
 	-rm -rf $(BUILDDIR)/*
 
-html:
+html: api.rst
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
@@ -128,3 +128,6 @@ doctest:
 	$(SPHINXBUILD) -b doctest $(ALLSPHINXOPTS) $(BUILDDIR)/doctest
 	@echo "Testing of doctests in the sources finished, look at the " \
 	      "results in $(BUILDDIR)/doctest/output.txt."
+
+api.rst: api.txt ../chemfp/__init__.py ../chemfp/arena.py
+	python apply_template.py api
