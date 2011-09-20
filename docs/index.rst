@@ -101,6 +101,9 @@ be all that hard. (Famous last words.)
 What about a wsgi component which implements a web-based search API
 for your local network?
 
+Do you want the underlying C code which does the searches to be
+available as a C API so you can call it from non-Python programs?
+
 But fundamentally, future work will be guided by what people want, and
 by funding. `Let me know <mailto:dalke@dalkescientific.com>`_ in
 either case.
