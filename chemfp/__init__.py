@@ -24,13 +24,20 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-__version__ = "1.0b1"
+__version__ = "1.0"
 __version_info = (1, 0, 0)
 SOFTWARE = "chemfp/" + __version__
 
 import os
 import __builtin__
 import itertools
+
+__all__ = ["open", "load_fingerprints", "read_structure_fingerprints",
+           "count_tanimoto_hits", "threshold_tanimoto_search",
+           "knearest_tanimoto_search", "Metadata", "FingerprintIterator",
+           "Fingerprints"]
+           
+           
 
 class ChemFPError(Exception):
     pass
@@ -39,15 +46,15 @@ class ParseError(ChemFPError):
     pass
 
 def read_structure_fingerprints(type, source=None, format=None, id_tag=None, errors="strict"):
-    """Read structures from `source` and return the corresponding ids and fingerprints
+    """Read structures from 'source' and return the corresponding ids and fingerprints
 
     This returns a FingerprintReader which can be iterated over to get
     the id and fingerprint for each read structure record. The
-    fingerprint generated depends on the value of `type`. Structures
-    are read from `source`, which can either be the structure
+    fingerprint generated depends on the value of 'type'. Structures
+    are read from 'source', which can either be the structure
     filename, or None to read from stdin.
 
-    `type` contains the information about how to turn a structure
+    'type' contains the information about how to turn a structure
     into a fingerprint. It can be a string or a metadata instance.
     String values look like "OpenBabel-FP2/1", "OpenEye-Path", and
     "OpenEye-Path/1 min_bonds=0 max_bonds=5 atype=DefaultAtom btype=DefaultBond".
@@ -55,24 +62,24 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, err
     Metadata instance with 'type' and 'aromaticity' values set
     in order to pass aromaticity information to OpenEye.
 
-    If `format` is None then the structure file format and compression
+    If 'format' is None then the structure file format and compression
     are determined by the filename's extension(s), defaulting to
-    uncompressed SMILES if that is not possible. Otherwise `format` may
+    uncompressed SMILES if that is not possible. Otherwise 'format' may
     be "smi" or "sdf" optionally followed by ".gz" or "bz2" to indicate
     compression. The OpenBabel and OpenEye toolkits also support
     additional formats.
     
-    If `id_tag` is None, then the record id is based on the title
-    field for the given format. If the input format is "sdf" then `id_tag`
+    If 'id_tag' is None, then the record id is based on the title
+    field for the given format. If the input format is "sdf" then 'id_tag'
     specifies the tag field containing the identifier. (Only the first
     line is used for multi-line values.) For example, ChEBI omits the
     title from the SD files and stores the id after the ">  <ChEBI ID>"
     line. In that case, use id_tag = "ChEBI ID".
 
-    `aromaticity` specifies the aromaticity model, and is only appropriate for
+    'aromaticity' specifies the aromaticity model, and is only appropriate for
     OEChem. It must be a string like "openeye" or "daylight".
 
-    Here is an example of using fingerprints generated from structure file:
+    Here is an example of using fingerprints generated from structure file::
     
         fp_reader = read_structure_fingerprints("OpenBabel-FP4/1", "example.sdf.gz")
         print "Each fingerprint has", fps.metadata.num_bits, "bits"
@@ -113,12 +120,12 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, err
 def open(source, format=None):
     """Read fingerprints from a fingerprint file
 
-    Read fingerprints from `source`, using the given format. If
-    `source` is a string then it is treated as a filename. If `source`
-    is None then fingerprints are read from stdin. Otherwise, `source`
+    Read fingerprints from 'source', using the given format. If
+    'source' is a string then it is treated as a filename. If 'source'
+    is None then fingerprints are read from stdin. Otherwise, 'source'
     must be a Python file object supporting 'read' and 'readline'.
 
-    If `format` is None then the fingerprint file format and
+    If 'format' is None then the fingerprint file format and
     compression type are derived from the source filename, or from the
     name attribute of the source file object. If the source is None
     then the stdin is assumed to be uncompressed data in "fps" format.
@@ -128,7 +135,7 @@ def open(source, format=None):
        fps, fps.gz  - fingerprints are in FPS format
     
     The result is an FPSReader. Here's an example of printing the
-    contents of the file.
+    contents of the file::
     
         reader = open("example.fps.gz")
         for id, fp in reader:
@@ -156,18 +163,18 @@ def open(source, format=None):
 
 def load_fingerprints(reader, metadata=None, reorder=True):
     """Load all of the fingerprints into an in-memory FingerprintArena data structure
-
+    
     The FingerprintArena data structure reads all of the fingerprints and
-    identifers from `reader` and stores them into an in-memory data
+    identifers from 'reader' and stores them into an in-memory data
     structure which supports fast similarity searches.
-
-    If `reader` is a string or implements "read" then the contents will be
-    parsed with the `chemfp.open` function. Otherwise it must support
-    iteration returning (id, fingerprint) pairs. `metadata` contains the
-    metadata the arena. If not specified then `reader.metadata` is used.
-
+    
+    If 'reader' is a string or implements "read" then the contents will be
+    parsed with the 'chemfp.open' function. Otherwise it must support
+    iteration returning (id, fingerprint) pairs. 'metadata' contains the
+    metadata the arena. If not specified then 'reader.metadata' is used.
+    
     The loader may reorder the fingerprints for better search performance.
-    To prevent ordering, use `reorder`=False.
+    To prevent ordering, use reorder=False.
 
     :param reader: An iterator over (id, fingerprint) pairs
     :type reader: a string, file object, or (id, fingerprint) iterator
@@ -190,20 +197,20 @@ def load_fingerprints(reader, metadata=None, reorder=True):
 ##### High-level search interfaces
 
 def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
-    """Count the number of targets within `threshold` of each query term
+    """Count the number of targets within 'threshold' of each query term
 
-    For each query in `queries`, count the number of targets in `targets`
-    which are at least `threshold` similar to the query. This function
+    For each query in 'queries', count the number of targets in 'targets'
+    which are at least 'threshold' similar to the query. This function
     returns an iterator containing the (query_id, count) pairs.
 
-    Example:
+    Example::
 
       queries = chemfp.open("queries.fps")
       targets = chemfp.load_fingerprints("targets.fps.gz")
       for (query_id, count) in chemfp.count_tanimoto_hits(queries, targets, threshold=0.9):
           print query_id, "has", count, "neighbors with at least 0.9 similarity"
 
-    Internally, queries are processed in batches of size `arena_size`.
+    Internally, queries are processed in batches of size 'arena_size'.
     A small batch size uses less overall memory and has lower
     processing latency, while a large batch size has better overall
     performance. Use arena_size=None to process the input as a single batch.
@@ -237,14 +244,14 @@ def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     
 
 def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
-    """Find all targets within `threshold` of each query term
+    """Find all targets within 'threshold' of each query term
 
-    For each query in `queries`, find all the targets in `targets` which
-    are at least `threshold` similar to the query. This function returns
+    For each query in 'queries', find all the targets in 'targets' which
+    are at least 'threshold' similar to the query. This function returns
     an iterator containing the (query_id, hits) pairs. The hits are stored
     as a list of (target_id, score) pairs.
 
-    Example:
+    Example::
 
       queries = chemfp.open("queries.fps")
       targets = chemfp.load_fingerprints("targets.fps.gz")
@@ -253,7 +260,7 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
           non_identical = [target_id for (target_id, score) in hits if score != 1.0]
           print "  The non-identical hits are:", non_identical
 
-    Internally, queries are processed in batches of size `arena_size`.
+    Internally, queries are processed in batches of size 'arena_size'.
     A small batch size uses less overall memory and has lower
     processing latency, while a large batch size has better overall
     performance. Use arena_size=None to process the input as a single batch.
@@ -272,7 +279,7 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
     :type arena_size: positive integer, or None
     :returns:
       An iterator containing (query_id, hits) pairs, one for each query.
-      `hits` contains a list of (target_id, score) pairs.
+      'hits' contains a list of (target_id, score) pairs.
     """
     if arena_size == 1:
         for (query_id, query_fp) in queries:
@@ -287,10 +294,10 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
             yield item
 
 def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
-    """Find the `k`-nearest targets within `threshold` of each query term
+    """Find the 'k'-nearest targets within 'threshold' of each query term
 
-    For each query in `queries`, find the `k`-nearest of all the targets
-    in `targets` which are at least `threshold` similar to the query. Ties
+    For each query in 'queries', find the 'k'-nearest of all the targets
+    in 'targets' which are at least 'threshold' similar to the query. Ties
     are broken arbitrarily and hits with scores equal to the smallest value
     may have been omitted.
     
@@ -298,7 +305,7 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
     where hits is a list of (target_id, score) pairs, sorted so that the
     highest scores are first. The order of ties is arbitrary.
 
-    Example:
+    Example::
 
       # Use the first 5 fingerprints as the queries 
       queries = next(chemfp.open("pubchem_subset.fps").iter_arenas(5))
@@ -311,7 +318,7 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
               target_id, score = hits[-1]
               print "    The least similar is", target_id, "with score", score
 
-    Internally, queries are processed in batches of size `arena_size`.
+    Internally, queries are processed in batches of size 'arena_size'.
     A small batch size uses less overall memory and has lower
     processing latency, while a large batch size has better overall
     performance. Use arena_size=None to process the input as a single batch.
@@ -332,7 +339,7 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
     :type arena_size: positive integer, or None
     :returns:
       An iterator containing (query_id, hits) pairs, one for each query.
-      `hits` contains a list of (target_id, score) pairs, sorted by score.
+      'hits' contains a list of (target_id, score) pairs, sorted by score.
     """
     if arena_size == 1:
         for (query_id, query_fp) in queries:
@@ -451,7 +458,7 @@ class Metadata(object):
 class FingerprintReader(object):
     """Base class for all chemfp objects holding fingerprint records
 
-    All FingerprintReader instances have a `metadata` attribute
+    All FingerprintReader instances have a 'metadata' attribute
     containing a Metadata and can be iteratated over to get the (id,
     fingerprint) for each record.
     
@@ -483,9 +490,9 @@ class FingerprintReader(object):
         """
 
     def iter_arenas(self, arena_size=1000):
-        """iterate through `arena_size` fingerprints at a time
+        """iterate through 'arena_size' fingerprints at a time
 
-        This iterates through the fingerprints `arena_size` at a time,
+        This iterates through the fingerprints 'arena_size' at a time,
         yielding a FingerprintArena for each group. Working with
         arenas is often faster than processing one fingerprint at a
         time, and more memory efficient than processing all
