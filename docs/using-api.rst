@@ -151,7 +151,7 @@ you want to read the file again you have to reopen it.
 Reading from disk is slow, and the FPS format is designed for
 ease-of-use and not performance. If you want to do many queries then
 it's best to store everything in memory. The
-:ref:`FingerprintArena <FingerprintArena>` is a
+:ref:`FingerprintArena <chemfp_arena_fingerprintarena>` is a
 fingerprint collection which does that.
 
 Here's how to load fingerprints into an arena::
@@ -194,7 +194,7 @@ reorders the fingerprints into a data structure which is faster to
 search, although you can disable that if you want the fingerprints to
 be the same as the input order.
 
-The :ref:`FingerprintArena <FingerprintArena>` has new capabilities. You can ask it how many
+The :ref:`FingerprintArena <chemfp_arena_fingerprintarena>` has new capabilities. You can ask it how many
 fingerprints it contains, get the list of identifiers, and look up a
 fingerprint record given an index, as in::
 
