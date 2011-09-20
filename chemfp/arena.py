@@ -322,9 +322,11 @@ class FingerprintLookup(object):
 class FingerprintArena(FingerprintReader):
     """Stores fingerprints in a contiguous block of memory
 
-    The only public members are:
-       metadata - `Metadata` about the fingerprints
-       ids - list of identifiers, ordered by position
+    The public attributes are:
+       metadata
+           `Metadata` about the fingerprints
+       ids
+           list of identifiers, ordered by position
     """
     def __init__(self, metadata, storage_size, arena, popcount_indicies, ids,
                  start=0, end=None):
