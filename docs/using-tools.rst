@@ -14,8 +14,8 @@ Generating fingerprint files from PubChem SD files
 ==================================================
 
 In this section you'll learn how to create a fingerprint file from an
-SD file which contains pre-computed CACTVS. You do not need a
-chemistry toolkit for this section.
+SD file which contains pre-computed CACTVS fingerprints. You do not
+need a chemistry toolkit for this section.
 
 `PubChem <http://pubchem.ncbi.nlm.nih.gov/>`_ is a great resource
 of publically available chemistry information. The data is available
@@ -46,17 +46,18 @@ Congratulations, that was it!
 
 How does this work? Each PubChem record contains the precomputed
 CACTVS substructure keys in the PUBCHEM_CACTVS_SUBSKEYS tag. The
-"--pubchem" flag tells sdf2fps to get the value of that tag and decode
+:option:`--pubchem` flag tells sdf2fps to get the value of that tag and decode
 it to get the fingerprint. It also adds a few metadata fields to the
 fingerprint file header.
 
 The order of the fingerprints are the same as the order of the
 corresponding record in the SDF, although unconvertable records might
-be skipped, depending on the --errors flag.
+be skipped, depending on the :option:`--errors` flag.
 
 If you store records in an SD file then you almost certainly don't use
 the same fingerprint encoding as PubChem. sdf2ps can decode from a
-number of encodings. Use --help to see the list.
+number of encodings. Use :option:`--help` to see the list of available
+decoders.
 
 
 k-nearest neighbor search
@@ -162,8 +163,8 @@ given threshold. You will need the fingerprint files generated in
 :ref:`pubchem_fingerprints` but you do not need a chemistry toolkit.
 
 
-You can combine the -k and --threshold queries to find the k-nearest
-neighbors which are all above a given threshold::
+You can combine the :option:`-k` and :option:`--threshold` queries to
+find the k-nearest neighbors which are all above a given threshold::
 
     simsearch -k 3 --threshold 0.7 -q pubchem_queries.fps pubchem_targets.fps
 
@@ -242,13 +243,14 @@ Instead, the id is the value of the "ChEBI ID" tag, which looks like::
 
 By default the toolkit-based fingerprint generation tools use the
 title as the identifier, and exits with an error if the identifier is
-missing. (Use the --errors option to change the behaviour). If you try
+missing. (Use the :option:`--errors` option to change the behaviour). If you try
 one of them with this data file you will get the error message::
 
     ERROR: Missing title for record #1 of 'ChEBI_lite.sdf.gz'. Exiting.
 
-Instead, use the --id-tag option to specify of the name of the data
-tag containing the id. For this data set you'll need to write it as::
+Instead, use the :option:`--id-tag` option to specify of the name of
+the data tag containing the id. For this data set you'll need to write
+it as::
 
     --id-tag "ChEBI ID"
 
@@ -337,7 +339,7 @@ about it.
 
 In most cases it's okay to skip a few records which can't be
 processed. You can tell rdkit2fps to report the error but continue
-processing by using the --errors option::
+processing by using the :option:`--errors` option::
 
     rdkit2fps --id-tag "ChEBI ID" --errors report ChEBI_lite.sdf.gz -o rdkit_chebi.fps
 
@@ -419,7 +421,7 @@ RDKit::
     00000000000000000000000000000140004480101e	phenol
 
 
-You might be wondering why "--rdmaccs" produces different fingerprint
+You might be wondering why :option:`--rdmaccs` produces different fingerprint
 types even if the toolkits use the same SMARTS definitions. Each
 toolkit perceives chemistry differently. Open Babel before 2.3 didn't
 support chirality so chiral-based bits will never be set. Each toolkit
@@ -436,5 +438,5 @@ then let me know.)
 chemp also includes an experimental "substruct" substructure
 fingerprint. This is an 881 bit fingerprint derived from the
 PubChem/CACTVS substructure keys. They are still being tested and
-validated, but you you want to try them out, use the --substruct
-option.
+validated, but you you want to try them out, use the
+:option:`--substruct` option.
