@@ -9,12 +9,17 @@ as well as a Python library which can be used to build new tools.
 
 These algorithms are designed for the dense, 100-10,000 bit
 fingerprints which occur in small-molecule/pharmaceutical
-chemisty. The core algorithms are implemented in C for performance.
+chemisty. The Tanimoto search algorithms are implemented in C for
+performance and support both threshold and k-nearest searches.
+
+Fingerprint generation can be done either by extracting existing
+fingerprint data from an SD file or by using an existing chemistry
+toolkit. chemfp supports the Python libraries from Open Babel,
+OpenEye, and RDKit toolkits.
 """
 
 setup(name = "chemfp",
       version = "1.0",
-      summary = "Cheminformatics fingerprint command-line tools and Python library",
       description = DESCRIPTION,
       author = "Andrew Dalke",
       author_email = 'dalke@dalkescientific.com',
