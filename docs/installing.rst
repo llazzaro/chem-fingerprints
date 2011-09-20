@@ -1,6 +1,9 @@
 Installing
 ==========
 
+Download the chemfp source code from the
+`project home page <http://code.google.com/p/chem-fingerprints/`_.
+
 The chemfp tools depends on a working Python installation.  You can
 download Python 2.7 from http://www.python.org/download/. (Note for
 OEChem users: OpenEye doesn't yet support Python 2.7 so you will need

@@ -4,8 +4,8 @@
 chemfp documentation
 ====================
 
-chemfp is a set of tools for working with cheminformatics fingerprints
-in the FPS format.
+`chemfp <http://code.google.com/p/chem-fingerprints/>`_ is a set of
+tools for working with cheminformatics fingerprints in the FPS format.
 
 Most people will use the command-line programs to generate and search
 fingerprint files. :ref:`ob2fps <ob2fps>`, :ref:`oe2fps <oe2fps>`, and
