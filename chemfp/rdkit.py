@@ -11,6 +11,7 @@ import gzip
 
 import rdkit
 from rdkit import Chem
+from rdkit.Chem import rdMolDescriptors
 import rdkit.rdBase
 from rdkit.Chem.MACCSkeys import GenMACCSKeys
 
@@ -276,27 +277,6 @@ def make_rdk_fingerprinter(minPath=MIN_PATH, maxPath=MAX_PATH, fpSize=NUM_BITS,
         return decoders.from_binary_lsb(fp.ToBitString())[1]
     return rdk_fingerprinter
 
-
-_fingerprint_decoders = {"minPath": int,
-                         "maxPath": int,
-                         "fpSize": int,
-                         "nBitsPerHash": int,
-                         "useHs": int}
-_fingerprint_defaults = {"minPath": 1,
-                         "maxPath": 7,
-                         "fpSize": 2048,
-                         "nBitsPerHash": 4,
-                         "useHs": 1}
-
-def decode_fingerprint_parameters(parameters):
-    fingerprinter_kwargs = _fingerprint_defaults.copy()
-    for name, value in parameters:
-        if name not in _fingerprint_decoders:
-            raise ValueError("Unknown RDKit-Fingerprint parameter %r" % (name,))
-        decoder = _fingerprint_decoders[name]
-        fingerprinter_kwargs[name] = decoder(value)
-    return fingerprinter_kwargs
-
 ########### The MACCS fingerprinter
 
 
@@ -308,6 +288,65 @@ def maccs166_fingerprinter(mol):
 
 def make_maccs166_fingerprinter():
     return maccs166_fingerprinter
+
+
+########### The morgan fingerprinter
+
+# Some constants shared by the fingerprinter and the command-line code.
+
+# NUM_BITS borrowed from above
+RADIUS = 2
+USE_FEATURES = 0
+USE_CHIRALITY = 0
+USE_BOND_TYPES = 1
+
+def make_morgan_fingerprinter(fpSize=NUM_BITS,
+                              radius=RADIUS,
+                              useFeatures=USE_FEATURES,
+                              useChirality=USE_CHIRALITY,
+                              useBondTypes=USE_BOND_TYPES):
+    if not (fpSize > 0):
+        raise ValueError("fpSize must be positive")
+    if not (radius >= 0):
+        raise ValueError("radius cannot be negative")
+
+    def morgan_fingerprinter(mol):
+        fp = rdMolDescriptors.GetMorganFingerprintAsBitVect(
+            mol, radius, nBits=fpSize, useChirality=useChirality,
+            useBondTypes=useBondTypes,useFeatures=useFeatures)
+        return decoders.from_binary_lsb(fp.ToBitString())[1]
+    return morgan_fingerprinter
+
+
+_fingerprint_decoders = {"minPath": int,
+                         "maxPath": int,
+                         "fpSize": int,
+                         "nBitsPerHash": int,
+                         "useHs": int,
+                         "radius":int,
+                         "useFeatures":int,
+                         "useChirality":int,
+                         "useBondTypes":int}
+_fingerprint_defaults = {"minPath": 1,
+                         "maxPath": 7,
+                         "fpSize": 2048,
+                         "nBitsPerHash": 4,
+                         "useHs": 1,
+                         "radius":2,
+                         "useFeatures":0,
+                         "useChirality":0,
+                         "useBondTypes":1}
+
+def decode_fingerprint_parameters(parameters):
+    fingerprinter_kwargs = _fingerprint_defaults.copy()
+    for name, value in parameters:
+        if name not in _fingerprint_decoders:
+            raise ValueError("Unknown RDKit-Fingerprint parameter %r" % (name,))
+        decoder = _fingerprint_decoders[name]
+        fingerprinter_kwargs[name] = decoder(value)
+    return fingerprinter_kwargs
+
+
 
 ####################
 
@@ -345,3 +384,21 @@ class RDKitFingerprinter_v1(_RDKitFingerprinter):
         return cls(kwargs)
 
     _get_fingerprinter = staticmethod(make_rdk_fingerprinter)
+
+class RDKitMorganFingerprinter_v1(_RDKitFingerprinter):
+    name = "RDKit-MorganFingerprint/1"
+    format_string = (
+             "radius=%(radius)d fpSize=%(fpSize)s useFeatures=%(useFeatures)d "
+             "useChirality=%(useChirality)d useBondTypes=%(useBondTypes)d")
+    software = SOFTWARE
+    def __init__(self, kwargs):
+        self.num_bits = kwargs["fpSize"]
+        super(RDKitMorganFingerprinter_v1, self).__init__(kwargs)
+
+    @classmethod
+    def from_parameters(cls, parameters):
+        kwargs = decode_fingerprint_parameters(parameters)
+        return cls(kwargs)
+
+    _get_fingerprinter = staticmethod(make_morgan_fingerprinter)
+    

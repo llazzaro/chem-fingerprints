@@ -44,6 +44,22 @@ rdk_group.add_argument(
     "--useHs", type=int, default=1,
     help="information about the number of hydrogens on each atom")
 
+morgan_group = parser.add_argument_group("RDKit morgan fingerprints")
+morgan_group.add_argument("--morgan", action="store_true",
+                       help="generate morgan fingerprints")
+morgan_group.add_argument(
+    "--radius", type=int, metavar="INT", default=rdkit.RADIUS,
+    help="radius for the morgan algorithm (default=%d)" % rdkit.RADIUS)
+morgan_group.add_argument(
+    "--useFeatures", type=int, metavar="INT", default=rdkit.USE_FEATURES,
+    help="use chemical-feature invariants (default=%d)" % rdkit.USE_FEATURES)
+morgan_group.add_argument(
+    "--useChirality", type=int, metavar="INT", default=rdkit.USE_CHIRALITY,
+    help="include information about chirality (default=%d)" % rdkit.USE_CHIRALITY)
+morgan_group.add_argument(
+    "--useBondTypes", type=int, metavar="INT", default=rdkit.USE_BOND_TYPES,
+    help="include information about bond types (default=%d)" % rdkit.USE_BOND_TYPES)
+
 maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
     "--maccs166", action="store_true", help="generate MACCS fingerprints")
