@@ -20,7 +20,7 @@ def mutual_exclusion(parser, args, default, groups):
 
 def sys_exit_opener(opener, metadata, source, format, id_tag, errors):
     try:
-        return opener.read_structure_fingerprints(metadata, source, format, id_tag, errors)
+        return opener.read_structure_fingerprints(source, format, id_tag, errors, metadata=metadata)
     except (IOError, ChemFPError), err:
         sys.stderr.write("Problem reading structure fingerprints: %s. Exiting.\n" % err)
         raise SystemExit(1)
