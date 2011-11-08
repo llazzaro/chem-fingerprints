@@ -286,4 +286,19 @@ int chemfp_knearest_tanimoto_arena(
 	double *result_scores
 				   );
 
+
+typedef int (*chemfp_popcount_f)(int len, const unsigned char *p1);
+typedef int (*chemfp_intersect_popcount_f)(int len, const unsigned char *p1,
+					   const unsigned char *p2);
+
+chemfp_popcount_f
+chemfp_select_popcount(int num_bits,
+		       int storage_len, const unsigned char *arena);
+
+chemfp_intersect_popcount_f
+chemfp_select_intersect_popcount(int num_bits,
+				 int storage_len1, const unsigned char *arena1,
+				 int storage_len2, const unsigned char *arena2);
+
+
 #endif /* CHEMFP_H */

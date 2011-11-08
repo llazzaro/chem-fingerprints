@@ -18,6 +18,12 @@ toolkit. chemfp supports the Python libraries from Open Babel,
 OpenEye, and RDKit toolkits.
 """
 
+import sys
+if sys.platform[:3] != "win":
+    extra_compile_args = ["-O3"]
+else:
+    extra_compile_args = []
+
 setup(name = "chemfp",
       version = "1.0",
       description = DESCRIPTION,
@@ -41,7 +47,8 @@ setup(name = "chemfp",
                                ["src/bitops.c", "src/chemfp.c",
                                 "src/heapq.c", "src/fps.c",
                                 "src/searches.c",
+                                "src/select_popcount.c",
                                 "src/python_api.c"],
-                               extra_compile_args = ["-O3"],
+                               extra_compile_args = extra_compile_args,
                                )],
      )

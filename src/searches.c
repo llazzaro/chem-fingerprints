@@ -29,6 +29,8 @@ static void double_score_swap(IndexScoreData *data, int i, int j) {
   data->scores[j] = tmp_score;
 }
 
+#if 0
+/* This doesn't seem to be used */
 /* Count the number of byte fingerprints which, when intersected with the
    query, have at least min_overlap bits in common */
 
@@ -65,6 +67,7 @@ int chemfp_byte_intersect_popcount_count(
   }
   return count;
 }
+#endif
 
 enum scoring_directions {
   UP_OR_DOWN = 0,
@@ -233,6 +236,9 @@ int chemfp_count_tanimoto_arena(
   int query_popcount, start_target_popcount, end_target_popcount;
   int target_popcount;
   int intersect_popcount;
+
+  chemfp_popcount_f calc_popcount;
+  chemfp_intersect_popcount_f calc_intersect_popcount;
   
   if (query_start >= query_end) {
     /* No queries */
@@ -271,7 +277,13 @@ int chemfp_count_tanimoto_arena(
     }
     return query_index-query_start;
   }
-  
+						   
+  /* Choose popcounts optimized for this case */
+  calc_popcount = chemfp_select_popcount(num_bits, query_storage_size, query_arena);
+  calc_intersect_popcount = chemfp_select_intersect_popcount(
+		num_bits, query_storage_size, query_arena,
+		target_storage_size, target_arena);
+
   /* This uses the limits from Swamidass and Baldi */
   /* It doesn't use the ordering because it's supposed to find everything */
 
@@ -279,7 +291,7 @@ int chemfp_count_tanimoto_arena(
   for (query_index = query_start; query_index < query_end;
        query_index++, query_fp += query_storage_size) {
     
-    query_popcount = chemfp_byte_popcount(fp_size, query_fp);
+    query_popcount = calc_popcount(fp_size, query_fp);
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
     if (query_popcount == 0) {
       if (threshold == 0.0) {
@@ -316,7 +328,7 @@ int chemfp_count_tanimoto_arena(
       popcount_sum = query_popcount + target_popcount;
       for (target_index = start; target_index < end;
 	   target_index++, target_fp += target_storage_size) {
-	intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
+	intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
 	score = intersect_popcount / (popcount_sum - intersect_popcount);
 	if (score >= threshold) {
 	  count++;
@@ -365,6 +377,9 @@ int chemfp_threshold_tanimoto_arena(
   int target_popcount;
   int intersect_popcount, popcount_sum;
   int result_offset = *result_offsets++;
+
+  chemfp_popcount_f calc_popcount;
+  chemfp_intersect_popcount_f calc_intersect_popcount;
   
   if (query_start >= query_end) {
     /* No queries */
@@ -408,6 +423,13 @@ int chemfp_threshold_tanimoto_arena(
     return query_index-query_start;
   }
   
+
+  calc_popcount = chemfp_select_popcount(num_bits, query_storage_size, query_arena);
+  calc_intersect_popcount = chemfp_select_intersect_popcount(
+		num_bits, query_storage_size, query_arena,
+		target_storage_size, target_arena);
+  
+
   /* This uses the limits from Swamidass and Baldi */
   /* It doesn't use the ordering because it's supposed to find everything */
 
@@ -419,7 +441,7 @@ int chemfp_threshold_tanimoto_arena(
       break;
     }
     
-    query_popcount = chemfp_byte_popcount(fp_size, query_fp);
+    query_popcount = calc_popcount(fp_size, query_fp);
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
     if (query_popcount == 0) {
       if (threshold == 0.0) {
@@ -464,7 +486,7 @@ int chemfp_threshold_tanimoto_arena(
       popcount_sum = query_popcount + target_popcount;
       for (target_index = start; target_index < end;
 	   target_index++, target_fp += target_storage_size) {
-	intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
+	intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
 	score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
 	if (score >= threshold) {
 	  *result_indices++ = target_index;
@@ -634,6 +656,9 @@ int chemfp_knearest_tanimoto_arena(
   IndexScoreData heap;
   int result_offset;
 
+  chemfp_popcount_f calc_popcount;
+  chemfp_intersect_popcount_f calc_intersect_popcount;
+
   /* This is C. We don't check for illegal input values. */
 
   if (query_start >= query_end) {
@@ -658,6 +683,13 @@ int chemfp_knearest_tanimoto_arena(
 	target_storage_size, target_arena, target_start, target_end,
 	result_offsets, num_cells, result_indices, result_scores);
   }
+
+  /* Choose popcounts optimized for this case */
+  calc_popcount = chemfp_select_popcount(num_bits, query_storage_size, query_arena);
+  calc_intersect_popcount = chemfp_select_intersect_popcount(
+		num_bits, query_storage_size, query_arena,
+		target_storage_size, target_arena);
+
   result_offset = *result_offsets++;
 
   /* Loop through the query fingerprints */
@@ -670,7 +702,7 @@ int chemfp_knearest_tanimoto_arena(
     }
 
     query_threshold = threshold;
-    query_popcount = chemfp_byte_popcount(fp_size, query_fp);
+    query_popcount = calc_popcount(fp_size, query_fp);
 
     if (query_popcount == 0) {
       /* By definition this will never return hits. Even if threshold == 0.0. */
@@ -714,7 +746,7 @@ int chemfp_knearest_tanimoto_arena(
       /* There are fewer than 'k' elements in the heap*/
       if (heap_size < k) {
 	for (; target_index<end; target_index++, target_fp += target_storage_size) {
-	  intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
+	  intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
 	  score = intersect_popcount / (popcount_sum - intersect_popcount);
 
 	  /* The heap isn't full; only check if we're at or above the query threshold */
@@ -751,7 +783,7 @@ int chemfp_knearest_tanimoto_arena(
 
       /* Scan through the target fingerprints; can we improve over the threshold? */
       for (; target_index<end; target_index++, target_fp += target_storage_size) {
-	intersect_popcount = chemfp_byte_intersect_popcount(fp_size, query_fp, target_fp);
+	intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
 	score = intersect_popcount / (popcount_sum - intersect_popcount);
 
 	/* We need to be strictly *better* than what's in the heap */
@@ -823,16 +855,17 @@ chemfp_reorder_by_popcount(
   int fp_size = (num_bits+7)/8;
   int fp_index, i;
   const unsigned char *fp;
+  chemfp_popcount_f calc_popcount;
 
   if (start >= end) {
     return 0;
   }
-
+  calc_popcount = chemfp_select_popcount(num_bits, storage_size, arena);
   num_fingerprints = end - start;
 
   fp = arena + (start * storage_size);
   for (fp_index = start; fp_index < end; fp_index++, fp += storage_size) {
-    popcount = chemfp_byte_popcount(fp_size, fp);
+    popcount = calc_popcount(fp_size, fp);
     ordering[fp_index].popcount = popcount;
     ordering[fp_index].index = fp_index;
   }
