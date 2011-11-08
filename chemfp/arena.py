@@ -11,10 +11,10 @@ Additional bytes must contain NUL bytes.
 
 The lookup for `ids[i]` contains the id for fingerprint `i`.
 
-A FingerprintArena has an optional `indicies` attribute. When
+A FingerprintArena has an optional `indices` attribute. When
 available, it means that the arena fingerprints and corresponding ids
 are ordered by population count, and the fingerprints with popcount
-`p` start at index indicies[p] and end just before indicies[p+1].
+`p` start at index indices[p] and end just before indices[p+1].
 
 """
 
@@ -52,7 +52,7 @@ def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
                                  len(query_fp), query_fp, 0, -1,
                                  target_arena.storage_size, target_arena.arena,
                                  target_arena.start, target_arena.end,
-                                 target_arena.popcount_indicies,
+                                 target_arena.popcount_indices,
                                  counts)
     return counts[0]
 
@@ -66,7 +66,7 @@ def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
                                  query_arena.arena, query_arena.start, query_arena.end,
                                  target_arena.storage_size,
                                  target_arena.arena, target_arena.start, target_arena.end,
-                                 target_arena.popcount_indicies,
+                                 target_arena.popcount_indices,
                                  counts)
     return counts
 
@@ -83,10 +83,10 @@ class SearchResults(object):
     get the hits as (target_index, target_score) pairs.
 
     """
-    def __init__(self, offsets, indicies, scores, query_ids, target_ids):
+    def __init__(self, offsets, indices, scores, query_ids, target_ids):
         assert len(offsets) > 0
         self.offsets = offsets
-        self.indicies = indicies
+        self.indices = indices
         self.scores = scores
         self.query_ids = query_ids
         self.target_ids = target_ids
@@ -114,7 +114,7 @@ class SearchResults(object):
         i = xrange(len(self.offsets)-1)[i]  # Use this trick to support negative index lookups
         start, end = self.offsets[i:i+2]
         ids = self.target_ids
-        return zip((ids[idx] for idx in self.indicies[start:end]), self.scores[start:end])
+        return zip((ids[idx] for idx in self.indices[start:end]), self.scores[start:end])
 
     def __iter__(self):
         """Iterate over the named hits for each result
@@ -123,11 +123,11 @@ class SearchResults(object):
         The order of the hits depends on the search algorithm.
         """
         target_ids = self.target_ids
-        indicies = self.indicies
+        indices = self.indices
         scores = self.scores
         start = self.offsets[0]
         for end in self.offsets[1:]:
-            yield zip((target_ids[index] for index in indicies[start:end]),
+            yield zip((target_ids[index] for index in indices[start:end]),
                       scores[start:end])
             start = end
 
@@ -137,39 +137,39 @@ class SearchResults(object):
         Each term is a list of hits. A hit contains (index, score) tuples.
         The order of the hits depends on the search algorithm.
         """
-        indicies = self.indicies
+        indices = self.indices
         scores = self.scores
         start = self.offsets[0]
         for end in self.offsets[1:]:
-            yield zip(indicies[start:end], scores[start:end])
+            yield zip(indices[start:end], scores[start:end])
             start = end
 
-def threshold_tanimoto_search_fp_indicies(query_fp, target_arena, threshold):
+def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
     require_matching_fp_size(query_fp, target_arena)
 
     offsets = (ctypes.c_int * 2)()
     offsets[0] = 0
     
     num_cells = len(target_arena)
-    indicies = (ctypes.c_int * num_cells)()
+    indices = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
 
     num_added = _chemfp.threshold_tanimoto_arena(
         threshold, target_arena.num_bits,
         len(query_fp), query_fp, 0, -1,
         target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-        target_arena.popcount_indicies,
+        target_arena.popcount_indices,
         offsets, 0,
-        indicies, scores)
+        indices, scores)
 
     assert num_added == 1
 
     end = offsets[1]
-    return [(indicies[i], scores[i]) for i in xrange(end)]
+    return [(indices[i], scores[i]) for i in xrange(end)]
 
 def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
     require_matching_fp_size(query_fp, target_arena)
-    result = threshold_tanimoto_search_fp_indicies(query_fp, target_arena, threshold)
+    result = threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold)
     return [(target_arena.ids[index], score) for (index, score) in result]
 
 
@@ -190,7 +190,7 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
         min_rows = max(2, max_cells // len(target_arena))
 
     num_cells = min_rows * len(target_arena)
-    indicies = (ctypes.c_int * num_cells)()
+    indices = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
     
     query_start = query_arena.start
@@ -202,37 +202,37 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
             threshold, num_bits,
             query_arena.storage_size, query_arena.arena, query_start, query_end,
             target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indicies,
+            target_arena.popcount_indices,
             offsets, offset_start, # XXX should query_start=0?
-            indicies, scores)
+            indices, scores)
 
-    return _search(query_start, query_end, offsets, indicies, scores, add_rows,
+    return _search(query_start, query_end, offsets, indices, scores, add_rows,
                    query_arena.ids, target_arena.ids)
 
 def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
-    result = knearest_tanimoto_search_fp_indicies(query_fp, target_arena, k, threshold)
+    result = knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold)
     return [(target_arena.ids[index], score) for (index, score) in result]
 
-def knearest_tanimoto_search_fp_indicies(query_fp, target_arena, k, threshold):
+def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
     require_matching_fp_size(query_fp, target_arena)
     if k < 0:
         raise ValueError("k must be non-negative")
 
     offsets = (ctypes.c_int * 2)()
     offsets[0] = 0
-    indicies = (ctypes.c_int * k)()
+    indices = (ctypes.c_int * k)()
     scores = (ctypes.c_double * k)()
 
     num_added = _chemfp.knearest_tanimoto_arena(
         k, threshold, target_arena.num_bits,
         len(query_fp), query_fp, 0, 1,
         target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-        target_arena.popcount_indicies,
+        target_arena.popcount_indices,
         offsets, 0,
-        indicies, scores)
+        indices, scores)
     assert num_added > 0, num_added
     end = offsets[1]
-    return [(indicies[i], scores[i]) for i in xrange(end)]
+    return [(indices[i], scores[i]) for i in xrange(end)]
 
 def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
     require_matching_sizes(query_arena, target_arena)
@@ -245,7 +245,7 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
 
     num_cells = min(100, len(query_arena))*k
 
-    indicies = (ctypes.c_int * num_cells)()
+    indices = (ctypes.c_int * num_cells)()
     scores = (ctypes.c_double * num_cells)()
 
     query_start = query_arena.start
@@ -256,27 +256,27 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
             k, threshold, num_bits,
             query_arena.storage_size, query_arena.arena, query_start, query_end,
             target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indicies,
+            target_arena.popcount_indices,
             offsets, offset_start,
-            indicies, scores)
+            indices, scores)
 
-    return _search(query_start, query_end, offsets, indicies, scores, add_rows,
+    return _search(query_start, query_end, offsets, indices, scores, add_rows,
                    query_arena.ids, target_arena.ids)
 
 
 # Core of the Tanimoto search routine
 
-def _search(query_start, query_end, offsets, indicies, scores,
+def _search(query_start, query_end, offsets, indices, scores,
             add_rows, query_ids, target_ids):
     num_added = add_rows(query_start, 0)
     if num_added == query_end:
-        return SearchResults(offsets, indicies, scores, query_ids, target_ids)
+        return SearchResults(offsets, indices, scores, query_ids, target_ids)
 
     query_start = query_start + num_added
     offset_start = num_added
 
     last = offsets[num_added]
-    all_indicies = indicies[:last]
+    all_indices = indices[:last]
     all_scores = scores[:last]
 
     while query_start < query_end:
@@ -284,13 +284,13 @@ def _search(query_start, query_end, offsets, indicies, scores,
         assert num_added > 0
 
         prev_last = offsets[query_start]
-        all_indicies[prev_last:] = indicies
+        all_indices[prev_last:] = indices
         all_scores[prev_last:] = scores
 
         offset_start += num_added
         query_start += num_added
 
-    return SearchResults(offsets, all_indicies, all_scores, query_ids, target_ids)
+    return SearchResults(offsets, all_indices, all_scores, query_ids, target_ids)
 
 
 
@@ -328,7 +328,7 @@ class FingerprintArena(FingerprintReader):
        ids
            list of identifiers, ordered by position
     """
-    def __init__(self, metadata, storage_size, arena, popcount_indicies, ids,
+    def __init__(self, metadata, storage_size, arena, popcount_indices, ids,
                  start=0, end=None):
         if metadata.num_bits is None:
             raise TypeError("Missing metadata num_bits information")
@@ -338,7 +338,7 @@ class FingerprintArena(FingerprintReader):
         self.num_bits = metadata.num_bits
         self.storage_size = storage_size
         self.arena = arena
-        self.popcount_indicies = popcount_indicies
+        self.popcount_indices = popcount_indices
         self.ids = ids
         self.fingerprints = FingerprintLookup(metadata.num_bytes, storage_size, arena)
         self.start = start
@@ -423,7 +423,7 @@ class FingerprintArena(FingerprintReader):
             ids = self.ids[i:i+arena_size]
             end = start+len(ids)
             yield FingerprintArena(self.metadata, self.storage_size, self.arena,
-                                   self.popcount_indicies, ids, start, end)
+                                   self.popcount_indices, ids, start, end)
             start = end
 
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):

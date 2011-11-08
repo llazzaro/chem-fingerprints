@@ -126,7 +126,7 @@ typedef struct {
   int heap_state;
 
   /* These all point to arrays of size k */
-  int *indicies;      /* [k]; contains a unique id or index */
+  int *indices;      /* [k]; contains a unique id or index */
   char **ids;          /* [k]; array of NULL or malloc'ed identifier */
   double *scores;     /* [k]; the Tanimoto similarity */
 } chemfp_fps_heap;
@@ -186,7 +186,7 @@ int chemfp_knearest_tanimoto_block(
         int query_len, unsigned char *query_fp,
         int num_targets, unsigned char *target_block, int offset, int storage_len,
         double threshold,
-        int *indicies, double *scores);
+        int *indices, double *scores);
 
 int chemfp_hex_tanimoto_block(
         int n,
@@ -205,7 +205,7 @@ int chemfp_reorder_by_popcount(
 	int num_bits,
 	int storage_size, const unsigned char *arena, int start, int end,
 	unsigned char *new_arena, ChemFPOrderedPopcount *ordering,
-	int *popcount_indicies);
+	int *popcount_indices);
 
 
 int chemfp_count_tanimoto_arena(
@@ -215,17 +215,17 @@ int chemfp_count_tanimoto_arena(
 	/* Number of bits in the fingerprint */
 	int num_bits,
 
-	/* Query arena, start and end indicies */
+	/* Query arena, start and end indices */
 	int query_storage_size,
 	const unsigned char *query_arena, int query_start, int query_end,
 
-	/* Target arena, start and end indicies */
+	/* Target arena, start and end indices */
 	int target_storage_size,
 	const unsigned char *target_arena, int target_start, int target_end,
 
 	/* Target popcount distribution information */
 	/*  (must have at least num_bits+1 elements) */
-	int *target_popcount_indicies,
+	int *target_popcount_indices,
 
 	/* Results go into these arrays  */
 	int *result_counts
@@ -238,22 +238,22 @@ int chemfp_threshold_tanimoto_arena(
 	/* Number of bits in the fingerprint */
 	int num_bits,
 
-	/* Query arena, start and end indicies */
+	/* Query arena, start and end indices */
 	int query_storage_size, const unsigned char *query_arena,
 	int query_start, int query_end,
 
-	/* Target arena, start and end indicies */
+	/* Target arena, start and end indices */
 	int target_storage_size, const unsigned char *target_arena,
 	int target_start, int target_end,
 
 	/* Target popcount distribution information */
 	/*  (must have at least num_bits+1 elements) */
-	int *target_popcount_indicies,
+	int *target_popcount_indices,
 
 	/* Results go into these arrays  */
 	int *result_offsets,
 	int num_cells,
-	int *result_indicies,
+	int *result_indices,
 	double *result_scores
 				    );
 
@@ -267,22 +267,22 @@ int chemfp_knearest_tanimoto_arena(
 	/* Number of bits in the fingerprint */
 	int num_bits,
 
-	/* Query arena, start and end indicies */
+	/* Query arena, start and end indices */
 	int query_storage_size, const unsigned char *query_arena,
 	int query_start, int query_end,
 
-	/* Target arena, start and end indicies */
+	/* Target arena, start and end indices */
 	int target_storage_size, const unsigned char *target_arena,
 	int target_start, int target_end,
 
 	/* Target popcount distribution information */
 	/*  (must have at least num_bits+1 elements) */
-	int *target_popcount_indicies,
+	int *target_popcount_indices,
 
 	/* Results go into these arrays  */
 	int *result_offsets,
 	int num_cells,
-	int *result_indicies,
+	int *result_indices,
 	double *result_scores
 				   );
 

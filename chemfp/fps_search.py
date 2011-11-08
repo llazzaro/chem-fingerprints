@@ -166,7 +166,7 @@ def _make_knearest_search(num_queries, k):
     class TanimotoHeap(ctypes.Structure):
         _fields_ = [("size", ctypes.c_int),
                     ("heap_state", ctypes.c_int),
-                    ("indicies", ctypes.POINTER(ctypes.c_int*k)),
+                    ("indices", ctypes.POINTER(ctypes.c_int*k)),
                     ("ids", ctypes.POINTER(ctypes.c_char_p*k)),
                     ("scores", ctypes.POINTER(ctypes.c_double*k))]
 

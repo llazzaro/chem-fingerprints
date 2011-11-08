@@ -18,10 +18,10 @@ def _load(fingerprints, reorder):
                                     metadata=chemfp.Metadata(num_bits=num_bits),
                                     reorder=reorder)
 
-def verify_popcount_indicies(arena):
-    assert len(arena.popcount_indicies) % 4 == 0
-    format = "i"*(len(arena.popcount_indicies)//4)
-    values = struct.unpack(format, arena.popcount_indicies)
+def verify_popcount_indices(arena):
+    assert len(arena.popcount_indices) % 4 == 0
+    format = "i"*(len(arena.popcount_indices)//4)
+    values = struct.unpack(format, arena.popcount_indices)
     assert len(values) == arena.metadata.num_bits+2, (len(values), arena.metadata.num_bits)
     assert values[-1] == len(arena.fingerprints), (values[-1], len(arena.fingerprints), values)
     for i in range(len(values)-1):
@@ -38,16 +38,16 @@ class TestReorder(unittest2.TestCase):
     def test_empty(self):
         arena = _load([], True)
         self.assertEquals(arena.arena, "")
-        verify_popcount_indicies(arena)
+        verify_popcount_indices(arena)
         
         arena = _load([], False)
         self.assertEquals(arena.arena, "")
-        self.assertEquals(arena.popcount_indicies, "")
+        self.assertEquals(arena.popcount_indices, "")
 
     def test_single(self):
         arena = _load(["1234"], True)
         self.assertEquals(arena.arena, "1234")
-        verify_popcount_indicies(arena)
+        verify_popcount_indices(arena)
         
         arena = _load(["1234"], False)
         self.assertEquals(arena.arena, "1234")
@@ -55,14 +55,14 @@ class TestReorder(unittest2.TestCase):
     def test_two(self):
         arena = _load(["AA", "CC"], True)
         self.assertEquals(arena.arena, "AACC")
-        verify_popcount_indicies(arena)
+        verify_popcount_indices(arena)
         
         arena = _load(["AA", "CC"], False)
         self.assertEquals(arena.arena, "AACC")
         
         arena = _load(["CC", "AA"], True)
         self.assertEquals(arena.arena, "AACC")
-        verify_popcount_indicies(arena)
+        verify_popcount_indices(arena)
         
         arena = _load(["CC", "AA"], False)
         self.assertEquals(arena.arena, "CCAA")
@@ -81,12 +81,12 @@ class TestReorder(unittest2.TestCase):
         arena = _load(all_bytes, True)
         popcounts = map(byte_popcount, arena.arena)
         self.assertEquals(popcounts, expected)
-        verify_popcount_indicies(arena)
+        verify_popcount_indices(arena)
 
         arena = _load(all_bytes[::-1], True)
         popcounts = map(byte_popcount, arena.arena)
         self.assertEquals(popcounts, expected)
-        verify_popcount_indicies(arena)
+        verify_popcount_indices(arena)
 
     def test_every_bit_sorted_tripled(self):
         # This is a bit tricker since there's no guaranteed order
@@ -99,18 +99,18 @@ class TestReorder(unittest2.TestCase):
         arena = _load(all_bytes, True)
         popcounts = map(byte_popcount, arena.arena)
         self.assertEquals(popcounts, expected)
-        verify_popcount_indicies(arena)
+        verify_popcount_indices(arena)
 
         arena = _load(all_bytes[::-1], True)
         popcounts = map(byte_popcount, arena.arena)
         self.assertEquals(popcounts, expected)
-        verify_popcount_indicies(arena)
+        verify_popcount_indices(arena)
 
 
     def test_all_ones(self):
         arena = _load([chr(255), chr(255), chr(255), chr(255)], True)
         self.assertEquals(arena.arena, "\xff\xff\xff\xff")
-        verify_popcount_indicies(arena)
+        verify_popcount_indices(arena)
 
 if __name__ == "__main__":
     unittest2.main()

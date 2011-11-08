@@ -203,20 +203,20 @@ static int fps_heap_lt(chemfp_fps_heap *heap, int i, int j) {
   if (heap->scores[i] > heap->scores[j])
     return 0;
   /* break ties on a first-come basis */
-  return (heap->indicies[i] > heap->indicies[j]);
+  return (heap->indices[i] > heap->indices[j]);
 }
 
 /* Swap two entries in the heap */
 static void fps_heap_swap(chemfp_fps_heap *heap, int i, int j) {
-  int idx = heap->indicies[i];
+  int idx = heap->indices[i];
   double score = heap->scores[i];
   char *id = heap->ids[i];
 
-  heap->indicies[i] = heap->indicies[j];
+  heap->indices[i] = heap->indices[j];
   heap->scores[i] = heap->scores[j];
   heap->ids[i] = heap->ids[j];
 
-  heap->indicies[j] = idx;
+  heap->indices[j] = idx;
   heap->scores[j] = score;
   heap->ids[j] = id;
 }
@@ -230,7 +230,7 @@ int chemfp_fps_knearest_search_init(
         int k, double threshold) {
 
   chemfp_fps_heap *heaps = NULL;
-  int *all_indicies = NULL;
+  int *all_indices = NULL;
   char **all_ids = NULL;
   double *all_scores = NULL;
   int i, num_queries;
@@ -245,8 +245,8 @@ int chemfp_fps_knearest_search_init(
   if (!heaps) {
     goto malloc_failure;
   }
-  all_indicies = (int *) calloc(k*num_queries, sizeof(int));
-  if (!all_indicies) {
+  all_indices = (int *) calloc(k*num_queries, sizeof(int));
+  if (!all_indices) {
     goto malloc_failure;
   }
   all_ids = (char **) calloc(k*num_queries, sizeof(char *));
@@ -271,7 +271,7 @@ int chemfp_fps_knearest_search_init(
   knearest_search->heaps = heaps;
 
   for (i=0; i<num_queries; i++) {
-    heaps[i].indicies = all_indicies+(i*k);
+    heaps[i].indices = all_indices+(i*k);
     heaps[i].ids = all_ids+(i*k);
     heaps[i].scores = all_scores+(i*k);
   }
@@ -285,7 +285,7 @@ int chemfp_fps_knearest_search_init(
  malloc_failure:
   if (all_scores) free(all_scores);
   if (all_ids) free(all_ids);
-  if (all_indicies) free(all_indicies);
+  if (all_indices) free(all_indices);
   if (heaps) free(heaps);
   return CHEMFP_NO_MEM;
 }

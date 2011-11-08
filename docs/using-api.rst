@@ -400,18 +400,18 @@ a FingerprintArena occurs with under 10 queries, so there should be
 little reason to worry about this.
 
 
-FingerprintArena searches returning indicies instead of ids
+FingerprintArena searches returning indices instead of ids
 ===========================================================
 
 In this section you'll learn how to search a FingerprintArea and use
-hits based on integer indicies rather than string ids.
+hits based on integer indices rather than string ids.
 
 The previous sections used a high-level interface to the Tanimoto
 search code. Those are designed for the common case where you just
 want the query id and the hits, where each hit includes the target id.
 
 Working with strings is actually rather inefficient in both speed and
-memory. It's usually better to work with indicies if you can, and in
+memory. It's usually better to work with indices if you can, and in
 the next section I'll show how to make a distance matrix using this
 interface.
 
@@ -561,13 +561,13 @@ is more likely to be a cluster centroid. Break ties arbitrarily by the
 fingerprint id; since fingerprints are ordered by the number of bits
 this likely makes larger structures appear first.::
 
-    def get_hit_indicies(hits):
+    def get_hit_indices(hits):
         return [id for (id, score) in hits]
     
     # Reorder so the centroid with the most hits comes first.
     # (That's why I do a reverse search.)
     # Ignore the arbitrariness of breaking ties by fingerprint index
-    results = sorted( (  (len(hits), i, get_hit_indicies(hits))
+    results = sorted( (  (len(hits), i, get_hit_indices(hits))
                                         for (i, hits) in enumerate(search.iter_hits())  ),
                       reverse=True)
 

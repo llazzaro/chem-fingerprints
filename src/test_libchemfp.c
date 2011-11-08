@@ -56,20 +56,20 @@ int main() {
         CHEMFP_BAD_FINGERPRINT);
 
   puts("== N-largest ==");
-  int indicies[2] = {0,0};
+  int indices[2] = {0,0};
   double scores[2] = {0.0, 0.0};
   if (chemfp_nlargest_tanimoto_block(2,
                                      2, "A1",
                                      15, "her/hlvhSV#$(ZXVLzf*)4lkdf[]#@",
                                      0, -1,
                                      0.0,
-                                     indicies, scores) < 0) {
+                                     indices, scores) < 0) {
     puts("FAIL: chemfp_nlargest_tanimoto_block");
   } else {
     puts("PASS: chemfp_nlargest_tanimoto_block");
-    //printf("[%d]=%f [%d]=%f\n", indicies[0], scores[0], indicies[1], scores[1]);
-    CHECK("  indicies[0]", indicies[0], 10);
-    CHECK("  indicies[1]", indicies[1], 13);
+    //printf("[%d]=%f [%d]=%f\n", indices[0], scores[0], indices[1], scores[1]);
+    CHECK("  indices[0]", indices[0], 10);
+    CHECK("  indices[1]", indices[1], 13);
     CHECK("  scores[0]", scores[0], 0.375);
     CHECK("  scores[1]", scores[1], 0.363636363636363636);
   }

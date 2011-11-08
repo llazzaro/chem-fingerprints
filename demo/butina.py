@@ -14,7 +14,7 @@ print "Clustering", len(dataset), "fingerprints"
 #   - the number of hits
 #   - an arbitrary and not very good tie-breaker value (larger values go first)
 #   - the fingerprint index
-#   - the list of fingerprint indicies within THRESHOLD of that fingerprint
+#   - the list of fingerprint indices within THRESHOLD of that fingerprint
 
 def tie_breaker_value(hits):
     # This is pretty arbitrary; it's the largest non-1.0 score; or 1.0
