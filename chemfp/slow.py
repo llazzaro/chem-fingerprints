@@ -41,7 +41,7 @@ def threshold_tanimoto_search_fp(query_fp, targets, threshold):
 
 def iter_threshold_tanimoto_search(queries, targets, threshold):
     for query_id, query_fp in queries:
-        yield threshold_tanimoto_search_fp(query_fp, targets, threshold)
+        yield query_id, threshold_tanimoto_search_fp(query_fp, targets, threshold)
 
 def threshold_tanimoto_search(queries, targets, threshold):
     return list(iter_threshold_tanimoto_search(queries, targets, threshold))
@@ -64,8 +64,8 @@ def knearest_tanimoto_search_fp(query_fp, targets, k, threshold):
                           key = operator.itemgetter(1))
 
 def iter_knearest_tanimoto_search(queries, targets, k, threshold):
-    for hits in iter_threshold_tanimoto_search(queries, targets, threshold):
-        yield heapq.nlargest(k, hits, key = operator.itemgetter(1))
+    for query_id, hits in iter_threshold_tanimoto_search(queries, targets, threshold):
+        yield query_id, heapq.nlargest(k, hits, key = operator.itemgetter(1))
 
 def knearest_tanimoto_search(queries, targets, k, threshold):
     return list(iter_knearest_tanimoto_search(queries, targets, k, threshold))
