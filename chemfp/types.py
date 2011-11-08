@@ -159,14 +159,22 @@ class Fingerprinter(object):
     def _get_fingerprinter(self, **fingerprinter_kwargs):
         raise NotImplementedError("Subclasses %r must implement _get_fingerprinter" % (self.__class__.__name__,))
     
-    def read_structure_fingerprints(self, metadata, source, format=None, id_tag=None, errors="strict"):
-        structure_reader = self._read_structures(metadata, source, format, id_tag, errors)
-        fingerprinter = self._get_fingerprinter(**self.fingerprinter_kwargs)
+    def read_structure_fingerprints(self, source, format=None, id_tag=None, errors="strict", metadata=None):
         source_filename = io.get_filename(source)
         if source_filename is None:
             sources = []
         else:
             sources = [source_filename]
+            
+        if metadata is None:
+            # XXX I don't like how the user who wants to pass in aromaticity
+            # information needs to create the full Metadata
+            metadata = Metadata(num_bits=self.num_bits, type=self.get_types(),
+                                software=self.software,
+                                sources=sources)
+            
+        structure_reader = self._read_structures(metadata, source, format, id_tag, errors)
+        fingerprinter = self._get_fingerprinter(**self.fingerprinter_kwargs)
 
         def fingerprint_reader(structure_reader, fingerprinter):
             for (id, mol) in structure_reader:
