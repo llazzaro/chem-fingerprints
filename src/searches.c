@@ -849,14 +849,14 @@ chemfp_reorder_by_popcount(
   if (popcount_indicies != NULL) {
     /* Since we've sorted by popcount, this is easy */
     popcount = 0;
-    *popcount_indicies++ = 0;
+    popcount_indicies[0] = 0;
     for (i=0; i<num_fingerprints; i++) {
       while (popcount < ordering[i].popcount) {
-	*popcount_indicies++ = i;
 	popcount++;
+	popcount_indicies[popcount] = i;
 	if (popcount == num_bits) {
 	  /* We are at or above the limit. We can stop now. */
-	  i = num_fingerprints+1;
+	  i = num_fingerprints;
 	  break;
 	  /* Note: with corrupted data it is possible
 	     that ->popcount can be > num_bits. This is
@@ -870,8 +870,7 @@ chemfp_reorder_by_popcount(
     }
     /* Finish up the high end */
     while (popcount <= num_bits) {
-      *popcount_indicies++ = i;
-      popcount++;
+      popcount_indicies[++popcount] = num_fingerprints;
     }
   }
   return num_fingerprints;

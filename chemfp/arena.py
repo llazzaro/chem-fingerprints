@@ -533,7 +533,7 @@ class ChemFPOrderedPopcount(ctypes.Structure):
 
 def reorder_fingerprints(fingerprints):
     ordering = (ChemFPOrderedPopcount*len(fingerprints))()
-    popcounts = array.array("i", (0,)*(fingerprints.metadata.num_bits+1))
+    popcounts = array.array("i", (0,)*(fingerprints.metadata.num_bits+2))
 
     new_arena = _chemfp.reorder_by_popcount(
         fingerprints.metadata.num_bits, fingerprints.storage_size,
