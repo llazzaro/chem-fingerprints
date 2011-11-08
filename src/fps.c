@@ -241,19 +241,19 @@ int chemfp_fps_knearest_search_init(
   } else {
     num_queries = query_end - query_start;
   }
-  heaps = (chemfp_fps_heap *) calloc(sizeof(chemfp_fps_heap), num_queries);
+  heaps = (chemfp_fps_heap *) calloc(num_queries, sizeof(chemfp_fps_heap));
   if (!heaps) {
     goto malloc_failure;
   }
-  all_indicies = (int *) calloc(sizeof(int), k*num_queries);
+  all_indicies = (int *) calloc(k*num_queries, sizeof(int));
   if (!all_indicies) {
     goto malloc_failure;
   }
-  all_ids = (char **) calloc(sizeof(char *), k*num_queries);
+  all_ids = (char **) calloc(k*num_queries, sizeof(char *));
   if (!all_ids) {
     goto malloc_failure;
   }
-  all_scores = (double *) calloc(sizeof(double), k*num_queries);
+  all_scores = (double *) calloc(k*num_queries, sizeof(double));
   if (!all_scores) {
     goto malloc_failure;
   }
