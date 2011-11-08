@@ -289,7 +289,7 @@ int chemfp_byte_contains(int len, const unsigned char *query_fp,
 }
 
 
-/* Return the Tanitoto between a byte fingerprint and a hex fingerprint */
+/* Return the Tanimoto between a byte fingerprint and a hex fingerprint */
 /* The size is the number of bytes in the byte_fp */
 double chemfp_byte_hex_tanimoto(int size,
 				const unsigned char *byte_fp,
