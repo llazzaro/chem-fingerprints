@@ -216,6 +216,15 @@ int chemfp_count_tanimoto_arena(
     }
     return query_index-query_start;
   }
+
+  if (threshold <= 0.0) {
+    /* Everything will match, so there's no need to figure that out */
+    for (query_index = query_start; query_index < query_end; query_index++) {
+      *result_counts++ = (target_end-target_start);
+    }
+    return query_index-query_start;
+  }
+
   if (target_popcount_indices == NULL) {
     /* Handle the case when precomputed targets aren't available. */
     /* This is a slower algorithm because it tests everything. */
