@@ -132,8 +132,6 @@ int chemfp_hex_intersect_popcount(int len, const char *sfp1, const char *sfp2) {
 
 /* Return the Tanitoto between two hex fingerprints, or -1.0 for invalid fingerprints
    If neither fingerprint has any set bits then return 1.0 */
-/* I spent a lot of time trying out different ways to optimize this code.
-   This is quite fast, but feel free to point out better ways! */
 double chemfp_hex_tanimoto(int len, const char *sfp1, const char *sfp2) {
   int i=0, union_w=0;
   int union_popcount=0, intersect_popcount=0;
