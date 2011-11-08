@@ -281,11 +281,15 @@ bad_popcount_indicies(const char *which, int check_indicies, int num_bits,
     return 1;
   }
 
+  /* If there is 1 bit then there must be three indicies: */
+  /*   indices[0]...indicies[1] ==> fingerprints with 0 bits set */
+  /*   indices[1]...indicies[2] ==> fingerprints with 1 bit set */
+
   num_popcounts = popcount_indicies_size / sizeof(int);
 
-  if (num_bits > num_popcounts - 1) {
+  if (num_bits > num_popcounts - 2) {
     sprintf(msg, "%d bits requires at least %d %spopcount indicies, not %d",
-            num_bits, num_bits+1, which, num_popcounts);
+            num_bits, num_bits+2, which, num_popcounts);
     PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
