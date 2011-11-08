@@ -169,7 +169,7 @@ class Fingerprinter(object):
         if metadata is None:
             # XXX I don't like how the user who wants to pass in aromaticity
             # information needs to create the full Metadata
-            metadata = Metadata(num_bits=self.num_bits, type=self.get_types(),
+            metadata = Metadata(num_bits=self.num_bits, type=self.get_type(),
                                 software=self.software,
                                 sources=sources)
             
