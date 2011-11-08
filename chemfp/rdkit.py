@@ -323,26 +323,37 @@ _fingerprint_decoders = {"minPath": int,
                          "fpSize": int,
                          "nBitsPerHash": int,
                          "useHs": int,
-                         "radius":int,
-                         "useFeatures":int,
-                         "useChirality":int,
-                         "useBondTypes":int}
+                         }
+
+
+_morgan_fingerprint_decoders = _fingerprint_decoders.copy()
+_morgan_fingerprint_decoders.update({
+    "useChirality": int,
+    "radius":int,
+    "useFeatures":int,
+    "useBondTypes":int})
+
 _fingerprint_defaults = {"minPath": 1,
                          "maxPath": 7,
                          "fpSize": 2048,
                          "nBitsPerHash": 4,
                          "useHs": 1,
-                         "radius":2,
-                         "useFeatures":0,
-                         "useChirality":0,
-                         "useBondTypes":1}
+                         }
 
-def decode_fingerprint_parameters(parameters):
-    fingerprinter_kwargs = _fingerprint_defaults.copy()
+_morgan_fingerprint_defaults = _fingerprint_defaults.copy()
+_morgan_fingerprint_defaults.update({
+    "useChirality": 0,
+    "radius":2,
+    "useFeatures":0,
+    "useBondTypes":1})
+    
+
+def decode_fingerprint_parameters(parameters, decoders, defaults):
+    fingerprinter_kwargs = defaults.copy()
     for name, value in parameters:
-        if name not in _fingerprint_decoders:
+        if name not in decoders:
             raise ValueError("Unknown RDKit-Fingerprint parameter %r" % (name,))
-        decoder = _fingerprint_decoders[name]
+        decoder = decoders[name]
         fingerprinter_kwargs[name] = decoder(value)
     return fingerprinter_kwargs
 
@@ -380,7 +391,8 @@ class RDKitFingerprinter_v1(_RDKitFingerprinter):
 
     @classmethod
     def from_parameters(cls, parameters):
-        kwargs = decode_fingerprint_parameters(parameters)
+        kwargs = decode_fingerprint_parameters(parameters, _fingerprint_decoders,
+                                               _fingerprint_defaults)
         return cls(kwargs)
 
     _get_fingerprinter = staticmethod(make_rdk_fingerprinter)
@@ -397,7 +409,8 @@ class RDKitMorganFingerprinter_v1(_RDKitFingerprinter):
 
     @classmethod
     def from_parameters(cls, parameters):
-        kwargs = decode_fingerprint_parameters(parameters)
+        kwargs = decode_fingerprint_parameters(parameters, _morgan_fingerprint_decoders,
+                                               _morgan_fingerprint_defaults)
         return cls(kwargs)
 
     _get_fingerprinter = staticmethod(make_morgan_fingerprinter)
