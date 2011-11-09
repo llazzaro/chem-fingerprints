@@ -1,0 +1,334 @@
+.. _chemfp-api:
+
+==========
+chemfp API
+==========
+
+This chapter contains the docstrings for the public portion of the
+chemfp API.
+
+=============
+chemfp module
+=============
+
+The following functions and classes are in the chemfp module.
+
+.. py:module:: chemfp
+
+open
+====
+
+.. py:function:: open(source[, format=None])
+
+{{ chemfp.open|docstring }}
+
+.. _chemfp_load_fingerprints:
+
+load_fingerprints
+=================
+
+.. py:function:: load_fingerprints(reader[, metadata=None][, reorder=True])
+
+{{ chemfp.load_fingerprints|docstring}}
+
+
+.. _chemfp_read_structure_fingerprints:
+
+read_structure_fingerprints
+===========================
+
+.. py:function:: read_structure_fingerprints(type[, source=None][, format=None][, id_tag=None][, errors="strict"]):
+
+{{ chemfp.read_structure_fingerprints|docstring}}
+
+
+.. _chemfp_count_tanimoto_hits:
+
+count_tanimoto_hits
+===================
+
+.. py:function:: count_tanimoto_hits(queries, targets[, threshold=0.7][, arena_size=100])
+
+{{ chemfp.count_tanimoto_hits|docstring}}
+
+
+.. _chemfp_threshold_tanimoto_search:
+
+threshold_tanimoto_search
+=========================
+
+.. py:function:: threshold_tanimoto_search (queries, targets[, threshold=0.7][, arena_size=100])
+
+{{ chemfp.threshold_tanimoto_search|docstring}}
+
+.. _chemfp_knearest_tanimoto_search:
+
+knearest_tanimoto_search
+========================
+
+.. py:function:: knearest_tanimoto_search (queries, targets[, k=3][, threshold=0.7][, arena_size=100])
+
+{{ chemfp.knearest_tanimoto_search|docstring}}
+
+
+.. _chemfp_metadata:
+
+Metadata
+========
+
+.. py:class:: Metadata([num_bits=None][, num_bytes=None][, type=None][, aromaticity=None][, software=None][, sources=None][, date=None])
+
+{{ chemfp.Metadata|docstring}}
+
+.. _chemfp_fingerprintreader:
+
+FingerprintReader (base class)
+==============================
+
+.. py:class:: chemfp.FingerprintReader(metadata)
+
+{{ chemfp.FingerprintReader.__init__|docstring}}
+
+{{ chemfp.FingerprintReader|docstring}}
+
+iter(arena)
+-----------
+
+.. py:method:: __iter__()
+
+{{ chemfp.FingerprintReader.__iter__|docstring}}
+
+iter_arenas
+-----------
+
+.. py:method:: iter_arenas([arena_size=1000])
+
+{{ chemfp.FingerprintReader.iter_arenas|docstring}}
+
+
+===================
+chemfp.arena module
+===================
+
+The following classes are returned as part of the public API but
+should not be constructed directly.
+
+.. _chemfp_arena_fingerprintarena:
+
+.. py:module:: chemfp.arena
+
+FingerprintArena
+================
+
+Implements the FingerprintReader interface.
+
+.. py:class:: FingerprintArena(... do not call directly ...)
+
+{{ chemfp.arena.FingerprintArena|docstring}}
+
+len(arena)
+----------
+
+.. py:method:: __len__()
+
+{{ chemfp.arena.FingerprintArena.__len__|docstring}}
+
+arena[i]
+--------
+
+.. py:method:: __getitem__(i)
+
+{{ chemfp.arena.FingerprintArena.__getitem__|docstring}}
+
+
+iter(arena)
+-----------
+
+.. py:method:: __iter__()
+
+{{ chemfp.arena.FingerprintArena.__iter__|docstring}}
+
+
+iter_arenas
+-----------
+
+.. py:method:: iter_arenas([arena_size=1000])
+
+{{ chemfp.arena.FingerprintArena.iter_arenas|docstring}}
+
+
+count_tanimoto_hits_fp
+----------------------
+
+.. py:method:: count_tanimoto_hits_fp(query_fp[, threshold=0.7])
+
+{{ chemfp.arena.FingerprintArena.count_tanimoto_hits_fp|docstring}}
+
+
+count_tanimoto_hits_arena
+-------------------------
+
+.. py:method:: count_tanimoto_hits_arena(query_arena[, threshold=0.7])
+
+{{ chemfp.arena.FingerprintArena.count_tanimoto_hits_arena|docstring}}
+
+threshold_tanimoto_search_fp
+----------------------------
+
+.. py:method:: threshold_tanimoto_search_fp(query_fp[, threshold=0.7])
+
+{{ chemfp.arena.FingerprintArena.threshold_tanimoto_search_fp|docstring}}
+
+
+threshold_tanimoto_search_arena
+-------------------------------
+
+.. py:method:: threshold_tanimoto_search_arena(query_arena[, threshold=0.7])
+
+{{ chemfp.arena.FingerprintArena.threshold_tanimoto_search_arena|docstring}}
+
+knearest_tanimoto_search_fp
+----------------------------
+
+.. py:method:: knearest_tanimoto_search_fp(query_fp[, k=3][, threshold=0.7])
+
+{{ chemfp.arena.FingerprintArena.knearest_tanimoto_search_fp|docstring}}
+
+
+knearest_tanimoto_search_arena
+-------------------------------
+
+.. py:method:: knearest_tanimoto_search_arena(query_arena[, k=3][, threshold=0.7])
+
+{{ chemfp.arena.FingerprintArena.knearest_tanimoto_search_arena|docstring }}
+
+
+save
+----
+
+.. py:method:: save(destination)
+
+{{ chemfp.arena.FingerprintArena.save|docstring}}
+
+
+
+SearchResults
+=============
+
+.. py:class:: SearchResults(... do not call directly ...)
+
+{{ chemfp.arena.SearchResults|docstring}}
+
+iter(results)
+-------------
+
+.. py:method:: __iter__()
+
+{{ chemfp.arena.SearchResults.__iter__|docstring}}
+
+iter_hits
+---------
+
+.. py:method:: iter_hits()
+
+{{ chemfp.arena.SearchResults.iter_hits|docstring}}
+
+
+len(results)
+------------
+
+.. py:method:: __len__()
+
+{{ chemfp.arena.SearchResults.__len__|docstring}}
+
+results[i]
+----------
+
+.. py:method:: __getitem__(i)
+
+{{ chemfp.arena.SearchResults.__getitem__|docstring}}
+
+size(i)
+-------
+
+.. py:method:: size()
+
+{{ chemfp.arena.SearchResults.size|docstring}}
+
+
+.. _chemfp.bitops:
+
+=====================
+chemfp.bitopts module
+=====================
+
+.. py:module:: chemfp.bitops
+
+The following functions are in the chemfp.bitops module. They
+provide low-level bit operations on byte and hex fingerprints.
+
+
+byte_popcount
+=============
+
+.. py:function:: byte_popcount()
+
+{{ chemfp.bitops.byte_popcount|docstring}}
+
+byte_intersect_popcount
+=======================
+
+.. py:function:: byte_intersect_popcount()
+
+{{ chemfp.bitops.byte_intersect_popcount|docstring}}
+
+byte_tanimoto
+=============
+
+.. py:function:: byte_tanimoto()
+
+{{ chemfp.bitops.byte_tanimoto|docstring}}
+
+byte_contains
+=============
+
+.. py:function:: byte_contains()
+
+{{ chemfp.bitops.byte_contains|docstring}}
+
+hex_isvalid
+===========
+
+.. py:function:: hex_isvalid()
+
+{{ chemfp.bitops.hex_isvalid|docstring}}
+
+hex_popcount
+============
+
+.. py:function:: hex_popcount()
+
+{{ chemfp.bitops.hex_popcount|docstring}}
+
+hex_intersect_popcount
+======================
+
+.. py:function:: hex_intersect_popcount()
+
+{{ chemfp.bitops.hex_intersect_popcount|docstring}}
+
+
+hex_tanimoto
+============
+
+.. py:function:: hex_tanimoto()
+
+{{ chemfp.bitops.hex_tanimoto|docstring}}
+
+
+hex_contains
+============
+
+.. py:function	:: hex_contains()
+
+{{ chemfp.bitops.hex_contains|docstring}}
