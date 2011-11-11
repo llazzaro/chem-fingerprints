@@ -49,7 +49,8 @@ def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
     require_matching_fp_size(query_fp, target_arena)
     counts = array.array("i", (0 for i in xrange(len(query_fp))))
     _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
-                                 len(query_fp), query_fp, 0, -1,
+                                 0, 0, len(query_fp), query_fp, 0, -1,
+                                 target_arena.start_padding, target_arena.end_padding,
                                  target_arena.storage_size, target_arena.arena,
                                  target_arena.start, target_arena.end,
                                  target_arena.popcount_indices,
@@ -62,8 +63,10 @@ def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
 
     counts = (ctypes.c_int*len(query_arena))()
     _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
+                                 query_arena.start_padding, query_arena.end_padding,
                                  query_arena.storage_size,
                                  query_arena.arena, query_arena.start, query_arena.end,
+                                 target_arena.start_padding, target_arena.end_padding,
                                  target_arena.storage_size,
                                  target_arena.arena, target_arena.start, target_arena.end,
                                  target_arena.popcount_indices,
@@ -156,8 +159,10 @@ def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
 
     num_added = _chemfp.threshold_tanimoto_arena(
         threshold, target_arena.num_bits,
-        len(query_fp), query_fp, 0, -1,
-        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+        0, 0, len(query_fp), query_fp, 0, -1,
+        target_arena.start_padding, target_arena.end_padding,
+        target_arena.storage_size, target_arena.arena,
+        target_arena.start, target_arena.end,
         target_arena.popcount_indices,
         offsets, 0,
         indices, scores)
@@ -200,7 +205,9 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     def add_rows(query_start, offset_start):
         return _chemfp.threshold_tanimoto_arena(
             threshold, num_bits,
+            query_arena.start_padding, query_arena.end_padding,
             query_arena.storage_size, query_arena.arena, query_start, query_end,
+            target_arena.start_padding, target_arena.end_padding,
             target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
             target_arena.popcount_indices,
             offsets, offset_start, # XXX should query_start=0?
@@ -225,7 +232,8 @@ def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
 
     num_added = _chemfp.knearest_tanimoto_arena(
         k, threshold, target_arena.num_bits,
-        len(query_fp), query_fp, 0, 1,
+        0, 0, len(query_fp), query_fp, 0, 1,
+        target_arena.start_padding, target_arena.end_padding,
         target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
         target_arena.popcount_indices,
         offsets, 0,
@@ -254,7 +262,9 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
     def add_rows(query_start, offset_start):
         return _chemfp.knearest_tanimoto_arena(
             k, threshold, num_bits,
+            query_arena.start_padding, query_arena.end_padding,
             query_arena.storage_size, query_arena.arena, query_start, query_end,
+            target_arena.start_padding, target_arena.end_padding,
             target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
             target_arena.popcount_indices,
             offsets, offset_start,
@@ -297,8 +307,10 @@ def _search(query_start, query_end, offsets, indices, scores,
 
 class FingerprintLookup(object):
     "This is an unpublished API and may be removed in the future"
-    def __init__(self, fp_size, storage_size, arena):
+    def __init__(self, fp_size, start_padding, end_padding, storage_size, arena):
         self._fp_size = fp_size
+        self._start_padding = start_padding
+        self._end_padding = end_padding
         self._storage_size = storage_size
         self._arena = arena
         self._range_check = xrange(len(self))
@@ -306,17 +318,19 @@ class FingerprintLookup(object):
     def __len__(self):
         if not self._storage_size:
             return 0
-        return len(self._arena) / self._storage_size
+        return (len(self._arena)-self._start_padding-self._end_padding)/self._storage_size
 
     def __iter__(self):
         fp_size = self._fp_size
         arena = self._arena
-        for id, start_offset in zip(self.ids, xrange(0, len(arena), storage_size)):
+        for id, start_offset in zip(self.ids,
+                                    xrange(self._start_padding,
+                                           len(arena)-self.end_padding, storage_size)):
             yield id, arena[start_offset:start_offset+target_fp_size]
         
         
     def __getitem__(self, i):
-        start_offset = self._range_check[i] * self._storage_size
+        start_offset = self._range_check[i] * self._storage_size + self._start_padding
         return self._arena[start_offset:start_offset+self._fp_size]
 
 class FingerprintArena(FingerprintReader):
@@ -328,19 +342,23 @@ class FingerprintArena(FingerprintReader):
        ids
            list of identifiers, ordered by position
     """
-    def __init__(self, metadata, storage_size, arena, popcount_indices, ids,
-                 start=0, end=None):
+    def __init__(self, metadata,
+                 start_padding, end_padding, storage_size, arena,
+                 popcount_indices, ids, start=0, end=None):
         if metadata.num_bits is None:
             raise TypeError("Missing metadata num_bits information")
         if metadata.num_bytes is None:
             raise TypeError("Missing metadata num_bytes information")
         self.metadata = metadata
         self.num_bits = metadata.num_bits
+        self.start_padding = start_padding
+        self.end_padding = end_padding
         self.storage_size = storage_size
         self.arena = arena
         self.popcount_indices = popcount_indices
         self.ids = ids
-        self.fingerprints = FingerprintLookup(metadata.num_bytes, storage_size, arena)
+        self.fingerprints = FingerprintLookup(metadata.num_bytes, self.start_padding,
+                                              self.end_padding, storage_size, arena)
         self.start = start
         if end is None:
             if self.metadata.num_bytes:
@@ -359,7 +377,7 @@ class FingerprintArena(FingerprintReader):
         """Return the (id, fingerprint) at position i"""
         i = self._range_check[i]
         arena_i = i + self.start
-        start_offset = arena_i * self.storage_size
+        start_offset = arena_i * self.storage_size + self.start_offset
         end_offset = start_offset + self.metadata.num_bytes
         return self.ids[i], self.arena[start_offset:end_offset]
 
@@ -394,8 +412,10 @@ class FingerprintArena(FingerprintReader):
             return
         target_fp_size = self.metadata.num_bytes
         arena = self.arena
-        for id, start_offset in zip(self.ids, xrange(self.start*storage_size,
-                                                     self.end*storage_size, storage_size)):
+        for id, start_offset in zip(self.ids,
+                                    xrange(self.start*storage_size+self.start_padding,
+                                           self.end*storage_size+self.start_padding,
+                                           storage_size)):
             yield id, arena[start_offset:start_offset+target_fp_size]
 
     def iter_arenas(self, arena_size = 1000):
@@ -422,7 +442,8 @@ class FingerprintArena(FingerprintReader):
         for i in xrange(0, len(self), arena_size):
             ids = self.ids[i:i+arena_size]
             end = start+len(ids)
-            yield FingerprintArena(self.metadata, self.storage_size, self.arena,
+            yield FingerprintArena(self.metadata, self.start_padding, self.end_padding,
+                                   self.storage_size, self.arena,
                                    self.popcount_indices, ids, start, end)
             start = end
 
@@ -531,21 +552,7 @@ class ChemFPOrderedPopcount(ctypes.Structure):
     _fields_ = [("popcount", ctypes.c_int),
                 ("index", ctypes.c_int)]
 
-def reorder_fingerprints(fingerprints):
-    ordering = (ChemFPOrderedPopcount*len(fingerprints))()
-    popcounts = array.array("i", (0,)*(fingerprints.metadata.num_bits+2))
-
-    new_arena = _chemfp.reorder_by_popcount(
-        fingerprints.metadata.num_bits, fingerprints.storage_size,
-        fingerprints.arena, fingerprints.start, fingerprints.end, ordering, popcounts)
-
-    new_ids = [fingerprints.ids[item.index] for item in ordering]
-    return FingerprintArena(fingerprints.metadata, fingerprints.storage_size,
-                            new_arena, popcounts.tostring(), new_ids)
-                                
-
-
-def fps_to_arena(fps_reader, metadata=None, reorder=True):
+def fps_to_arena(fps_reader, metadata=None, reorder=True, alignment=8):
     if metadata is None:
         metadata = fps_reader.metadata
     num_bits = metadata.num_bits
@@ -553,20 +560,43 @@ def fps_to_arena(fps_reader, metadata=None, reorder=True):
         num_bits = metadata.num_bytes * 8
     #assert num_bits
 
+    storage_size = metadata.num_bytes
+    if storage_size % alignment != 0:
+        n = alignment - storage_size % alignment
+        end_padding = "\0" * n
+        storage_size += n
+    else:
+        end_padding = None
+
     ids = []
     unsorted_fps = StringIO()
     for (id, fp) in fps_reader:
         unsorted_fps.write(fp)
+        if end_padding:
+            unsorted_fps.write(end_padding)
         ids.append(id)
 
     unsorted_arena = unsorted_fps.getvalue()
     unsorted_fps.close()
     unsorted_fps = None
 
-    fingerprints = FingerprintArena(metadata, metadata.num_bytes,
-                                    unsorted_arena, "", ids)
 
-    if reorder and metadata.num_bits:
-        return reorder_fingerprints(fingerprints)
-    else:
-        return fingerprints
+    if not reorder or not metadata.num_bits:
+        start_padding, end_padding, unsorted_arena = _chemfp.make_unsorted_aligned_arena(
+            unsorted_arena, alignment)
+        return FingerprintArena(metadata, start_padding, end_padding, storage_size,
+                                unsorted_arena, "", ids)
+
+    # Reorder
+        
+    ordering = (ChemFPOrderedPopcount*len(ids))()
+    popcounts = array.array("i", (0,)*(metadata.num_bits+2))
+
+    start_padding, end_padding, unsorted_arena = _chemfp.make_sorted_aligned_arena(
+        num_bits, storage_size, unsorted_arena, len(ids),
+        ordering, popcounts, alignment)
+
+    new_ids = [ids[item.index] for item in ordering]
+    return FingerprintArena(metadata,
+                            start_padding, end_padding, storage_size,
+                            unsorted_arena, popcounts.tostring(), new_ids)
