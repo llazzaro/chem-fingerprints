@@ -793,7 +793,7 @@ calculate_arena_popcounts(int num_bits, int storage_size, const unsigned char *a
 			  int num_fingerprints, ChemFPOrderedPopcount *ordering) {
   chemfp_popcount_f calc_popcount;
   const unsigned char *fp;
-  int fp_index, popcount, prev_popcount, is_ordered;
+  int fp_index, popcount, prev_popcount;
   /* Compute the popcounts. (Alignment isn't that important here.) */
 
   calc_popcount = chemfp_select_popcount(num_bits, storage_size, arena);
@@ -807,15 +807,13 @@ calculate_arena_popcounts(int num_bits, int storage_size, const unsigned char *a
   /* Check if the values are already ordered */
 
   prev_popcount = ordering[0].popcount;
-  is_ordered = 1;
   for (fp_index = 1; fp_index < num_fingerprints; fp_index++) {
-    if (ordering[fp_index].popcount > prev_popcount) {
-      is_ordered = 0;
-      break;
+    if (ordering[fp_index].popcount < prev_popcount) {
+      return 1; /* Need to sort */
     }
     prev_popcount = ordering[fp_index].popcount;
   }
-  return is_ordered;
+  return 0; /* Don't need to sort */
 }
 
 
@@ -838,6 +836,38 @@ static int compare_by_popcount(const void *left_p, const void *right_p) {
 }
 
 
+static void
+set_popcount_indicies(int num_fingerprints, int num_bits,
+		      ChemFPOrderedPopcount *ordering, int *popcount_indices) {
+  int popcount, i;
+
+  /* We've sorted by popcount so this isn't so difficult */
+  popcount = 0;
+  popcount_indices[0] = 0;
+  for (i=0; i<num_fingerprints; i++) {
+    while (popcount < ordering[i].popcount) {
+      popcount++;
+      popcount_indices[popcount] = i;
+      if (popcount == num_bits) {
+	/* We are at or above the limit. We can stop now. */
+	i = num_fingerprints;
+	break;
+	/* Note: with corrupted data it is possible
+	   that ->popcount can be > num_bits. This is
+	   undefined behavior. I get to do what I want.
+	   I decided to treat them as having "max_popcount" bits.
+	   After all, I don't want corrupt data to crash the
+	   system, and no one is going to validate the input
+	   fingerprints for correctness each time.  */
+      }
+    }
+  }
+  /* Finish up the high end */
+  while (popcount <= num_bits) {
+    popcount_indices[++popcount] = num_fingerprints;
+  }
+}
+
 
 static PyObject *
 make_sorted_aligned_arena(PyObject *self, PyObject *args) {
@@ -850,7 +880,7 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
   Py_ssize_t input_arena_size;
   ChemFPOrderedPopcount *ordering;
   int *popcount_indices;
-  int is_ordered, i, popcount;
+  int need_to_sort, i;
   int alignment;
   
   if (!PyArg_ParseTuple(args, "iiOiw#w#i",
@@ -886,22 +916,23 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
   }
 
 
-  is_ordered = calculate_arena_popcounts(num_bits, storage_size, input_arena,
-					 num_fingerprints, ordering);
+  need_to_sort = calculate_arena_popcounts(num_bits, storage_size, input_arena,
+					   num_fingerprints, ordering);
 
-
-  if (is_ordered) {
-    /* Everything is ordered. Just need the right alignment. */
+  if (!need_to_sort) {
+    /* Everything is ordered. Just need the right alignment .... */
     output_arena_obj = _align_arena(input_arena_obj, alignment,
 				    &start_padding, &end_padding);
     if (!output_arena_obj) {
       return NULL;
     }
+
+    /* ... and to set the popcount indicies */
+    set_popcount_indicies(num_fingerprints, num_bits, ordering, popcount_indices);
     
     /* Everything is aligned and ordered, so we're done */
     return Py_BuildValue("iiO", start_padding, end_padding, output_arena_obj);
   }
-
 
   /* Not ordered. Make space for the results. */
   output_arena_obj = _alloc_aligned_arena(input_arena_size, alignment,
@@ -922,31 +953,9 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
   }
 
   /* Create the popcount indicies */
-  /* We've sorted by popcount so this isn't so difficult */
-  popcount = 0;
-  popcount_indices[0] = 0;
-  for (i=0; i<num_fingerprints; i++) {
-    while (popcount < ordering[i].popcount) {
-      popcount++;
-      popcount_indices[popcount] = i;
-      if (popcount == num_bits) {
-	/* We are at or above the limit. We can stop now. */
-	i = num_fingerprints;
-	break;
-	/* Note: with corrupted data it is possible
-	   that ->popcount can be > num_bits. This is
-	   undefined behavior. I get to do what I want.
-	   I decided to treat them as having "max_popcount" bits.
-	   After all, I don't want corrupt data to crash the
-	   system, and no one is going to validate the input
-	   fingerprints for correctness each time.  */
-      }
-    }
-  }
-  /* Finish up the high end */
-  while (popcount <= num_bits) {
-    popcount_indices[++popcount] = num_fingerprints;
-  }
+  set_popcount_indicies(num_fingerprints, num_bits, ordering, popcount_indices);
+
+
   Py_END_ALLOW_THREADS;
 
   return Py_BuildValue("iiO", start_padding, end_padding, output_arena_obj);
