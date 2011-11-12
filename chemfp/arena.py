@@ -185,6 +185,8 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     num_queries = len(query_arena)
 
     offsets = (ctypes.c_int * (num_queries+1))()
+    print "There are", num_queries, "queries"
+
     offsets[0] = 0
     
     product = num_queries*len(target_arena)
@@ -362,7 +364,7 @@ class FingerprintArena(FingerprintReader):
         self.start = start
         if end is None:
             if self.metadata.num_bytes:
-                end = len(arena) // self.metadata.num_bytes
+                end = (len(arena) - start_padding - end_padding) // self.storage_size
             else:
                 end = 0
         self.end = end

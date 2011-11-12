@@ -142,8 +142,9 @@ def threshold_tanimoto_search_all(query_arena, target_reader, threshold):
         end = len(block)
         while 1:
             err, start, num_lines, num_cells = _chemfp.fps_threshold_tanimoto_search(
-                query_arena.metadata.num_bits, query_arena.storage_size,
-                query_arena.arena, 0, -1,
+                query_arena.metadata.num_bits,
+                query_arena.start_padding, query_arena.end_padding,
+                query_arena.storage_size, query_arena.arena, 0, -1,
                 block, start, end,
                 threshold, cells)
             lineno += num_lines
