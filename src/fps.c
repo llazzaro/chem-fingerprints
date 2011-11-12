@@ -106,7 +106,7 @@ int chemfp_fps_count_tanimoto_hits(
 
     query_fp = query_arena + query_start * query_storage_size;
     for (query_index=query_start; query_index<query_end;
-	 query_index++, query_fp += fp_size) {
+	 query_index++, query_fp += query_storage_size) {
       score = chemfp_byte_hex_tanimoto(fp_size, query_fp, line);
       if (score >= threshold)
 	counts[query_index]++;
@@ -126,7 +126,6 @@ int chemfp_fps_threshold_tanimoto_search(
 	int num_bits,
 	int query_storage_size,
 	const unsigned char *query_arena, int query_start, int query_end,
-	
 	const char *target_block, int target_block_end,
         double threshold,
 	int num_cells, chemfp_tanimoto_cell *cells,
@@ -169,7 +168,7 @@ int chemfp_fps_threshold_tanimoto_search(
 
     query_fp = query_arena + query_start * query_storage_size;
     for (query_index=query_start; query_index<query_end;
-	 query_index++, query_fp += fp_size) {
+	 query_index++, query_fp += query_storage_size) {
       score = chemfp_byte_hex_tanimoto(fp_size, query_fp, line);
       if (score >= threshold) {
 	current_cell->score = score;
