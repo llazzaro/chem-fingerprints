@@ -185,7 +185,6 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     num_queries = len(query_arena)
 
     offsets = (ctypes.c_int * (num_queries+1))()
-    print "There are", num_queries, "queries"
 
     offsets[0] = 0
     
