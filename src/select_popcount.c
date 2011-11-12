@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "chemfp.h"
+#include "chemfp_internal.h"
 
 /*#define REGULAR*/
 
@@ -18,10 +19,16 @@ static int lut[] = {
   3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8  };
 
 
+/* This is called with the number of bytes in the fingerprint, */
+/* which is not necessarily a multiple of 4. However, the select */
+/* function promises that there will be enough extra data. */
+
 static inline int popcount_lut8(int n, uint32_t *fp) {
   int cnt=0;
   unsigned int i;
-  n /= 4;
+
+  /* Handle even cases where the fingerprint length is not a multiple of 4 */
+  n = (n+3) / 4;
   do {
     i = *fp;
     cnt += lut[i&255];
@@ -36,7 +43,7 @@ static inline int popcount_lut8(int n, uint32_t *fp) {
 static inline int intersect_popcount_lut8(int n, uint32_t *fp1, uint32_t *fp2) {
   int cnt=0;
   unsigned int i;
-  n /= 4;
+  n = (n+3) / 4;
   do {
     i = *fp1 & *fp2;
     cnt += lut[i&255];
@@ -51,10 +58,6 @@ static inline int intersect_popcount_lut8(int n, uint32_t *fp1, uint32_t *fp2) {
 
 
 
-/* Modified from http://stackoverflow.com/questions/1898153/how-to-determine-if-memory-is-aligned-testing-for-alignment-not-aligning */
-
-#define ALIGNMENT(POINTER, BYTE_COUNT) \
-  (((uintptr_t)(const void *)(POINTER)) % (BYTE_COUNT))
 
 
 /* chemfp stores fingerprints as Python strings */
@@ -66,9 +69,21 @@ chemfp_select_popcount(int num_bits,
 		       int storage_len, const unsigned char *arena) {
 
   uintptr_t alignment = ALIGNMENT(arena, 4);
+
+  int num_bytes = (num_bits+7)/8;
+
 #ifdef REGULAR
-    return chemfp_byte_popcount;
+  return chemfp_byte_popcount;
 #endif
+  if (num_bytes > storage_len) {
+    /* Give me bad input, I'll give you worse output */
+    return NULL;
+  }
+  if (num_bytes < 4) {
+    /* Really? That's very small. There's no reason to optimize this case */
+    return chemfp_byte_popcount;
+  }
+
   if (alignment != 0) {
     /* I could in theory optimize this as well. */
     return chemfp_byte_popcount;
@@ -102,6 +117,9 @@ chemfp_select_intersect_popcount(int num_bits,
   if (num_bytes > storage_len) {
     /* Give me bad input, I'll give you worse output */
     return NULL;
+  }
+  if (num_bytes < 4) {
+    return chemfp_byte_intersect_popcount;
   }
 
   if (alignment1 != alignment2) {
