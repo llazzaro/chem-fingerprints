@@ -556,6 +556,23 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
         self.assertEquals(fps[5:45][0], fps[5])
         self.assertEquals(fps[5:45][0], fps[5])
         self.assertEquals(fps[5:45][3:6][0], fps[8])
+
+    def test_slice_negative(self):
+        fps = self._open(CHEBI_TARGETS)
+        self.assertEquals(fps[len(fps)-1], fps[-1])
+        self.assertEquals(fps.ids[-2:], fps[-2:].ids)
+        self.assertEquals(fps.ids[-2:], fps[-2:].ids)
+        self.assertEquals(list(fps[-2:]), [fps[-2], fps[-1]])
+        self.assertEquals(fps[-5:-2][-1], fps[-3])
+
+    def test_slice_errors(self):
+        arena = self._open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(IndexError, "arena fingerprint index out of range"):
+            arena[len(arena)]
+        with self.assertRaisesRegexp(IndexError, "arena fingerprint index out of range"):
+            arena[-len(arena)-1]
+        with self.assertRaisesRegexp(IndexError, "arena slice step size must be 1"):
+            arena[4:45:2]
         
 
 # Use this to verify the other implementations
