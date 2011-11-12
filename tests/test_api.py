@@ -546,6 +546,18 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
     def _open(self, name):
         return chemfp.load_fingerprints(name, reorder=False)
 
+    def test_slice_ids(self):
+        fps = self._open(CHEBI_TARGETS)
+        self.assertEquals(fps.ids[4:10], fps[4:10].ids)
+        self.assertEquals(fps.ids[5:20][1:5], fps[6:10].ids)
+
+    def test_slice_fingerprints(self):
+        fps = self._open(CHEBI_TARGETS)
+        self.assertEquals(fps[5:45][0], fps[5])
+        self.assertEquals(fps[5:45][0], fps[5])
+        self.assertEquals(fps[5:45][3:6][0], fps[8])
+        
+
 # Use this to verify the other implementations
 from chemfp.slow import SlowFingerprints
 class TestSlowFingerprints(unittest2.TestCase, CommonReaderAPI):

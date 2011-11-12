@@ -376,9 +376,20 @@ class FingerprintArena(FingerprintReader):
 
     def __getitem__(self, i):
         """Return the (id, fingerprint) at position i"""
+        if isinstance(i, slice):
+            start, end, step = i.indices(self.end - self.start)
+            if start >= end:
+                return FingerprintArena(self.metadata, 0, 0, self.storage_size, "",
+                                        "", [], 0, 0)
+            if step != 1:
+                raise ValueError("arena slice step size must be 1")
+            return FingerprintArena(self.metadata, self.start_padding, self.end_padding,
+                                    self.storage_size, self.arena,
+                                    self.popcount_indices, self.ids[start:end],
+                                    self.start+start, self.start+end)
         i = self._range_check[i]
         arena_i = i + self.start
-        start_offset = arena_i * self.storage_size + self.start_offset
+        start_offset = arena_i * self.storage_size + self.start_padding
         end_offset = start_offset + self.metadata.num_bytes
         return self.ids[i], self.arena[start_offset:end_offset]
 
