@@ -1,0 +1,263 @@
+# The contents of this file are derived from RDKit's Chem/MACCSkeys.py
+# and translated by hand to the chemfp pattern format.
+
+# The RDKit code is distributed with the following license:
+
+# Copyright (c) 2006-2010
+# Rational Discovery LLC, Greg Landrum, and Julie Penzotti 
+# 
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met: 
+# 
+#     * Redistributions of source code must retain the above copyright 
+#       notice, this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above
+#       copyright notice, this list of conditions and the following 
+#       disclaimer in the documentation and/or other materials provided 
+#       with the distribution.
+#     * Neither the name of Rational Discovery nor the names of its 
+#       contributors may be used to endorse or promote products derived 
+#       from this software without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+# Copyright (C) 2001-2008 greg Landrum and Rational Discovery LLC
+#
+#   @@ All Rights Reserved  @@
+#
+
+
+# SMARTS definitions for the publically available MACCS keys
+# and a MACCS fingerprinter
+# 
+# I compared the MACCS fingerprints generated here with those from two
+# other packages (not MDL, unfortunately). Of course there are
+# disagreements between the various fingerprints still, but I think
+# these definitions work pretty well. Some notes:
+# 
+# 1) most of the differences have to do with aromaticity
+# 2) there's a discrepancy sometimes because the current RDKit
+# definitions do not require multiple matches to be distinct. e.g. the
+# SMILES C(=O)CC(=O) can match the (hypothetical) key O=CC twice in my
+# definition. It's not clear to me what the correct behavior is.
+# 3) Some keys are not fully defined in the MDL documentation
+# 4) Two keys, 125 and 166, have to be done outside of SMARTS.
+#     (Note: in chemfp those are bits 123 and 165)
+# 5) Key 1 (ISOTOPE) isn't defined
+
+0  1 <0> Isotope
+
+#1 [#103,#104,#105,#106,#107,#106,#109,#110,#111,#112] 1 Isotope (Not complete)
+1 1 [#103,#104]  Isotope (Not complete)
+
+# *NOTE* spec wrong
+2 1 [Ge,#33,#34,Sn,Sb,#52,Tl,Pb,Bi]  Group IVa,Va,VIa Periods 4-6 (Ge...)
+
+3 1 [Ac,Th,Pa,U,Np,Pu,Am,Cm,Bk,Cf,Es,Fm,Md,No,Lr]  actinide
+
+#   *NOTE* spec wrong
+4 1 [Sc,Ti,Y,Zr,Hf]   Group IIIB,IVB (Sc...)
+5 1 [La,Ce,Pr,Nd,Pm,Sm,Eu,Gd,Tb,Dy,Ho,Er,Tm,Yb,Lu]   Lanthanide
+
+# *NOTE* spec wrong
+6 1 [V,Cr,Mn,Nb,Mo,Tc,Ta,W,Re]   Group VB,VIB,VIIB (V...) 
+7 1 [!#6;!#1]~1~*~*~*~1  QAAA@1
+8 1 [Fe,Co,Ni,Ru,Rh,Pd,Os,Ir,Pt]   Group VIII (Fe...)
+9 1 [Be,Mg,Ca,Sr,Ba,Ra]   Group IIa (Alkaline earth)
+10 1 *~1~*~*~*~1  4-member Ring
+11 1 [Cu,Zn,Ag,Cd,Au,Hg]   Group IB,IIB (Cu..)
+12 1 [#8]~[#7](~[#6])~[#6]   ON(C)C
+13 1 [#16]-[#16]  S-S
+14 1 [#8]~[#6](~[#8])~[#8]  OC(O)O
+15 1 [!#6;!#1]~1~*~*~1  QAA@1
+16 1 [#6]#[#6]  CTC
+
+# *NOTE* spec wrong
+17 1 [#5,Al,Ga,In,Tl]  Group IIIA (B...)
+
+18 1 *~1~*~*~*~*~*~*~1  7-member Ring
+19 1 [#14]  Si
+20 1 [#6]=[#6](~[!#6;!#1])~[!#6;!#1]  C=C(Q)Q
+21 1 *~1~*~*~1  3-member Ring
+22 1 [#7]~[#6](~[#8])~[#8]  NC(O)O
+23 1 [#7]-[#8]  N-O
+24 1 [#7]~[#6](~[#7])~[#7]  NC(N)N
+25 1 [#6]=;@[#6](@*)@*  C$=C($A)$A
+26 1 [I]  I
+27 1 [!#6;!#1]~[CH2]~[!#6;!#1]  QCH2Q
+28 1 [#15]   P
+29 1 [#6]~[!#6;!#1](~[#6])(~[#6])~[!#1]  CQ(C)(C)A
+30 1 [!#6;!#1]~[F,Cl,Br,I]  QX
+31 1 [#6]~[#16]~[#7]  CSN
+32 1 [#7]~[#16]  NS
+33 1 [CH2]=*   CH2=A
+34 1 [Li,Na,K,Rb,Cs,Fr]     Group IA (Alkali Metal)
+35 1 [#16R]   S Heterocycle
+36 1 [#7]~[#6](~[#8])~[#7]   NC(O)N
+37 1 [#7]~[#6](~[#6])~[#7]   NC(C)N
+38 1 [#8]~[#16](~[#8])~[#8]   OS(O)O
+39 1 [#16]-[#8]   S-O
+40 1 [#6]#[#7]   CTN
+41 1 F   F
+42 1 [!C;!c;!#1;!H0]~*~[!C;!c;!#1;!H0]  QHAQH
+
+# I have no idea (APD)
+#43 1 <rdmaccs-bit-43>  OTHER
+43 1 <0>  OTHER
+
+44 1 [#6]=[#6]~[#7]  C=CN
+45 1 Br  BR
+46 1 [#16]~*~[#7]  SAN
+47 1 [#8]~[!#6;!#1](~[#8])(~[#8])  OQ(O)O
+48 1 [!+0]  CHARGE  
+49 1 [#6]=[#6](~[#6])~[#6]  C=C(C)C
+50 1 [#6]~[#16]~[#8]  CSO
+51 1 [#7]~[#7]  NN
+52 1 [!#6;!#1;!H0]~*~*~*~[!#6;!#1;!H0]  QHAAAQH
+53 1 [!#6;!#1;!H0]~*~*~[!#6;!#1;!H0]  QHAAQH
+54 1 [#8]~[#16]~[#8]  OSO
+55 1 [#8]~[#7](~[#8])~[#6]  ON(O)C
+56 1 [#8R]   O Heterocycle
+57 1 [!#6;!#1]~[#16]~[!#6;!#1]  QSQ
+58 1 [#16]!:*:*  Snot%A%A
+59 1 [#16]=[#8]  S=O
+60 1 [!#1]~[#16](~[!#1])~[!#1]   AS(A)A
+61 1 *@*!@*@*   A$!A$A
+62 1 [#7]=[#8]   N=O
+63 1 *@*!@[#16]   A$A!S
+64 1 c:n   C%N
+65 1 [#6]~[#6](~[#6])(~[#6])~[!#1]   CC(C)(C)A
+66 1 [!#6;!#1]~[#16]   QS
+67 1 [!#6;!#1;!H0]~[!#6;!#1;!H0]   QHQH (&...) FIX: incomplete definition
+68 1 [!#6;!#1]~[!#6;!#1;!H0]   QQH
+69 1 [!#6;!#1]~[#7]~[!#6;!#1]   QNQ
+70 1 [#7]~[#8]   NO
+71 1 [#8]~*~*~[#8]   OAAO
+72 1 [#16]=*   S=A
+73 1 [CH3]~*~[CH3]   CH3ACH3
+74 1 [!#1]!@[#7]@[!#1]   A!N$A
+75 1 [#6]=[#6](~[!#1])~[!#1]   C=C(A)A
+76 1 [#7]~*~[#7]   NAN
+77 1 [#6]=[#7]   C=N
+78 1 [#7]~*~*~[#7]   NAAN
+79 1 [#7]~*~*~*~[#7]   NAAAN
+80 1 [#16]~*(~[!#1])~[!#1]   SA(A)A
+81 1 [!#1]~[CH2]~[!#6;!#1;!H0]   ACH2QH
+82 1 [!#6;!#1]~1~*~*~*~*~1   QAAAA@1
+83 1 [NH2]  NH2
+84 1 [#6]~[#7](~[#6])~[#6]   CN(C)C
+85 1 [C;H2,H3][!#6;!#1][C;H2,H3]   CH2QCH2
+86 1 [F,Cl,Br,I]!@*@*   X!A$A
+87 1 [#16]   S
+88 1 [#8]~*~*~*~[#8]   OAAAO
+#89 1 [$([!#6;!#1;!H0]~*~*~[CH2]~[!#1]),$([!#6;!#1;!H0;R]1@[R]@[R]@[CH2;R]1),$([!#6;!#1;!H0]~[R]1@[R]@[CH2;R]1)]   QHAACH2A
+89 1 [$([!#6;!#1;!H0]~*~*~[CH2]~[!#1]),$([!#6;!#1;!H0;R]1@[R]@[R]@[CH2;R]1),$([!#6;!#1;!H0]~[R]1@[R]@[CH2;R]1)]   QHAACH2A
+90 1 [$([!#6;!#1;!H0]~*~*~*~[CH2]~[!#1]),$([!#6;!#1;!H0;R]1@[R]@[R]@[R]@[CH2;R]1),$([!#6;!#1;!H0]~[R]1@[R]@[R]@[CH2;R]1),$([!#6;!#1;!H0]~*~[R]1@[R]@[CH2;R]1)]   QHAAACH2A
+91 1 [#8]~[#6](~[#7])~[#6]   OC(N)C
+92 1 [!#6;!#1]~[CH3]   QCH3
+93 1 [!#6;!#1]~[#7]   QN
+94 1 [#7]~*~*~[#8]   NAAO
+95 1 *~1~*~*~*~*~1   5 M ring
+96 1 [#7]~*~*~*~[#8]   NAAAO
+97 1 [!#6;!#1]~1~*~*~*~*~*~1   QAAAAA@1
+98 1 [#6]=[#6]   C=C
+99 1 [!#1]~[CH2]~[#7]   ACH2N
+100 1 [$([R]@1@[R]@[R]@[R]@[R]@[R]@[R]@[R]1),$([R]@1@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]1),$([R]@1@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]1),$([R]@1@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]1),$([R]@1@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]1),$([R]@1@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]1),$([R]@1@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]@[R]1)]   8M Ring or larger. This only handles up to ring sizes of 14
+101 1 [!#6;!#1]~[#8]   QO
+102 1 Cl   CL
+103 1 [!#6;!#1;!H0]~*~[CH2]~[!#1]   QHACH2A
+104 1 *@*(@*)@*   A$A($A)$A
+105 1 [!#6;!#1]~*(~[!#6;!#1])~[!#6;!#1]   QA(Q)Q
+106 1 [F,Cl,Br,I]~*(~[!#1])~[!#1]   XA(A)A
+107 1 [CH3]~*~*~*~[CH2]~[!#1]   CH3AAACH2A
+108 1 [!#1]~[CH2]~[#8]   ACH2O
+109 1 [#7]~[#6]~[#8]   NCO
+110 1 [#7]~*~[CH2]~[!#1]   NACH2A
+111 1 [!#1]~*(~[!#1])(~[!#1])~[!#1]   AA(A)(A)A
+112 1 [#8]!:*:*   Onot%A%A
+113 1 [CH3]~[CH2]~[!#1]   CH3CH2A
+114 1 [CH3]~*~[CH2]~[!#1]   CH3ACH2A
+115 1 [$([CH3]~*~*~[CH2]~[!#1]),$([CH3]~*1~*~[CH2]1)]   CH3AACH2A
+116 1 [#7]~*~[#8]   NAO
+117 2 [$([!#1]~[CH2]~[CH2]~[!#1]),$(*1~[CH2]~[CH2]1)]  ACH2CH2A > 1
+118 1 [#7]=*   N=A
+
+# FIX: incomplete definition
+119 2 [!#6;R] Heterocyclic atom > 1 (&...)
+
+120 1 [#7;R]   N Heterocycle
+121 1 [!#1]~[#7](~[!#1])~[!#1]   AN(A)A
+122 1 [#8]~[#6]~[#8]   OCO
+123 1 [!#6;!#1]~[!#6;!#1]   QQ
+124 2 <aromatic-rings>  Aromatic Ring > 1
+125 1 [!#1]!@[#8]!@[!#1]   A!O!A
+
+# FIX: incomplete definition
+126 2 *@*!@[#8]  A$A!O > 1 (&...)
+
+127 1 [$([!#1]~[CH2]~*~*~*~[CH2]~[!#1]),$([R]1@[CH2;R]@[R]@[R]@[R]@[CH2;R]1),$([!#1]~[CH2]~[R]1@[R]@[R]@[CH2;R]1),$([!#1]~[CH2]~*~[R]1@[R]@[CH2;R]1)]   ACH2AAACH2A
+128 1 [$([!#1]~[CH2]~*~*~[CH2]~[!#1]),$([R]1@[CH2]@[R]@[R]@[CH2;R]1),$([!#1]~[CH2]~[R]1@[R]@[CH2;R]1)]   ACH2AACH2A
+
+
+# FIX: incomplete definition
+129 2 [!#6;!#1]~[!#6;!#1] QQ > 1 (&...)
+
+130 2 [!#6;!#1;!H0]  QH > 1
+131 1 [#8]~*~[CH2]~[!#1]   OACH2A
+132 1 *@*!@[#7]   A$A!N
+133 1 [F,Cl,Br,I]   X (HALOGEN)
+134 1 [#7]!:*:*   Nnot%A%A
+135 2 [#8]=*    O=A > 1
+136 1 [!#6;R]   Heterocycle
+
+# FIX: incomplete definition
+137 2 [!#6;!#1]~[CH2]~[!#1]   QCH2A > 1 (&...)
+138 1 [O;!H0] OH
+
+# FIX: incomplete definition
+139 4 [#8]     O > 3 (&...) 
+
+# FIX: incomplete definition
+140 3 [CH3]    CH3 > 2  (&...)
+
+141 2 [#7]     N > 1
+142 1 *@*!@[#8]   A$A!O
+143 1 [!#1]!:*:*!:[!#1]   Anot%A%Anot%A
+144 2 *~1~*~*~*~*~*~1 6-member ring > 1
+145 3 [#8]  O > 2
+146 1 [$([!#1]~[CH2]~[CH2]~[!#1]),$([R]1@[CH2;R]@[CH2;R]1)]   ACH2CH2A
+147 1 [!#1]~[!#6;!#1](~[!#1])~[!#1]   AQ(A)A
+148 2 [C;H3,H4] CH3 > 1
+149 1 [!#1]!@*@*!@[!#1]   A!A$A!A
+150 1 [#7;!H0]   NH
+151 1 [#8]~[#6](~[#6])~[#6]   OC(C)C
+152 1 [!#6;!#1]~[CH2]~[!#1]   QCH2A
+153 1 [#6]=[#8]   C=O
+154 1 [!#1]!@[CH2]!@[!#1]   A!CH2!A
+155 1 [#7]~[!#1](~[!#1])~[!#1]   NA(A)A
+156 1 [#6]-[#8]   C-O
+157 1 [#6]-[#7]   C-N
+158 2 [#8]  O>1
+159 1 [C;H3,H4]  CH3
+160 1 [#7]   N
+161 1 a   Aromatic
+162 1 *~1~*~*~*~*~*~1  6-member Ring
+163 1 [#8]   O
+164 1 [R]   Ring
+
+# this can't be done in SMARTS
+165 2 <fragments>  more than one fragment
