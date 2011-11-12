@@ -16,7 +16,7 @@ def _load(fingerprints, reorder):
     id_fps = ((str(i), fp) for (i, fp) in enumerate(fingerprints))
     return chemfp.load_fingerprints(id_fps,
                                     metadata=chemfp.Metadata(num_bits=num_bits),
-                                    reorder=reorder)
+                                    reorder=reorder, alignment=1)
 
 def verify_popcount_indices(arena):
     assert len(arena.popcount_indices) % 4 == 0
