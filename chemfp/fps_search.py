@@ -57,7 +57,7 @@ def report_errors(problem_report):
 def _fp_to_arena(query_fp, metadata):
     assert len(query_fp) == metadata.num_bytes
     from . import arena
-    return arena.FingerprintArena(metadata, len(query_fp), query_fp, "", [None])
+    return arena.FingerprintArena(metadata, 0, 0, len(query_fp), query_fp, "", [None])
 
 def count_tanimoto_hits_fp(query_fp, target_reader, threshold):
     return count_tanimoto_hits_arena(_fp_to_arena(query_fp, target_reader.metadata), target_reader, threshold)[0]
@@ -70,7 +70,9 @@ def count_tanimoto_hits_arena(query_arena, target_reader, threshold):
 
     for block in target_reader.iter_blocks():
         err, num_lines = _chemfp.fps_count_tanimoto_hits(
-            query_arena.metadata.num_bits, query_arena.storage_size, query_arena.arena, 0, -1,
+            query_arena.metadata.num_bits,
+            query_arena.start_padding, query_arena.end_padding,
+            query_arena.storage_size, query_arena.arena, 0, -1,
             block, 0, -1,
             threshold, counts)
         lineno += num_lines
@@ -107,7 +109,7 @@ def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
         end = len(block)
         while 1:
             err, start, num_lines, num_cells = _chemfp.fps_threshold_tanimoto_search(
-                num_bits, fp_size, query_fp, 0, -1,
+                num_bits, 0, 0, fp_size, query_fp, 0, -1,
                 block, start, end,
                 threshold, cells)
             lineno += num_lines
@@ -140,8 +142,9 @@ def threshold_tanimoto_search_all(query_arena, target_reader, threshold):
         end = len(block)
         while 1:
             err, start, num_lines, num_cells = _chemfp.fps_threshold_tanimoto_search(
-                query_arena.metadata.num_bits, query_arena.storage_size,
-                query_arena.arena, 0, -1,
+                query_arena.metadata.num_bits,
+                query_arena.start_padding, query_arena.end_padding,
+                query_arena.storage_size, query_arena.arena, 0, -1,
                 block, start, end,
                 threshold, cells)
             lineno += num_lines
@@ -200,7 +203,9 @@ def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
 
     _chemfp.fps_knearest_search_init(
         search,
-        query_arena.metadata.num_bits, query_arena.storage_size, query_arena.arena, 0, -1,
+        query_arena.metadata.num_bits,
+        query_arena.start_padding, query_arena.end_padding,
+        query_arena.storage_size, query_arena.arena, 0, -1,
         k, threshold)
 
     try:

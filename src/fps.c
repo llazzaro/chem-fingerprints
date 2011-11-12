@@ -106,7 +106,7 @@ int chemfp_fps_count_tanimoto_hits(
 
     query_fp = query_arena + query_start * query_storage_size;
     for (query_index=query_start; query_index<query_end;
-	 query_index++, query_fp += fp_size) {
+	 query_index++, query_fp += query_storage_size) {
       score = chemfp_byte_hex_tanimoto(fp_size, query_fp, line);
       if (score >= threshold)
 	counts[query_index]++;
@@ -126,7 +126,6 @@ int chemfp_fps_threshold_tanimoto_search(
 	int num_bits,
 	int query_storage_size,
 	const unsigned char *query_arena, int query_start, int query_end,
-	
 	const char *target_block, int target_block_end,
         double threshold,
 	int num_cells, chemfp_tanimoto_cell *cells,
@@ -169,7 +168,7 @@ int chemfp_fps_threshold_tanimoto_search(
 
     query_fp = query_arena + query_start * query_storage_size;
     for (query_index=query_start; query_index<query_end;
-	 query_index++, query_fp += fp_size) {
+	 query_index++, query_fp += query_storage_size) {
       score = chemfp_byte_hex_tanimoto(fp_size, query_fp, line);
       if (score >= threshold) {
 	current_cell->score = score;
@@ -311,7 +310,7 @@ int chemfp_fps_knearest_tanimoto_search_feed(
   const char *line, *next_line, *end, *id_start, *id_end;
   const unsigned char *query_fp;
   chemfp_fps_heap *heap;
-  int query_hex_size, query_fp_size;
+  int query_hex_size, query_fp_size, query_storage_size;
   int i, err, retval;
   
   if (target_block_len == 0 || target_block[target_block_len-1] != '\n')
@@ -322,6 +321,7 @@ int chemfp_fps_knearest_tanimoto_search_feed(
   k = knearest_search->k;
   query_fp_size = knearest_search->query_fp_size;
   query_hex_size = query_fp_size * 2;
+  query_storage_size = knearest_search->query_storage_size;
 
   line = target_block;
   while (line < end) {
@@ -334,7 +334,7 @@ int chemfp_fps_knearest_tanimoto_search_feed(
     query_fp = knearest_search->query_start;
     
     heap = knearest_search->heaps;
-    for (i=0; i<knearest_search->num_queries; i++, query_fp += query_fp_size, heap++) {
+    for (i=0; i<knearest_search->num_queries; i++, query_fp += query_storage_size, heap++) {
       switch(heap->heap_state) {
       case ADD_TO_HEAP:
 	score = chemfp_byte_hex_tanimoto(query_fp_size, query_fp, line);

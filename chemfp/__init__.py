@@ -159,7 +159,7 @@ def open(source, format=None):
     raise TypeError("Unable to determine fingerprint format type from %r" % (source,))
 
 
-def load_fingerprints(reader, metadata=None, reorder=True):
+def load_fingerprints(reader, metadata=None, reorder=True, alignment=8):
     """Load all of the fingerprints into an in-memory FingerprintArena data structure
     
     The FingerprintArena data structure reads all of the fingerprints and
@@ -190,7 +190,8 @@ def load_fingerprints(reader, metadata=None, reorder=True):
         metadata = reader.metadata
 
     from . import arena
-    return arena.fps_to_arena(reader, metadata=metadata, reorder=reorder)
+    return arena.fps_to_arena(reader, metadata=metadata, reorder=reorder,
+                              alignment=alignment)
 
 ##### High-level search interfaces
 
