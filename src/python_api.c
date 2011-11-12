@@ -369,7 +369,7 @@ bad_offsets(int num_queries, int size, int start) {
     return 1;
   }
   if ((num_queries+1) < (num_offsets - start)) {
-    sprintf(msg, "Insuffient space to store %d result offsets", num_queries);
+    sprintf(msg, "Insufficient space to store %d result offsets", num_queries);
     PyErr_SetString(PyExc_ValueError, msg);
     return 1;
   }
@@ -555,7 +555,8 @@ fps_count_tanimoto_hits(PyObject *self, PyObject *args) {
 */
 static PyObject *
 fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
-  int num_bits, query_storage_size, query_arena_size, query_start, query_end;
+  int num_bits, query_start_padding, query_end_padding;
+  int query_storage_size, query_arena_size, query_start, query_end;
   const unsigned char *query_arena;
   const char *target_block, *stopped_at;
   int target_block_size, target_start, target_end;
@@ -565,8 +566,9 @@ fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
   int num_lines_processed = 0, num_cells_processed = 0;
   int num_cells, err;
 
-  if (!PyArg_ParseTuple(args, "iit#iit#iidw#",
+  if (!PyArg_ParseTuple(args, "iiiit#iit#iidw#",
                         &num_bits,
+			&query_start_padding, &query_end_padding,
                         &query_storage_size, &query_arena, &query_arena_size,
                         &query_start, &query_end,
                         &target_block, &target_block_size,
@@ -576,6 +578,8 @@ fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
     return NULL;
 
   if (bad_num_bits(num_bits) ||
+      bad_padding("query_", query_start_padding, query_end_padding,
+		  &query_arena, &query_arena_size) ||
       bad_arena_size("query_", num_bits, query_storage_size) ||
       bad_arena_limits("query ", query_arena_size, query_storage_size,
 		       &query_start, &query_end) ||
