@@ -711,7 +711,9 @@ fps_knearest_search_free(PyObject *self, PyObject *args) {
 
 /**************** The library-based searches **********/
 
-/* Always allocate space */
+/* Always allocate space. This must overallocate because */
+/* there is no guarantee the start alignment. */
+/* (Though on my Mac it's always 4-byte aligned. */
 static PyObject *
 _alloc_aligned_arena(Py_ssize_t size, int alignment,
 		     int *start_padding, int *end_padding) {
