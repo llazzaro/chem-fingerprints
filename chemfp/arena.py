@@ -331,7 +331,11 @@ class FingerprintLookup(object):
         
         
     def __getitem__(self, i):
-        start_offset = self._range_check[i] * self._storage_size + self._start_padding
+        try:
+            start_offset = self._range_check[i] * self._storage_size + self._start_padding
+        except IndexError:
+            raise IndexError("arena fingerprint index out of range")
+            
         return self._arena[start_offset:start_offset+self._fp_size]
 
 class FingerprintArena(FingerprintReader):
@@ -382,12 +386,15 @@ class FingerprintArena(FingerprintReader):
                 return FingerprintArena(self.metadata, 0, 0, self.storage_size, "",
                                         "", [], 0, 0)
             if step != 1:
-                raise ValueError("arena slice step size must be 1")
+                raise IndexError("arena slice step size must be 1")
             return FingerprintArena(self.metadata, self.start_padding, self.end_padding,
                                     self.storage_size, self.arena,
                                     self.popcount_indices, self.ids[start:end],
                                     self.start+start, self.start+end)
-        i = self._range_check[i]
+        try:
+            i = self._range_check[i]
+        except IndexError:
+            raise IndexError("arena fingerprint index out of range")
         arena_i = i + self.start
         start_offset = arena_i * self.storage_size + self.start_padding
         end_offset = start_offset + self.metadata.num_bytes
