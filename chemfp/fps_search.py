@@ -109,7 +109,7 @@ def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
         end = len(block)
         while 1:
             err, start, num_lines, num_cells = _chemfp.fps_threshold_tanimoto_search(
-                num_bits, fp_size, query_fp, 0, -1,
+                num_bits, 0, 0, fp_size, query_fp, 0, -1,
                 block, start, end,
                 threshold, cells)
             lineno += num_lines
