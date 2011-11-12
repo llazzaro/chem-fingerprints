@@ -27,7 +27,7 @@ static inline int popcount_lut8(int n, uint32_t *fp) {
     cnt += lut[i&255];
     cnt += lut[i>>8&255];
     cnt += lut[i>>16&255];
-    cnt += lut[i>>24];  /* APD: removed the unneeded &255 */
+    cnt += lut[i>>24];
     fp++;
   } while(--n);
   return cnt;
