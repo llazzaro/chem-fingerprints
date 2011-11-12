@@ -236,7 +236,7 @@ int chemfp_count_tanimoto_arena(
       count = 0;
 
       for (target_index = target_start; target_index < target_end;
-	   target_index++, target_fp += query_storage_size) {
+	   target_index++, target_fp += target_storage_size) {
 	score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
 	if (score >= threshold) {
 	  count++;
@@ -377,7 +377,7 @@ int chemfp_threshold_tanimoto_arena(
       /* Handle the popcount(query) == 0 special case? */
       count = 0;
       for (target_index = target_start; target_index < target_end;
-	   target_index++, target_fp += query_storage_size) {
+	   target_index++, target_fp += target_storage_size) {
 	score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
 	if (score >= threshold) {
 	  *result_indices++ = target_index;
