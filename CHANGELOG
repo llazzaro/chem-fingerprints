@@ -1,8 +1,12 @@
-What's new in 1.1a1
+What's new in 1.1 (in development)
 ==================
 
-33% performance increase for fingerprints which are a multiple of 32
-bits in length.
+New "alignment" option for fingerprint arenas. The default is 8 byte
+aligned, which makes for the fastest search performance.
+
+Over a factor of two performance increase for fingerprints which
+are 8 byte aligned, using code contributed by Kim Walisch. Also
+sped up fingerprints which are 4 byte aligned by 33%.
 
 Support for RDKit's Morgan fingerprints.
 
