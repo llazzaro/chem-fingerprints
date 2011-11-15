@@ -6,7 +6,7 @@
 #include "chemfp.h"
 #include "chemfp_internal.h"
 
-/*#define REGULAR*/
+#define REGULAR
 
 /* Example of a faster algorithm assuming 4-byte aligned data */
 
