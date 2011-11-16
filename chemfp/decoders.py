@@ -245,6 +245,118 @@ def from_cactvs(text):
     return 881, fp[4:].translate(_reverse_bits_in_a_byte_transtable)
 
 
+############## Convert from a Daylight base64 encoding
+
+# Copied from PyDaylight daylight/dayencodings.py
+"""
+This code is based on the description of the encoding given in the
+contrib program '$DY_ROOT/contrib/src/c/fingerprint/ascii2bits.c'
+
+Here is the description from that file.
+
+*****************************************************************************
+
+ ASCII:    |=======+=======+=======+=======| etc.
+                                           ^
+   becomes...                      3  <->  4
+                                   v
+ BINARY:   |=====+=====+=====+=====| etc.
+
+ Daylight uses the following method for translating binary data into
+ printable ascii and vice versa.  Each 6 bits of binary (range 0-63) is
+ converted to one of 64 characters in the set [.,0-9A-Za-z]; each 3-byte
+ triplet thus converts to a 4-byte ASCII string.
+
+ Every binary array is padded to a multiple of 3 bytes for the
+ conversion; once the conversion is done you can't tell whether the last
+ two bytes are pad bytes or real bytes containing zero.  To remedy this,
+ an extra character is tacked on the ASCII representation; it will
+ always be one of the characters '3', '2', or '1', indicating how many
+ of the bytes in the last triplet are genuine.  That is, an
+ ASCII-to-binary conversion will always produce an array whose length is
+ a 3n bytes, but the last one or two bytes might just be pad bytes;
+ the last ascii character indicates this.
+
+ Thus, ascii strings are always of length (4n + 1) bytes.
+
+ Thus, an ascii string can only describe bitmaps with bitcounts
+ that are a multiple of 8.  If other sizes are desired, a specific
+ bitcount must be remembered.
+**************************************************************************
+4.61 Change: ',' is replaced by '+'.
+**************************************************************************
+ Author: Jeremy Yang
+ Rev:   27 Jan 1999
+*************************************************************************
+"""
+
+# Map from 6 bit value to character encoding (used in binary2ascii)
+_daylight_table = (".+" +
+                   "".join(map(chr, range(ord("0"), ord("9") + 1) +
+                               range(ord("A"), ord("Z") + 1) +
+                               range(ord("a"), ord("z") + 1))))
+
+# Map from character encoding to 6 bits (used in ascii2binary)
+# The '+' used to be represented as ',' in pre-4.61 code
+_daylight_reverse_table = {}
+for i, c in enumerate(_daylight_table):
+  _daylight_reverse_table[c] = i
+
+_daylight_reverse_table[","] = _daylight_reverse_table["+"]
+del i, c
+
+def from_daylight(text):
+  """decode a Daylight ASCII fingerprint
+
+  >>> from_daylight("I5Z2MLZgOKRcR...1")
+  (None, "PyDaylight")
+
+  See the implementation for format details.
+  """
+  if len(text) % 4 != 1:
+    raise ValueError("Daylight binary encoding is of the wrong length")
+
+  if text == "3":
+    # This is the encoding of an empty string (perverse, I know)
+    return ""
+  
+  count = text[-1]
+  if count not in ("1", "2", "3"):
+    raise ValueError("Last character of encoding must be 1, 2, or 3, not %s" %
+                     (count,))
+  
+  count = int(count)
+  
+  # Take four digits at a time
+  fields = []
+  reverse_table = _daylight_reverse_table
+  for i in range(0, len(text)-1, 4):
+    t = text[i:i+4]
+    d = (reverse_table[t[0]] * 262144 +  # (2**6) ** 3
+         reverse_table[t[1]] * 4096 +    # (2**6) ** 2
+         reverse_table[t[2]] * 64 +      # (2**6) ** 1
+         reverse_table[t[3]])            # (2**6) ** 0
+    
+    # This is a 24 bit field
+    # Convert back into 8 bits at a time
+    c1 = d >> 16
+    c2 = (d >> 8) & 0xFF
+    c3 = d & 0xFF
+    
+    fields.append( chr(c1) + chr(c2) + chr(c3) )
+  
+  # Only 'count' of the last field is legal
+  # Because of the special case for empty string earlier,
+  #  the 'fields' array is non-empty
+  fields[-1] = fields[-1][:count]
+  s = "".join(fields)
+  return (None, s)
+
+
+assert from_daylight("I5Z2MLZgOKRcR...1") == (None, "PyDaylight")
+
+##############
+
 def import_decoder(path):
     """Find a decoder function given its full name, as in 'chemfp.decoders.from_cactvs'
 
@@ -305,6 +417,8 @@ _A("--base64", "store_true", from_base64,
    "Base-64 encoded. Bit #0 is first bit (1<<0) of first byte. Example: AfI= encodes value \\x01\\xf2 = 498")
 _A("--cactvs", "store_true", from_cactvs,
    help="CACTVS encoding, based on base64 and includes a version and bit length")
+_A("--daylight", "store_true", from_daylight,
+   help="Daylight encoding, which is is base64 variant")
 _A("--decoder", "store", None,
     help="import and use the DECODER function to decode the fingerprint")
 

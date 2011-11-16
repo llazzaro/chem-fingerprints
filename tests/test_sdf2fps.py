@@ -152,6 +152,15 @@ class TestDecoderFlags(unittest2.TestCase):
         self.assertEquals(result[0], "Greetings, human".encode("hex") + "\t9425004")
         self.assertEquals(result[1], "blahblahspamblah".encode("hex") + "\t9425009")
 
+    def test_daylight1(self):
+        result = run_fps("--daylight --fp-tag daylight1", 2)
+        self.assertEquals(result[0], "PyDaylight".encode("hex") + "\t9425004")
+        self.assertEquals(result[1], "chemfptest".encode("hex") + "\t9425009")
+
+    def test_daylight2(self):
+        result = run_fps("--daylight --fp-tag daylight2", 2)
+        self.assertEquals(result[0], "Okie dokie pokie!".encode("hex") + "\t9425004")
+        self.assertEquals(result[1], "Testing   1, 2, 3".encode("hex") + "\t9425009")
 
     def test_bad_decoding(self):
         msg = run_warning("--base64 --fp-tag binary17 --errors report")
@@ -201,7 +210,7 @@ class TestTitleProcessing(unittest2.TestCase):
 
     def test_missing_title_from_title_line(self):
         warning = run_warning("--hex --fp-tag hex2 --id-tag FAKE_TITLE --errors report")
-        self.assertIn("Missing id tag 'FAKE_TITLE' in the record starting at line 146 of ", warning)
+        self.assertIn("Missing id tag 'FAKE_TITLE' in the record starting at line 152 of ", warning)
         self.assertIn("decoder.sdf", warning)
         self.assertIn("title='9425009'", warning)
         self.assertIn("Skipping.", warning)
@@ -210,7 +219,7 @@ class TestTitleProcessing(unittest2.TestCase):
         warning = run_warning("--hex --fp-tag hex2 --id-tag DOES_NOT_EXIST --errors report")
         self.assertIn("Missing id tag 'DOES_NOT_EXIST'", warning)
         self.assertIn("line 1 of", warning)
-        self.assertIn("line 146 of", warning)
+        self.assertIn("line 152 of", warning)
 
 class TestShortcuts(unittest2.TestCase):
     def test_pubchem(self):
