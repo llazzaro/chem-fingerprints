@@ -171,7 +171,6 @@ def warn_to_stderr(filename, lineno, message):
     where = _where(filename, lineno)
     sys.stderr.write("WARNING: %s at %s\n" % (message, where))
 
-_whitespace = re.compile(r"[ \t\n]")
 def read_header(f, filename, warn=warn_to_stderr):
     metadata = Metadata()
 
@@ -189,12 +188,10 @@ def read_header(f, filename, warn=warn_to_stderr):
                 block = block[start:]
                 if metadata.num_bits is None:
                     # We can figure this out from the fingerprint on the first line
-                    m = _whitespace.search(block)
-                    if m is None:
-                        raise TypeError(block)
-                    i = m.end()-1 # Back up from the whitespace
-                    if i % 2 == 1:
-                        raise TypeError(block)
+                    err = _chemfp.fps_line_validate(-1, block)
+                    if err:
+                        raise FPSParseError(err, lineno, filename)
+                    i = block.index("\t")-1
                     # If you don't specify the number of bits then I'll do it for you.
                     metadata.num_bits = i * 4
                     metadata.num_bytes = i // 2
