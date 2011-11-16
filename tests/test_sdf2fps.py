@@ -210,7 +210,7 @@ class TestTitleProcessing(unittest2.TestCase):
 
     def test_missing_title_from_title_line(self):
         warning = run_warning("--hex --fp-tag hex2 --id-tag FAKE_TITLE --errors report")
-        self.assertIn("Missing id tag 'FAKE_TITLE' in the record starting at line 152 of ", warning)
+        self.assertIn("Missing id tag 'FAKE_TITLE' in the record starting at line 151 of ", warning)
         self.assertIn("decoder.sdf", warning)
         self.assertIn("title='9425009'", warning)
         self.assertIn("Skipping.", warning)
@@ -219,7 +219,7 @@ class TestTitleProcessing(unittest2.TestCase):
         warning = run_warning("--hex --fp-tag hex2 --id-tag DOES_NOT_EXIST --errors report")
         self.assertIn("Missing id tag 'DOES_NOT_EXIST'", warning)
         self.assertIn("line 1 of", warning)
-        self.assertIn("line 152 of", warning)
+        self.assertIn("line 151 of", warning)
 
 class TestShortcuts(unittest2.TestCase):
     def test_pubchem(self):

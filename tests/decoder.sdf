@@ -115,7 +115,6 @@ A very short fingerprint to test support for fewer than 8 bits
 001
 
 > <comment>
-
 Exactly 8 bits
 
 > <binary8>
