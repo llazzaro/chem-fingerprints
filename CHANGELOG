@@ -13,6 +13,19 @@ Support for RDKit's Morgan fingerprints.
 Fixed a memory overflow bug which caused crashes on some Windows and
 Linux machines.
 
+Added Alex Grönholm's 'futures' package as a submodule. It greatly
+simplifies making a thread- or process pool. It is a backport of the
+code in Python 3.2.
+
+Added Nilton Volpato's 'progressbar' package as a submodule. Use it to
+show a text-based progress bar in chemfp-based search tools.
+
+Added an experimental "Watcher" module. Use it to handle ^C events,
+which otherwise get sent to an arbitary thread. It works by spawning a
+child process. The main process listens for a ^C and forwards that as
+a os.kill() to the child process. This will likely only work on Unix
+systems.
+
 
 What's new in 1.0
 ==================
