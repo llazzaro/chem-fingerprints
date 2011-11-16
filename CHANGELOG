@@ -26,6 +26,7 @@ child process. The main process listens for a ^C and forwards that as
 a os.kill() to the child process. This will likely only work on Unix
 systems.
 
+New decoder for Daylight's "binary2ascii" encoding.
 
 What's new in 1.0
 ==================
