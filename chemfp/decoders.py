@@ -245,7 +245,7 @@ def from_cactvs(text):
     return 881, fp[4:].translate(_reverse_bits_in_a_byte_transtable)
 
 
-############## Convert from a Daylight base64 encoding
+########### Convert from the Daylight encoding created by dt_binary2ascii
 
 # Copied from PyDaylight daylight/dayencodings.py
 """
