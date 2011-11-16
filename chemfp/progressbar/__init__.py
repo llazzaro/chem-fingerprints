@@ -41,6 +41,7 @@ automatically enable features like auto-resizing when the system supports it.
 '''
 
 from __future__ import division
+from __future__ import absolute_import
 
 import math
 import os
@@ -55,8 +56,8 @@ try:
 except ImportError:
     pass
 
-from progressbar.compat import *
-from progressbar.widgets import *
+from .compat import *
+from .widgets import *
 
 
 __author__ = 'Nilton Volpato'
