@@ -147,6 +147,19 @@ class SearchResults(object):
             yield zip(indices[start:end], scores[start:end])
             start = end
 
+    def iter_indices(self):
+        """Iterate over the indices for each result
+
+        Each term is a list of indices. The order of the indices in a list
+        depends on the search algorithm.
+        """
+        indices = self.indices
+        start = self.offsets[0]
+        for end in self.offsets[1:]:
+            yield indices[start:end]
+            start = end
+        
+
 def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
     require_matching_fp_size(query_fp, target_arena)
 
