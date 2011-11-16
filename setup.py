@@ -39,7 +39,8 @@ setup(name = "chemfp",
                      "Topic :: Scientific/Engineering :: Chemistry",
                      "Topic :: Software Development :: Libraries :: Python Modules"],
       
-      packages = ["chemfp", "chemfp.commandline"],
+      packages = ["chemfp", "chemfp.commandline", "chemfp.concurrent",
+                  "chemfp.concurrent.futures", "chemfp.progressbar"],
       package_data = {"chemfp": ["rdmaccs.patterns", "substruct.patterns"]},
       scripts = ["ob2fps", "oe2fps", "rdkit2fps", "sdf2fps", "simsearch"],
 
