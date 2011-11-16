@@ -27,7 +27,7 @@ enum chemfp_errors {
 /* This is of the form (\d+\.\d+) (\.\d)? ((a|b|pre)\d+)
      for examples:  0.9, 1.0.4, 1.0pre2.
  The "a"lpha, "b"eta, and "pre"view suffixes will never be seen in production releases */
-#define CHEMFP_VERSION_STRING "1.1a2"
+#define CHEMFP_VERSION_STRING "1.1a3"
 
 /* Return the CHEMFP_VERSION.  */
 const char *chemfp_version(void);

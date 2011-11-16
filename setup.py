@@ -25,7 +25,7 @@ else:
     extra_compile_args = []
 
 setup(name = "chemfp",
-      version = "1.1a2",
+      version = "1.1a3",
       description = DESCRIPTION,
       author = "Andrew Dalke",
       author_email = 'dalke@dalkescientific.com',
