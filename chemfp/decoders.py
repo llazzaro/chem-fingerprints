@@ -309,7 +309,7 @@ def from_daylight(text):
   """decode a Daylight ASCII fingerprint
 
   >>> from_daylight("I5Z2MLZgOKRcR...1")
-  (None, "PyDaylight")
+  (None, 'PyDaylight')
 
   See the implementation for format details.
   """
