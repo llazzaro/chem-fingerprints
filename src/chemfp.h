@@ -42,7 +42,7 @@ const char *chemfp_alignment_label(enum chemfp_alignments alignment);
 
 int chemfp_get_alignment_method(enum chemfp_alignments alignment);
 int chemfp_set_alignment_method(enum chemfp_alignments alignment,
-				enum chemfp_popcount_methods method);
+                                enum chemfp_popcount_methods method);
 
 
 
@@ -112,7 +112,7 @@ double chemfp_byte_tanimoto(int len, const unsigned char *fp1,
                             const unsigned char *fp2);
 
 double chemfp_byte_hex_tanimoto(int size, const unsigned char *byte_fp,
-				const char *hex_fp);
+                                const char *hex_fp);
 
 /* Return 1 if the query fingerprint is contained in the target, 0 if it isn't */
 int chemfp_byte_contains(int len, const unsigned char *query_fp,
@@ -129,24 +129,24 @@ int chemfp_byte_contains(int len, const unsigned char *query_fp,
 int chemfp_fps_line_validate(int hex_size,  /* use -1 if not known */
                              int line_size, const char *line_start);
 int chemfp_fps_find_id(int hex_size, const char *line,
-		       const char **id_start, const char **id_end);
+                       const char **id_start, const char **id_end);
 
 int chemfp_threshold_tanimoto_hexfp_fps(
-	int hex_size, const char *hex_query_fp,
-	int target_block_size, const char *target_block_start,
-	int *lineno, const char **stopped_at,
-	double threshold,
-	int num_cells, int *id_starts, int *id_ends, double *scores);
+        int hex_size, const char *hex_query_fp,
+        int target_block_size, const char *target_block_start,
+        int *lineno, const char **stopped_at,
+        double threshold,
+        int num_cells, int *id_starts, int *id_ends, double *scores);
 
 /* Return the number of fingerprints in the fps block which are greater
    than or equal to the specified threshold. */
 int chemfp_fps_count_tanimoto_hits(
-	int num_bits,
-	int query_storage_size,
-	const unsigned char *query_arena, int query_start, int query_end,
-	const char *target_block, int target_block_end,
+        int num_bits,
+        int query_storage_size,
+        const unsigned char *query_arena, int query_start, int query_end,
+        const char *target_block, int target_block_end,
         double threshold,
-	int *counts, int *num_lines_processed);
+        int *counts, int *num_lines_processed);
 
 
 typedef struct {
@@ -177,14 +177,14 @@ typedef struct {
 
 int chemfp_fps_knearest_search_init(
         chemfp_fps_knearest_search *knearest_search,
-	int num_bits, int query_storage_size,
-	const unsigned char *query_arena, int query_start, int query_end,
+        int num_bits, int query_storage_size,
+        const unsigned char *query_arena, int query_start, int query_end,
         int k, double threshold);
 
 /* Update the heap based on the lines in an fps fingerprint data block. */
 int chemfp_fps_knearest_tanimoto_search_feed(
-	chemfp_fps_knearest_search *knearest_search,
-	int target_block_len, const char *target_block);
+        chemfp_fps_knearest_search *knearest_search,
+        int target_block_len, const char *target_block);
 
 /* Call this after the last fps block, in order to convert the heap into an
    sorted array. */
@@ -194,14 +194,14 @@ void chemfp_fps_knearest_search_free(chemfp_fps_knearest_search *knearest_search
 
 
 int chemfp_fps_threshold_tanimoto_search(
-	int num_bits,
-	int query_storage_size,
-	const unsigned char *query_arena, int query_start, int query_end,
-	
-	const char *target_block, int target_block_end,
+        int num_bits,
+        int query_storage_size,
+        const unsigned char *query_arena, int query_start, int query_end,
+        
+        const char *target_block, int target_block_end,
         double threshold,
-	int num_cells, chemfp_tanimoto_cell *cells,
-	const char ** stopped_at, int *num_lines_processed, int *num_cells_processed);
+        int num_cells, chemfp_tanimoto_cell *cells,
+        const char ** stopped_at, int *num_lines_processed, int *num_cells_processed);
 
 
 /***** The byte-oriented algorithms  ********/
@@ -227,106 +227,106 @@ int chemfp_hex_tanimoto_block(
 int chemfp_byte_intersect_popcount_count(
         int len, unsigned char *query_fp,
         int num_targets, unsigned char *target_block, int offset, int storage_len,
-		int min_overlap);
+                int min_overlap);
 
 int chemfp_reorder_by_popcount(
-	int num_bits,
-	int storage_size, const unsigned char *arena, int start, int end,
-	unsigned char *new_arena, ChemFPOrderedPopcount *ordering,
-	int *popcount_indices);
+        int num_bits,
+        int storage_size, const unsigned char *arena, int start, int end,
+        unsigned char *new_arena, ChemFPOrderedPopcount *ordering,
+        int *popcount_indices);
 
 
 int chemfp_count_tanimoto_arena(
-	/* Count all matches within the given threshold */
-	double threshold,
+        /* Count all matches within the given threshold */
+        double threshold,
 
-	/* Number of bits in the fingerprint */
-	int num_bits,
+        /* Number of bits in the fingerprint */
+        int num_bits,
 
-	/* Query arena, start and end indices */
-	int query_storage_size,
-	const unsigned char *query_arena, int query_start, int query_end,
+        /* Query arena, start and end indices */
+        int query_storage_size,
+        const unsigned char *query_arena, int query_start, int query_end,
 
-	/* Target arena, start and end indices */
-	int target_storage_size,
-	const unsigned char *target_arena, int target_start, int target_end,
+        /* Target arena, start and end indices */
+        int target_storage_size,
+        const unsigned char *target_arena, int target_start, int target_end,
 
-	/* Target popcount distribution information */
-	/*  (must have at least num_bits+1 elements) */
-	int *target_popcount_indices,
+        /* Target popcount distribution information */
+        /*  (must have at least num_bits+1 elements) */
+        int *target_popcount_indices,
 
-	/* Results go into these arrays  */
-	int *result_counts
-				);
+        /* Results go into these arrays  */
+        int *result_counts
+                                );
 
 int chemfp_threshold_tanimoto_arena(
-	/* Within the given threshold */
-	double threshold,
+        /* Within the given threshold */
+        double threshold,
 
-	/* Number of bits in the fingerprint */
-	int num_bits,
+        /* Number of bits in the fingerprint */
+        int num_bits,
 
-	/* Query arena, start and end indices */
-	int query_storage_size, const unsigned char *query_arena,
-	int query_start, int query_end,
+        /* Query arena, start and end indices */
+        int query_storage_size, const unsigned char *query_arena,
+        int query_start, int query_end,
 
-	/* Target arena, start and end indices */
-	int target_storage_size, const unsigned char *target_arena,
-	int target_start, int target_end,
+        /* Target arena, start and end indices */
+        int target_storage_size, const unsigned char *target_arena,
+        int target_start, int target_end,
 
-	/* Target popcount distribution information */
-	/*  (must have at least num_bits+1 elements) */
-	int *target_popcount_indices,
+        /* Target popcount distribution information */
+        /*  (must have at least num_bits+1 elements) */
+        int *target_popcount_indices,
 
-	/* Results go into these arrays  */
-	int *result_offsets,
-	int num_cells,
-	int *result_indices,
-	double *result_scores
-				    );
+        /* Results go into these arrays  */
+        int *result_offsets,
+        int num_cells,
+        int *result_indices,
+        double *result_scores
+                                    );
 
 
 int chemfp_knearest_tanimoto_arena(
-	/* Find the 'k' nearest items */
-	int k,
-	/* Within the given threshold */
-	double threshold,
+        /* Find the 'k' nearest items */
+        int k,
+        /* Within the given threshold */
+        double threshold,
 
-	/* Number of bits in the fingerprint */
-	int num_bits,
+        /* Number of bits in the fingerprint */
+        int num_bits,
 
-	/* Query arena, start and end indices */
-	int query_storage_size, const unsigned char *query_arena,
-	int query_start, int query_end,
+        /* Query arena, start and end indices */
+        int query_storage_size, const unsigned char *query_arena,
+        int query_start, int query_end,
 
-	/* Target arena, start and end indices */
-	int target_storage_size, const unsigned char *target_arena,
-	int target_start, int target_end,
+        /* Target arena, start and end indices */
+        int target_storage_size, const unsigned char *target_arena,
+        int target_start, int target_end,
 
-	/* Target popcount distribution information */
-	/*  (must have at least num_bits+1 elements) */
-	int *target_popcount_indices,
+        /* Target popcount distribution information */
+        /*  (must have at least num_bits+1 elements) */
+        int *target_popcount_indices,
 
-	/* Results go into these arrays  */
-	int *result_offsets,
-	int num_cells,
-	int *result_indices,
-	double *result_scores
-				   );
+        /* Results go into these arrays  */
+        int *result_offsets,
+        int num_cells,
+        int *result_indices,
+        double *result_scores
+                                   );
 
 
 typedef int (*chemfp_popcount_f)(int len, const unsigned char *p1);
 typedef int (*chemfp_intersect_popcount_f)(int len, const unsigned char *p1,
-					   const unsigned char *p2);
+                                           const unsigned char *p2);
 
 chemfp_popcount_f
 chemfp_select_popcount(int num_bits,
-		       int storage_len, const unsigned char *arena);
+                       int storage_len, const unsigned char *arena);
 
 chemfp_intersect_popcount_f
 chemfp_select_intersect_popcount(int num_bits,
-				 int storage_len1, const unsigned char *arena1,
-				 int storage_len2, const unsigned char *arena2);
+                                 int storage_len1, const unsigned char *arena1,
+                                 int storage_len2, const unsigned char *arena2);
 
 
 #endif /* CHEMFP_H */
