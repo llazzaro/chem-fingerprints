@@ -6,7 +6,7 @@
 #include "chemfp.h"
 #include "chemfp_internal.h"
 
-#define REGULAR
+//#define REGULAR
 
 /* Example of a faster algorithm assuming 4-byte aligned data */
 
@@ -82,7 +82,8 @@ static inline int intersect_popcount_lut8(int n, uint32_t *fp1, uint32_t *fp2) {
  * http://perso.citi.insa-lyon.fr/claurado/ham/overview.pdf
  * http://perso.citi.insa-lyon.fr/claurado/hamming.html
  */
-int popcount_lauradoux(const uint64_t *fp, int size) {
+static int
+popcount_lauradoux(const uint64_t *fp, int size) {
   assert(fp != NULL);
   assert(size <= UINT32_MAX / (8 * sizeof(uint64_t)));
   
@@ -137,7 +138,8 @@ int popcount_lauradoux(const uint64_t *fp, int size) {
   return bit_count;
 }
 
-int intersect_popcount_lauradoux( int size, const uint64_t *fp1, const uint64_t *fp2) {
+static int
+intersect_popcount_lauradoux( int size, const uint64_t *fp1, const uint64_t *fp2) {
   assert(fp1 != NULL && fp2 != NULL);
   assert(size <= UINT32_MAX / (8 * sizeof(uint64_t)));
   
@@ -196,6 +198,104 @@ int intersect_popcount_lauradoux( int size, const uint64_t *fp1, const uint64_t 
 }
 
 
+
+typedef struct {
+  int alignment;
+  int min_size;
+  int id;
+  const char *name;
+  chemfp_popcount_f popcount;
+  chemfp_intersect_popcount_f intersect_popcount;
+} method_type;
+
+static method_type methods [] = {
+  {1, 1, CHEMFP_METHOD_LUT8, "LUT8", 
+   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+
+  {2, 2, CHEMFP_METHOD_LUT16, "LUT16",  /* To implement */
+   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+
+  {2, 2, CHEMFP_METHOD_INTRINSIC16, "Intrinsic16",  /* To implement */
+   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+
+  {4, 4, CHEMFP_METHOD_INTRINSIC32, "Intrinsic32",  /* To implement */
+   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+
+  {8, 8, CHEMFP_METHOD_INTRINSIC64, "Intrinsic64",  /* To implement */
+   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+
+  {8, 96, CHEMFP_METHOD_LAURADOUX, "Lauradoux",
+   popcount_lauradoux, intersect_popcount_lauradoux},
+};
+
+int
+chemfp_num_methods(void) {
+  return sizeof(methods) / sizeof(method_type);
+}
+
+const char *
+chemfp_method_name(enum chemfp_popcount_methods method) {
+  if (method < 0 || method >= chemfp_num_methods()) {
+    return NULL;
+  }
+  return methods[method].name;
+}
+
+
+typedef struct {
+  int alignment;
+  int id;
+  const char *name;
+  method_type *method_p;
+} alignment_type;
+
+static alignment_type alignments[] = {
+  {1, CHEMFP_ALIGN1, "1 byte aligned", &methods[CHEMFP_METHOD_LUT8]},
+  {2, CHEMFP_ALIGN2, "2 byte aligned", &methods[CHEMFP_METHOD_LUT16]},
+  {4, CHEMFP_ALIGN4, "4 byte aligned", &methods[CHEMFP_METHOD_LUT16]},
+  {8, CHEMFP_ALIGN8_SMALL, "8 byte aligned (<96 bytes)", &methods[CHEMFP_METHOD_LUT16]},
+  {8, CHEMFP_ALIGN8_LARGE, "8 byte aligned (>=96 bytes)", &methods[CHEMFP_METHOD_LAURADOUX]},
+};
+
+int
+chemfp_num_alignments(void) {
+  return sizeof(alignments) / sizeof(alignment_type);
+}
+
+const char *
+chemfp_alignment_label(enum chemfp_alignments alignment) {
+  if (alignment < 0 || alignment >= chemfp_num_alignments()) {
+    return NULL;
+  }
+  return alignments[alignment].name;
+}
+
+int 
+chemfp_get_alignment_method(enum chemfp_alignments alignment) {
+  if (alignment < 0 || alignment >= chemfp_num_alignments()) {
+    return -1;
+  }
+  return alignments[alignment].method_p->id;
+}
+
+int
+chemfp_set_alignment_method(enum chemfp_alignments alignment,
+			    enum chemfp_popcount_methods method) {
+  if (alignment < 0 || alignment >= chemfp_num_alignments()) {
+    return -1;
+  }
+  if (method < 0 || method >= chemfp_num_methods()) {
+    return -1;
+  }
+  if (methods[method].alignment > alignments[alignment].alignment) {
+    return -1;
+  }
+  alignments[alignment].method_p = methods+method;
+  return 0;
+}
+
+  
+
 /**************************************/
 
 /* chemfp stores fingerprints as Python strings */
@@ -237,6 +337,7 @@ chemfp_select_popcount(int num_bits,
 }
 
 
+
 chemfp_intersect_popcount_f
 chemfp_select_intersect_popcount(int num_bits,
 				 int storage_len1, const unsigned char *arena1,
@@ -247,8 +348,6 @@ chemfp_select_intersect_popcount(int num_bits,
   int storage_len = (storage_len1 < storage_len2) ? storage_len1 : storage_len2;
 
   int num_bytes = (num_bits+7)/8;
-  char *env_option;
-  static int popcount_option;
 
 #ifdef REGULAR
   return chemfp_byte_intersect_popcount;
@@ -258,54 +357,53 @@ chemfp_select_intersect_popcount(int num_bits,
     /* Give me bad input, I'll give you worse output */
     return NULL;
   }
-  if (num_bytes < 4) {
-    return chemfp_byte_intersect_popcount;
+  if (num_bytes < 8) {
+    return alignments[CHEMFP_ALIGN1].method_p->intersect_popcount;
   }
 
   if (alignment1 != alignment2) {
     /* No fast support yet for mixed alignments */
-    return chemfp_byte_intersect_popcount;
+    return alignments[CHEMFP_ALIGN1].method_p->intersect_popcount;
   }
 
   if (alignment1 != 0) {
-    /* I could in theory optimize this as well. */
+    /* I could in theory optimize this case as well. */
     /* That will have to wait until there's a need for it. */
-    return chemfp_byte_intersect_popcount;
+    return alignments[CHEMFP_ALIGN1].method_p->intersect_popcount;
   }
 
-  if (storage_len1 % 4 != 0 ||
-      storage_len2 % 4 != 0) {
-    /* While fp[0] is 4 byte aligned, this means fp[1] is *NOT* */
-    return chemfp_byte_intersect_popcount;
-  }
-  
-  /* Yay! Four byte alignment! */
+  /* Check for 8 byte alignment */
 
-  if (num_bits < 256) {
-    /* Probably not worthwhile */
-    return chemfp_byte_intersect_popcount;
-  }
+  if (ALIGNMENT(arena1, 8) == 0 &&
+      ALIGNMENT(arena2, 8) == 0 &&
+      storage_len1 % 8 == 0 &&
+      storage_len2 % 8 == 0) {
 
-  if ( ((env_option = getenv("POPCOUNT")) == NULL) ||
-       strcmp(env_option, "LUT") ) {
-    if (ALIGNMENT(arena1, 8) == 0 &&
-	ALIGNMENT(arena2, 8) == 0 &&
-	storage_len1 % 8 == 0 &&
-	storage_len2 % 8 == 0 &&
-	num_bytes >= 96) {
-      if (popcount_option != 2) {
-	printf("Using Lauradoux\n");
-	popcount_option = 2;
-      }
-      return intersect_popcount_lauradoux;
+    if (num_bytes >= 96) {
+      return alignments[CHEMFP_ALIGN8_LARGE].method_p->intersect_popcount;
+    } else {
+      return alignments[CHEMFP_ALIGN8_SMALL].method_p->intersect_popcount;
     }
   }
 
-  if (popcount_option != 1) {
-    printf("Using LUT8\n");
-    popcount_option = 1;
-  }
-  
-  return (chemfp_intersect_popcount_f) intersect_popcount_lut8;
+  /* Check for 4 byte alignment */
 
+  if (ALIGNMENT(arena1, 4) == 0 &&
+      ALIGNMENT(arena2, 4) == 0 &&
+      storage_len1 % 4 == 0 &&
+      storage_len2 % 4 == 0) {
+    return alignments[CHEMFP_ALIGN4].method_p->intersect_popcount;
+  }
+
+  /* Check for 2 byte alignment */
+
+  if (ALIGNMENT(arena1, 2) == 0 &&
+      ALIGNMENT(arena2, 2) == 0 &&
+      storage_len1 % 2 == 0 &&
+      storage_len2 % 2 == 0) {
+    return alignments[CHEMFP_ALIGN2].method_p->intersect_popcount;
+  }
+
+  /* At least we're one byte aligned */
+  return alignments[CHEMFP_ALIGN1].method_p->intersect_popcount;
 }
