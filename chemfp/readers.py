@@ -191,7 +191,7 @@ def read_header(f, filename, warn=warn_to_stderr):
                     err = _chemfp.fps_line_validate(-1, block)
                     if err:
                         raise FPSParseError(err, lineno, filename)
-                    i = block.index("\t")-1
+                    i = block.index("\t")
                     # If you don't specify the number of bits then I'll do it for you.
                     metadata.num_bits = i * 4
                     metadata.num_bytes = i // 2
