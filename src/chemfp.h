@@ -4,7 +4,7 @@
 /* Errors are always negative numbers. */
 enum chemfp_errors {
   CHEMFP_OK = 0,
-  CHEMFP_BAD_ARG = -1,  /* Generic error; not used */
+  CHEMFP_BAD_ARG = -1,
 
   CHEMFP_NO_MEM = -2,  /* memory allocation failed */
 
@@ -15,7 +15,11 @@ enum chemfp_errors {
   CHEMFP_UNEXPECTED_FINGERPRINT_LENGTH = -33,
   CHEMFP_MISSING_ID = -34,
   CHEMFP_BAD_ID = -35,
-  CHEMFP_MISSING_NEWLINE = -36
+  CHEMFP_MISSING_NEWLINE = -36,
+
+  /* Popcount errors */
+  CHEMFP_METHOD_MISMATCH = -50,
+  
 };
 
 int chemfp_get_num_methods(void);

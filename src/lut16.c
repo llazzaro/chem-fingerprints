@@ -1,3 +1,6 @@
+#include "popcount.h"
+
+/* 16 bit / 65536 entry lookup table */
 static char lut[] = {
      0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
      1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
@@ -4096,3 +4099,73 @@ static char lut[] = {
     11,12,12,13,12,13,13,14,12,13,13,14,13,14,14,15,
     12,13,13,14,13,14,14,15,13,14,14,15,14,15,15,16
 };
+
+/* This is called with the number of bytes in the fingerprint, */
+/* which is not necessarily a multiple of 4. However, the select */
+/* function promises that there will be enough extra data. */
+
+int
+_chemfp_popcount_lut8_4(int n, uint32_t *fp) {
+  int cnt=0;
+  unsigned int i;
+
+  /* Handle even cases where the fingerprint length is not a multiple of 4 */
+  n = (n+3) / 4;
+  do {
+    i = *fp;
+    cnt += lut[i&255];
+    cnt += lut[i>>8&255];
+    cnt += lut[i>>16&255];
+    cnt += lut[i>>24];
+    fp++;
+  } while(--n);
+  return cnt;
+}
+
+int
+_chemfp_intersect_popcount_lut8_4(int n, uint32_t *fp1, uint32_t *fp2) {
+  int cnt=0;
+  unsigned int i;
+  n = (n+3) / 4;
+  do {
+    i = *fp1 & *fp2;
+    cnt += lut[i&255];
+    cnt += lut[i>>8&255];
+    cnt += lut[i>>16&255];
+    cnt += lut[i>>24];
+    fp1++;
+    fp2++;
+  } while(--n);
+  return cnt;
+}
+
+int
+_chemfp_popcount_lut16_4(int n, uint32_t *fp) {
+  int cnt=0;
+  unsigned int i;
+
+  /* Handle even cases where the fingerprint length is not a multiple of 4 */
+  n = (n+3) / 4;
+  do {
+    i = *fp;
+    cnt += lut[i&65535];
+    cnt += lut[i>>16];
+    fp++;
+  } while(--n);
+  return cnt;
+}
+
+int
+_chemfp_intersect_popcount_lut16_4(int n, uint32_t *fp1, uint32_t *fp2) {
+  int cnt=0;
+  unsigned int i;
+  n = (n+3) / 4;
+  do {
+    i = *fp1 & *fp2;
+    cnt += lut[i&65535];
+    cnt += lut[i>>16];
+    fp1++;
+    fp2++;
+  } while(--n);
+  return cnt;
+}
