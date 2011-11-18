@@ -20,6 +20,7 @@ typedef struct {
   const char *name;
   int alignment;
   int min_size;
+  int okay_for_larger_alignments;
   chemfp_method_check_f check;
   chemfp_popcount_f popcount;
   chemfp_intersect_popcount_f intersect_popcount;

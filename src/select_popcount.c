@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "chemfp.h"
 #include "chemfp_internal.h"
@@ -18,29 +19,29 @@ chemfp_alignment_type _chemfp_alignments[] = {
 
 
 static chemfp_method_type compile_time_methods[] = {
-  {0, "LUT8-1", 1, 1, NULL,
+  {0, "LUT8-1", 1, 1, 0, NULL,
    chemfp_byte_popcount,
     chemfp_byte_intersect_popcount},
 
-  {0, "LUT8-4", 4, 4, NULL,
+  {0, "LUT8-4", 4, 4, 1, NULL,
    (chemfp_popcount_f) _chemfp_popcount_lut8_4,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lut8_4},
 
-  {0, "LUT16-4", 4, 4, NULL,
+  {0, "LUT16-4", 4, 4, 1, NULL,
    (chemfp_popcount_f) _chemfp_popcount_lut16_4,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lut16_4},
 
-  {0, "Lauradoux", 8, 96, NULL,
+  {0, "Lauradoux", 8, 96, 1, NULL,
    (chemfp_popcount_f) _chemfp_popcount_lauradoux,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lauradoux},
 
 #if defined(HAS_POPCOUNT_INTRINSIC)
-  {0, "intrinsic32", 4, 4, /* To implement */
+  {0, "intrinsic32", 4, 4, 0,
    _chemfp_has_popcnt_instruction,
    (chemfp_popcount_f) _chemfp_popcount_intrinsic32,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_intrinsic32},
 
-  {0, "intrinsic64", 8, 8, /* To implement */
+  {0, "intrinsic64", 8, 8, 1,
    _chemfp_has_popcnt_instruction,
    (chemfp_popcount_f) _chemfp_popcount_intrinsic64,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_intrinsic64},
@@ -88,39 +89,30 @@ chemfp_get_method_name(int method) {
   return detected_methods[method]->name;
 }
 
-static chemfp_method_type *
-_get_method(const char **names, int num_bytes) {
-  int probe, i;
-  int num_names = num_bytes / sizeof(const char *);
-  for (probe=0; probe<num_names; probe++) {
-    for (i=0; i<num_methods; i++) {
-      if (!strcmp(names[probe], detected_methods[i]->name)) {
-	printf("Assign %s\n", detected_methods[i]->name);
-	return detected_methods[i];
-      }
-    }
-  }
-  printf("Default\n");
-  return &compile_time_methods[0];
-}
-
-	    
 static inline void
 set_alignment_methods(void) {
+  int alignment;
+
+  /* Make sure we haven't already initialized the alignments */
   if (_chemfp_alignments[0].method_p != NULL) {
     return;
   }
-  printf("detect methods\n");
+
+  /* Figure out which methods are available for this hardware */
   detect_methods();
-  printf("detect methods is done\n");
-  const char *align1[] = {"LUT8-1"};
-  const char *align4[] = {"LUT16-4", "LUT8-4"};
-  const char *align8_small[] = {"intrinsic64", "LUT16-4", "LUT8-4"};
-  const char *align8_large[] = {"intrinsic64", "Lauradoux", "LUT16-4", "LUT8-4"};
-  _chemfp_alignments[0].method_p = _get_method(align1, sizeof(align1));
-  _chemfp_alignments[1].method_p = _get_method(align4, sizeof(align4));
-  _chemfp_alignments[2].method_p = _get_method(align8_small, sizeof(align8_small));
-  _chemfp_alignments[3].method_p = _get_method(align8_large, sizeof(align8_large));
+
+  /* Initialize to something which is always */
+  for (alignment=0; alignment < sizeof(_chemfp_alignments) / sizeof(chemfp_alignment_type);
+       alignment++) {
+    _chemfp_alignments[alignment].method_p = detected_methods[0];
+  }
+
+  /* Determine the fastest method for the different alignment categories */
+  /* (I chose "1000" because the times end up around 100 microseconds. */
+  /*  Any lower and the fastest times might be too small for high-end machines) */
+  chemfp_select_fastest_method(CHEMFP_ALIGN4, 1000);
+  chemfp_select_fastest_method(CHEMFP_ALIGN8_SMALL, 1000);
+  chemfp_select_fastest_method(CHEMFP_ALIGN8_LARGE, 1000);
 }
 
 
@@ -262,4 +254,88 @@ chemfp_select_intersect_popcount(int num_bits,
 
   /* At least we're one byte aligned */
   return _chemfp_alignments[CHEMFP_ALIGN1].method_p->intersect_popcount;
+}
+
+
+/*********** Automatically select the fastest method ***********/
+
+static const int buffersize = 2048/8;
+
+static unsigned long
+get_usecs(void) {
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec*1000000+tv.tv_usec;
+}
+
+static unsigned long 
+timeit(chemfp_popcount_f popcount, int size, unsigned char *buffer, int repeat) {
+  unsigned long t1, t2;
+  int i;
+  t1 = get_usecs();
+  for (i=0; i<repeat; i++) {
+    popcount(size, buffer);
+  }
+  t2 = get_usecs();
+  return t2-t1;
+}
+
+
+
+int
+chemfp_select_fastest_method(int alignment, int repeat) {
+  unsigned char *buffer;
+  int method, best_method=-1, old_method;
+  int i, probe_size;
+  unsigned long dt;
+  unsigned long best_time=0;
+  chemfp_method_type *method_p=NULL;
+
+  old_method = chemfp_get_alignment_method(alignment);
+  if (old_method < 0) {
+    return old_method;
+  }
+
+  buffer = (unsigned char *) malloc(buffersize);
+  for (i=0; i<buffersize; i++) {
+    buffer[i] = i % 256;
+  }
+
+  
+  if (alignment == CHEMFP_ALIGN8_SMALL) {
+    probe_size = 64; /* 512 bits */
+  } else {
+    probe_size = 2048/8;
+  }
+
+  for (method=0; method<chemfp_get_num_methods(); method++) {
+
+    /* See if I can use this method */
+    if (chemfp_set_alignment_method(alignment, method) < 0) {
+      continue;
+    }
+    method_p = _chemfp_alignments[alignment].method_p;
+    if (method_p->alignment < _chemfp_alignments[alignment].alignment &&
+	!method_p->okay_for_larger_alignments) {
+      continue;
+    }
+
+    /* Time the performance */
+    dt = timeit(method_p->popcount,
+		probe_size, buffer, repeat);
+		
+    if (best_method == -1 || dt < best_time) {
+      best_method = method;
+      best_time = dt;
+    }
+  }
+  if (best_method == -1) {
+    /* Shouldn't happen, but I want to be on the safe side. */
+    best_method = old_method;
+  }
+  chemfp_set_alignment_method(alignment, best_method);
+
+  free(buffer);
+
+  return best_method;
 }

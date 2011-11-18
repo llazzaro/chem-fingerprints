@@ -31,6 +31,7 @@ const char *chemfp_get_alignment_name(int alignment);
 int chemfp_get_alignment_method(int alignment);
 int chemfp_set_alignment_method(int alignment, int method);
 
+int chemfp_select_fastest_method(int alignment, int repeat);
 
 /* This gives compile-time version information. */
 /* Use "chemfp_version" for run-time version information */
