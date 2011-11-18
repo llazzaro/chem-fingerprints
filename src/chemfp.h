@@ -18,32 +18,14 @@ enum chemfp_errors {
   CHEMFP_MISSING_NEWLINE = -36
 };
 
-enum chemfp_popcount_methods {
-  CHEMFP_METHOD_LUT8 = 0,
-  CHEMFP_METHOD_LUT16,
-  CHEMFP_METHOD_INTRINSIC16,
-  CHEMFP_METHOD_INTRINSIC32,
-  CHEMFP_METHOD_INTRINSIC64,
-  CHEMFP_METHOD_LAURADOUX
-};
-
 int chemfp_num_methods(void);
-const char *chemfp_method_name(enum chemfp_popcount_methods method);
+const char *chemfp_method_name(int method);
 
-enum chemfp_alignments {
-  CHEMFP_ALIGN1 = 0,
-  CHEMFP_ALIGN2,
-  CHEMFP_ALIGN4,
-  CHEMFP_ALIGN8_SMALL,
-  CHEMFP_ALIGN8_LARGE
-};
 int chemfp_num_alignments(void);
-const char *chemfp_alignment_label(enum chemfp_alignments alignment);
+const char *chemfp_alignment_name(int alignment);
 
-int chemfp_get_alignment_method(enum chemfp_alignments alignment);
-int chemfp_set_alignment_method(enum chemfp_alignments alignment,
-                                enum chemfp_popcount_methods method);
-
+int chemfp_get_alignment_method(int alignment);
+int chemfp_set_alignment_method(int alignment, int method);
 
 
 /* This gives compile-time version information. */
