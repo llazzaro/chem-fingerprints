@@ -8,19 +8,6 @@
 
 //#define REGULAR
 
-/* Example of a faster algorithm assuming 4-byte aligned data */
-
-/*
-static char lut[] = {
-  0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
-  1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-  1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-  2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-  1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
-  2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-  2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
-  3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8  };
-*/
 #include "lut16.c"
 
 
@@ -93,13 +80,7 @@ static inline int intersect_popcount_lut16(int n, uint32_t *fp1, uint32_t *fp2) 
 
 /**************************************/
 
-#ifdef MS_VISUAL_C
-#define POPCNT32(i) __popcnt(i)
-#define POPCNT64(i) __popcnt64(i)
-#else
-#define POPCNT32(i) __builtin_popcountl(i)
-#define POPCNT64(i) __builtin_popcountll(i)
-#endif
+#if defined(HAS_POPCOUNT_INTRINSIC)
 
 static inline int popcount_intrinsic32(int n, uint32_t *fp) {
   int cnt=0;
@@ -159,7 +140,7 @@ has_popcnt(void) {
   printf("Do I have popcount\n");
   return 1;
 }
-
+#endif
 
 
 /**************************************/
@@ -328,11 +309,13 @@ static method_type available_methods[] = {
   {0, "LUT16-4", 4, 4,  /* To implement */
    NULL, popcount_lut16, intersect_popcount_lut16},
 
+#if defined(HAS_POPCOUNT_INTRINSIC)
   {0, "intrinsic32", 4, 4, /* To implement */
    has_popcnt, popcount_intrinsic32, intersect_popcount_intrinsic32},
 
   {0, "intrinsic64", 8, 8, /* To implement */
    has_popcnt, popcount_intrinsic64, intersect_popcount_intrinsic64},
+#endif
 
   {0, "Lauradoux", 8, 96,
    NULL, popcount_lauradoux, intersect_popcount_lauradoux},
