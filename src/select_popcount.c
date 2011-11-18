@@ -8,6 +8,8 @@
 #include "chemfp_internal.h"
 #include "popcount.h"
 
+#include "cpuid.h"
+
 //#define REGULAR
 
 chemfp_alignment_type _chemfp_alignments[] = {
@@ -17,6 +19,10 @@ chemfp_alignment_type _chemfp_alignments[] = {
   {"align8-large", 8, 96, NULL},
 };
 
+static int
+has_popcnt_instruction(void) {
+  return (get_cpuid_flags() & bit_POPCNT);
+}
 
 static chemfp_method_type compile_time_methods[] = {
   {0, "LUT8-1", 1, 1, 0, NULL,
@@ -35,17 +41,10 @@ static chemfp_method_type compile_time_methods[] = {
    (chemfp_popcount_f) _chemfp_popcount_lauradoux,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lauradoux},
 
-#if defined(HAS_POPCOUNT_INTRINSIC)
-  {0, "intrinsic32", 4, 4, 0,
-   _chemfp_has_popcnt_instruction,
-   (chemfp_popcount_f) _chemfp_popcount_intrinsic32,
-   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_intrinsic32},
-
-  {0, "intrinsic64", 8, 8, 1,
-   _chemfp_has_popcnt_instruction,
-   (chemfp_popcount_f) _chemfp_popcount_intrinsic64,
-   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_intrinsic64},
-#endif
+  {0, "popcnt", 8, 8, 1,
+   has_popcnt_instruction,
+   (chemfp_popcount_f) popcount_POPCNT,
+   (chemfp_intersect_popcount_f) intersect_popcount_POPCNT},
 
 };
 
@@ -101,7 +100,7 @@ set_alignment_methods(void) {
   /* Figure out which methods are available for this hardware */
   detect_methods();
 
-  /* Initialize to something which is always */
+  /* Initialize to something which is always valid */
   for (alignment=0; alignment < sizeof(_chemfp_alignments) / sizeof(chemfp_alignment_type);
        alignment++) {
     _chemfp_alignments[alignment].method_p = detected_methods[0];

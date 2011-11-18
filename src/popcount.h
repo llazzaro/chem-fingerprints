@@ -46,32 +46,4 @@ int _chemfp_intersect_popcount_lut16_4(int n, uint32_t *fp1, uint32_t *fp2);
 int _chemfp_popcount_lauradoux(int size, const uint64_t *fp);
 int _chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const uint64_t *fp2);
 
-
-#if defined(_MSC_VER)
-#  include <intrin.h>
-
-#define HAS_POPCOUNT_INTRINSIC
-#define POPCNT32(i) __popcnt(i)
-#define POPCNT64(i) __popcnt64(i)
-
-#else if defined(__GNUC__) || defined(__llvm__)
-
-#define HAS_POPCOUNT_INTRINSIC
-#define POPCNT32(i) __builtin_popcountl(i)
-#define POPCNT64(i) __builtin_popcountll(i)
-
-#endif
-
-#if defined(HAS_POPCOUNT_INTRINSIC)
-int _chemfp_popcount_intrinsic32(int n, uint32_t *fp);
-int _chemfp_intersect_popcount_intrinsic32(int n, uint32_t *fp1, uint32_t *fp2);
-
-int _chemfp_popcount_intrinsic64(int n, uint64_t *fp);
-int _chemfp_intersect_popcount_intrinsic64(int n, uint64_t *fp1, uint64_t *fp2);
-
-int _chemfp_has_popcnt_instruction(void);
-#endif
-
-
-
 #endif
