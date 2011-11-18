@@ -10,7 +10,8 @@
 
 /* Example of a faster algorithm assuming 4-byte aligned data */
 
-static int lut[] = {
+/*
+static char lut[] = {
   0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
   1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
   1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
@@ -19,6 +20,8 @@ static int lut[] = {
   2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
   2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
   3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8  };
+*/
+#include "lut16.c"
 
 
 /* This is called with the number of bytes in the fingerprint, */
@@ -58,6 +61,107 @@ static inline int intersect_popcount_lut8(int n, uint32_t *fp1, uint32_t *fp2) {
   return cnt;
 }
 
+static inline int popcount_lut16(int n, uint32_t *fp) {
+  int cnt=0;
+  unsigned int i;
+
+  /* Handle even cases where the fingerprint length is not a multiple of 4 */
+  n = (n+3) / 4;
+  do {
+    i = *fp;
+    cnt += lut[i&65535];
+    cnt += lut[i>>16];
+    fp++;
+  } while(--n);
+  return cnt;
+}
+
+static inline int intersect_popcount_lut16(int n, uint32_t *fp1, uint32_t *fp2) {
+  int cnt=0;
+  unsigned int i;
+  n = (n+3) / 4;
+  do {
+    i = *fp1 & *fp2;
+    cnt += lut[i&65535];
+    cnt += lut[i>>16];
+    fp1++;
+    fp2++;
+  } while(--n);
+  return cnt;
+}
+
+
+/**************************************/
+
+#ifdef MS_VISUAL_C
+#define POPCNT32(i) __popcnt(i)
+#define POPCNT64(i) __popcnt64(i)
+#else
+#define POPCNT32(i) __builtin_popcountl(i)
+#define POPCNT64(i) __builtin_popcountll(i)
+#endif
+
+static inline int popcount_intrinsic32(int n, uint32_t *fp) {
+  int cnt=0;
+
+  /* Handle even cases where the fingerprint length is not a multiple of 4 */
+  n = (n+3) / 4;
+  do {
+    cnt += POPCNT32(*fp++);
+  } while(--n);
+  return cnt;
+}
+
+static inline int intersect_popcount_intrinsic32(int n, uint32_t *fp1, uint32_t *fp2) {
+  int cnt=0;
+  uint32_t i;
+
+  /* Handle even cases where the fingerprint length is not a multiple of 4 */
+  n = (n+3) / 4;
+  do {
+    i = (*fp1 & *fp2);
+    cnt += POPCNT32(i);
+    fp1++;
+    fp2++;
+  } while(--n);
+  return cnt;
+}
+
+
+static inline int popcount_intrinsic64(int n, uint64_t *fp) {
+  int cnt=0;
+
+  /* Handle even cases where the fingerprint length is not a multiple of 4 */
+  n = (n+7) / 8;
+  do {
+    cnt += POPCNT64(*fp++);
+  } while(--n);
+  return cnt;
+}
+
+static inline int intersect_popcount_intrinsic64(int n, uint64_t *fp1, uint64_t *fp2) {
+  int cnt=0;
+  uint64_t i;
+
+  /* Handle even cases where the fingerprint length is not a multiple of 4 */
+  n = (n+7) / 8;
+  do {
+    i = (*fp1 & *fp2);
+    cnt += POPCNT64(i);
+    fp1++;
+    fp2++;
+  } while(--n);
+  return cnt;
+}
+
+static int
+has_popcnt(void) {
+  printf("Do I have popcount\n");
+  return 1;
+}
+
+
+
 /**************************************/
 //
 // popcount_lauradoux.c, v 1.1
@@ -83,7 +187,7 @@ static inline int intersect_popcount_lut8(int n, uint32_t *fp1, uint32_t *fp2) {
  * http://perso.citi.insa-lyon.fr/claurado/hamming.html
  */
 static int
-popcount_lauradoux(const uint64_t *fp, int size) {
+popcount_lauradoux(int size, const uint64_t *fp) {
   assert(fp != NULL);
   assert(size <= UINT32_MAX / (8 * sizeof(uint64_t)));
   
@@ -97,6 +201,7 @@ popcount_lauradoux(const uint64_t *fp, int size) {
   uint64_t count1, count2, half1, half2, acc;
   uint64_t x;
   int i, j;    
+  size = (size + 7) / 8;
   int limit = size - size % 12;
   int bit_count = 0;
   
@@ -198,72 +303,142 @@ intersect_popcount_lauradoux( int size, const uint64_t *fp1, const uint64_t *fp2
 }
 
 
+/************************/
+
+typedef int (*method_check_f)(void);
+
 
 typedef struct {
+  int detected_index;
+  const char *name;
   int alignment;
   int min_size;
-  int id;
-  const char *name;
+  method_check_f check;
   chemfp_popcount_f popcount;
   chemfp_intersect_popcount_f intersect_popcount;
 } method_type;
 
-static method_type methods [] = {
-  {1, 1, CHEMFP_METHOD_LUT8, "LUT8", 
-   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+static method_type available_methods[] = {
+  {0, "LUT8-1", 1, 1,
+   NULL, chemfp_byte_popcount, chemfp_byte_intersect_popcount},
 
-  {2, 2, CHEMFP_METHOD_LUT16, "LUT16",  /* To implement */
-   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+  {0, "LUT8-4", 4, 4,
+   NULL, popcount_lut8, intersect_popcount_lut8},
 
-  {2, 2, CHEMFP_METHOD_INTRINSIC16, "Intrinsic16",  /* To implement */
-   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+  {0, "LUT16-4", 4, 4,  /* To implement */
+   NULL, popcount_lut16, intersect_popcount_lut16},
 
-  {4, 4, CHEMFP_METHOD_INTRINSIC32, "Intrinsic32",  /* To implement */
-   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+  {0, "intrinsic32", 4, 4, /* To implement */
+   has_popcnt, popcount_intrinsic32, intersect_popcount_intrinsic32},
 
-  {8, 8, CHEMFP_METHOD_INTRINSIC64, "Intrinsic64",  /* To implement */
-   chemfp_byte_intersect_popcount, chemfp_byte_intersect_popcount},
+  {0, "intrinsic64", 8, 8, /* To implement */
+   has_popcnt, popcount_intrinsic64, intersect_popcount_intrinsic64},
 
-  {8, 96, CHEMFP_METHOD_LAURADOUX, "Lauradoux",
-   popcount_lauradoux, intersect_popcount_lauradoux},
+  {0, "Lauradoux", 8, 96,
+   NULL, popcount_lauradoux, intersect_popcount_lauradoux},
 };
+
+static method_type *methods[sizeof(available_methods)/sizeof(method_type)];
+static int num_methods = 0;
+
+static void
+detect_methods(void) {
+  int i, j=0;
+  if (num_methods != 0) {
+    return;
+  }
+  for (i=0; i<sizeof(available_methods)/sizeof(method_type); i++) {
+    if ((available_methods[i].check == NULL) ||
+	(available_methods[i].check())) {
+      available_methods[i].detected_index = j;
+      methods[j++] = &available_methods[i];
+    }
+  }
+  num_methods = j;
+}
+
+
 
 int
 chemfp_num_methods(void) {
-  return sizeof(methods) / sizeof(method_type);
+  detect_methods();
+  return num_methods;
 }
 
 const char *
-chemfp_method_name(enum chemfp_popcount_methods method) {
+chemfp_method_name(int method) {
   if (method < 0 || method >= chemfp_num_methods()) {
     return NULL;
   }
-  return methods[method].name;
+  return methods[method]->name;
 }
 
 
 typedef struct {
-  int alignment;
-  int id;
   const char *name;
+  int alignment;
+  int min_size;
   method_type *method_p;
 } alignment_type;
 
 static alignment_type alignments[] = {
-  {1, CHEMFP_ALIGN1, "1 byte aligned", &methods[CHEMFP_METHOD_LUT8]},
-  {2, CHEMFP_ALIGN2, "2 byte aligned", &methods[CHEMFP_METHOD_LUT16]},
-  {4, CHEMFP_ALIGN4, "4 byte aligned", &methods[CHEMFP_METHOD_LUT16]},
-  {8, CHEMFP_ALIGN8_SMALL, "8 byte aligned (<96 bytes)", &methods[CHEMFP_METHOD_LUT16]},
-  {8, CHEMFP_ALIGN8_LARGE, "8 byte aligned (>=96 bytes)", &methods[CHEMFP_METHOD_LAURADOUX]},
+  {"align1", 1, 1, NULL},
+  {"align4", 4, 4, NULL},
+  {"align8-small", 8, 8, NULL},
+  {"align8-large", 8, 96, NULL},
 };
+enum {
+  CHEMFP_ALIGN1=0,
+  CHEMFP_ALIGN4,
+  CHEMFP_ALIGN8_SMALL,
+  CHEMFP_ALIGN8_LARGE,
+};
+
+
+static method_type *
+_get_method(const char **names, int num_bytes) {
+  int probe, i;
+  int num_names = num_bytes / sizeof(const char *);
+  for (probe=0; probe<num_names; probe++) {
+    for (i=0; i<num_methods; i++) {
+      if (!strcmp(names[probe], methods[i]->name)) {
+	printf("Assign %s\n", methods[i]->name);
+	return methods[i];
+      }
+    }
+  }
+  printf("Default\n");
+  return &available_methods[0];
+}
+
+	    
+static inline void
+set_alignment_methods(void) {
+  if (alignments[0].method_p != NULL) {
+    return;
+  }
+  printf("detect methods\n");
+  detect_methods();
+  printf("detect methods is done\n");
+  const char *align1[] = {"LUT8-1"};
+  const char *align4[] = {"LUT16-4", "LUT8-4"};
+  const char *align8_small[] = {"intrinsic64", "LUT16-4", "LUT8-4"};
+  const char *align8_large[] = {"intrinsic64", "Lauradoux", "LUT16-4", "LUT8-4"};
+  alignments[0].method_p = _get_method(align1, sizeof(align1));
+  alignments[1].method_p = _get_method(align4, sizeof(align4));
+  alignments[2].method_p = _get_method(align8_small, sizeof(align8_small));
+  alignments[3].method_p = _get_method(align8_large, sizeof(align8_large));
+}
+
 
 int
 chemfp_num_alignments(void) {
+  set_alignment_methods();
   return sizeof(alignments) / sizeof(alignment_type);
 }
 
 const char *
-chemfp_alignment_label(enum chemfp_alignments alignment) {
+chemfp_alignment_name(int alignment) {
   if (alignment < 0 || alignment >= chemfp_num_alignments()) {
     return NULL;
   }
@@ -271,26 +446,30 @@ chemfp_alignment_label(enum chemfp_alignments alignment) {
 }
 
 int 
-chemfp_get_alignment_method(enum chemfp_alignments alignment) {
+chemfp_get_alignment_method(int alignment) {
   if (alignment < 0 || alignment >= chemfp_num_alignments()) {
     return -1;
   }
-  return alignments[alignment].method_p->id;
+  return alignments[alignment].method_p->detected_index;
 }
 
 int
-chemfp_set_alignment_method(enum chemfp_alignments alignment,
-			    enum chemfp_popcount_methods method) {
+chemfp_set_alignment_method(int alignment, int method) {
+  /* Make sure it's an available alignment and method */
   if (alignment < 0 || alignment >= chemfp_num_alignments()) {
     return -1;
   }
   if (method < 0 || method >= chemfp_num_methods()) {
     return -1;
   }
-  if (methods[method].alignment > alignments[alignment].alignment) {
+  /* Make sure the alignment and sizes are good enough */
+  if (methods[method]->alignment > alignments[alignment].alignment) {
     return -1;
   }
-  alignments[alignment].method_p = methods+method;
+  if (methods[method]->min_size > alignments[alignment].min_size) {
+    return -1;
+  }
+  alignments[alignment].method_p = methods[method];
   return 0;
 }
 
@@ -306,8 +485,6 @@ chemfp_popcount_f
 chemfp_select_popcount(int num_bits,
 		       int storage_len, const unsigned char *arena) {
 
-  uintptr_t alignment = ALIGNMENT(arena, 4);
-
   int num_bytes = (num_bits+7)/8;
 
 #ifdef REGULAR
@@ -317,23 +494,33 @@ chemfp_select_popcount(int num_bits,
     /* Give me bad input, I'll give you worse output */
     return NULL;
   }
-  if (num_bytes < 4) {
-    /* Really? That's very small. There's no reason to optimize this case */
-    return chemfp_byte_popcount;
+
+  set_alignment_methods();
+
+  if (num_bytes <= 1) {
+    /* Really? */
+    return alignments[CHEMFP_ALIGN1].method_p->popcount;
+  }
+  if (ALIGNMENT(arena, 8) == 0 &&
+      storage_len % 8 == 0) {
+    if (num_bytes >= 96) {
+      return alignments[CHEMFP_ALIGN8_LARGE].method_p->popcount;
+    } else {
+      return alignments[CHEMFP_ALIGN8_SMALL].method_p->popcount;
+    }
   }
 
-  if (alignment != 0) {
-    /* I could in theory optimize this as well. */
-    return chemfp_byte_popcount;
+  if (ALIGNMENT(arena, 4) &&
+      storage_len % 4 == 0) {
+    return alignments[CHEMFP_ALIGN4].method_p->popcount;
   }
 
-  if (storage_len % 4 != 0) {
-    /* While fp[0] is 4 byte aligned, this means fp[1] is *NOT* */
-    return chemfp_byte_popcount;
+  if (ALIGNMENT(arena, 2) &&
+      storage_len % 2 == 0) {
+    return alignments[CHEMFP_ALIGN1].method_p->popcount;
   }
 
-  /* Yay! Four byte alignment! */
-  return (chemfp_popcount_f) popcount_lut8;
+  return alignments[CHEMFP_ALIGN1].method_p->popcount;
 }
 
 
@@ -343,8 +530,6 @@ chemfp_select_intersect_popcount(int num_bits,
 				 int storage_len1, const unsigned char *arena1,
 				 int storage_len2, const unsigned char *arena2) {
 
-  uintptr_t alignment1 = ALIGNMENT(arena1, 4);
-  uintptr_t alignment2 = ALIGNMENT(arena2, 4);
   int storage_len = (storage_len1 < storage_len2) ? storage_len1 : storage_len2;
 
   int num_bytes = (num_bits+7)/8;
@@ -357,18 +542,10 @@ chemfp_select_intersect_popcount(int num_bits,
     /* Give me bad input, I'll give you worse output */
     return NULL;
   }
-  if (num_bytes < 8) {
-    return alignments[CHEMFP_ALIGN1].method_p->intersect_popcount;
-  }
 
-  if (alignment1 != alignment2) {
-    /* No fast support yet for mixed alignments */
-    return alignments[CHEMFP_ALIGN1].method_p->intersect_popcount;
-  }
-
-  if (alignment1 != 0) {
-    /* I could in theory optimize this case as well. */
-    /* That will have to wait until there's a need for it. */
+  set_alignment_methods();
+  
+  if (num_bytes <= 1) {
     return alignments[CHEMFP_ALIGN1].method_p->intersect_popcount;
   }
 
@@ -393,15 +570,6 @@ chemfp_select_intersect_popcount(int num_bits,
       storage_len1 % 4 == 0 &&
       storage_len2 % 4 == 0) {
     return alignments[CHEMFP_ALIGN4].method_p->intersect_popcount;
-  }
-
-  /* Check for 2 byte alignment */
-
-  if (ALIGNMENT(arena1, 2) == 0 &&
-      ALIGNMENT(arena2, 2) == 0 &&
-      storage_len1 % 2 == 0 &&
-      storage_len2 % 2 == 0) {
-    return alignments[CHEMFP_ALIGN2].method_p->intersect_popcount;
   }
 
   /* At least we're one byte aligned */
