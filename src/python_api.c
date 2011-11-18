@@ -1181,6 +1181,77 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
   return PyInt_FromLong(result);
 }
 
+/* Select the popcount methods */
+
+static PyObject *
+num_methods(PyObject *self, PyObject *args) {
+  return PyInt_FromLong(chemfp_num_methods());
+}
+
+static PyObject *
+method_name(PyObject *self, PyObject *args) {
+  int method;
+  const char *s;
+  if (!PyArg_ParseTuple(args, "i:method_name", &method)) {
+    return NULL;
+  }
+  s = chemfp_method_name(method);
+  if (s == NULL) {
+    PyErr_SetString(PyExc_IndexError, "method index is out of range");
+    return NULL;
+  }
+  return PyString_FromString(s);
+}
+
+static PyObject *
+num_alignments(PyObject *self, PyObject *args) {
+  return PyInt_FromLong(chemfp_num_alignments());
+}
+
+static PyObject *
+alignment_name(PyObject *self, PyObject *args) {
+  int alignment;
+  const char *s;
+  if (!PyArg_ParseTuple(args, "i:alignment_name", &alignment)) {
+    return NULL;
+  }
+  s = chemfp_alignment_name(alignment);
+  if (s == NULL) {
+    PyErr_SetString(PyExc_IndexError, "alignment index is out of range");
+    return NULL;
+  }
+  return PyString_FromString(s);
+}
+
+static PyObject *
+get_alignment_method(PyObject *self, PyObject *args) {
+  int alignment, method;
+  if (!PyArg_ParseTuple(args, "i:get_alignment_method", &alignment)) {
+    return NULL;
+  }
+  method = chemfp_get_alignment_method(alignment);
+  if (method == -1) {
+    PyErr_SetString(PyExc_IndexError, "alignment index is out of range");
+    return NULL;
+  }
+  return PyInt_FromLong(method);
+}
+
+
+static PyObject *
+set_alignment_method(PyObject *self, PyObject *args) {
+  int alignment, method;
+  int result;
+  if (!PyArg_ParseTuple(args, "ii:get_alignment_method", &alignment, &method)) {
+    return NULL;
+  }
+  result = chemfp_set_alignment_method(alignment, method);
+  /* TODO: better error code */
+  return PyInt_FromLong(result);
+}
+
+
+
 
 static PyMethodDef chemfp_methods[] = {
   {"version", version, METH_NOARGS,
@@ -1244,6 +1315,26 @@ static PyMethodDef chemfp_methods[] = {
    "make_sorted_aligned_arena (TODO: document)"},
   {"make_unsorted_aligned_arena", make_unsorted_aligned_arena, METH_VARARGS,
    "make_unsorted_aligned_arena (TODO: document)"},
+
+  /* Select the popcount methods */
+  {"num_methods", num_methods, METH_NOARGS,
+   "num_methods (TODO: document)"},
+
+  {"method_name", method_name, METH_VARARGS,
+   "method_name (TODO: document)"},
+
+  {"num_alignments", num_alignments, METH_NOARGS,
+   "num_alignments (TODO: document)"},
+
+  {"alignment_name", alignment_name, METH_VARARGS,
+   "alignment_name (TODO: document)"},
+
+  {"get_alignment_method", get_alignment_method, METH_VARARGS,
+   "get_alignment_method (TODO: document)"},
+
+  {"set_alignment_method", set_alignment_method, METH_VARARGS,
+   "set_alignment_method (TODO: document)"},
+
 
   {NULL, NULL, 0, NULL}        /* Sentinel */
 
