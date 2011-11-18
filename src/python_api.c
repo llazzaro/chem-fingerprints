@@ -968,65 +968,6 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
 }
 
 
-/* reorder_by_popcount */
-static PyObject *
-reorder_by_popcount(PyObject *self, PyObject *args) {
-  int num_bits;
-  int storage_size, start, end;
-  unsigned char *arena;
-  int arena_size;
-  PyObject *py_arena = NULL;
-  ChemFPOrderedPopcount *ordering;
-  int ordering_size;
-  int *popcount_indices, popcount_indices_size;
-
-  if (!PyArg_ParseTuple(args, "iit#iiw#w#",
-                        &num_bits,
-                        &storage_size, &arena, &arena_size,
-                        &start, &end,
-                        &ordering, &ordering_size,
-                        &popcount_indices, &popcount_indices_size
-                        )) {
-    return NULL;
-  }
-
-  if (bad_num_bits(num_bits) ||
-      bad_arena_limits("", arena_size, storage_size, &start, &end) ||
-      bad_popcount_indices("", 0, num_bits, popcount_indices_size, NULL)) {
-    return NULL;
-  }
-  if ((ordering_size / sizeof(ChemFPOrderedPopcount)) < (end-start)) {
-    PyErr_SetString(PyExc_ValueError, "allocated ordering space is too small");
-    return NULL;
-  }
-  /* TODO: compute the counts first. If everything is in order then */
-  /* there's no need to allocate a new arena string. */
-  if (end <= start) {
-    py_arena = PyString_FromStringAndSize("", 0);
-  } else {
-    py_arena = PyString_FromStringAndSize(NULL, (end-start)*storage_size);
-  }
-  if (!py_arena)
-    goto error;
-
-  Py_BEGIN_ALLOW_THREADS;
-  chemfp_reorder_by_popcount(num_bits, storage_size,
-                             arena, start, end,
-                             (unsigned char *) PyString_AS_STRING(py_arena),
-                             ordering, popcount_indices);
-  Py_END_ALLOW_THREADS;
-
-  return py_arena;
-
- error:
-  if (py_arena) {
-    PyObject_Del(py_arena);
-  }
-  return NULL;
-}
-
-
-
 /* count_tanimoto_arena */
 static PyObject *
 count_tanimoto_arena(PyObject *self, PyObject *args) {
@@ -1298,9 +1239,6 @@ static PyMethodDef chemfp_methods[] = {
 
   {"knearest_tanimoto_arena", knearest_tanimoto_arena, METH_VARARGS,
    "knearest_tanimoto_arena (TODO: document)"},
-
-  {"reorder_by_popcount", reorder_by_popcount, METH_VARARGS,
-   "reorder_by_popcount (TODO: document)"},
 
   {"make_sorted_aligned_arena", make_sorted_aligned_arena, METH_VARARGS,
    "make_sorted_aligned_arena (TODO: document)"},
