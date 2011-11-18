@@ -1230,8 +1230,8 @@ get_alignment_method(PyObject *self, PyObject *args) {
     return NULL;
   }
   method = chemfp_get_alignment_method(alignment);
-  if (method == -1) {
-    PyErr_SetString(PyExc_IndexError, "alignment index is out of range");
+  if (method < 0) {
+    PyErr_SetString(PyExc_ValueError, chemfp_strerror(method));
     return NULL;
   }
   return PyInt_FromLong(method);
@@ -1246,10 +1246,27 @@ set_alignment_method(PyObject *self, PyObject *args) {
     return NULL;
   }
   result = chemfp_set_alignment_method(alignment, method);
-  /* TODO: better error code */
-  return PyInt_FromLong(result);
+  if (result < 0) {
+    PyErr_SetString(PyExc_ValueError, chemfp_strerror(method));
+    return NULL;
+  }
+  return Py_BuildValue("");
 }
 
+static PyObject *
+select_fastest_method(PyObject *self, PyObject *args) {
+  int alignment, repeat, result;
+  if (!PyArg_ParseTuple(args, "ii:select_fastest_method", &alignment, &repeat)) {
+    return NULL;
+  }
+  result = chemfp_select_fastest_method(alignment, repeat);
+  if (result < 0) {
+    PyErr_SetString(PyExc_ValueError, chemfp_strerror(result));
+    return NULL;
+  }
+  return PyInt_FromLong(result);
+}
+  
 
 
 
@@ -1335,6 +1352,8 @@ static PyMethodDef chemfp_methods[] = {
   {"set_alignment_method", set_alignment_method, METH_VARARGS,
    "set_alignment_method (TODO: document)"},
 
+  {"select_fastest_method", select_fastest_method, METH_VARARGS,
+   "select_fastest_method (TODO: document)"},
 
   {NULL, NULL, 0, NULL}        /* Sentinel */
 
