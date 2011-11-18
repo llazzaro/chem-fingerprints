@@ -18,11 +18,11 @@ enum chemfp_errors {
   CHEMFP_MISSING_NEWLINE = -36
 };
 
-int chemfp_num_methods(void);
-const char *chemfp_method_name(int method);
+int chemfp_get_num_methods(void);
+const char *chemfp_get_method_name(int method);
 
-int chemfp_num_alignments(void);
-const char *chemfp_alignment_name(int alignment);
+int chemfp_get_num_alignments(void);
+const char *chemfp_get_alignment_name(int alignment);
 
 int chemfp_get_alignment_method(int alignment);
 int chemfp_set_alignment_method(int alignment, int method);

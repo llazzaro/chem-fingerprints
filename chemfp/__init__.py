@@ -579,3 +579,35 @@ class Fingerprints(FingerprintReader):
 
     # Question: should I support other parts of the list API?
     # I almost certainly want to support slice syntax ilke x[:5]
+
+def get_methods():
+    import _chemfp
+    return [_chemfp.get_method_name(i) for i in range(_chemfp.get_num_methods())]
+
+def get_alignments():
+    import _chemfp
+    return [_chemfp.get_alignment_name(i) for i in range(_chemfp.get_num_alignments())]
+
+def get_alignment_methods():
+    import _chemfp
+    settings = {}
+    for alignment in range(_chemfp.get_num_alignments()):
+        method = _chemfp.get_alignment_method(alignment)
+        settings[_chemfp.get_alignment_name(alignment)] = _chemfp.get_method_name(method)
+    return settings
+
+def set_alignment_method(alignment, method):
+    import _chemfp
+
+    try:
+        alignment_i = get_alignments().index(alignment)
+    except ValueError:
+        raise ValueError("Unknown alignment %r" % (alignment,))
+
+    try:
+        method_i = get_methods().index(method)
+    except ValueError:
+        raise ValueError("Unknown method %r" % (method,))
+
+    result = _chemfp.set_alignment_method(alignment_i, method_i)
+    assert result == 0

@@ -343,14 +343,14 @@ detect_methods(void) {
 
 
 int
-chemfp_num_methods(void) {
+chemfp_get_num_methods(void) {
   detect_methods();
   return num_methods;
 }
 
 const char *
-chemfp_method_name(int method) {
-  if (method < 0 || method >= chemfp_num_methods()) {
+chemfp_get_method_name(int method) {
+  if (method < 0 || method >= chemfp_get_num_methods()) {
     return NULL;
   }
   return methods[method]->name;
@@ -415,14 +415,14 @@ set_alignment_methods(void) {
 
 
 int
-chemfp_num_alignments(void) {
+chemfp_get_num_alignments(void) {
   set_alignment_methods();
   return sizeof(alignments) / sizeof(alignment_type);
 }
 
 const char *
-chemfp_alignment_name(int alignment) {
-  if (alignment < 0 || alignment >= chemfp_num_alignments()) {
+chemfp_get_alignment_name(int alignment) {
+  if (alignment < 0 || alignment >= chemfp_get_num_alignments()) {
     return NULL;
   }
   return alignments[alignment].name;
@@ -430,7 +430,7 @@ chemfp_alignment_name(int alignment) {
 
 int 
 chemfp_get_alignment_method(int alignment) {
-  if (alignment < 0 || alignment >= chemfp_num_alignments()) {
+  if (alignment < 0 || alignment >= chemfp_get_num_alignments()) {
     return -1;
   }
   return alignments[alignment].method_p->detected_index;
@@ -439,10 +439,10 @@ chemfp_get_alignment_method(int alignment) {
 int
 chemfp_set_alignment_method(int alignment, int method) {
   /* Make sure it's an available alignment and method */
-  if (alignment < 0 || alignment >= chemfp_num_alignments()) {
+  if (alignment < 0 || alignment >= chemfp_get_num_alignments()) {
     return -1;
   }
-  if (method < 0 || method >= chemfp_num_methods()) {
+  if (method < 0 || method >= chemfp_get_num_methods()) {
     return -1;
   }
   /* Make sure the alignment and sizes are good enough */
