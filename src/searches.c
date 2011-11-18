@@ -794,21 +794,3 @@ int chemfp_knearest_tanimoto_arena(
 
   return query_index-query_start;
 }
-
-static int compare_by_popcount(const void *left_p, const void *right_p) {
-  const ChemFPOrderedPopcount *left = (ChemFPOrderedPopcount *) left_p;
-  const ChemFPOrderedPopcount *right = (ChemFPOrderedPopcount *) right_p;
-  if (left->popcount < right->popcount) {
-    return -1;
-  }
-  if (left->popcount > right->popcount) {
-    return 1;
-  }
-  if (left->index < right->index) {
-    return -1;
-  }
-  if (left->index > right->index) {
-    return 1;
-  }
-  return 0;
-}
