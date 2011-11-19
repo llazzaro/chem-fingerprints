@@ -127,6 +127,7 @@ _chemfp_intersect_popcount_lauradoux(int byte_size,
 
 #if 1
   /* Finish things up with the CHEMFP_ALIGN8_SMALL method */
+  /* In my test case with 2048 bits the time went from 15.5 to 12.6 seconds */
   bit_count += _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p->intersect_popcount(
 			byte_size - limit*8,
 			(unsigned char *) fp1, (unsigned char *) fp2);
