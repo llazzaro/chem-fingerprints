@@ -80,7 +80,8 @@ _chemfp_popcount_lauradoux(int size, const uint64_t *fp) {
 }
 
 int
-_chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const uint64_t *fp2) {
+_chemfp_intersect_popcount_lauradoux(int byte_size,
+				     const uint64_t *fp1, const uint64_t *fp2) {
   assert(fp1 != NULL && fp2 != NULL);
   assert(size <= UINT32_MAX / (8 * sizeof(uint64_t)));
   
@@ -96,7 +97,7 @@ _chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const uint64
   int i, j;
   /* Adjust the input size because the size isn't necessarily a multiple of 8 */
   /* even though the storage area will be a multiple of 8. */
-  size = (size + 7) / 8;
+  int size = (byte_size + 7) / 8;
   int limit = size - size % 12;
   int bit_count = 0;
   
@@ -123,7 +124,14 @@ _chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const uint64
     acc =  acc       +  (acc >> 32);
     bit_count += (int) acc;
   }
-  
+
+#if 1
+  /* Finish things up with the CHEMFP_ALIGN8_SMALL method */
+  bit_count += _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p->intersect_popcount(
+			byte_size - limit*8,
+			(unsigned char *) fp1, (unsigned char *) fp2);
+    
+#else
   // intersect count the bits of the remaining bytes (MAX 88) using 
   // "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
   // the code uses wikipedia's 64-bit popcount_3() implementation:
@@ -135,6 +143,7 @@ _chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const uint64
     x = (x       +  (x >> 4)) & m4;
     bit_count += (int) ((x * h01) >> 56);
   }
+#endif
   return bit_count;
 }
 
