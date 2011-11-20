@@ -635,7 +635,7 @@ chemfp_select_fastest_method(int alignment, int repeat) {
   int method, best_method=-1, old_method;
   int probe_size;
   unsigned long dt;
-  unsigned long best_time=0;
+  unsigned long first_time, best_time=0;
   chemfp_method_type *method_p=NULL;
 
   old_method = chemfp_get_alignment_method(alignment);
@@ -643,8 +643,9 @@ chemfp_select_fastest_method(int alignment, int repeat) {
     return old_method;
   }
 
+  /* NOTE: probe_size must evenly divide sizeof(popcount_buffer); */
   if (alignment == CHEMFP_ALIGN8_SMALL) {
-    probe_size = 64; /* 512 bits */
+    probe_size = 64; /* 512 bits; must be < 96 bytes  */
   } else {
     probe_size = 2048/8;
   }
@@ -657,8 +658,13 @@ chemfp_select_fastest_method(int alignment, int repeat) {
     }
     method_p = _chemfp_alignments[alignment].method_p;
 
-    /* Time the performance */
+    /* Time the performance; do it twice in a timeslice happens in the middle  */
+    first_time = timeit(method_p->popcount, probe_size, repeat);
     dt = timeit(method_p->popcount, probe_size, repeat);
+    if (first_time < dt) {
+      dt = first_time;
+    }
+    
     if (best_method == -1 || dt < best_time) {
       best_method = method;
       best_time = dt;
