@@ -508,7 +508,7 @@ fps_count_tanimoto_hits(PyObject *self, PyObject *args) {
   int num_lines_processed = 0;
   int err;
 
-  if (!PyArg_ParseTuple(args, "iiiit#iit#iidw#",
+  if (!PyArg_ParseTuple(args, "iiiit#iit#iidw#:fps_count_tanimoto_hits",
                         &num_bits,
 			&query_start_padding, &query_end_padding,
                         &query_storage_size, &query_arena, &query_arena_size,
@@ -566,7 +566,7 @@ fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
   int num_lines_processed = 0, num_cells_processed = 0;
   int num_cells, err;
 
-  if (!PyArg_ParseTuple(args, "iiiit#iit#iidw#",
+  if (!PyArg_ParseTuple(args, "iiiit#iit#iidw#:fps_threshold_tanimoto_search",
                         &num_bits,
 			&query_start_padding, &query_end_padding,
                         &query_storage_size, &query_arena, &query_arena_size,
@@ -616,7 +616,7 @@ fps_knearest_search_init(PyObject *self, PyObject *args) {
   double threshold;
   int err;
 
-  if (!PyArg_ParseTuple(args, "w#iiiit#iiid",
+  if (!PyArg_ParseTuple(args, "w#iiiit#iiid:fps_knearest_search_init",
 			&knearest_search, &knearest_search_size,
 			&num_bits, &start_padding, &end_padding, &query_storage_size,
 			&query_arena, &query_arena_size, &query_start, &query_end,
@@ -655,7 +655,7 @@ fps_knearest_tanimoto_search_feed(PyObject *self, PyObject *args) {
   int target_block_size, target_start, target_end;
   int err;
 
-  if (!PyArg_ParseTuple(args, "w#t#ii",
+  if (!PyArg_ParseTuple(args, "w#t#ii:fps_knearest_tanimoto_search_feed",
 			&knearest_search, &knearest_search_size,
 			&target_block, &target_block_size, &target_start, &target_end))
     return NULL;
@@ -675,7 +675,7 @@ fps_knearest_search_finish(PyObject *self, PyObject *args) {
   chemfp_fps_knearest_search *knearest_search;  
   int knearest_search_size;
   
-  if (!PyArg_ParseTuple(args, "w#",
+  if (!PyArg_ParseTuple(args, "w#:fps_knearest_search_finish",
 			&knearest_search, &knearest_search_size))
     return NULL;
   if (bad_knearest_search_size(knearest_search_size))
@@ -694,7 +694,7 @@ fps_knearest_search_free(PyObject *self, PyObject *args) {
   chemfp_fps_knearest_search *knearest_search;  
   int knearest_search_size;
   
-  if (!PyArg_ParseTuple(args, "w#",
+  if (!PyArg_ParseTuple(args, "w#:fps_knearest_search_free",
 			&knearest_search, &knearest_search_size))
     return NULL;
   if (bad_knearest_search_size(knearest_search_size))
@@ -779,7 +779,8 @@ make_unsorted_aligned_arena(PyObject *self, PyObject *args) {
   int start_padding, end_padding;
   PyObject *input_arena_obj, *output_arena_obj;
 
-  if (!PyArg_ParseTuple(args, "Oi", &input_arena_obj, &alignment)) {
+  if (!PyArg_ParseTuple(args, "Oi:make_unsorted_aligned_arena",
+			&input_arena_obj, &alignment)) {
     return NULL;
   }
   if (bad_alignment(alignment)) {
@@ -889,7 +890,7 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
   int need_to_sort, i;
   int alignment;
   
-  if (!PyArg_ParseTuple(args, "iiOiw#w#i",
+  if (!PyArg_ParseTuple(args, "iiOiw#w#i:make_sorted_aligned_arena",
                         &num_bits,
                         &storage_size, &input_arena_obj,
                         &num_fingerprints,
@@ -983,7 +984,7 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
   
   int result_counts_size, *result_counts;
 
-  if (!PyArg_ParseTuple(args, "diiiis#iiiiis#iis#w#",
+  if (!PyArg_ParseTuple(args, "diiiis#iiiiis#iis#w#:count_tanimoto_arena",
                         &threshold,
                         &num_bits,
 			&query_start_padding, &query_end_padding,
@@ -1055,7 +1056,7 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
   int result;
 
     
-  if (!PyArg_ParseTuple(args, "diiiit#iiiiit#iit#w#iw#w#",
+  if (!PyArg_ParseTuple(args, "diiiit#iiiiit#iit#w#iw#w#:threshold_tanimoto_arena",
                         &threshold,
                         &num_bits,
 			&query_start_padding, &query_end_padding,
@@ -1129,7 +1130,7 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
   int result;
 
     
-  if (!PyArg_ParseTuple(args, "idiiiit#iiiiit#iit#w#iw#w#",
+  if (!PyArg_ParseTuple(args, "idiiiit#iiiiit#iit#w#iw#w#:knearest_tanimoto_arena",
                         &k, &threshold,
                         &num_bits,
 			&query_start_padding, &query_end_padding,
@@ -1192,7 +1193,7 @@ static PyObject *
 get_method_name(PyObject *self, PyObject *args) {
   int method;
   const char *s;
-  if (!PyArg_ParseTuple(args, "i:method_name", &method)) {
+  if (!PyArg_ParseTuple(args, "i:get_method_name", &method)) {
     return NULL;
   }
   s = chemfp_get_method_name(method);
@@ -1212,7 +1213,7 @@ static PyObject *
 get_alignment_name(PyObject *self, PyObject *args) {
   int alignment;
   const char *s;
-  if (!PyArg_ParseTuple(args, "i:alignment_name", &alignment)) {
+  if (!PyArg_ParseTuple(args, "i:get_alignment_name", &alignment)) {
     return NULL;
   }
   s = chemfp_get_alignment_name(alignment);
