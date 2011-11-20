@@ -10,10 +10,10 @@
 
 #include "cpuid.h"
 
-//#define REGULAR
-
 static unsigned long 
 timeit(chemfp_popcount_f popcount, int size, int repeat);
+
+/* These are the alignment categories which I support */
 
 chemfp_alignment_type _chemfp_alignments[] = {
   {"align1", 1, 1, NULL},
@@ -98,7 +98,7 @@ chemfp_get_method_name(int method) {
 
 
 static inline void
-set_alignment_methods(void) {
+set_default_alignment_methods(void) {
   int lut_method, large_method;
   unsigned long first_time, lut8_time, lut16_time, lut_time, lauradoux_time;
 
@@ -180,7 +180,7 @@ set_alignment_methods(void) {
 
 int
 chemfp_get_num_alignments(void) {
-  set_alignment_methods();
+  set_default_alignment_methods();
   return sizeof(_chemfp_alignments) / sizeof(chemfp_alignment_type);
 }
 
@@ -234,15 +234,12 @@ chemfp_select_popcount(int num_bits,
 
   int num_bytes = (num_bits+7)/8;
 
-#ifdef REGULAR
-  return chemfp_byte_popcount;
-#endif
   if (num_bytes > storage_len) {
     /* Give me bad input, I'll give you worse output */
     return NULL;
   }
 
-  set_alignment_methods();
+  set_default_alignment_methods();
 
   if (num_bytes <= 1) {
     /* Really? */
@@ -273,19 +270,14 @@ chemfp_select_intersect_popcount(int num_bits,
 				 int storage_len2, const unsigned char *arena2) {
 
   int storage_len = (storage_len1 < storage_len2) ? storage_len1 : storage_len2;
-
   int num_bytes = (num_bits+7)/8;
-
-#ifdef REGULAR
-  return chemfp_byte_intersect_popcount;
-#endif
 
   if (num_bytes > storage_len) {
     /* Give me bad input, I'll give you worse output */
     return NULL;
   }
 
-  set_alignment_methods();
+  set_default_alignment_methods();
   
   if (num_bytes <= 1) {
     return _chemfp_alignments[CHEMFP_ALIGN1].method_p->intersect_popcount;
@@ -371,6 +363,9 @@ static unsigned long
 timeit(chemfp_popcount_f popcount, int size, int repeat) {
   unsigned long t1, t2;
   int i;
+  if (size > sizeof(popcount_buffer)) {
+    size = sizeof(popcount_buffer);
+  }
   t1 = get_usecs();
   for (i=0; i<repeat; i++) {
     popcount(size, (unsigned char*) popcount_buffer);
