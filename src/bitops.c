@@ -246,7 +246,7 @@ int chemfp_byte_popcount(int len, const unsigned char *fp) {
 /* Return the population count of the intersection of two byte fingerprints */
 int chemfp_byte_intersect_popcount(int len, const unsigned char *fp1,
                                    const unsigned char *fp2) {
-  _chemfp_intersect_popcount_lut8_1(len, fp1, fp2);
+  return _chemfp_intersect_popcount_lut8_1(len, fp1, fp2);
 }
 
 /* Return the Tanitoto between two byte fingerprints, or -1.0 for invalid fingerprints
