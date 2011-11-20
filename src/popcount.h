@@ -44,6 +44,8 @@ typedef struct {
 
 extern chemfp_alignment_type _chemfp_alignments[];
 
+int _chemfp_popcount_lut8_1(int n, const unsigned char *fp);
+int _chemfp_intersect_popcount_lut8_1(int n, const unsigned char *fp1, const unsigned char *fp2);
 
 int _chemfp_popcount_lut8_4(int n, uint32_t *fp);
 int _chemfp_intersect_popcount_lut8_4(int n, uint32_t *fp1, uint32_t *fp2);

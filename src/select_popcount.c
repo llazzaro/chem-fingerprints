@@ -30,8 +30,7 @@ has_popcnt_instruction(void) {
 /* These are in the same order as an enum in popcount.h */
 static chemfp_method_type compile_time_methods[] = {
   {0, "LUT8-1", 1, 1, NULL,
-   chemfp_byte_popcount,
-    chemfp_byte_intersect_popcount},
+   _chemfp_popcount_lut8_1, _chemfp_intersect_popcount_lut8_1},
 
   {0, "LUT8-4", 4, 4, NULL,
    (chemfp_popcount_f) _chemfp_popcount_lut8_4,
