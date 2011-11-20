@@ -44,7 +44,7 @@ static chemfp_method_type compile_time_methods[] = {
    (chemfp_popcount_f) _chemfp_popcount_lauradoux,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lauradoux},
 
-  {0, "popcnt", 8, 8,
+  {0, "POPCNT", 8, 8,
    has_popcnt_instruction,
    (chemfp_popcount_f) popcount_POPCNT,
    (chemfp_intersect_popcount_f) intersect_popcount_POPCNT},
