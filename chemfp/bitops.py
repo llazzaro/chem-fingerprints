@@ -26,6 +26,13 @@ def get_alignment_methods():
         settings[_chemfp.get_alignment_name(alignment)] = _chemfp.get_method_name(method)
     return settings
 
+def get_alignment_method(alignment):
+    try:
+        alignment_i = get_alignments().index(alignment)
+    except ValueError:
+        raise ValueError("Unknown alignment %r" % (alignment,))
+    return _chemfp.get_method_name(_chemfp.get_alignment_method(alignment_i))
+
 def set_alignment_method(alignment, method):
     try:
         alignment_i = get_alignments().index(alignment)
@@ -37,19 +44,11 @@ def set_alignment_method(alignment, method):
     except ValueError:
         raise ValueError("Unknown method %r" % (method,))
 
-    result = _chemfp.set_alignment_method(alignment_i, method_i)
-    assert result == 0
+    _chemfp.set_alignment_method(alignment_i, method_i)
 
-def select_fastest_method(alignment=None, repeat=10000):
+def select_fastest_method(repeat=10000):
     if repeat > 100000:
         raise ValueError("repeat size is meaninglessly large")
     
-    if alignment is None:
-        for alignment_i, name in enumerate(get_alignments()):
-            _chemfp.select_fastest_method(alignment_i, repeat)
-    else:
-        try:
-            alignment_i = get_alignments().index(alignment)
-        except ValueError:
-            raise ValueError("Unknown alignment %r" % (alignment,))
+    for alignment_i, name in enumerate(get_alignments()):
         _chemfp.select_fastest_method(alignment_i, repeat)
