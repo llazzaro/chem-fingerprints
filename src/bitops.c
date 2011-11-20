@@ -1,5 +1,5 @@
 #include "chemfp.h"
-#include <stdio.h>
+#include "popcount.h"
 
 /* Bit operations related to byte and hex fingerprints
 
@@ -237,24 +237,16 @@ static int byte_popcounts[] = {
 
 
 /* Return the population count of a byte fingerprint */
-/* There are faster algorithms but this one is fast and simple, and it doesn't
-   place any requirements on word alignment. */
 int chemfp_byte_popcount(int len, const unsigned char *fp) {
-  int i, popcount = 0;
-  for (i=0; i<len; i++) {
-    popcount += byte_popcounts[fp[i]];
-  }
-  return popcount;
+  /* This doesn't (yet?) need the fastest code, so use the simplest  */
+  /* (I only call this through Python, and that overhead dominates.) */
+  return _chemfp_popcount_lut8_1(len, fp);
 }
 
 /* Return the population count of the intersection of two byte fingerprints */
 int chemfp_byte_intersect_popcount(int len, const unsigned char *fp1,
                                    const unsigned char *fp2) {
-  int i, intersect_popcount = 0;
-  for (i=0; i<len; i++) {
-    intersect_popcount += byte_popcounts[fp1[i]&fp2[i]];
-  }
-  return intersect_popcount;
+  _chemfp_intersect_popcount_lut8_1(len, fp1, fp2);
 }
 
 /* Return the Tanitoto between two byte fingerprints, or -1.0 for invalid fingerprints

@@ -4100,9 +4100,34 @@ static char lut[] = {
     12,13,13,14,13,14,14,15,13,14,14,15,14,15,15,16
 };
 
-/* This is called with the number of bytes in the fingerprint, */
-/* which is not necessarily a multiple of 4. However, the select */
-/* function promises that there will be enough extra data. */
+
+int
+_chemfp_popcount_lut8_1(int n, const unsigned char *fp) {
+  int cnt=0;
+  unsigned int i;
+  int top = n-n%2;
+  /* I got a 30% performance gain by unrolling  */
+  for (i=0; i<top; i+=2) {
+    cnt += lut[fp[i]<<8 | fp[i+1]];
+  }
+  if (i != n) {
+    cnt += lut[fp[i]];
+  }
+  return cnt;
+}
+
+
+int
+_chemfp_intersect_popcount_lut8_1(int n, const unsigned char *fp1, const unsigned char *fp2) {
+  int cnt=0;
+  unsigned int i;
+  /* I tried unrolling and using a 16 bit popcount, but saw no time advantage */
+  for (i=0; i<n; i++) {
+    cnt += lut[fp1[i] & fp2[i]];
+  }
+  return cnt;
+}
+
 
 int
 _chemfp_popcount_lut8_4(int n, uint32_t *fp) {
@@ -4138,6 +4163,8 @@ _chemfp_intersect_popcount_lut8_4(int n, uint32_t *fp1, uint32_t *fp2) {
   } while(--n);
   return cnt;
 }
+
+/* 16 bit LUT assuming I can fetch 4 bytes at a time */
 
 int
 _chemfp_popcount_lut16_4(int n, uint32_t *fp) {
