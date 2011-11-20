@@ -13,6 +13,15 @@ enum {
   CHEMFP_ALIGN8_LARGE,
 };
 
+/* These are in the same order as compile_time_methods */
+enum {
+  CHEMFP_LUT8_1=0,
+  CHEMFP_LUT8_4,
+  CHEMFP_LUT16_4,
+  CHEMFP_LAURADOUX,
+  CHEMFP_POPCNT,
+};
+
 typedef int (*chemfp_method_check_f)(void);
 
 typedef struct {
@@ -20,7 +29,6 @@ typedef struct {
   const char *name;
   int alignment;
   int min_size;
-  int okay_for_larger_alignments;
   chemfp_method_check_f check;
   chemfp_popcount_f popcount;
   chemfp_intersect_popcount_f intersect_popcount;
