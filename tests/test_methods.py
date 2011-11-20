@@ -15,7 +15,7 @@ targets = chemfp.load_fingerprints(CHEBI_TARGETS, alignment=8)
 alignment_methods = chemfp.bitops.get_alignment_methods()
 
 
-all_methods = dict.fromkeys("LUT8-1 LUT8-4 LUT16-4 Lauradoux POPCNT".split())
+all_methods = dict.fromkeys("LUT8-1 LUT8-4 LUT16-4 Lauradoux POPCNT Gillies".split())
 
 class TestMethods(unittest2.TestCase):
     def test_no_duplicates(self):
@@ -76,6 +76,14 @@ class TestAlignments(unittest2.TestCase):
         with self.assertRaisesRegexp(ValueError, "Bad argument"):
             _chemfp.get_alignment_name(_chemfp.set_alignment_method(100, 0))
 
+
+    def test_cannot_use_64_bit_method_for_shorter_bit_alignment(self):
+        msg = "Mismatch between popcount method and alignment type"
+        for method in ("Lauradoux", "Gillies", "POPCNT"):
+            with self.assertRaisesRegexp(ValueError, msg):
+                chemfp.bitops.set_alignment_method("align1", method)
+            with self.assertRaisesRegexp(ValueError, msg):
+                chemfp.bitops.set_alignment_method("align4", method)
 
 
 class TestAlign8SmallMethods(unittest2.TestCase):
