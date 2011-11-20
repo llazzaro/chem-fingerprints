@@ -1247,7 +1247,7 @@ set_alignment_method(PyObject *self, PyObject *args) {
   }
   result = chemfp_set_alignment_method(alignment, method);
   if (result < 0) {
-    PyErr_SetString(PyExc_ValueError, chemfp_strerror(method));
+    PyErr_SetString(PyExc_ValueError, chemfp_strerror(result));
     return NULL;
   }
   return Py_BuildValue("");
