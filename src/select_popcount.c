@@ -49,6 +49,10 @@ static chemfp_method_type compile_time_methods[] = {
    (chemfp_popcount_f) popcount_POPCNT,
    (chemfp_intersect_popcount_f) intersect_popcount_POPCNT},
 
+  {0, "Gillies", 8, 8, NULL,
+   (chemfp_popcount_f) _chemfp_popcount_gillies,
+   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_gillies},
+
 };
 
 
@@ -98,8 +102,9 @@ chemfp_get_method_name(int method) {
 
 static inline void
 set_default_alignment_methods(void) {
-  int lut_method, large_method;
-  unsigned long first_time, lut8_time, lut16_time, lut_time, lauradoux_time;
+  int lut_method, best32_method, large_method;
+  unsigned long first_time, lut8_time, lut16_time, lut_time;
+  unsigned long gillies_time, best32_time, lauradoux_time;
 
   /* Make sure we haven't already initialized the alignments */
   if (_chemfp_alignments[0].method_p != NULL) {
@@ -127,14 +132,14 @@ set_default_alignment_methods(void) {
   /* (You really should use an 8-byte aligned arena in this case, so not a priority */
 
   /* On older hardware the LUT16 can be slower than the LUT8 */
-  first_time = timeit(compile_time_methods[CHEMFP_LUT8_4].popcount, 128, 700);
-  lut8_time = timeit(compile_time_methods[CHEMFP_LUT8_4].popcount, 128, 700);
+  first_time = timeit(compile_time_methods[CHEMFP_LUT8_4].popcount, 128, 200);
+  lut8_time = timeit(compile_time_methods[CHEMFP_LUT8_4].popcount, 128, 200);
   if (first_time < lut8_time) {
     lut8_time = first_time;
   }
 
-  first_time = timeit(compile_time_methods[CHEMFP_LUT16_4].popcount, 128, 700);
-  lut16_time = timeit(compile_time_methods[CHEMFP_LUT16_4].popcount, 128, 700);
+  first_time = timeit(compile_time_methods[CHEMFP_LUT16_4].popcount, 128, 200);
+  lut16_time = timeit(compile_time_methods[CHEMFP_LUT16_4].popcount, 128, 200);
   if (first_time < lut16_time) {
     lut16_time = first_time;
   }
@@ -147,7 +152,25 @@ set_default_alignment_methods(void) {
     lut_method = CHEMFP_LUT16_4;
     lut_time = lut16_time;
   }
-  _chemfp_alignments[CHEMFP_ALIGN4].method_p = &compile_time_methods[lut_method];
+
+  /* Let's see if the Gillies method is faster */
+  first_time = timeit(compile_time_methods[CHEMFP_GILLIES].popcount, 128, 200);
+  gillies_time = timeit(compile_time_methods[CHEMFP_GILLIES].popcount, 128, 200);
+  if (first_time < gillies_time) {
+    gillies_time = first_time;
+  }
+
+  /* Is it faster than the fastest LUT? */
+  if (lut_time < gillies_time) {
+    best32_time = lut_time;
+    best32_method = lut_method;
+  } else {
+    best32_time = gillies_time;
+    best32_method = CHEMFP_GILLIES;
+  }
+
+
+  _chemfp_alignments[CHEMFP_ALIGN4].method_p = &compile_time_methods[best32_method];
 
 
   /* For 8-byte aligned code we always want to use the POPCNT instruction if it exists */
@@ -156,21 +179,21 @@ set_default_alignment_methods(void) {
       _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[CHEMFP_POPCNT];
   } else {
 
-    /* No POPCNT? Then it's a LUT for the small case, and perhaps Lauradoux */
+    /* No POPCNT? Then the 32-bit method for the small case, and perhaps Lauradoux */
     /* for the large case */
 
-    _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = &compile_time_methods[lut_method];
+    _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = &compile_time_methods[best32_method];
 
-    first_time = timeit(compile_time_methods[CHEMFP_LAURADOUX].popcount, 128, 700);
-    lauradoux_time = timeit(compile_time_methods[CHEMFP_LAURADOUX].popcount, 128, 700);
+    first_time = timeit(compile_time_methods[CHEMFP_LAURADOUX].popcount, 128, 200);
+    lauradoux_time = timeit(compile_time_methods[CHEMFP_LAURADOUX].popcount, 128, 200);
     if (first_time < lauradoux_time) {
       lauradoux_time = first_time;
     }
 
-    if (lauradoux_time < lut_time) {
+    if (lauradoux_time < best32_time) {
       large_method = CHEMFP_LAURADOUX;
     } else {
-      large_method = lut_method;
+      large_method = best32_method;
     }
     _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[large_method];
   }
@@ -320,10 +343,12 @@ get_usecs(void) {
 }
 
 
-/* Space for 2048 bits == 32 * 64 bit words */
 /* Use uint64_t so it's 64-bit/8 byte aligned */
 /* The contents are randomly generated. */
-static uint64_t popcount_buffer[] = {
+/* My first version was too small, and caused the LUT to appear
+   faster even when the Gillies was better on real data. */
+
+static uint64_t popcount_buffer[256] = {
   0x9b649615d1a50133ull,
   0xf3b8dada0e8b43deull,
   0x0197e207e4b9af2bull,
@@ -356,18 +381,248 @@ static uint64_t popcount_buffer[] = {
   0xb362909621b9a2c8ull,
   0xcadab7b921d3cd0aull,
   0xd27f7aef7e2a0c6full,
+  0xaf5d649ca1d2eefdull,
+  0x6fc389a822e5769cull,
+  0xdc849b5da5c5a101ull,
+  0x3011e28954c71b98ull,
+  0xecc6f2bb9b24b9d3ull,
+  0x13d0974bbdbe16b5ull,
+  0xb50625ca9f3348eeull,
+  0x91a7462492f11cbbull,
+  0x5fe0ca6928b55722ull,
+  0xa5d89c3149133253ull,
+  0x84645ec3c2cf4be6ull,
+  0x22fd27c4b7981d9aull,
+  0x3f9869fee13b43d9ull,
+  0x0683208def61ce16ull,
+  0x26f9fd185d31a581ull,
+  0x837b1ded3af58f74ull,
+  0x52e0246315b38ad7ull,
+  0xbde27bb52d771b42ull,
+  0x7fc2cb4428e33ee2ull,
+  0xe3511d67a78fb94eull,
+  0xeac2042d93f9d5f2ull,
+  0xf987675f01562dd5ull,
+  0x49f0250c27805c24ull,
+  0xc331de3409aa714cull,
+  0x9f3774691ac74fafull,
+  0x167a091ad590c514ull,
+  0xe4fbcf7d8f0f2008ull,
+  0xfbc4b0cb233b04f6ull,
+  0x960590126cce716aull,
+  0x1dc1c707f6cc348dull,
+  0x274b57e30bd6d6d3ull,
+  0x67525306591d1746ull,
+  0xf99163b382488844ull,
+  0xe94f9bf47dfb0b16ull,
+  0xcbb738584662cebbull,
+  0x56ee87587103f7e5ull,
+  0xcd8ff0352714830dull,
+  0x624dd08f67e90c4bull,
+  0xfff1f1b5b1f92417ull,
+  0xcd9d4fb51b05e32bull,
+  0x43c85c5a7a69cdc4ull,
+  0xa27e72305a33c247ull,
+  0xc40882a6813e08f1ull,
+  0xad2b48e065ca1768ull,
+  0x1ffa6c9616288e30ull,
+  0xeb83e3323610ff2bull,
+  0xb520d27b4f3a3273ull,
+  0x15470f6c7346b910ull,
+  0x3397c4c5b5e9bdc6ull,
+  0x85f3179422591e54ull,
+  0x86db696004af1781ull,
+  0x22a9e51e871984beull,
+  0x2de8e4cdd4652a1cull,
+  0xe70ef696e037662aull,
+  0xfc67e1f7083e10f0ull,
+  0x945105f1c12fc00dull,
+  0x4d169c35fc28ddebull,
+  0x5522d55800e2b719ull,
+  0x618040f560444bedull,
+  0xff91b03867854f0bull,
+  0x5ce1bfaf57be27d0ull,
+  0x81752ce65cf5ba9eull,
+  0x98e499fe7f0f365eull,
+  0x5aa2bc888ad924bdull,
+  0xae2de7838420c59bull,
+  0x42cda0012ae00ff1ull,
+  0x7620f99214e30e2full,
+  0xa0be3f23a80f82ceull,
+  0x420edefc42cedb09ull,
+  0x80fe957c6a2817ffull,
+  0x355174b6692ff140ull,
+  0x47653e206352c78aull,
+  0x808f7214b82d7c59ull,
+  0x5dfcfe4144c253d4ull,
+  0x4b918724a9084523ull,
+  0x3e0608080fc35d1bull,
+  0xf23cfdfd8c0b219eull,
+  0x55bfd8597cdba8f5ull,
+  0x269c25c3799d723cull,
+  0x91e53b39bfdca5deull,
+  0x02b04e9b8e52e823ull,
+  0xc53fe276534e5317ull,
+  0x18bd1dc656174acaull,
+  0x0e5b4b3a13772eebull,
+  0xa1943806fca56da6ull,
+  0x04a5016c4c0be049ull,
+  0x977ba238079e1e0cull,
+  0x2df9dbcc4e036035ull,
+  0x86adc435f1414d29ull,
+  0x4402f529defe1868ull,
+  0x03dbf44c63afc870ull,
+  0xfbfe185f7297e08aull,
+  0xe717fd0019ef65edull,
+  0x7918c2b6e9275ba4ull,
+  0x24f5ee4355f022b3ull,
+  0xc0ba7a6be52fe0a4ull,
+  0x685aabb6a61f00d8ull,
+  0x3fa62a93e20e9372ull,
+  0xc201d0ade1f15de7ull,
+  0x28cb5915df8a4912ull,
+  0x517843f1c3f9928full,
+  0x4632606437902d9aull,
+  0x82f853fb34d514b7ull,
+  0x00464a29dcb32cbcull,
+  0x84e1c0073eee811full,
+  0x6eb2e2781ce72271ull,
+  0xe3f40911bc8845e9ull,
+  0xe6f2aacb1dd4d080ull,
+  0xa87b1b15af61762full,
+  0x810e66188c97dbeaull,
+  0xdb919c39003db0d6ull,
+  0x18452ccd19197178ull,
+  0x5fe005b938986834ull,
+  0xb179f1f3b113509full,
+  0xea27088977c864c2ull,
+  0x4e524739e812d35eull,
+  0xf76f7a7d15cc08dbull,
+  0xc0b9a7c0251f7f58ull,
+  0x319d8eb2f9334c6dull,
+  0x65db68328c2d2d4dull,
+  0xc260bbf348039ee2ull,
+  0xc692e00595613bffull,
+  0x90fec8d4b374484dull,
+  0x8ebd5b2ff1de52dfull,
+  0xd3781952d5254631ull,
+  0x84196d92f8852097ull,
+  0xdc621b34a1763da6ull,
+  0x0799e73b826efc26ull,
+  0x098532b1f427cd10ull,
+  0xfb2b0735121a374eull,
+  0x9f8d3d10f5108176ull,
+  0x57ee9d46db4529aaull,
+  0x7c8db1c2e675c649ull,
+  0x9d8e3388f3ef4382ull,
+  0x639b5c10b29fc572ull,
+  0x011f05e93ec9c4aeull,
+  0xec28a9716fd3f5a1ull,
+  0x837c0d205aefb577ull,
+  0x0099fd93cadcb971ull,
+  0xf29e78eae535df65ull,
+  0x3c1ca48f330a6d1dull,
+  0xb734f3c83f57de82ull,
+  0x42f85b65c22dc638ull,
+  0x0c50c85af7d3a601ull,
+  0xea8ced5869fbe2fdull,
+  0xb0cc396bfd86be6dull,
+  0xb3ea7c3295866ef9ull,
+  0x36cf28b306426badull,
+  0x590de78ae5300681ull,
+  0x41f4e16df296c0bcull,
+  0xaad908beff6a93a9ull,
+  0x909d243860e863d0ull,
+  0x1d574b777f6e2725ull,
+  0xacb7e3a9b94bb2b2ull,
+  0x3b4d173db0b61bf6ull,
+  0x4ccc5649c6c02c51ull,
+  0x8d851d80b1a90638ull,
+  0x6ca86fac5976ba0aull,
+  0x09b49bdb4a58e177ull,
+  0x7da8938aa92fe6b7ull,
+  0x0f10d2d164ab5260ull,
+  0x410822b41fff8a8eull,
+  0x13d8dd389fe19217ull,
+  0x0d6fcf685fdca839ull,
+  0xae9965f4e51c9094ull,
+  0x3cc74eabd4b3574aull,
+  0x616a5f30b4a1e0a2ull,
+  0x01c995c3cf9cde82ull,
+  0x083e3df79ed6d08dull,
+  0x50ca7def49e9be55ull,
+  0x6827bee9c7b104adull,
+  0xb09c88041e5a1480ull,
+  0xd7d6b3f8a5fd79d2ull,
+  0xe9a2a7562deb9cbbull,
+  0xc6df657d5d037eaaull,
+  0xa0513198d897cf1bull,
+  0x941721727391ffbbull,
+  0xdd65e39bef1199cbull,
+  0x4e1129988fcc1a78ull,
+  0x57d5274d4189e641ull,
+  0xcd78a6383892a6c2ull,
+  0x5380e97a1e588b36ull,
+  0x4b153a04ed4f2d4cull,
+  0x78c74fdda5d88d5full,
+  0xa838c19ff3a05996ull,
+  0x64a935bf0b55a732ull,
+  0xa5727c5fee927c99ull,
+  0x584c550d5f7af1d7ull,
+  0x7b15564ed80dd58bull,
+  0x42db540eda52029cull,
+  0x78f64d45305d7f6full,
+  0x8b549a03a9806568ull,
+  0x6fa3c48b2b01ba66ull,
+  0xc56ccbe0f05d1511ull,
+  0x8adcd70ff4730081ull,
+  0xf3f19cc845fd5b7aull,
+  0x0936f92d55e55133ull,
+  0xfda06bcd399ae365ull,
+  0xde0c5052f3e158a4ull,
+  0x58584d0c5e3b7dddull,
+  0x3c3eb71846edfeb7ull,
+  0xc1080e17c84266ffull,
+  0xb25fd442e286d778ull,
+  0x568605346b044740ull,
+  0x54ffc2f936a972a2ull,
+  0x366b795d073f062bull,
+  0x206dadf277bbf8b4ull,
+  0x916749a7cdf5e525ull,
+  0x0afce12439536907ull,
+  0x9fce50346e346701ull,
+  0x562fe8ffc572a020ull,
+  0xbac08aa15dc2f3f6ull,
+  0x992aea3d03fb66a9ull,
+  0x9e6a37740d285aafull,
+  0x11dfb9a7b6b4424aull,
+  0xe220772a626e2f9dull,
+  0xae5c0a22b8ab8f2dull,
+  0x11496ae8d4258860ull,
+  0x6f3e74167f908fe6ull,
+  0x622f3431103aef5dull,
+  0x608584c6e190403dull,
+  0xc8f7ec331fa3110cull,
+  0x5ef7066f95c03fa1ull,
+  0x48924db0f5d40254ull,
 };
 
 static unsigned long 
 timeit(chemfp_popcount_f popcount, int size, int repeat) {
   unsigned long t1, t2;
+  unsigned char *start_buffer, *end_buffer, *fp;
   int i;
   if (size > sizeof(popcount_buffer)) {
     size = sizeof(popcount_buffer);
   }
   t1 = get_usecs();
+  start_buffer = (unsigned char *) popcount_buffer;
+  end_buffer = start_buffer + sizeof(popcount_buffer);
+
   for (i=0; i<repeat; i++) {
-    popcount(size, (unsigned char*) popcount_buffer);
+    for (fp=start_buffer; fp<end_buffer; fp += size) {
+      popcount(size, fp);
+    }
   }
   t2 = get_usecs();
   return t2-t1;
@@ -404,7 +659,6 @@ chemfp_select_fastest_method(int alignment, int repeat) {
 
     /* Time the performance */
     dt = timeit(method_p->popcount, probe_size, repeat);
-		
     if (best_method == -1 || dt < best_time) {
       best_method = method;
       best_time = dt;
