@@ -102,9 +102,9 @@ chemfp_get_method_name(int method) {
 
 static inline void
 set_default_alignment_methods(void) {
-  int lut_method, best32_method, large_method;
+  int lut_method, best64_method, large_method;
   unsigned long first_time, lut8_time, lut16_time, lut_time;
-  unsigned long gillies_time, best32_time, lauradoux_time;
+  unsigned long gillies_time, best64_time, lauradoux_time;
 
   /* Make sure we haven't already initialized the alignments */
   if (_chemfp_alignments[0].method_p != NULL) {
@@ -153,6 +153,8 @@ set_default_alignment_methods(void) {
     lut_time = lut16_time;
   }
 
+  _chemfp_alignments[CHEMFP_ALIGN4].method_p = &compile_time_methods[lut_method];
+
   /* Let's see if the Gillies method is faster */
   first_time = timeit(compile_time_methods[CHEMFP_GILLIES].popcount, 128, 200);
   gillies_time = timeit(compile_time_methods[CHEMFP_GILLIES].popcount, 128, 200);
@@ -160,29 +162,23 @@ set_default_alignment_methods(void) {
     gillies_time = first_time;
   }
 
-  /* Is it faster than the fastest LUT? */
-  if (lut_time < gillies_time) {
-    best32_time = lut_time;
-    best32_method = lut_method;
-  } else {
-    best32_time = gillies_time;
-    best32_method = CHEMFP_GILLIES;
-  }
-
-
-  _chemfp_alignments[CHEMFP_ALIGN4].method_p = &compile_time_methods[best32_method];
-
-
   /* For 8-byte aligned code we always want to use the POPCNT instruction if it exists */
   if (has_popcnt_instruction()) {
     _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = 
       _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[CHEMFP_POPCNT];
   } else {
 
-    /* No POPCNT? Then the 32-bit method for the small case, and perhaps Lauradoux */
-    /* for the large case */
+    /* No POPCNT? Then either the LUT or Gillies for the small case, */
+    /* and perhaps Lauradoux for the large case */
+    if (lut_time < gillies_time) {
+      best64_time = lut_time;
+      best64_method = lut_method;
+    } else {
+      best64_time = gillies_time;
+      best64_method = CHEMFP_GILLIES;
+    }
 
-    _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = &compile_time_methods[best32_method];
+    _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = &compile_time_methods[best64_method];
 
     first_time = timeit(compile_time_methods[CHEMFP_LAURADOUX].popcount, 128, 200);
     lauradoux_time = timeit(compile_time_methods[CHEMFP_LAURADOUX].popcount, 128, 200);
@@ -190,10 +186,10 @@ set_default_alignment_methods(void) {
       lauradoux_time = first_time;
     }
 
-    if (lauradoux_time < best32_time) {
+    if (lauradoux_time < best64_time) {
       large_method = CHEMFP_LAURADOUX;
     } else {
-      large_method = best32_method;
+      large_method = best64_method;
     }
     _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[large_method];
   }
