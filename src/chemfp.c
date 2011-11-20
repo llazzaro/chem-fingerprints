@@ -19,6 +19,8 @@ const char *chemfp_strerror(int err) {
   case CHEMFP_BAD_ID: return "Id field is in the wrong format";
   case CHEMFP_MISSING_NEWLINE: return "Line must end with a newline character";
 
+  case CHEMFP_METHOD_MISMATCH: return "Mismatch between popcount method and alignment type";
+
   default: return "Unknown error";
   }
 }
