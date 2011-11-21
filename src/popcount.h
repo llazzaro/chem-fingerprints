@@ -11,6 +11,7 @@ enum {
   CHEMFP_ALIGN4,
   CHEMFP_ALIGN8_SMALL,
   CHEMFP_ALIGN8_LARGE,
+  CHEMFP_ALIGN_SSSE3,
 };
 
 /* These are in the same order as compile_time_methods */
@@ -21,12 +22,14 @@ enum {
   CHEMFP_LAURADOUX,
   CHEMFP_POPCNT,
   CHEMFP_GILLIES,
+  CHEMFP_SHUFFLE,
 };
 
 typedef int (*chemfp_method_check_f)(void);
 
 typedef struct {
   int detected_index;
+  int id;
   const char *name;
   int alignment;
   int min_size;
@@ -59,5 +62,17 @@ int _chemfp_intersect_popcount_gillies(int n, uint64_t *fp1, uint64_t *fp2);
 
 int _chemfp_popcount_lauradoux(int size, const uint64_t *fp);
 int _chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const uint64_t *fp2);
+
+
+#if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
+  #define GENERATE_SSSE3
+#elif defined(__i386__) || defined(__i386) || defined(__x86_64__)
+  #if defined(__SSSE3__) || !defined(__GNUC__)
+    #define GENERATE_SSSE3
+  #endif
+#endif
+
+int _chemfp_popcount_SSSE3(int, const unsigned*);
+int _chemfp_intersect_popcount_SSSE3(int, const unsigned*, const unsigned*);
 
 #endif
