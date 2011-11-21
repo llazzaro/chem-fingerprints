@@ -77,13 +77,13 @@ class build_ext_subclass( build_ext ):
             names = [c]
 
         for c in names:
-            if copt.has_key(c):
+            if c in copt:
                 for e in self.extensions:
                     e.extra_compile_args = copt[ c ]
                 break
 
         for c in names:
-            if lopt.has_key(c):
+            if c in lopt:
                 for e in self.extensions:
                     e.extra_link_args = lopt[ c ]
                 break
