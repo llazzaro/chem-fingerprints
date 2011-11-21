@@ -18,7 +18,7 @@ targets = chemfp.load_fingerprints(CHEBI_TARGETS, alignment=8)
 alignment_methods = chemfp.bitops.get_alignment_methods()
 
 
-all_methods = dict.fromkeys("LUT8-1 LUT8-4 LUT16-4 Lauradoux POPCNT Gillies shuffle".split())
+all_methods = dict.fromkeys("LUT8-1 LUT8-4 LUT16-4 Lauradoux POPCNT Gillies ssse3".split())
 
 class TestMethods(unittest2.TestCase):
     def test_no_duplicates(self):
@@ -92,14 +92,14 @@ class TestAlignments(unittest2.TestCase):
                 set_alignment_method("align4", method)
 
 
-    @unittest2.skipIf("shuffle" not in alignment_methods, "CPU does not implement SSSE3")
+    @unittest2.skipIf("ssse3" not in alignment_methods, "CPU does not implement SSSE3")
     def test_ssse3(self):
         method = get_alignment_method("align-ssse3")
         # This disables SSSE3 support
         set_alignment_method("align-ssse3", "LUT8-1")
         self.assertEquals(get_alignment_method("align-ssse3"), "LUT8-1")
-        set_alignment_method("align-ssse3", "shuffle")
-        self.assertEquals(get_alignment_method("align-ssse3"), "shuffle")
+        set_alignment_method("align-ssse3", "ssse3")
+        self.assertEquals(get_alignment_method("align-ssse3"), "ssse3")
         set_alignment_method("align-ssse3", method)
 
 

@@ -21,7 +21,7 @@ chemfp_alignment_type _chemfp_alignments[] = {
   {"align8-small", 8, 8, NULL},
   {"align8-large", 8, 96, NULL},
 
-  /* This is a purely hack category. It's only used if set to "shuffle" */
+  /* This is a purely hack category. It's only used if set to "ssse3" */
   {"align-ssse3", 64, 64, NULL},
 };
 
@@ -62,7 +62,7 @@ static chemfp_method_type compile_time_methods[] = {
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_gillies},
 
 #if defined(GENERATE_SSSE3)
-  {0, CHEMFP_SHUFFLE, "shuffle", 64, 64, has_ssse3,
+  {0, CHEMFP_SSSE3, "ssse3", 64, 64, has_ssse3,
    (chemfp_popcount_f) _chemfp_popcount_SSSE3,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_SSSE3},
 #endif
@@ -219,13 +219,13 @@ set_default_alignment_methods(void) {
 
 #if defined(GENERATE_SSSE3)
     if (has_ssse3()) {
-      first_time = timeit(compile_time_methods[CHEMFP_SHUFFLE].popcount, 128, 200);
-      ssse3_time = timeit(compile_time_methods[CHEMFP_SHUFFLE].popcount, 128, 200);
+      first_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
+      ssse3_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
       if (first_time < ssse3_time) {
 	ssse3_time = first_time;
       }
       if (ssse3_time < best64_time) {
-	ssse3_method = CHEMFP_SHUFFLE;
+	ssse3_method = CHEMFP_SSSE3;
       }
     }
 #endif
@@ -347,8 +347,8 @@ chemfp_select_intersect_popcount(int num_bits,
       storage_len1 % 8 == 0 &&
       storage_len2 % 8 == 0) {
 
-    /* We only use SSSE3 if this alignment is identical to "CHEMFP_SHUFFLE" */
-    if (_chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p->id == CHEMFP_SHUFFLE) {
+    /* We only use SSSE3 if this alignment is identical to "CHEMFP_SSSE3" */
+    if (_chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p->id == CHEMFP_SSSE3) {
 
       /* I'll try, but only if I have 64 byte alignment */
       if (ALIGNMENT(arena1, 64) == 0 &&

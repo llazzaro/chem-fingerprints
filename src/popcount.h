@@ -22,7 +22,7 @@ enum {
   CHEMFP_LAURADOUX,
   CHEMFP_POPCNT,
   CHEMFP_GILLIES,
-  CHEMFP_SHUFFLE,
+  CHEMFP_SSSE3,
 };
 
 typedef int (*chemfp_method_check_f)(void);
