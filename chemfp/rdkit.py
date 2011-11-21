@@ -398,7 +398,7 @@ class RDKitFingerprinter_v1(_RDKitFingerprinter):
     _get_fingerprinter = staticmethod(make_rdk_fingerprinter)
 
 class RDKitMorganFingerprinter_v1(_RDKitFingerprinter):
-    name = "RDKit-MorganFingerprint/1"
+    name = "RDKit-Morgan/1"
     format_string = (
              "radius=%(radius)d fpSize=%(fpSize)s useFeatures=%(useFeatures)d "
              "useChirality=%(useChirality)d useBondTypes=%(useBondTypes)d")

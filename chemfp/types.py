@@ -36,6 +36,7 @@ _families = [
     
     FingerprintFamily("RDKit-MACCS166/1", "chemfp.rdkit.RDKitMACCSFingerprinter_v1"),
     FingerprintFamily("RDKit-Fingerprint/1", "chemfp.rdkit.RDKitFingerprinter_v1"),
+    FingerprintFamily("RDKit-Morgan/1", "chemfp.rdkit.RDKitMorganFingerprinter_v1"),
     
     FingerprintFamily("OpenBabel-FP2/1", "chemfp.openbabel.OpenBabelFP2Fingerprinter_v1"),
     FingerprintFamily("OpenBabel-FP3/1", "chemfp.openbabel.OpenBabelFP3Fingerprinter_v1"),

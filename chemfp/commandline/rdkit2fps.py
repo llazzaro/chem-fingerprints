@@ -41,23 +41,23 @@ rdk_group.add_argument(
     "--nBitsPerHash", type=int, metavar="INT", default=rdkit.BITS_PER_HASH,
     help="number of bits to set per path (default=%d)" % rdkit.BITS_PER_HASH)
 rdk_group.add_argument(
-    "--useHs", type=int, default=1,
-    help="information about the number of hydrogens on each atom")
+    "--useHs", type=int, default=rdkit.USE_HS, metavar="0|1",
+    help="include information about the number of hydrogens on each atom (default=%d)" % rdkit.USE_HS)
 
-morgan_group = parser.add_argument_group("RDKit morgan fingerprints")
+morgan_group = parser.add_argument_group("RDKit Morgan fingerprints")
 morgan_group.add_argument("--morgan", action="store_true",
-                       help="generate morgan fingerprints")
+                       help="generate Morgan fingerprints")
 morgan_group.add_argument(
     "--radius", type=int, metavar="INT", default=rdkit.RADIUS,
     help="radius for the morgan algorithm (default=%d)" % rdkit.RADIUS)
 morgan_group.add_argument(
-    "--useFeatures", type=int, metavar="INT", default=rdkit.USE_FEATURES,
+    "--useFeatures", type=int, metavar="0|1", default=rdkit.USE_FEATURES,
     help="use chemical-feature invariants (default=%d)" % rdkit.USE_FEATURES)
 morgan_group.add_argument(
-    "--useChirality", type=int, metavar="INT", default=rdkit.USE_CHIRALITY,
+    "--useChirality", type=int, metavar="0|1", default=rdkit.USE_CHIRALITY,
     help="include information about chirality (default=%d)" % rdkit.USE_CHIRALITY)
 morgan_group.add_argument(
-    "--useBondTypes", type=int, metavar="INT", default=rdkit.USE_BOND_TYPES,
+    "--useBondTypes", type=int, metavar="0|1", default=rdkit.USE_BOND_TYPES,
     help="include information about bond types (default=%d)" % rdkit.USE_BOND_TYPES)
 
 maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
@@ -95,7 +95,7 @@ def main(args=None):
     args = parser.parse_args(args)
 
     cmdsupport.mutual_exclusion(parser, args, "RDK",
-                                ("maccs166", "RDK", "substruct", "rdmaccs"))
+                                ("maccs166", "RDK", "substruct", "rdmaccs", "morgan"))
 
     if args.maccs166:
         opener = types.get_fingerprint_family("RDKit-MACCS166")()
@@ -128,6 +128,32 @@ def main(args=None):
         opener = types.get_fingerprint_family("ChemFP-Substruct-RDKit")()
     elif args.rdmaccs:
         opener = types.get_fingerprint_family("RDMACCS-RDKit")()
+    elif args.morgan:
+        radius = args.radius
+        fpSize = args.fpSize
+        useFeatures = args.useFeatures
+        useChirality = args.useChirality
+        useBondTypes = args.useBondTypes
+
+        if radius < 0:
+            parser.error("--radius must not be negative")
+        if fpSize < 1:
+            parser.error("--fpSize must be positive")
+        if useFeatures not in (0, 1):
+            parser.error("--useFeatures parameter must be 0 or 1")
+        if useChirality not in (0, 1):
+            parser.error("--useChirality parameter must be 0 or 1")
+        if useBondTypes not in (0, 1):
+            parser.error("--useBondTypes parameter must be 0 or 1")
+        
+        opener = types.get_fingerprint_family("RDKit-Morgan")(
+            radius=radius,
+            fpSize=fpSize,
+            useFeatures=useFeatures,
+            useChirality=useChirality,
+            useBondTypes=useBondTypes)
+    else:
+        raise AssertionError("Unknown fingerprinter")
 
     if not rdkit.is_valid_format(args.format):
         parser.error("Unsupported format specifier: %r" % (args.format,))
