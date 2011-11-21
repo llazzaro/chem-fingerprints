@@ -159,7 +159,7 @@ def open(source, format=None):
     raise TypeError("Unable to determine fingerprint format type from %r" % (source,))
 
 
-def load_fingerprints(reader, metadata=None, reorder=True, alignment=8):
+def load_fingerprints(reader, metadata=None, reorder=True, alignment=64):
     """Load all of the fingerprints into an in-memory FingerprintArena data structure
     
     The FingerprintArena data structure reads all of the fingerprints and
