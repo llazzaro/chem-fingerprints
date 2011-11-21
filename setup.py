@@ -2,6 +2,7 @@
 
 from distutils.core import setup, Extension
 from distutils.command.build_ext import build_ext
+from distutils.sysconfig import get_config_var
 
 DESCRIPTION  = """\
 chemfp is a set of command-lines tools for generating cheminformatics
@@ -20,6 +21,7 @@ OpenEye, and RDKit toolkits.
 """
 
 USE_OPENMP = False
+USE_SSSE3 = True
 
 # chemfp has experimental support for OpenMP, but only for the counts.
 # Preliminary tests 
@@ -27,6 +29,17 @@ def OMP(*args):
     if USE_OPENMP:
         return list(args)
     return []
+
+def SSSE3(*args):
+    if not USE_SSSE3:
+        return []
+    # Some Python installations on my Mac are compiled with "-arch ppc".
+    # gcc doesn't like the -mssse3 option in that case.
+    arch = get_config_var("ARCHFLAGS")
+    if arch and "-arch ppc" in arch:
+        return []
+
+    return list(args)
 
 
 # Compiler-specific configuration settings due to:
@@ -38,7 +51,7 @@ copt =  {
     "gcc-4.1": ["-O3"], # Doesn't support OpenMP, doesn't support -mssse3
 
     # I'm going to presume that everyone is using an Intel-like processor
-    "gcc": OMP("-fopenmp") + ["-O3", "-mssse3"],
+    "gcc": OMP("-fopenmp") + SSSE3("-mssse3") + ["-O3"],
     }
 
 lopt =  {
