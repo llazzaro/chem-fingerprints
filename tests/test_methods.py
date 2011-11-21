@@ -82,7 +82,10 @@ class TestAlignments(unittest2.TestCase):
 
     def test_cannot_use_64_bit_method_for_shorter_bit_alignment(self):
         msg = "Mismatch between popcount method and alignment type"
+        available_methods = chemfp.bitops.get_methods()
         for method in ("Lauradoux", "Gillies", "POPCNT"):
+            if (method == "POPCNT") and ("POPCNT" not in available_methods):
+                continue
             with self.assertRaisesRegexp(ValueError, msg):
                 set_alignment_method("align1", method)
             with self.assertRaisesRegexp(ValueError, msg):
@@ -167,7 +170,7 @@ class TestSelectFastestMethod(unittest2.TestCase):
         chemfp.bitops.select_fastest_method()
 
         best_methods2 = chemfp.bitops.get_alignment_methods()
-        self.assertEquals(best_methods1, best_methods2)
+        self.assertEquals(best_methods1, best_methods2) # This might fail if two methods have nearly identical timings
 
         chemfp.bitops.select_fastest_method(repeat=-1000)
 
