@@ -24,7 +24,6 @@ USE_OPENMP = False
 USE_SSSE3 = True
 
 # chemfp has experimental support for OpenMP, but only for the counts.
-# Preliminary tests 
 def OMP(*args):
     if USE_OPENMP:
         return list(args)
