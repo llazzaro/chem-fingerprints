@@ -18,7 +18,7 @@ targets = chemfp.load_fingerprints(CHEBI_TARGETS, alignment=8)
 alignment_methods = chemfp.bitops.get_alignment_methods()
 
 
-all_methods = dict.fromkeys("LUT8-1 LUT8-4 LUT16-4 Lauradoux POPCNT Gillies".split())
+all_methods = dict.fromkeys("LUT8-1 LUT8-4 LUT16-4 Lauradoux POPCNT Gillies shuffle".split())
 
 class TestMethods(unittest2.TestCase):
     def test_no_duplicates(self):
@@ -39,7 +39,7 @@ class TestMethods(unittest2.TestCase):
         with self.assertRaisesRegexp(IndexError, "method index is out of range"):
             _chemfp.get_method_name(_chemfp.get_num_methods())
 
-all_alignments = dict.fromkeys("align1 align4 align8-small align8-large".split())
+all_alignments = dict.fromkeys("align1 align4 align8-small align8-large align-ssse3".split())
 
 class TestAlignments(unittest2.TestCase):
     def test_no_duplicates(self):
@@ -146,7 +146,7 @@ class TestAlign8SmallMethods(unittest2.TestCase):
 
 class TestSelectFastestMethod(unittest2.TestCase):
     def setUp(self):
-        self._alignment_methods = get_alignment_methods()
+        self._alignment_methods = chemfp.bitops.get_alignment_methods()
     def tearDown(self):
         for k,v in self._alignment_methods.items():
             set_alignment_method(k, v)
@@ -158,7 +158,7 @@ class TestSelectFastestMethod(unittest2.TestCase):
 
         chemfp.bitops.select_fastest_method()
 
-        best_methods1 = get_alignment_methods()
+        best_methods1 = chemfp.bitops.get_alignment_methods()
 
         for alignment in all_alignments:
             set_alignment_method(alignment, "LUT8-1")
@@ -166,7 +166,7 @@ class TestSelectFastestMethod(unittest2.TestCase):
 
         chemfp.bitops.select_fastest_method()
 
-        best_methods2 = get_alignment_methods()
+        best_methods2 = chemfp.bitops.get_alignment_methods()
         self.assertEquals(best_methods1, best_methods2)
 
         chemfp.bitops.select_fastest_method(repeat=-1000)
