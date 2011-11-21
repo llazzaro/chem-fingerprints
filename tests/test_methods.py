@@ -7,6 +7,9 @@ import chemfp
 import chemfp.bitops
 import _chemfp
 
+set_alignment_method = chemfp.bitops.set_alignment_method
+get_alignment_method = chemfp.bitops.get_alignment_method
+
 CHEBI_TARGETS = fullpath("chebi_rdmaccs.fps")
 CHEBI_QUERIES = fullpath("chebi_queries.fps.gz")
 
@@ -50,12 +53,12 @@ class TestAlignments(unittest2.TestCase):
 
     def test_get_set_alignment_method(self):
         for alignment in chemfp.bitops.get_alignments():
-            method = chemfp.bitops.get_alignment_method(alignment)
+            method = get_alignment_method(alignment)
             self.assertIn(method, all_methods)
-            chemfp.bitops.set_alignment_method(alignment, "LUT8-1")
-            self.assertEqual(chemfp.bitops.get_alignment_method(alignment), "LUT8-1")
-            chemfp.bitops.set_alignment_method(alignment, method)
-            self.assertEqual(chemfp.bitops.get_alignment_method(alignment), method)
+            set_alignment_method(alignment, "LUT8-1")
+            self.assertEqual(get_alignment_method(alignment), "LUT8-1")
+            set_alignment_method(alignment, method)
+            self.assertEqual(get_alignment_method(alignment), method)
             
         
     def test_internal_bad_args(self):
@@ -81,20 +84,32 @@ class TestAlignments(unittest2.TestCase):
         msg = "Mismatch between popcount method and alignment type"
         for method in ("Lauradoux", "Gillies", "POPCNT"):
             with self.assertRaisesRegexp(ValueError, msg):
-                chemfp.bitops.set_alignment_method("align1", method)
+                set_alignment_method("align1", method)
             with self.assertRaisesRegexp(ValueError, msg):
-                chemfp.bitops.set_alignment_method("align4", method)
+                set_alignment_method("align4", method)
+
+
+    @unittest2.skipIf("shuffle" not in alignment_methods, "CPU does not implement SSSE3")
+    def test_ssse3(self):
+        method = get_alignment_method("align-ssse3")
+        # This disables SSSE3 support
+        set_alignment_method("align-ssse3", "LUT8-1")
+        self.assertEquals(get_alignment_method("align-ssse3"), "LUT8-1")
+        set_alignment_method("align-ssse3", "shuffle")
+        self.assertEquals(get_alignment_method("align-ssse3"), "shuffle")
+        set_alignment_method("align-ssse3", method)
+
 
 
 class TestAlign8SmallMethods(unittest2.TestCase):
     def setUp(self):
-        self.method = chemfp.bitops.get_alignment_method("align8-small")
+        self.method = get_alignment_method("align8-small")
     def tearDown(self):
-        chemfp.bitops.set_alignment_method("align8-small", self.method)
+        set_alignment_method("align8-small", self.method)
         
     def _doit(self, method):
-        chemfp.bitops.set_alignment_method("align8-small", method)
-        self.assertEquals(chemfp.bitops.get_alignment_method("align8-small"), method)
+        set_alignment_method("align8-small", method)
+        self.assertEquals(get_alignment_method("align8-small"), method)
         
         hits = targets.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2)
         self.assertEqual(hits, [('CHEBI:8069', 1.0),
@@ -121,37 +136,37 @@ class TestAlign8SmallMethods(unittest2.TestCase):
 
     def test_lauradoux(self):
         with self.assertRaisesRegexp(ValueError, "Mismatch between popcount method and alignment type"):
-            chemfp.bitops.set_alignment_method("align8-small", "Lauradoux")
+            set_alignment_method("align8-small", "Lauradoux")
 
     @unittest2.skipIf("POPCNT" not in alignment_methods, "CPU does not implement POPCNT")
     def test_popcnt(self):
-        chemfp.bitops.set_alignment_method("align8-small", "POPCNT")
+        set_alignment_method("align8-small", "POPCNT")
         self._doit()
         
 
 class TestSelectFastestMethod(unittest2.TestCase):
     def setUp(self):
-        self._alignment_methods = chemfp.bitops.get_alignment_methods()
+        self._alignment_methods = get_alignment_methods()
     def tearDown(self):
         for k,v in self._alignment_methods.items():
-            chemfp.bitops.set_alignment_method(k, v)
+            set_alignment_method(k, v)
             
     def test_select_fastest(self):
         for alignment in all_alignments:
-            chemfp.bitops.set_alignment_method(alignment, "LUT8-1")
-            self.assertEquals(chemfp.bitops.get_alignment_method(alignment), "LUT8-1")
+            set_alignment_method(alignment, "LUT8-1")
+            self.assertEquals(get_alignment_method(alignment), "LUT8-1")
 
         chemfp.bitops.select_fastest_method()
 
-        best_methods1 = chemfp.bitops.get_alignment_methods()
+        best_methods1 = get_alignment_methods()
 
         for alignment in all_alignments:
-            chemfp.bitops.set_alignment_method(alignment, "LUT8-1")
-            self.assertEquals(chemfp.bitops.get_alignment_method(alignment), "LUT8-1")
+            set_alignment_method(alignment, "LUT8-1")
+            self.assertEquals(get_alignment_method(alignment), "LUT8-1")
 
         chemfp.bitops.select_fastest_method()
 
-        best_methods2 = chemfp.bitops.get_alignment_methods()
+        best_methods2 = get_alignment_methods()
         self.assertEquals(best_methods1, best_methods2)
 
         chemfp.bitops.select_fastest_method(repeat=-1000)
