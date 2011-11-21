@@ -68,7 +68,7 @@ class TestRDKFingerprints(unittest2.TestCase):
     def assertIn(self, substr, str):
         self.assertEquals(substr in str, True, str)
         
-    def test_default(self):
+    def test_is_default(self):
         result = runner.run_fps("", 19)
         self.assertEquals(result[0], _fp1 + "\t9425004")
         self.assertNotEquals(result[1].split()[0], _fp1)
@@ -87,7 +87,7 @@ class TestRDKFingerprints(unittest2.TestCase):
         self.assertEquals(result[0], _fp1 + "\t9425004")
         self.assertNotEquals(result[1].split()[0], _fp1)
 
-    def test_num_bits_64(self):
+    def test_num_bits_16(self):
         field, first = get_field_and_first("--fpSize 16", "#num_bits=")
         self.assertEquals(field, "#num_bits=16")
         self.assertEquals(first, "ffff\t9425004")
@@ -158,6 +158,73 @@ class TestRDKFingerprints(unittest2.TestCase):
 #  I don't have a good test case for this... XXX
 
 TestRDKFingerprints = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestRDKFingerprints)
+
+
+_morgan1 = "00000080000200000010010000000040000000400000000000000000000000000000000200000000800000400040000400000000000000004200000000080000000000000000020000000000000000000004000000004008000000000002000000000000800000000800000100080800000000048000000000400000000000000081000002000000010000000000000001000020000000000000000000020000000000000100000020040800100000000000000000000000000000000000000000000000000000040000800000000000000008000000000408004000000000000000000000000100000002000000002000010000100000000000000000000000"
+
+_morgan_radius3 = "00000080000200000110010000000040000100400000000000000000000000004000000201000000800000400040000401000000000000004200000000080000000000000000020000000000000000000004400000004008000000000002000000000000800000000800000100080800000000048000000000408000000000000081000002000000010020000000000001000020000000000002000000020080000000000100000020040800100000000000000000000000000000000000200000000040000000040000800000000000000008000000040408004000000000000000000000000100000002000000002800010000100000000000000000000000"
+
+class TestRDKMorgan(unittest2.TestCase):
+    def test_as_morgan(self):
+        result = runner.run_fps("--morgan", 19)
+        self.assertEquals(result[0], _morgan1 + "\t9425004")
+        self.assertNotEquals(result[1].split()[0], _morgan1)
+        # All must have the same length (since the fp lengths and ids lengths are the same
+        self.assertEquals(len(set(map(len, result))), 1, set(map(len, result)))
+        
+    def test_num_bits_default(self):
+        result = runner.run_fps("--morgan --fpSize 2048", 19)
+        self.assertEquals(result[0], _morgan1 + "\t9425004")
+        self.assertNotEquals(result[1].split()[0], _morgan1)
+
+    def test_num_bits_16(self):
+        field, first = get_field_and_first("--morgan --fpSize 16", "#num_bits=")
+        self.assertEquals(field, "#num_bits=16")
+        self.assertEquals(first, "fbff\t9425004")
+
+    def test_num_bits_1(self):
+        field, first = get_field_and_first("--morgan --fpSize 1", "#num_bits=")
+        self.assertEquals(field, "#num_bits=1")
+        self.assertEquals(first, "01\t9425004")
+
+    def test_num_bits_2(self):
+        field, first = get_field_and_first("--morgan --fpSize 2", "#num_bits=")
+        self.assertEquals(field, "#num_bits=2")
+        self.assertEquals(first, "03\t9425004")
+
+    def test_num_bits_too_small(self):
+        result = runner.run_exit("--morgan --fpSize 0")
+        self.assertIn("--fpSize must be positive", result)
+
+    def test_radius_default(self):
+        result = runner.run_fps("--morgan --radius 2", 19)
+        self.assertEquals(result[0], _morgan1 + "\t9425004")
+        self.assertNotEquals(result[1].split()[0], _morgan1)
+
+    def test_radius_3(self):
+        result = runner.run_fps("--morgan --radius 3", 19)
+        self.assertEquals(result[0], _morgan_radius3 + "\t9425004")
+        self.assertNotEquals(result[1].split()[0], _morgan1)
+
+    def test_radius_too_small(self):
+        result = runner.run_exit("--morgan --radius -1")
+        self.assertIn("--radius must not be negative", result)
+
+    def test_default_use_options(self):
+        field, first = get_field_and_first("--morgan --useFeatures 0 --useChirality 0 --useBondTypes 1",
+                                      "#type")
+        self.assertEquals(field,
+                          "#type=RDKit-Morgan/1 radius=2 fpSize=2048 useFeatures=0 useChirality=0 useBondTypes=1")
+        self.assertEquals(first, _morgan1 + "\t9425004")
+
+    # This isn't a complete test of the different options. I don't think it's worth the effort
+    def test_useChirality(self):
+        field, first = get_field_and_first("--morgan --useFeatures 1 --useChirality 1 --useBondTypes 0",
+                                           "#type=")
+        self.assertEquals(field,
+                          "#type=RDKit-Morgan/1 radius=2 fpSize=2048 useFeatures=1 useChirality=1 useBondTypes=0")
+        self.assertNotEquals(first, _morgan1 + "\t9425004")
+        
 
 class TestIO(unittest2.TestCase, support.TestIdAndErrors):
     _runner = runner
