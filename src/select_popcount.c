@@ -20,6 +20,9 @@ chemfp_alignment_type _chemfp_alignments[] = {
   {"align4", 4, 4, NULL},
   {"align8-small", 8, 8, NULL},
   {"align8-large", 8, 96, NULL},
+
+  /* This is a purely hack category. It's only used if set to "shuffle" */
+  {"align-ssse3", 64, 64, NULL},
 };
 
 static int
@@ -27,31 +30,43 @@ has_popcnt_instruction(void) {
   return (get_cpuid_flags() & bit_POPCNT);
 }
 
+static int
+has_ssse3(void) {
+  return (get_cpuid_flags() & bit_SSSE3);
+}
+
 /* These are in the same order as an enum in popcount.h */
 static chemfp_method_type compile_time_methods[] = {
-  {0, "LUT8-1", 1, 1, NULL,
+  {0, CHEMFP_LUT8_1, "LUT8-1", 1, 1, NULL,
    _chemfp_popcount_lut8_1, _chemfp_intersect_popcount_lut8_1},
 
-  {0, "LUT8-4", 4, 4, NULL,
+  {0, CHEMFP_LUT8_4, "LUT8-4", 4, 4, NULL,
    (chemfp_popcount_f) _chemfp_popcount_lut8_4,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lut8_4},
 
-  {0, "LUT16-4", 4, 4, NULL,
+  {0, CHEMFP_LUT16_4, "LUT16-4", 4, 4, NULL,
    (chemfp_popcount_f) _chemfp_popcount_lut16_4,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lut16_4},
 
-  {0, "Lauradoux", 8, 96, NULL,
+  {0, CHEMFP_LAURADOUX, "Lauradoux", 8, 96, NULL,
    (chemfp_popcount_f) _chemfp_popcount_lauradoux,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lauradoux},
 
-  {0, "POPCNT", 8, 8,
+  {0, CHEMFP_POPCNT, "POPCNT", 8, 8,
    has_popcnt_instruction,
    (chemfp_popcount_f) popcount_POPCNT,
    (chemfp_intersect_popcount_f) intersect_popcount_POPCNT},
 
-  {0, "Gillies", 8, 8, NULL,
+  {0, CHEMFP_GILLIES, "Gillies", 8, 8, NULL,
    (chemfp_popcount_f) _chemfp_popcount_gillies,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_gillies},
+
+#if defined(GENERATE_SSSE3)
+  {0, CHEMFP_SHUFFLE, "shuffle", 64, 64, has_ssse3,
+   (chemfp_popcount_f) _chemfp_popcount_SSSE3,
+   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_SSSE3},
+#endif
+   
 
 };
 
@@ -102,9 +117,12 @@ chemfp_get_method_name(int method) {
 
 static inline void
 set_default_alignment_methods(void) {
-  int lut_method, best64_method, large_method;
+  int lut_method, best64_method, large_method, ssse3_method;
   unsigned long first_time, lut8_time, lut16_time, lut_time;
   unsigned long gillies_time, best64_time, lauradoux_time;
+#if defined(GENERATE_SSSE3)
+  unsigned long ssse3_time;
+#endif
 
   /* Make sure we haven't already initialized the alignments */
   if (_chemfp_alignments[0].method_p != NULL) {
@@ -165,7 +183,9 @@ set_default_alignment_methods(void) {
   /* For 8-byte aligned code we always want to use the POPCNT instruction if it exists */
   if (has_popcnt_instruction()) {
     _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = 
-      _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[CHEMFP_POPCNT];
+      _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = 
+      _chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p = 
+      &compile_time_methods[CHEMFP_POPCNT];
   } else {
 
     /* No POPCNT? Then either the LUT or Gillies for the small case, */
@@ -188,10 +208,29 @@ set_default_alignment_methods(void) {
 
     if (lauradoux_time < best64_time) {
       large_method = CHEMFP_LAURADOUX;
+      best64_time = lauradoux_time;
     } else {
       large_method = best64_method;
     }
     _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[large_method];
+
+
+    ssse3_method = large_method;
+
+#if defined(GENERATE_SSSE3)
+    if (has_ssse3()) {
+      first_time = timeit(compile_time_methods[CHEMFP_SHUFFLE].popcount, 128, 200);
+      ssse3_time = timeit(compile_time_methods[CHEMFP_SHUFFLE].popcount, 128, 200);
+      if (first_time < ssse3_time) {
+	ssse3_time = first_time;
+      }
+      if (ssse3_time < best64_time) {
+	ssse3_method = CHEMFP_SHUFFLE;
+      }
+    }
+#endif
+    _chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p = &compile_time_methods[ssse3_method];
+
   }
 }
 
@@ -307,6 +346,18 @@ chemfp_select_intersect_popcount(int num_bits,
       ALIGNMENT(arena2, 8) == 0 &&
       storage_len1 % 8 == 0 &&
       storage_len2 % 8 == 0) {
+
+    /* We only use SSSE3 if this alignment is identical to "CHEMFP_SHUFFLE" */
+    if (_chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p->id == CHEMFP_SHUFFLE) {
+
+      /* I'll try, but only if I have 64 byte alignment */
+      if (ALIGNMENT(arena1, 64) == 0 &&
+	  ALIGNMENT(arena2, 64) == 0 &&
+	  storage_len1 % 64 == 0 &&
+	  storage_len2 % 64 == 0) {
+	return _chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p->intersect_popcount;
+      }
+    }
 
     if (num_bytes >= 96) {
       return _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p->intersect_popcount;

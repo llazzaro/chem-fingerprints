@@ -35,8 +35,10 @@ copt =  {
     "msvc": OMP("/openmp") + ["/Ox"],
     "mingw32" : OMP("-fopenmp") + ["-O3", "-ffast-math", "-march=native"],
 
-    "gcc-4.1": ["-O3"], # Doesn't support OpenMP
-    "gcc": OMP("-fopenmp") + ["-O3"],
+    "gcc-4.1": ["-O3"], # Doesn't support OpenMP, doesn't support -mssse3
+
+    # I'm going to presume that everyone is using an Intel-like processor
+    "gcc": OMP("-fopenmp") + ["-O3", "-mssse3"],
     }
 
 lopt =  {
@@ -104,7 +106,7 @@ setup(name = "chemfp",
                                 "src/searches.c",
                                 "src/select_popcount.c",
                                 "src/lauradoux.c", "src/lut16.c", "src/gillies.c",
-                                "src/python_api.c"],
+                                "src/popcount_SSSE3.c", "src/python_api.c"],
                                )],
       cmdclass = {"build_ext": build_ext_subclass},
      )
