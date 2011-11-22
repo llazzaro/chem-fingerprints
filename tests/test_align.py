@@ -3,6 +3,7 @@ from cStringIO import StringIO
 import unittest2
 
 import chemfp
+from chemfp import arena, bitops
 
 zeros = ("0000\tfirst\n"
          "0010\tsecond\n"
@@ -109,6 +110,94 @@ class TestAlreadyOrderedAlignment(unittest2.TestCase):
             self.assertEquals(s, ("\x00"*16 +
                                   "\x00"*16 +
                                   "\x00\x10" + "\x00"*14))
+
+class TestOptimalAlignment(unittest2.TestCase):
+    def setUp(self):
+        self._has_popcnt = arena._has_popcnt
+        self._has_ssse3 = arena._has_ssse3
+        self.get_alignment_method = bitops.get_alignment_method
+        bitops.get_alignment_method = self.hook
+
+    def tearDown(self):
+        arena._has_popcnt = self._has_popcnt
+        arena._has_ssse3 = self._has_ssse3
+        bitops.get_alignment_method = self.get_alignment_method
+
+    def hook(self, name):
+        return self.data[name]
+
+    def test_tiny(self):
+        for i in range(1, 9):
+            self.assertEquals(arena.get_optimal_alignment(i), 1)
+
+    def test_small(self):
+        for i in range(9, 33):
+            self.assertEquals(arena.get_optimal_alignment(i), 4)
+
+
+    def test_medium(self):
+        arena._has_popcnt = False
+        arena._has_ssse3 = False
+        for i in range(35, 225):
+            self.assertEquals(arena.get_optimal_alignment(i), 8)
+
+    def test_popcnt_ssse3_combinations(self):
+        arena._has_popcnt = True
+        arena._has_ssse3 = True
+        
+        self.data = {"align8-large": "POPCNT",
+                     "align8-small": "POPCNT",
+                     "align-ssse3": "ssse3"}
+        self.assertEquals(arena.get_optimal_alignment(300), 8)
+        self.assertEquals(arena.get_optimal_alignment(800), 8)
+        
+        self.data = {"align8-large": "POPCNT",
+                     "align8-small": "LUT8-1",
+                     "align-ssse3": "ssse3"}
+        self.assertEquals(arena.get_optimal_alignment(300), 64)
+        self.assertEquals(arena.get_optimal_alignment(800), 8)
+
+        self.data = {"align8-large": "LUT8-1",
+                     "align8-small": "POPCNT",
+                     "align-ssse3": "ssse3"}
+        self.assertEquals(arena.get_optimal_alignment(300), 8)
+        self.assertEquals(arena.get_optimal_alignment(800), 64)
+
+        self.data = {"align8-large": "LUT8-1",
+                     "align8-small": "LUT8-1",
+                     "align-ssse3": "ssse3"}
+        self.assertEquals(arena.get_optimal_alignment(300), 64)
+        self.assertEquals(arena.get_optimal_alignment(800), 64)
+
+        # And now, with SSSE3 disabled
+
+        self.data = {"align8-large": "POPCNT",
+                     "align8-small": "POPCNT",
+                     "align-ssse3": "POPCNT"}
+        self.assertEquals(arena.get_optimal_alignment(300), 8)
+        self.assertEquals(arena.get_optimal_alignment(800), 8)
+        
+        self.data = {"align8-large": "POPCNT",
+                     "align8-small": "LUT8-1",
+                     "align-ssse3": "POPCNT"}
+        self.assertEquals(arena.get_optimal_alignment(300), 8)
+        self.assertEquals(arena.get_optimal_alignment(800), 8)
+
+        self.data = {"align8-large": "LUT8-1",
+                     "align8-small": "POPCNT",
+                     "align-ssse3": "POPCNT"}
+        self.assertEquals(arena.get_optimal_alignment(300), 8)
+        self.assertEquals(arena.get_optimal_alignment(800), 8)
+
+        self.data = {"align8-large": "LUT8-1",
+                     "align8-small": "LUT8-1",
+                     "align-ssse3": "POPCNT"}
+        self.assertEquals(arena.get_optimal_alignment(300), 8)
+        self.assertEquals(arena.get_optimal_alignment(800), 8)
+
+
+        
+        
 
 if __name__ == "__main__":
     unittest2.main()

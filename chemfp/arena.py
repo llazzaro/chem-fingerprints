@@ -26,6 +26,7 @@ import array
 
 from chemfp import FingerprintReader, check_fp_problems, check_metadata_problems
 import _chemfp
+from chemfp import bitops
 
 __all__ = []
 
@@ -584,13 +585,60 @@ class ChemFPOrderedPopcount(ctypes.Structure):
     _fields_ = [("popcount", ctypes.c_int),
                 ("index", ctypes.c_int)]
 
-def fps_to_arena(fps_reader, metadata=None, reorder=True, alignment=8):
+
+_methods = bitops.get_methods()
+_has_popcnt = "POPCNT" in _methods
+_has_ssse3 = "ssse3" in _methods
+
+def get_optimal_alignment(num_bits):
+    if num_bits <= 32:
+        # Just in case!
+        if num_bits <= 8:
+            return 1
+        return 4
+
+    # Since the ssse3 method must examine at least 512 bits while the
+    # Gillies method doesn't, this puts the time tradeoff around 210 bits.
+    # I decided to save a bit of space and round that up to 224 bits.
+    # (Experience will tell us if 256 is a better boundary.)
+    if num_bits <= 224:
+        return 8
+
+    # If you have POPCNT (and you're using it) then there's no reason
+    # to use a larger alignment
+    if _has_popcnt:
+        if num_bits >= 768:
+            if bitops.get_alignment_method("align8-large") == "POPCNT":
+                return 8
+        else:
+            if bitops.get_alignment_method("align8-small") == "POPCNT":
+                return 8
+
+    # If you don't have SSSE3 or you aren't using it, then use 8
+    if not _has_ssse3 or bitops.get_alignment_method("align-ssse3") != "ssse3":
+        return 8
+
+    # In my timing tests:
+    #    Lauradoux takes 12.6s
+    #    ssse3 takes in 9.0s
+    #    Gillies takes 22s
+
+
+    # Otherwise, go ahead and pad up to 64 bytes
+    # (Even at 768 bits/96 bytes, the SSSE3 method is faster.)
+    return 64
+
+
+def fps_to_arena(fps_reader, metadata=None, reorder=True, alignment=None):
     if metadata is None:
         metadata = fps_reader.metadata
     num_bits = metadata.num_bits
     if not num_bits:
         num_bits = metadata.num_bytes * 8
     #assert num_bits
+
+    if alignment is None:
+        alignment = get_optimal_alignment(num_bits)
 
     storage_size = metadata.num_bytes
     if storage_size % alignment != 0:
