@@ -3,7 +3,7 @@
 /* Quoting from Knuth, Fascicle 1,
 
   The first textbook on programming, "The Preparation of Programs for
-  an Elextronic Digital Computer" byt Wilkes, Wheeler, and Gill,
+  an Electronic Digital Computer" by Wilkes, Wheeler, and Gill,
   second edition (Reading, Mass.: Addison-Wesley, 1957), 155, 191-193,
   presented an interesting subroutine for sideways addition due to
   D. B. Gillies and J. C. P. Miller. Their method was devised for the
