@@ -133,6 +133,75 @@ byte_contains(PyObject *self, PyObject *args) {
   return PyInt_FromLong(chemfp_byte_contains(len1, s1, s2));
 }
 
+static PyObject *
+byte_intersect(PyObject *self, PyObject *args) {
+  unsigned char *s, *s1, *s2;
+  int i, len1, len2;
+  PyObject *new_obj;
+  if (!PyArg_ParseTuple(args, "s#s#:byte_intersect", &s1, &len1, &s2, &len2))
+    return NULL;
+  if (len1 != len2) {
+    PyErr_SetString(PyExc_ValueError,
+                    "byte fingerprints must have the same length");
+    return NULL;
+  }
+  new_obj = PyString_FromStringAndSize(NULL, len1);
+  if (!new_obj) {
+    return NULL;
+  }
+  s = (unsigned char *) PyString_AS_STRING(new_obj);
+  for (i=0; i<len1; i++) {
+    s[i] = s1[i] & s2[i];
+  }
+  return new_obj;
+}
+
+static PyObject *
+byte_union(PyObject *self, PyObject *args) {
+  unsigned char *s, *s1, *s2;
+  int i, len1, len2;
+  PyObject *new_obj;
+  if (!PyArg_ParseTuple(args, "s#s#:byte_union", &s1, &len1, &s2, &len2))
+    return NULL;
+  if (len1 != len2) {
+    PyErr_SetString(PyExc_ValueError,
+                    "byte fingerprints must have the same length");
+    return NULL;
+  }
+  new_obj = PyString_FromStringAndSize(NULL, len1);
+  if (!new_obj) {
+    return NULL;
+  }
+  s = (unsigned char *) PyString_AS_STRING(new_obj);
+  for (i=0; i<len1; i++) {
+    s[i] = s1[i] | s2[i];
+  }
+  return new_obj;
+}
+
+static PyObject *
+byte_difference(PyObject *self, PyObject *args) {
+  unsigned char *s, *s1, *s2;
+  int i, len1, len2;
+  PyObject *new_obj;
+  if (!PyArg_ParseTuple(args, "s#s#:byte_difference", &s1, &len1, &s2, &len2))
+    return NULL;
+  if (len1 != len2) {
+    PyErr_SetString(PyExc_ValueError,
+                    "byte fingerprints must have the same length");
+    return NULL;
+  }
+  new_obj = PyString_FromStringAndSize(NULL, len1);
+  if (!new_obj) {
+    return NULL;
+  }
+  s = (unsigned char *) PyString_AS_STRING(new_obj);
+  for (i=0; i<len1; i++) {
+    s[i] = s1[i] ^ s2[i];
+  }
+  return new_obj;
+}
+
 /*************** Internal validation routines  *************/
 
 static int
@@ -1297,6 +1366,13 @@ static PyMethodDef chemfp_methods[] = {
    "byte_tanimoto(fp1, fp2)\n\nCompute the Tanimoto similarity between two byte fingerprints"},
   {"byte_contains", byte_contains, METH_VARARGS,
    "byte_contains(super_fp, sub_fp)\n\nReturn 1 if the on bits of sub_fp are also 1 bits in super_fp"},
+
+  {"byte_intersect", byte_intersect, METH_VARARGS,
+   "byte_interect(fp1, fp2)\n\nReturn fp1 & fp2"},
+  {"byte_union", byte_union, METH_VARARGS,
+   "byte_union(fp1, fp2)\n\nReturn fp1 | fp2"},
+  {"byte_difference", byte_difference, METH_VARARGS,
+   "byte_difference(fp1, fp2)\n\nReturn fp1 ^ fp2"},
 
   /* FPS */
   {"fps_line_validate", fps_line_validate, METH_VARARGS,

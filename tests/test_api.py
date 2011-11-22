@@ -781,6 +781,43 @@ TestRDKitReadStructureFingerprints = (
   unittest2.skipUnless(has_rdkit, "RDKit not available")(TestRDKitReadStructureFingerprints)
 )
 
+class TestBitOps(unittest2.TestCase):
+    def test_byte_union(self):
+        for (fp1, fp2, expected) in (
+            ("ABC", "ABC", "ABC"),
+            ("ABC", "BBC", "CBC"),
+            ("BA", "12", "ss")):
+            self.assertEquals(bitops.byte_union(fp1, fp2), expected)
+
+    def test_byte_intersect(self):
+        for (fp1, fp2, expected) in (
+            ("ABC", "ABC", "ABC"),
+            ("ABC", "BBC", "@BC"),
+            ("AB", "12", "\1\2"),
+            ("BA", "12", "\0\0")):
+            self.assertEquals(bitops.byte_intersect(fp1, fp2), expected)
+
+    def test_byte_difference(self):
+        for (fp1, fp2, expected) in (
+            ("A", "C", "\2"),
+            ("ABC", "ABC", "\0\0\0"),
+            ("ABC", "BBC", "\3\0\0"),
+            ("BA", "12", "ss")):
+            self.assertEquals(bitops.byte_difference(fp1, fp2), expected)
+        
+    def test_empty(self):
+        self.assertEquals(bitops.byte_union("", ""), "")
+        self.assertEquals(bitops.byte_intersect("", ""), "")
+        self.assertEquals(bitops.byte_difference("", ""), "")
+        
+    def test_failures(self):
+        for func in (bitops.byte_union,
+                     bitops.byte_intersect,
+                     bitops.byte_difference):
+            with self.assertRaisesRegexp(ValueError, "byte fingerprints must have the same length"):
+                func("1", "12")
+    
+
 if __name__ == "__main__":
     unittest2.main()
 
