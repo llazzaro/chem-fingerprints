@@ -5,6 +5,8 @@
 /* This is not a comprehensive test suite. That's done in Python code. */
 /* This tests that the libchemfp public API is usable from C code */
 
+#error This has not been compiled for a very long time
+
 #define CHECK(msg, expr, result)                                 \
   if ( (expr) != (result) ) {puts("FAIL: " msg); failed++;} \
   else {puts("PASS: " msg); passed++;}
@@ -107,13 +109,13 @@ int main() {
     CHECK("  id[1]", strncmp(start_ids[1], "ID13 ", id_lens[1]+1), 0);
   }
   CHECK("chemfp_byte_intersect_popcount_count",
-		// We know the BCDE returns an overlap of 6 bits
-		// "A   " returns an overlap of 2
-		chemfp_byte_intersect_popcount_count(4, "ABCD", 2, "XBCDEXA   X", 1, 5, 2),
-		2);
+                // We know the BCDE returns an overlap of 6 bits
+                // "A   " returns an overlap of 2
+                chemfp_byte_intersect_popcount_count(4, "ABCD", 2, "XBCDEXA   X", 1, 5, 2),
+                2);
   CHECK("chemfp_byte_intersect_popcount_count",
-		chemfp_byte_intersect_popcount_count(4, "ABCD", 2, "XBCDEXA   X", 1, 5, 3),
-		1);
+                chemfp_byte_intersect_popcount_count(4, "ABCD", 2, "XBCDEXA   X", 1, 5, 3),
+                1);
 
   printf("Pass: %d   Fail: %d\n", passed, failed);
 }
