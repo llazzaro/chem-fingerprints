@@ -27,8 +27,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 =====================================================================
 
 The maintainer and primary copyright holder is
-  Andrew Dalke, Andrew Dalke Scientific AB
+ - Andrew Dalke, Andrew Dalke Scientific AB
 
 Other copyright holders are:
-  Kim Walisch, <kim.walisch@gmail.com>
-  Stanford Univeristy (written by Imran S. Haque <ihaque@cs.stanford.edu>)
+ - Kim Walisch, <kim.walisch@gmail.com>
+ - Stanford Univeristy (written by Imran S. Haque <ihaque@cs.stanford.edu>)
+
+This package also includes copies of (see each directory for details):
+ - chemfp/progressbar/ by Nilton Volpato under the LGPL
+ - chemfp/futures/ by Brian Quinlan under the Python license
