@@ -75,7 +75,7 @@ _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
 #if !defined(ORIGINAL)
   /* Finish things up with the CHEMFP_ALIGN8_SMALL method */
   bit_count += _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p->popcount(
-			byte_size - limit*8, (unsigned char *) fp);
+                        byte_size - limit*8, (unsigned char *) fp);
 #else
   // count the bits of the remaining bytes (MAX 88) using 
   // "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
@@ -94,7 +94,7 @@ _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
 
 int
 _chemfp_intersect_popcount_lauradoux(int byte_size,
-				     const uint64_t *fp1, const uint64_t *fp2) {
+                                     const uint64_t *fp1, const uint64_t *fp2) {
   const uint64_t m1  = UINT64_C(0x5555555555555555);
   const uint64_t m2  = UINT64_C(0x3333333333333333);
   const uint64_t m4  = UINT64_C(0x0F0F0F0F0F0F0F0F);
@@ -143,8 +143,8 @@ _chemfp_intersect_popcount_lauradoux(int byte_size,
   /* Finish things up with the CHEMFP_ALIGN8_SMALL method */
   /* In my test case with 2048 bits the time went from 15.5 to 12.6 seconds */
   bit_count += _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p->intersect_popcount(
-			byte_size - limit*8,
-			(unsigned char *) fp1, (unsigned char *) fp2);
+                        byte_size - limit*8,
+                        (unsigned char *) fp1, (unsigned char *) fp2);
     
 #else
   // intersect count the bits of the remaining bytes (MAX 88) using 

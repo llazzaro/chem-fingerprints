@@ -242,7 +242,7 @@ bad_alignment(int alignment) {
 
 static int
 bad_padding(const char *which, int start_padding, int end_padding,
-	    const unsigned char **arena, int *arena_size) {
+            const unsigned char **arena, int *arena_size) {
   char msg[150];
   /*  printf("PADDING: %d %d for %d\n", start_padding, end_padding, *arena_size);*/
   if (start_padding < 0) {
@@ -304,7 +304,7 @@ static int
 bad_knearest_search_size(int knearest_search_size) {
   if (knearest_search_size < sizeof(chemfp_fps_knearest_search)) {
     PyErr_SetString(PyExc_ValueError,
-		    "Not enough space allocated for a chemfp_fps_knearest_search");
+                    "Not enough space allocated for a chemfp_fps_knearest_search");
     return 1;
   }
   return 0;
@@ -579,21 +579,21 @@ fps_count_tanimoto_hits(PyObject *self, PyObject *args) {
 
   if (!PyArg_ParseTuple(args, "iiiit#iit#iidw#:fps_count_tanimoto_hits",
                         &num_bits,
-			&query_start_padding, &query_end_padding,
+                        &query_start_padding, &query_end_padding,
                         &query_storage_size, &query_arena, &query_arena_size,
                         &query_start, &query_end,
                         &target_block, &target_block_size,
                         &target_start, &target_end,
                         &threshold,
-			&counts, &counts_size))
+                        &counts, &counts_size))
     return NULL;
 
   if (bad_num_bits(num_bits) ||
       bad_padding("query_", query_start_padding, query_end_padding,
-		  &query_arena, &query_arena_size) ||
+                  &query_arena, &query_arena_size) ||
       bad_arena_size("query_", num_bits, query_storage_size) ||
       bad_arena_limits("query ", query_arena_size, query_storage_size,
-		       &query_start, &query_end) ||
+                       &query_start, &query_end) ||
       bad_block_limits(target_block_size, &target_start, &target_end) ||
       bad_threshold(threshold) ||
       bad_counts(counts_size, query_arena_size / query_storage_size)) {
@@ -620,7 +620,7 @@ fps_count_tanimoto_hits(PyObject *self, PyObject *args) {
  (err, next_start, num_lines_processed, num_cells_processed) = 
      fps_threshold_tanimoto_search(num_bits, query_storage_size, query_arena,
                                    target_block, target_start, target_end,
-				   threshold, cells)
+                                   threshold, cells)
 */
 static PyObject *
 fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
@@ -637,7 +637,7 @@ fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
 
   if (!PyArg_ParseTuple(args, "iiiit#iit#iidw#:fps_threshold_tanimoto_search",
                         &num_bits,
-			&query_start_padding, &query_end_padding,
+                        &query_start_padding, &query_end_padding,
                         &query_storage_size, &query_arena, &query_arena_size,
                         &query_start, &query_end,
                         &target_block, &target_block_size,
@@ -648,10 +648,10 @@ fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
 
   if (bad_num_bits(num_bits) ||
       bad_padding("query_", query_start_padding, query_end_padding,
-		  &query_arena, &query_arena_size) ||
+                  &query_arena, &query_arena_size) ||
       bad_arena_size("query_", num_bits, query_storage_size) ||
       bad_arena_limits("query ", query_arena_size, query_storage_size,
-		       &query_start, &query_end) ||
+                       &query_start, &query_end) ||
       bad_block_limits(target_block_size, &target_start, &target_end) ||
       bad_threshold(threshold) ||
       bad_fps_cells(&num_cells, cells_size, query_arena_size / query_storage_size)) {
@@ -686,10 +686,10 @@ fps_knearest_search_init(PyObject *self, PyObject *args) {
   int err;
 
   if (!PyArg_ParseTuple(args, "w#iiiit#iiid:fps_knearest_search_init",
-			&knearest_search, &knearest_search_size,
-			&num_bits, &start_padding, &end_padding, &query_storage_size,
-			&query_arena, &query_arena_size, &query_start, &query_end,
-			&k, &threshold))
+                        &knearest_search, &knearest_search_size,
+                        &num_bits, &start_padding, &end_padding, &query_storage_size,
+                        &query_arena, &query_arena_size, &query_start, &query_end,
+                        &k, &threshold))
     return NULL;
 
   if (bad_knearest_search_size(knearest_search_size) ||
@@ -697,7 +697,7 @@ fps_knearest_search_init(PyObject *self, PyObject *args) {
       bad_padding("", start_padding, end_padding, &query_arena, &query_arena_size) ||
       bad_arena_size("query_", num_bits, query_storage_size) ||
       bad_arena_limits("query ", query_arena_size, query_storage_size,
-		       &query_start, &query_end) ||
+                       &query_start, &query_end) ||
       bad_k(k) ||
       bad_threshold(threshold)) {
     return NULL;
@@ -705,9 +705,9 @@ fps_knearest_search_init(PyObject *self, PyObject *args) {
 
   Py_BEGIN_ALLOW_THREADS;
   err = chemfp_fps_knearest_search_init(
-	  knearest_search, num_bits, query_storage_size, 
-	  query_arena, query_start, query_end,
-	  k, threshold);
+          knearest_search, num_bits, query_storage_size, 
+          query_arena, query_start, query_end,
+          k, threshold);
   Py_END_ALLOW_THREADS;
   if (err) {
     PyErr_SetString(PyExc_ValueError, chemfp_strerror(err));
@@ -725,8 +725,8 @@ fps_knearest_tanimoto_search_feed(PyObject *self, PyObject *args) {
   int err;
 
   if (!PyArg_ParseTuple(args, "w#t#ii:fps_knearest_tanimoto_search_feed",
-			&knearest_search, &knearest_search_size,
-			&target_block, &target_block_size, &target_start, &target_end))
+                        &knearest_search, &knearest_search_size,
+                        &target_block, &target_block_size, &target_start, &target_end))
     return NULL;
 
   if (bad_knearest_search_size(knearest_search_size) ||
@@ -745,7 +745,7 @@ fps_knearest_search_finish(PyObject *self, PyObject *args) {
   int knearest_search_size;
   
   if (!PyArg_ParseTuple(args, "w#:fps_knearest_search_finish",
-			&knearest_search, &knearest_search_size))
+                        &knearest_search, &knearest_search_size))
     return NULL;
   if (bad_knearest_search_size(knearest_search_size))
     return NULL;
@@ -764,7 +764,7 @@ fps_knearest_search_free(PyObject *self, PyObject *args) {
   int knearest_search_size;
   
   if (!PyArg_ParseTuple(args, "w#:fps_knearest_search_free",
-			&knearest_search, &knearest_search_size))
+                        &knearest_search, &knearest_search_size))
     return NULL;
   if (bad_knearest_search_size(knearest_search_size))
     return NULL;
@@ -785,7 +785,7 @@ fps_knearest_search_free(PyObject *self, PyObject *args) {
 /* (Though on my Mac it's always 4-byte aligned. */
 static PyObject *
 _alloc_aligned_arena(Py_ssize_t size, int alignment,
-		     int *start_padding, int *end_padding) {
+                     int *start_padding, int *end_padding) {
   PyObject *new_py_string;
   char *s;
   int i;
@@ -810,7 +810,7 @@ _alloc_aligned_arena(Py_ssize_t size, int alignment,
 
 static PyObject *
 _align_arena(PyObject *input_arena_obj, int alignment,
-	     int *start_padding, int *end_padding) {
+             int *start_padding, int *end_padding) {
   const char *input_arena;
   char *output_arena;
   Py_ssize_t input_arena_size;
@@ -833,7 +833,7 @@ _align_arena(PyObject *input_arena_obj, int alignment,
 
   /* Not aligned. We'll have to move it to a new string */
   output_arena_obj = _alloc_aligned_arena(input_arena_size, alignment,
-					  start_padding, end_padding);
+                                          start_padding, end_padding);
   output_arena = PyString_AS_STRING(output_arena_obj);
 
   /* Copy over into the new string */
@@ -849,14 +849,14 @@ make_unsorted_aligned_arena(PyObject *self, PyObject *args) {
   PyObject *input_arena_obj, *output_arena_obj;
 
   if (!PyArg_ParseTuple(args, "Oi:make_unsorted_aligned_arena",
-			&input_arena_obj, &alignment)) {
+                        &input_arena_obj, &alignment)) {
     return NULL;
   }
   if (bad_alignment(alignment)) {
     return NULL;
   }
   output_arena_obj = _align_arena(input_arena_obj, alignment,
-				  &start_padding, &end_padding);
+                                  &start_padding, &end_padding);
   if (!output_arena_obj) {
     return NULL;
   }
@@ -866,7 +866,7 @@ make_unsorted_aligned_arena(PyObject *self, PyObject *args) {
 
 static int
 calculate_arena_popcounts(int num_bits, int storage_size, const unsigned char *arena,
-			  int num_fingerprints, ChemFPOrderedPopcount *ordering) {
+                          int num_fingerprints, ChemFPOrderedPopcount *ordering) {
   chemfp_popcount_f calc_popcount;
   const unsigned char *fp;
   int fp_index, popcount, prev_popcount;
@@ -914,7 +914,7 @@ static int compare_by_popcount(const void *left_p, const void *right_p) {
 
 static void
 set_popcount_indicies(int num_fingerprints, int num_bits,
-		      ChemFPOrderedPopcount *ordering, int *popcount_indices) {
+                      ChemFPOrderedPopcount *ordering, int *popcount_indices) {
   int popcount, i;
 
   /* We've sorted by popcount so this isn't so difficult */
@@ -925,16 +925,16 @@ set_popcount_indicies(int num_fingerprints, int num_bits,
       popcount++;
       popcount_indices[popcount] = i;
       if (popcount == num_bits) {
-	/* We are at or above the limit. We can stop now. */
-	i = num_fingerprints;
-	break;
-	/* Note: with corrupted data it is possible
-	   that ->popcount can be > num_bits. This is
-	   undefined behavior. I get to do what I want.
-	   I decided to treat them as having "max_popcount" bits.
-	   After all, I don't want corrupt data to crash the
-	   system, and no one is going to validate the input
-	   fingerprints for correctness each time.  */
+        /* We are at or above the limit. We can stop now. */
+        i = num_fingerprints;
+        break;
+        /* Note: with corrupted data it is possible
+           that ->popcount can be > num_bits. This is
+           undefined behavior. I get to do what I want.
+           I decided to treat them as having "max_popcount" bits.
+           After all, I don't want corrupt data to crash the
+           system, and no one is going to validate the input
+           fingerprints for correctness each time.  */
       }
     }
   }
@@ -965,13 +965,13 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
                         &num_fingerprints,
                         &ordering, &ordering_size,
                         &popcount_indices, &popcount_indices_size,
-			&alignment
+                        &alignment
                         )) {
     return NULL;
   }
 
   if (PyObject_AsCharBuffer(input_arena_obj,
-			     (const char **) &input_arena, &input_arena_size)) {
+                             (const char **) &input_arena, &input_arena_size)) {
     PyErr_SetString(PyExc_ValueError, "arena must be a character buffer");
     return NULL;
   }
@@ -993,12 +993,12 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
 
 
   need_to_sort = calculate_arena_popcounts(num_bits, storage_size, input_arena,
-					   num_fingerprints, ordering);
+                                           num_fingerprints, ordering);
 
   if (!need_to_sort) {
     /* Everything is ordered. Just need the right alignment .... */
     output_arena_obj = _align_arena(input_arena_obj, alignment,
-				    &start_padding, &end_padding);
+                                    &start_padding, &end_padding);
     if (!output_arena_obj) {
       return NULL;
     }
@@ -1012,7 +1012,7 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
 
   /* Not ordered. Make space for the results. */
   output_arena_obj = _alloc_aligned_arena(input_arena_size, alignment,
-					  &start_padding, &end_padding);
+                                          &start_padding, &end_padding);
   if (!output_arena_obj) {
     return NULL;
   }
@@ -1025,7 +1025,7 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
   /* Build the new arena based on the values in the old arena */
   for (i=0; i<num_fingerprints; i++) {
     memcpy(output_arena+(i*storage_size), input_arena+(ordering[i].index * storage_size),
-	   storage_size);
+           storage_size);
   }
 
   /* Create the popcount indicies */
@@ -1056,10 +1056,10 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "diiiis#iiiiis#iis#w#:count_tanimoto_arena",
                         &threshold,
                         &num_bits,
-			&query_start_padding, &query_end_padding,
+                        &query_start_padding, &query_end_padding,
                         &query_storage_size, &query_arena, &query_arena_size,
                         &query_start, &query_end,
-			&target_start_padding, &target_end_padding,
+                        &target_start_padding, &target_end_padding,
                         &target_storage_size, &target_arena, &target_arena_size,
                         &target_start, &target_end,
                         &target_popcount_indices, &target_popcount_indices_size,
@@ -1069,14 +1069,14 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
   if (bad_threshold(threshold) ||
       bad_num_bits(num_bits) ||
       bad_padding("query ", query_start_padding, query_end_padding,
-		  &query_arena, &query_arena_size) ||
+                  &query_arena, &query_arena_size) ||
       bad_padding("target ", target_start_padding, target_end_padding,
-		  &target_arena, &target_arena_size) ||
+                  &target_arena, &target_arena_size) ||
       bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
       bad_arena_limits("query ", query_arena_size, query_storage_size,
-		       &query_start, &query_end) ||
+                       &query_start, &query_end) ||
       bad_arena_limits("target ", target_arena_size, target_storage_size,
-		       &target_start, &target_end) ||
+                       &target_start, &target_end) ||
       bad_popcount_indices("target ", 1, num_bits, 
                             target_popcount_indices_size, &target_popcount_indices)) {
     return NULL;
@@ -1128,10 +1128,10 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "diiiit#iiiiit#iit#w#iw#w#:threshold_tanimoto_arena",
                         &threshold,
                         &num_bits,
-			&query_start_padding, &query_end_padding,
+                        &query_start_padding, &query_end_padding,
                         &query_storage_size, &query_arena, &query_arena_size,
                         &query_start, &query_end,
-			&target_start_padding, &target_end_padding,
+                        &target_start_padding, &target_end_padding,
                         &target_storage_size, &target_arena, &target_arena_size,
                         &target_start, &target_end,
                         &target_popcount_indices, &target_popcount_indices_size,
@@ -1145,13 +1145,13 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
       bad_num_bits(num_bits) ||
       bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
       bad_padding("query ", query_start_padding, query_end_padding, 
-		  &query_arena, &query_arena_size) ||
+                  &query_arena, &query_arena_size) ||
       bad_padding("target ", target_start_padding, target_end_padding, 
-		  &target_arena, &target_arena_size) ||
+                  &target_arena, &target_arena_size) ||
       bad_arena_limits("query ", query_arena_size, query_storage_size,
-		       &query_start, &query_end) ||
+                       &query_start, &query_end) ||
       bad_arena_limits("target ", target_arena_size, target_storage_size,
-		       &target_start, &target_end) ||
+                       &target_start, &target_end) ||
       bad_popcount_indices("target ", 1, num_bits,
                             target_popcount_indices_size, &target_popcount_indices)) {
     return NULL;
@@ -1202,10 +1202,10 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "idiiiit#iiiiit#iit#w#iw#w#:knearest_tanimoto_arena",
                         &k, &threshold,
                         &num_bits,
-			&query_start_padding, &query_end_padding,
+                        &query_start_padding, &query_end_padding,
                         &query_storage_size, &query_arena, &query_arena_size,
                         &query_start, &query_end,
-			&target_start_padding, &target_end_padding,
+                        &target_start_padding, &target_end_padding,
                         &target_storage_size, &target_arena, &target_arena_size,
                         &target_start, &target_end,
                         &target_popcount_indices, &target_popcount_indices_size,
@@ -1219,14 +1219,14 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
       bad_threshold(threshold) ||
       bad_num_bits(num_bits) ||
       bad_padding("query ", query_start_padding, query_end_padding,
-		  &query_arena, &query_arena_size) ||
+                  &query_arena, &query_arena_size) ||
       bad_padding("target ", target_start_padding, target_end_padding,
-		  &target_arena, &target_arena_size) ||
+                  &target_arena, &target_arena_size) ||
       bad_fingerprint_sizes(num_bits, query_storage_size, target_storage_size) ||
       bad_arena_limits("query ", query_arena_size, query_storage_size,
-		       &query_start, &query_end) ||
+                       &query_start, &query_end) ||
       bad_arena_limits("target ", target_arena_size, target_storage_size,
-		       &target_start, &target_end) ||
+                       &target_start, &target_end) ||
       bad_popcount_indices("target ", 1, num_bits,
                             target_popcount_indices_size, &target_popcount_indices)) {
     return NULL;

@@ -88,7 +88,7 @@ detect_methods(void) {
   /* Go through all of the compile-time methods and see if it's available */
   for (i=0; i<sizeof(compile_time_methods)/sizeof(chemfp_method_type); i++) {
     if ((compile_time_methods[i].check == NULL) ||
-	(compile_time_methods[i].check())) {
+        (compile_time_methods[i].check())) {
 
       /* Add it to the list of detected methods, and tell it its index position */
       compile_time_methods[i].detected_index = j;
@@ -222,10 +222,10 @@ set_default_alignment_methods(void) {
       first_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
       ssse3_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
       if (first_time < ssse3_time) {
-	ssse3_time = first_time;
+        ssse3_time = first_time;
       }
       if (ssse3_time < best64_time) {
-	ssse3_method = CHEMFP_SSSE3;
+        ssse3_method = CHEMFP_SSSE3;
       }
     }
 #endif
@@ -287,7 +287,7 @@ chemfp_set_alignment_method(int alignment, int method) {
 
 chemfp_popcount_f
 chemfp_select_popcount(int num_bits,
-		       int storage_len, const unsigned char *arena) {
+                       int storage_len, const unsigned char *arena) {
 
   int num_bytes = (num_bits+7)/8;
 
@@ -323,8 +323,8 @@ chemfp_select_popcount(int num_bits,
 
 chemfp_intersect_popcount_f
 chemfp_select_intersect_popcount(int num_bits,
-				 int storage_len1, const unsigned char *arena1,
-				 int storage_len2, const unsigned char *arena2) {
+                                 int storage_len1, const unsigned char *arena1,
+                                 int storage_len2, const unsigned char *arena2) {
 
   int storage_len = (storage_len1 < storage_len2) ? storage_len1 : storage_len2;
   int num_bytes = (num_bits+7)/8;
@@ -352,10 +352,10 @@ chemfp_select_intersect_popcount(int num_bits,
 
       /* I'll try, but only if I have 64 byte alignment */
       if (ALIGNMENT(arena1, 64) == 0 &&
-	  ALIGNMENT(arena2, 64) == 0 &&
-	  storage_len1 % 64 == 0 &&
-	  storage_len2 % 64 == 0) {
-	return _chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p->intersect_popcount;
+          ALIGNMENT(arena2, 64) == 0 &&
+          storage_len1 % 64 == 0 &&
+          storage_len2 % 64 == 0) {
+        return _chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p->intersect_popcount;
       }
     }
 

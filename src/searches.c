@@ -51,7 +51,7 @@ typedef struct {
 } PopcountSearchOrder;
 
 static void init_search_order(PopcountSearchOrder *popcount_order, int query_popcount,
-			      int max_popcount) {
+                              int max_popcount) {
   popcount_order->query_popcount = query_popcount;
   popcount_order->popcount = query_popcount;
   popcount_order->max_popcount = max_popcount;
@@ -105,13 +105,13 @@ static int next_popcount(PopcountSearchOrder *popcount_order, double threshold) 
       popcount_order->popcount = (popcount_order->up_popcount)++;
       popcount_order->score = up_score;
       if (popcount_order->up_popcount > popcount_order->max_popcount) {
-	popcount_order->direction = DOWN_ONLY;
+        popcount_order->direction = DOWN_ONLY;
       }
     } else {
       popcount_order->popcount = (popcount_order->down_popcount)--;
       popcount_order->score = down_score;
       if (popcount_order->down_popcount < 0) {
-	popcount_order->direction = UP_ONLY;
+        popcount_order->direction = UP_ONLY;
       }
     }
     break;
@@ -147,7 +147,7 @@ static int next_popcount(PopcountSearchOrder *popcount_order, double threshold) 
 
 static int 
 check_bounds(PopcountSearchOrder *popcount_order,
-	     int *start, int *end, int target_start, int target_end) {
+             int *start, int *end, int target_start, int target_end) {
   if (*start > target_end) {
     ordering_no_higher(popcount_order);
     return 0;
@@ -170,26 +170,26 @@ check_bounds(PopcountSearchOrder *popcount_order,
 
 /* count code */
 int chemfp_count_tanimoto_arena(
-	/* Count all matches within the given threshold */
-	double threshold,
+        /* Count all matches within the given threshold */
+        double threshold,
 
-	/* Number of bits in the fingerprint */
-	int num_bits,
+        /* Number of bits in the fingerprint */
+        int num_bits,
 
-	/* Query arena, start and end indices */
-	int query_storage_size,
-	const unsigned char *query_arena, int query_start, int query_end,
+        /* Query arena, start and end indices */
+        int query_storage_size,
+        const unsigned char *query_arena, int query_start, int query_end,
 
-	/* Target arena, start and end indices */
-	int target_storage_size,
-	const unsigned char *target_arena, int target_start, int target_end,
+        /* Target arena, start and end indices */
+        int target_storage_size,
+        const unsigned char *target_arena, int target_start, int target_end,
 
-	/* Target popcount distribution information */
-	int *target_popcount_indices,
+        /* Target popcount distribution information */
+        int *target_popcount_indices,
 
-	/* Results go into these arrays  */
-	int *result_counts
-				   ) {
+        /* Results go into these arrays  */
+        int *result_counts
+                                   ) {
 
   int query_index, target_index;
   const unsigned char *query_fp, *target_fp;
@@ -234,28 +234,28 @@ int chemfp_count_tanimoto_arena(
     /* This is a slower algorithm because it tests everything. */
     query_fp = query_arena + (query_start * query_storage_size);
     for (query_index = query_start; query_index < query_end;
-	 query_index++, query_fp += query_storage_size) {
+         query_index++, query_fp += query_storage_size) {
       target_fp = target_arena + (target_start * target_storage_size);
       /* Handle the popcount(query) == 0 special case? */
       count = 0;
 
       for (target_index = target_start; target_index < target_end;
-	   target_index++, target_fp += target_storage_size) {
-	score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
-	if (score >= threshold) {
-	  count++;
-	}
+           target_index++, target_fp += target_storage_size) {
+        score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
+        if (score >= threshold) {
+          count++;
+        }
       }
       *result_counts++ = count;
     }
     return query_index-query_start;
   }
-						   
+                                                   
   /* Choose popcounts optimized for this case */
   calc_popcount = chemfp_select_popcount(num_bits, query_storage_size, query_arena);
   calc_intersect_popcount = chemfp_select_intersect_popcount(
-		num_bits, query_storage_size, query_arena,
-		target_storage_size, target_arena);
+                num_bits, query_storage_size, query_arena,
+                target_storage_size, target_arena);
 
   /* This uses the limits from Swamidass and Baldi */
   /* It doesn't use the ordering because it's supposed to find everything */
@@ -268,9 +268,9 @@ int chemfp_count_tanimoto_arena(
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
     if (query_popcount == 0) {
       if (threshold == 0.0) {
-	*result_counts++ = (target_end - target_start);
+        *result_counts++ = (target_end - target_start);
       } else {
-	result_counts++;
+        result_counts++;
       }
       continue;
     }
@@ -282,32 +282,32 @@ int chemfp_count_tanimoto_arena(
       start_target_popcount = query_popcount * threshold;
       end_target_popcount = ceil(query_popcount / threshold);
       if (end_target_popcount > num_bits) {
-	end_target_popcount = num_bits;
+        end_target_popcount = num_bits;
       }
     }
     count = 0;
     #pragma omp parallel for private(start, end, target_fp, popcount_sum, target_index, intersect_popcount, score) schedule(dynamic)
     for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
-	 target_popcount++) {
+         target_popcount++) {
       start = target_popcount_indices[target_popcount];
       end = target_popcount_indices[target_popcount+1];
       if (start < target_start) {
-	start = target_start;
+        start = target_start;
       }
       if (end > target_end) {
-	end = target_end;
+        end = target_end;
       }
 
       target_fp = target_arena + (start * target_storage_size);
       popcount_sum = query_popcount + target_popcount;
       for (target_index = start; target_index < end;
-	   target_index++, target_fp += target_storage_size) {
-	intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
-	score = intersect_popcount / (popcount_sum - intersect_popcount);
-	if (score >= threshold) {
+           target_index++, target_fp += target_storage_size) {
+        intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
+        score = intersect_popcount / (popcount_sum - intersect_popcount);
+        if (score >= threshold) {
           #pragma omp atomic
-	  count++;
-	}
+          count++;
+        }
       }
     }
     *result_counts++ = count;
@@ -317,30 +317,30 @@ int chemfp_count_tanimoto_arena(
 
 
 int chemfp_threshold_tanimoto_arena(
-	/* Within the given threshold */
-	double threshold,
+        /* Within the given threshold */
+        double threshold,
 
-	/* Number of bits in the fingerprint */
-	int num_bits,
+        /* Number of bits in the fingerprint */
+        int num_bits,
 
-	/* Query arena, start and end indices */
-	int query_storage_size, const unsigned char *query_arena,
-	int query_start, int query_end,
+        /* Query arena, start and end indices */
+        int query_storage_size, const unsigned char *query_arena,
+        int query_start, int query_end,
 
-	/* Target arena, start and end indices */
-	int target_storage_size, const unsigned char *target_arena,
-	int target_start, int target_end,
+        /* Target arena, start and end indices */
+        int target_storage_size, const unsigned char *target_arena,
+        int target_start, int target_end,
 
-	/* Target popcount distribution information */
-	/*  (must have at least num_bits+1 elements) */
-	int *target_popcount_indices,
+        /* Target popcount distribution information */
+        /*  (must have at least num_bits+1 elements) */
+        int *target_popcount_indices,
 
-	/* Results go into these arrays  */
-	int *result_offsets,
-	int num_cells,
-	int *result_indices,
-	double *result_scores
-				    ) {
+        /* Results go into these arrays  */
+        int *result_offsets,
+        int num_cells,
+        int *result_indices,
+        double *result_scores
+                                    ) {
 
   int query_index, target_index;
   const unsigned char *query_fp, *target_fp;
@@ -378,18 +378,18 @@ int chemfp_threshold_tanimoto_arena(
     /* This is a slower algorithm because it tests everything. */
     query_fp = query_arena + (query_start * query_storage_size);
     for (query_index = query_start; query_index < query_end;
-	 query_index++, query_fp += query_storage_size) {
+         query_index++, query_fp += query_storage_size) {
       target_fp = target_arena + (target_start * target_storage_size);
       /* Handle the popcount(query) == 0 special case? */
       count = 0;
       for (target_index = target_start; target_index < target_end;
-	   target_index++, target_fp += target_storage_size) {
-	score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
-	if (score >= threshold) {
-	  *result_indices++ = target_index;
-	  *result_scores++ = score;
-	  count++;
-	}
+           target_index++, target_fp += target_storage_size) {
+        score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
+        if (score >= threshold) {
+          *result_indices++ = target_index;
+          *result_scores++ = score;
+          count++;
+        }
       }
       result_offset += count;
       num_cells -= count;
@@ -401,8 +401,8 @@ int chemfp_threshold_tanimoto_arena(
 
   calc_popcount = chemfp_select_popcount(num_bits, query_storage_size, query_arena);
   calc_intersect_popcount = chemfp_select_intersect_popcount(
-		num_bits, query_storage_size, query_arena,
-		target_storage_size, target_arena);
+                num_bits, query_storage_size, query_arena,
+                target_storage_size, target_arena);
   
 
   /* This uses the limits from Swamidass and Baldi */
@@ -420,13 +420,13 @@ int chemfp_threshold_tanimoto_arena(
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
     if (query_popcount == 0) {
       if (threshold == 0.0) {
-	for (target_index = target_start; target_index < target_end; target_index++) {
-	  *result_indices++ = target_index;
-	  *result_scores++ = 0.0;
-	}
-	count = (target_index - target_start);
+        for (target_index = target_start; target_index < target_end; target_index++) {
+          *result_indices++ = target_index;
+          *result_scores++ = 0.0;
+        }
+        count = (target_index - target_start);
       } else {
-	count = 0;
+        count = 0;
       }
       result_offset += count;
       num_cells -= count;
@@ -441,33 +441,33 @@ int chemfp_threshold_tanimoto_arena(
       start_target_popcount = query_popcount * threshold;
       end_target_popcount = ceil(query_popcount / threshold);
       if (end_target_popcount > num_bits) {
-	end_target_popcount = num_bits;
+        end_target_popcount = num_bits;
       }
     }
 
     count = 0;
     for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
-	 target_popcount++) {
+         target_popcount++) {
       start = target_popcount_indices[target_popcount];
       end = target_popcount_indices[target_popcount+1];
       if (start < target_start) {
-	start = target_start;
+        start = target_start;
       }
       if (end > target_end) {
-	end = target_end;
+        end = target_end;
       }
 
       target_fp = target_arena + (start * target_storage_size);
       popcount_sum = query_popcount + target_popcount;
       for (target_index = start; target_index < end;
-	   target_index++, target_fp += target_storage_size) {
-	intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
-	score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
-	if (score >= threshold) {
-	  *result_indices++ = target_index;
-	  *result_scores++ = score;
-	  count++;
-	}
+           target_index++, target_fp += target_storage_size) {
+        intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
+        score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
+        if (score >= threshold) {
+          *result_indices++ = target_index;
+          *result_scores++ = score;
+          count++;
+        }
       }
     }
     result_offset += count;
@@ -485,28 +485,28 @@ int chemfp_threshold_tanimoto_arena(
 
 static int 
 knearest_tanimoto_arena_no_popcounts(
-	/* Find the 'k' nearest items */
-	int k,
-	/* Within the given threshold */
-	double threshold,
+        /* Find the 'k' nearest items */
+        int k,
+        /* Within the given threshold */
+        double threshold,
 
-	/* Fingerprint size in bits */
-	int num_bits,
+        /* Fingerprint size in bits */
+        int num_bits,
 
-	/* Query arena, start and end indices */
-	int query_storage_size, const unsigned char *query_arena,
-	int query_start, int query_end,
+        /* Query arena, start and end indices */
+        int query_storage_size, const unsigned char *query_arena,
+        int query_start, int query_end,
 
-	/* Target arena, start and end indices */
-	int target_storage_size, const unsigned char *target_arena,
-	int target_start, int target_end,
+        /* Target arena, start and end indices */
+        int target_storage_size, const unsigned char *target_arena,
+        int target_start, int target_end,
 
-	/* Results go into these arrays  */
-	int *result_offsets,
-	int num_cells,
-	int *result_indices,
-	double *result_scores
-				   ) {
+        /* Results go into these arrays  */
+        int *result_offsets,
+        int num_cells,
+        int *result_indices,
+        double *result_scores
+                                   ) {
   int query_index, target_index;
   int fp_size = (num_bits+7)/8;
   const unsigned char *query_fp, *target_fp;
@@ -533,49 +533,49 @@ knearest_tanimoto_arena_no_popcounts(
     target_index = target_start;
 
     for (; target_index < target_end;
-	 target_index++, target_fp += target_storage_size) {
+         target_index++, target_fp += target_storage_size) {
       score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
       if (score >= query_threshold) {
-	heap.indices[heap_size] = target_index;
-	heap.scores[heap_size] = score;
-	heap_size++;
-	if (heap_size == k) {
-	  chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
-			       (chemfp_heapq_swap) double_score_swap);
-	  query_threshold = heap.scores[0];
-	  /* Since we leave the loop early, I need to advance the pointers */
-	  target_index++;
-	  target_fp += target_storage_size;
-	  break;
-	}
+        heap.indices[heap_size] = target_index;
+        heap.scores[heap_size] = score;
+        heap_size++;
+        if (heap_size == k) {
+          chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
+                               (chemfp_heapq_swap) double_score_swap);
+          query_threshold = heap.scores[0];
+          /* Since we leave the loop early, I need to advance the pointers */
+          target_index++;
+          target_fp += target_storage_size;
+          break;
+        }
       }
     }
     /* Either we've reached the end of the fingerprints or the heap is full */
     if (heap_size == k) {
       /* Continue scanning through the fingerprints */
       for (; target_index < target_end;
-	   target_index++, target_fp += target_storage_size) {
-	score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
+           target_index++, target_fp += target_storage_size) {
+        score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
 
-	/* We need to be strictly *better* than what's in the heap */
-	if (score > query_threshold) {
-	  heap.indices[0] = target_index;
-	  heap.scores[0] = score;
-	  chemfp_heapq_siftup(heap_size, &heap, 0, (chemfp_heapq_lt) double_score_lt,
-			      (chemfp_heapq_swap) double_score_swap);
-	  query_threshold = heap.scores[0];
-	} /* heapreplaced the old smallest item with the new item */
+        /* We need to be strictly *better* than what's in the heap */
+        if (score > query_threshold) {
+          heap.indices[0] = target_index;
+          heap.scores[0] = score;
+          chemfp_heapq_siftup(heap_size, &heap, 0, (chemfp_heapq_lt) double_score_lt,
+                              (chemfp_heapq_swap) double_score_swap);
+          query_threshold = heap.scores[0];
+        } /* heapreplaced the old smallest item with the new item */
       }
       /* End of the fingerprint scan */
     } else {
       /* The heap isn't full, so we haven't yet heapified it. */
       chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
-			   (chemfp_heapq_swap) double_score_swap);
+                           (chemfp_heapq_swap) double_score_swap);
     }
 
     /* Sort the elements */
     chemfp_heapq_heapsort(heap_size, &heap, (chemfp_heapq_lt) double_score_lt,
-			  (chemfp_heapq_swap) double_score_swap);
+                          (chemfp_heapq_swap) double_score_swap);
     
     /* Pass back the query results */
     result_offset += heap_size;
@@ -595,31 +595,31 @@ knearest_tanimoto_arena_no_popcounts(
 
 
 int chemfp_knearest_tanimoto_arena(
-	/* Find the 'k' nearest items */
-	int k,
-	/* Within the given threshold */
-	double threshold,
+        /* Find the 'k' nearest items */
+        int k,
+        /* Within the given threshold */
+        double threshold,
 
-	/* Size of the fingerprints and size of the storage block */
-	int num_bits,
+        /* Size of the fingerprints and size of the storage block */
+        int num_bits,
 
-	/* Query arena, start and end indices */
-	int query_storage_size, const unsigned char *query_arena,
-	int query_start, int query_end,
+        /* Query arena, start and end indices */
+        int query_storage_size, const unsigned char *query_arena,
+        int query_start, int query_end,
 
-	/* Target arena, start and end indices */
-	int target_storage_size, const unsigned char *target_arena,
-	int target_start, int target_end,
+        /* Target arena, start and end indices */
+        int target_storage_size, const unsigned char *target_arena,
+        int target_start, int target_end,
 
-	/* Target popcount distribution information */
-	int *target_popcount_indices,
+        /* Target popcount distribution information */
+        int *target_popcount_indices,
 
-	/* Results go into these arrays  */
-	int *result_offsets,
-	int num_cells,
-	int *result_indices,
-	double *result_scores
-				   ) {
+        /* Results go into these arrays  */
+        int *result_offsets,
+        int num_cells,
+        int *result_indices,
+        double *result_scores
+                                   ) {
 
   int heap_size, fp_size;
   int query_popcount, target_popcount, intersect_popcount;
@@ -653,17 +653,17 @@ int chemfp_knearest_tanimoto_arena(
   if (target_popcount_indices == NULL) {
     /* precomputed targets aren't available. Use the slower algorithm. */
     return knearest_tanimoto_arena_no_popcounts(
-	k, threshold, num_bits,
-	query_storage_size, query_arena, query_start, query_end,
-	target_storage_size, target_arena, target_start, target_end,
-	result_offsets, num_cells, result_indices, result_scores);
+        k, threshold, num_bits,
+        query_storage_size, query_arena, query_start, query_end,
+        target_storage_size, target_arena, target_start, target_end,
+        result_offsets, num_cells, result_indices, result_scores);
   }
 
   /* Choose popcounts optimized for this case */
   calc_popcount = chemfp_select_popcount(num_bits, query_storage_size, query_arena);
   calc_intersect_popcount = chemfp_select_intersect_popcount(
-		num_bits, query_storage_size, query_arena,
-		target_storage_size, target_arena);
+                num_bits, query_storage_size, query_arena,
+                target_storage_size, target_arena);
 
   result_offset = *result_offsets++;
 
@@ -701,7 +701,7 @@ int chemfp_knearest_tanimoto_arena(
 
       /* If we can't beat the query threshold then we're done with the targets */
       if (best_possible_score < query_threshold) {
-	break;
+        break;
       }
 
       /* Scan through the targets which have the given popcount */
@@ -709,7 +709,7 @@ int chemfp_knearest_tanimoto_arena(
       end = target_popcount_indices[target_popcount+1];
       
       if (!check_bounds(&popcount_order, &start, &end, target_start, target_end)) {
-	continue;
+        continue;
       }
 
       /* Iterate over the target fingerprints */
@@ -720,30 +720,30 @@ int chemfp_knearest_tanimoto_arena(
 
       /* There are fewer than 'k' elements in the heap*/
       if (heap_size < k) {
-	for (; target_index<end; target_index++, target_fp += target_storage_size) {
-	  intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
-	  score = intersect_popcount / (popcount_sum - intersect_popcount);
+        for (; target_index<end; target_index++, target_fp += target_storage_size) {
+          intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
+          score = intersect_popcount / (popcount_sum - intersect_popcount);
 
-	  /* The heap isn't full; only check if we're at or above the query threshold */
-	  if (score >= query_threshold) {
-	    heap.indices[heap_size] = target_index;
-	    heap.scores[heap_size] = score;
-	    heap_size++;
-	    if (heap_size == k) {
-	      chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
-				   (chemfp_heapq_swap) double_score_swap);
-	      query_threshold = heap.scores[0];
-	      /* We're going to jump to the "heap is full" section */
-	      /* Since we leave the loop early, I need to advance the pointers */
-	      target_index++;
-	      target_fp += target_storage_size;
-	      goto heap_replace;
-	    }
-	  } /* Added to heap */
-	} /* Went through target fingerprints */
+          /* The heap isn't full; only check if we're at or above the query threshold */
+          if (score >= query_threshold) {
+            heap.indices[heap_size] = target_index;
+            heap.scores[heap_size] = score;
+            heap_size++;
+            if (heap_size == k) {
+              chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
+                                   (chemfp_heapq_swap) double_score_swap);
+              query_threshold = heap.scores[0];
+              /* We're going to jump to the "heap is full" section */
+              /* Since we leave the loop early, I need to advance the pointers */
+              target_index++;
+              target_fp += target_storage_size;
+              goto heap_replace;
+            }
+          } /* Added to heap */
+        } /* Went through target fingerprints */
 
-	/* If we're here then the heap did not fill up. Try the next popcount */
-	continue;
+        /* If we're here then the heap did not fill up. Try the next popcount */
+        continue;
       }
 
     heap_replace:
@@ -752,27 +752,27 @@ int chemfp_knearest_tanimoto_arena(
       /* Earlier we tested for "best_possible_score<query_threshold". */
       /* The test to replace an element in the heap is more stringent. */
       if (query_threshold >= best_possible_score) {
-	/* Can't do better. Might as well give up. */
-	break;
+        /* Can't do better. Might as well give up. */
+        break;
       }
 
       /* Scan through the target fingerprints; can we improve over the threshold? */
       for (; target_index<end; target_index++, target_fp += target_storage_size) {
-	intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
-	score = intersect_popcount / (popcount_sum - intersect_popcount);
+        intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
+        score = intersect_popcount / (popcount_sum - intersect_popcount);
 
-	/* We need to be strictly *better* than what's in the heap */
-	if (score > query_threshold) {
-	  heap.indices[0] = target_index;
-	  heap.scores[0] = score;
-	  chemfp_heapq_siftup(heap_size, &heap, 0, (chemfp_heapq_lt) double_score_lt,
-			      (chemfp_heapq_swap) double_score_swap);
-	  query_threshold = heap.scores[0];
-	  if (query_threshold >= best_possible_score) {
-	    /* we can't do any better in this section (or in later ones) */
-	    break;
-	  }
-	} /* heapreplaced the old smallest item with the new item */
+        /* We need to be strictly *better* than what's in the heap */
+        if (score > query_threshold) {
+          heap.indices[0] = target_index;
+          heap.scores[0] = score;
+          chemfp_heapq_siftup(heap_size, &heap, 0, (chemfp_heapq_lt) double_score_lt,
+                              (chemfp_heapq_swap) double_score_swap);
+          query_threshold = heap.scores[0];
+          if (query_threshold >= best_possible_score) {
+            /* we can't do any better in this section (or in later ones) */
+            break;
+          }
+        } /* heapreplaced the old smallest item with the new item */
       } /* looped over fingerprints */
     } /* Went through all the popcount regions */
 
@@ -781,11 +781,11 @@ int chemfp_knearest_tanimoto_arena(
     if (heap_size < k) {
       /* Not full, so need to heapify it. */
       chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
-			   (chemfp_heapq_swap) double_score_swap);
+                           (chemfp_heapq_swap) double_score_swap);
     }
     /* Sort the elements */
     chemfp_heapq_heapsort(heap_size, &heap, (chemfp_heapq_lt) double_score_lt,
-			  (chemfp_heapq_swap) double_score_swap);
+                          (chemfp_heapq_swap) double_score_swap);
     
     /* Pass back the query results */
     result_offset += heap_size;

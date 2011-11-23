@@ -179,7 +179,7 @@ double chemfp_hex_tanimoto(int len, const char *sfp1, const char *sfp2) {
     return -1.0;
   }
   /* Special case define that 0/0 = 0.0. It's hard to decide what to 
-	 use here, for example, OpenEye uses 1.0. It seems that 0.0
+         use here, for example, OpenEye uses 1.0. It seems that 0.0
      is the least surprising choice. */
   if (union_popcount == 0) {
     return 0.0;
@@ -282,8 +282,8 @@ int chemfp_byte_contains(int len, const unsigned char *query_fp,
 /* Return the Tanimoto between a byte fingerprint and a hex fingerprint */
 /* The size is the number of bytes in the byte_fp */
 double chemfp_byte_hex_tanimoto(int size,
-				const unsigned char *byte_fp,
-				const char *shex_fp) {
+                                const unsigned char *byte_fp,
+                                const char *shex_fp) {
   const unsigned char *hex_fp = (unsigned char *) shex_fp;
   int union_w=0;
   int union_popcount=0, intersect_popcount=0;
@@ -307,7 +307,7 @@ double chemfp_byte_hex_tanimoto(int size,
     return -1.0;
   }
   /* Special case define that 0/0 = 0.0. It's hard to decide what to 
-	 use here, for example, OpenEye uses 1.0. It seems that 0.0
+         use here, for example, OpenEye uses 1.0. It seems that 0.0
      is the least surprising choice. */
   if (union_popcount == 0) {
     return 0.0;

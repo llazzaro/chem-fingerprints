@@ -76,12 +76,12 @@ int chemfp_fps_line_validate(int hex_size, int line_size, const char *line_start
 /* Return the number of fingerprints in the fps block which are greater
    than or equal to the specified threshold. */
 int chemfp_fps_count_tanimoto_hits(
-	int num_bits,
-	int query_storage_size,
-	const unsigned char *query_arena, int query_start, int query_end,
-	const char *target_block, int target_block_end,
+        int num_bits,
+        int query_storage_size,
+        const unsigned char *query_arena, int query_start, int query_end,
+        const char *target_block, int target_block_end,
         double threshold,
-	int *counts, int *num_lines_processed) {
+        int *counts, int *num_lines_processed) {
   const unsigned char *query_fp;
   const char *line, *next_line, *end;
   int fp_size = (num_bits+7)/8;
@@ -106,10 +106,10 @@ int chemfp_fps_count_tanimoto_hits(
 
     query_fp = query_arena + query_start * query_storage_size;
     for (query_index=query_start; query_index<query_end;
-	 query_index++, query_fp += query_storage_size) {
+         query_index++, query_fp += query_storage_size) {
       score = chemfp_byte_hex_tanimoto(fp_size, query_fp, line);
       if (score >= threshold)
-	counts[query_index]++;
+        counts[query_index]++;
     }
     num_lines++;
     line = next_line;
@@ -123,13 +123,13 @@ int chemfp_fps_count_tanimoto_hits(
 /****** Linear Tanimoto search with threshold and unlimited number of hits ********/
 
 int chemfp_fps_threshold_tanimoto_search(
-	int num_bits,
-	int query_storage_size,
-	const unsigned char *query_arena, int query_start, int query_end,
-	const char *target_block, int target_block_end,
+        int num_bits,
+        int query_storage_size,
+        const unsigned char *query_arena, int query_start, int query_end,
+        const char *target_block, int target_block_end,
         double threshold,
-	int num_cells, chemfp_tanimoto_cell *cells,
-	const char ** stopped_at, int *num_lines_processed, int *num_cells_processed) {
+        int num_cells, chemfp_tanimoto_cell *cells,
+        const char ** stopped_at, int *num_lines_processed, int *num_cells_processed) {
   const char *line = target_block;
   const char *next_line;
   const char *end = target_block+target_block_end;
@@ -168,15 +168,15 @@ int chemfp_fps_threshold_tanimoto_search(
 
     query_fp = query_arena + query_start * query_storage_size;
     for (query_index=query_start; query_index<query_end;
-	 query_index++, query_fp += query_storage_size) {
+         query_index++, query_fp += query_storage_size) {
       score = chemfp_byte_hex_tanimoto(fp_size, query_fp, line);
       if (score >= threshold) {
-	current_cell->score = score;
-	current_cell->query_index = query_index;
-	current_cell->id_start = id_start - target_block;
-	current_cell->id_end = id_end - target_block;
-	current_cell++;
-	num_cells--;
+        current_cell->score = score;
+        current_cell->query_index = query_index;
+        current_cell->id_start = id_start - target_block;
+        current_cell->id_end = id_end - target_block;
+        current_cell++;
+        num_cells--;
       }
     }
     line = next_line;
@@ -224,8 +224,8 @@ static void fps_heap_swap(chemfp_fps_heap *heap, int i, int j) {
 
 int chemfp_fps_knearest_search_init(
         chemfp_fps_knearest_search *knearest_search,
-	int num_bits, int query_storage_size,
-	const unsigned char *query_arena, int query_start, int query_end,
+        int num_bits, int query_storage_size,
+        const unsigned char *query_arena, int query_start, int query_end,
         int k, double threshold) {
 
   chemfp_fps_heap *heaps = NULL;
@@ -301,8 +301,8 @@ static char *new_string(const char *start, const char *end) {
 
 
 int chemfp_fps_knearest_tanimoto_search_feed(
-	chemfp_fps_knearest_search *knearest_search,
-	int target_block_len, const char *target_block) {
+        chemfp_fps_knearest_search *knearest_search,
+        int target_block_len, const char *target_block) {
   int k;
   double score, threshold;
   int num_added = 0;
@@ -337,47 +337,47 @@ int chemfp_fps_knearest_tanimoto_search_feed(
     for (i=0; i<knearest_search->num_queries; i++, query_fp += query_storage_size, heap++) {
       switch(heap->heap_state) {
       case ADD_TO_HEAP:
-	score = chemfp_byte_hex_tanimoto(query_fp_size, query_fp, line);
-	if (score >= threshold) {
-	  heap->scores[heap->size] = score;
-	  s = new_string(id_start, id_end);
-	  if (!s) {
-	    retval = CHEMFP_NO_MEM;
-	    goto finish;
-	  }
-	  heap->ids[heap->size] = s;
-	  heap->size++;
-	}
-	if (heap->size == k) {
-	  chemfp_heapq_heapify(k, (void *)heap, (chemfp_heapq_lt) fps_heap_lt,
-			       (chemfp_heapq_swap) fps_heap_swap);
-	  heap->heap_state = REPLACE_IN_HEAP;
-	}
-	break;
+        score = chemfp_byte_hex_tanimoto(query_fp_size, query_fp, line);
+        if (score >= threshold) {
+          heap->scores[heap->size] = score;
+          s = new_string(id_start, id_end);
+          if (!s) {
+            retval = CHEMFP_NO_MEM;
+            goto finish;
+          }
+          heap->ids[heap->size] = s;
+          heap->size++;
+        }
+        if (heap->size == k) {
+          chemfp_heapq_heapify(k, (void *)heap, (chemfp_heapq_lt) fps_heap_lt,
+                               (chemfp_heapq_swap) fps_heap_swap);
+          heap->heap_state = REPLACE_IN_HEAP;
+        }
+        break;
 
       case REPLACE_IN_HEAP:
-	score = chemfp_byte_hex_tanimoto(query_fp_size, query_fp, line);
-	if (score > heap->scores[0]) {
-	  heap->scores[0] = score;
-	  free(heap->ids[0]);
-	  s = new_string(id_start, id_end);
-	  if (!s) {
-	    retval = CHEMFP_NO_MEM;
-	    goto finish;
-	  }
-	  heap->ids[0] = s;
-	  chemfp_heapq_siftup(k, (void *) heap, 0,
-			      (chemfp_heapq_lt) fps_heap_lt,
-			      (chemfp_heapq_swap) fps_heap_swap);
-	  if (heap->scores[0] == 1.0) {
-	    heap->heap_state = MAXED_OUT_HEAP;
-	  }
-	}
-	break;
+        score = chemfp_byte_hex_tanimoto(query_fp_size, query_fp, line);
+        if (score > heap->scores[0]) {
+          heap->scores[0] = score;
+          free(heap->ids[0]);
+          s = new_string(id_start, id_end);
+          if (!s) {
+            retval = CHEMFP_NO_MEM;
+            goto finish;
+          }
+          heap->ids[0] = s;
+          chemfp_heapq_siftup(k, (void *) heap, 0,
+                              (chemfp_heapq_lt) fps_heap_lt,
+                              (chemfp_heapq_swap) fps_heap_swap);
+          if (heap->scores[0] == 1.0) {
+            heap->heap_state = MAXED_OUT_HEAP;
+          }
+        }
+        break;
       case MAXED_OUT_HEAP:
-	continue;
+        continue;
       default:
-	return -1; /* Not possible */
+        return -1; /* Not possible */
       }
     }
     line = next_line;
@@ -409,6 +409,6 @@ void chemfp_fps_knearest_search_finish(chemfp_fps_knearest_search *knearest_sear
                          (chemfp_heapq_lt) fps_heap_lt, (chemfp_heapq_swap) fps_heap_swap);
     }
     chemfp_heapq_heapsort(heap->size, (void *)heap,
-			  (chemfp_heapq_lt) fps_heap_lt, (chemfp_heapq_swap) fps_heap_swap);
+                          (chemfp_heapq_lt) fps_heap_lt, (chemfp_heapq_swap) fps_heap_swap);
   }
 }
