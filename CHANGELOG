@@ -1,14 +1,29 @@
 What's new in 1.1 (in development)
 ==================
 
-New "alignment" option for fingerprint arenas. The default is 8 byte
-aligned, which makes for the fastest search performance.
+New popcount algorithms:
+  - Lauradoux and POPCNT versions contributed by Kim Walisch
+      (These are 2x and 3x faster than the original method.)
+  - SSSE3 version by Imran Haque, Stanford University
+      (This is about 2.5x faster than the original method.)
+  - Gilles method, which can be better than the original method.
 
-Over a factor of two performance increase for fingerprints which
-are 8 byte aligned, using code contributed by Kim Walisch. Also
-sped up fingerprints which are 4 byte aligned by 33%.
+The timings depend very much on the compiler, CPU features, and choice
+of 32- vs 64- bit architecture. For example, Lauradoux is slower than
+the lookup tables for 32 bit systems. chemfp selects the best method
+at import run-time. Use chemfp.bitops.set_alignment_method to force a
+specific method.
+
+The new popcount algorithms require a specific fingerprint alignment
+and padding. Use the new "alignment" option in load_fingerprints() to
+specify an alignment. The default uses an alignment based on the
+available methods and the fingerprint size. (It will be 8 or less
+unless you have SSSE3 hardware but not SSE4.2, and your fingerprint is
+larger than 224 bits, in which case it's 64 bytes.)
 
 Support for RDKit's Morgan fingerprints.
+
+New decoder for Daylight's "binary2ascii" encoding.
 
 Fixed a memory overflow bug which caused crashes on some Windows and
 Linux machines.
@@ -20,13 +35,11 @@ code in Python 3.2.
 Added Nilton Volpato's 'progressbar' package as a submodule. Use it to
 show a text-based progress bar in chemfp-based search tools.
 
-Added an experimental "Watcher" module. Use it to handle ^C events,
-which otherwise get sent to an arbitary thread. It works by spawning a
-child process. The main process listens for a ^C and forwards that as
-a os.kill() to the child process. This will likely only work on Unix
-systems.
-
-New decoder for Daylight's "binary2ascii" encoding.
+Added an experimental "Watcher" module by Allen Downey. Use it to
+handle ^C events, which otherwise get sent to an arbitary thread. It
+works by spawning a child process. The main process listens for a ^C
+and forwards that as a os.kill() to the child process. This will
+likely only work on Unix systems.
 
 What's new in 1.0
 ==================
