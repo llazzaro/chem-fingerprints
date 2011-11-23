@@ -33,6 +33,7 @@ Other copyright holders are:
  - Kim Walisch, <kim.walisch@gmail.com>
  - Stanford Univeristy (written by Imran S. Haque <ihaque@cs.stanford.edu>)
 
-This package also includes copies of (see each directory for details):
+This package also includes copies of
  - chemfp/progressbar/ by Nilton Volpato under the LGPL
  - chemfp/futures/ by Brian Quinlan under the Python license
+ - chemfp/Watcher.py by Allen Downey under the Python license
