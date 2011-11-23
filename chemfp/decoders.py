@@ -306,7 +306,7 @@ _daylight_reverse_table[","] = _daylight_reverse_table["+"]
 del i, c
 
 def from_daylight(text):
-  """decode a Daylight ASCII fingerprint
+  """Decode a Daylight ASCII fingerprint
 
   >>> from_daylight("I5Z2MLZgOKRcR...1")
   (None, 'PyDaylight')
@@ -355,6 +355,36 @@ def from_daylight(text):
 
 assert from_daylight("I5Z2MLZgOKRcR...1") == (None, "PyDaylight")
 
+def from_on_bit_positions(text, num_bits=1024, separator=" "):
+    """Decode from a list of integers describing the location of the on bits
+
+    >>> from_on_bit_positions("1 4 9 63", num_bits=32)
+    (32, '\\x12\\x02\\x00\\x80')
+    >>> from_on_bit_positions("1,4,9,63", num_bits=64, separator=",")
+    (64, '\\x12\\x02\\x00\\x00\\x00\\x00\\x00\\x80')
+
+    The text contains a sequence of non-negative integer values
+    separated by the `separator` text. Bit positions are folded modulo
+    num_bits. 
+
+    This is often used to convert sparse fingerprints into a dense
+    fingerprint.
+    """
+    if num_bits <= 0:
+        raise ValueError("num_bits must be positive")
+    bytes = [0] * ((num_bits+7)//8)
+    for bit_s in text.split(separator):
+        try:
+            bit = int(bit_s)
+        except ValueError:
+            raise ValueError("Bit positions must be an integer, not %r" % (bit_s,))
+        if bit < 0:
+            raise ValueError("Bit positions must be non-negative, not %r" % (bit,))
+        bit = bit % num_bits
+        bytes[bit//8] |= 1<<(bit%8)
+    return num_bits, "".join(map(chr, bytes))
+
+
 ##############
 
 def import_decoder(path):
@@ -393,6 +423,7 @@ def import_decoder(path):
                            dict(attr=failure_path, path=path))
 
     return obj
+
 
 
 ##### Helper code for dealing with common command-line parameters
