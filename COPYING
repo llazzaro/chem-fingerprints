@@ -1,10 +1,9 @@
 Library for working with cheminformatics fingerprints
 
-All FPF software is distributed under the terms of "the MIT
-license" which follows:
+Unless otherwise noted, the chemfp software is distributed under the
+terms of "the MIT license" which follows:
 
 =====================================================================
-Copyright (c) 2010-2011 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
