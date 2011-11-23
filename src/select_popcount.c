@@ -54,8 +54,8 @@ static chemfp_method_type compile_time_methods[] = {
 
   {0, CHEMFP_POPCNT, "POPCNT", 8, 8,
    has_popcnt_instruction,
-   (chemfp_popcount_f) popcount_POPCNT,
-   (chemfp_intersect_popcount_f) intersect_popcount_POPCNT},
+   (chemfp_popcount_f) _chemfp_popcount_popcnt,
+   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_popcnt},
 
   {0, CHEMFP_GILLIES, "Gillies", 8, 8, NULL,
    (chemfp_popcount_f) _chemfp_popcount_gillies,

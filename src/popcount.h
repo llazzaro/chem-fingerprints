@@ -63,6 +63,9 @@ int _chemfp_intersect_popcount_gillies(int n, uint64_t *fp1, uint64_t *fp2);
 int _chemfp_popcount_lauradoux(int size, const uint64_t *fp);
 int _chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const uint64_t *fp2);
 
+int _chemfp_popcount_popcnt(int size, const uint64_t *fp);
+int _chemfp_intersect_popcount_popcnt(int size, const uint64_t *fp1, const uint64_t *fp2);
+
 
 #if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
   #define GENERATE_SSSE3
