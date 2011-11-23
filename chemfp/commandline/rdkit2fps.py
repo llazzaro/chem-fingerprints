@@ -46,7 +46,7 @@ rdk_group.add_argument(
 
 morgan_group = parser.add_argument_group("RDKit Morgan fingerprints")
 morgan_group.add_argument("--morgan", action="store_true",
-                       help="generate Morgan fingerprints")
+                          help="generate Morgan fingerprints")
 morgan_group.add_argument(
     "--radius", type=int, metavar="INT", default=rdkit.RADIUS,
     help="radius for the morgan algorithm (default=%d)" % rdkit.RADIUS)

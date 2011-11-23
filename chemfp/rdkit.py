@@ -20,13 +20,13 @@ from . import decoders
 from . import io
 from . import types
 
-
 # These are the things I consider to be public
 __all__ = ["read_structures", "iter_smiles_molecules", "iter_sdf_molecules"]
 
 
 # If the attribute doesn't exist then this is an unsupported pre-2010 RDKit distribution
 SOFTWARE = "RDKit/" + getattr(rdkit.rdBase, "rdkitVersion", "unknown")
+
 
 #########
 _allowed_formats = ["sdf", "smi"]
@@ -290,7 +290,7 @@ def make_maccs166_fingerprinter():
     return maccs166_fingerprinter
 
 
-########### The morgan fingerprinter
+########### The Morgan fingerprinter
 
 # Some constants shared by the fingerprinter and the command-line code.
 
