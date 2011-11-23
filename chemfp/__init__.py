@@ -159,7 +159,7 @@ def open(source, format=None):
     raise TypeError("Unable to determine fingerprint format type from %r" % (source,))
 
 
-def load_fingerprints(reader, metadata=None, reorder=True, alignment=64):
+def load_fingerprints(reader, metadata=None, reorder=True, alignment=None):
     """Load all of the fingerprints into an in-memory FingerprintArena data structure
     
     The FingerprintArena data structure reads all of the fingerprints and
@@ -174,6 +174,13 @@ def load_fingerprints(reader, metadata=None, reorder=True, alignment=64):
     The loader may reorder the fingerprints for better search performance.
     To prevent ordering, use reorder=False.
 
+    The 'alignment' option specifies the alignment data alignment and
+    padding size for each fingerprint. A value of 8 means that each
+    fingerprint will start on a 8 byte alignment, and use storage
+    space which a multiple of 8 bytes long. The default value of None
+    determines the best alignment based on the fingerprint size and
+    available popcount methods.
+
     :param reader: An iterator over (id, fingerprint) pairs
     :type reader: a string, file object, or (id, fingerprint) iterator
     :param metadata: The metadata for the arena, if other than reader.metadata
@@ -181,6 +188,7 @@ def load_fingerprints(reader, metadata=None, reorder=True, alignment=64):
     :param reorder: Specify if fingerprints should be reordered for better performance
     :type reorder: True or False
     :returns: FingerprintArena
+    :param alignment: Alignment size (both data alignment and padding) 
     """
     if isinstance(reader, basestring):
         reader = open(reader)
