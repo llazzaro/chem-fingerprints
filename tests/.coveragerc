@@ -1,0 +1,6 @@
+[run]
+source=chemfp
+
+[report]
+omit=argparse
+     /Users/dalke/cvses/chem-fingerprints/chemfp/argparse*
