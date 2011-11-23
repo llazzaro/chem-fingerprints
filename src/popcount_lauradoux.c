@@ -1,3 +1,11 @@
+/**
+ * Enable the UINT64_C(c) macro from <stdint.h>.
+ */
+#if !defined(__STDC_CONSTANT_MACROS)
+#  define __STDC_CONSTANT_MACROS
+#endif
+#include <stdint.h>
+
 #include "popcount.h"
 
 // popcount_lauradoux.c, v 1.1
@@ -9,8 +17,6 @@
 // 12*8 = 96 bytes per iteration (previously 240 bytes).
 // This makes the functions more efficient for small fingerprints
 // e.g. 881 bits.
-
-#include <assert.h>
 
 /**
  * Count the number of 1 bits (population count) in an array using
@@ -24,9 +30,6 @@
  */
 int
 _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
-  assert(fp != NULL);
-  assert(size <= UINT32_MAX / (8 * sizeof(uint64_t)));
-  
   const uint64_t m1  = UINT64_C(0x5555555555555555);
   const uint64_t m2  = UINT64_C(0x3333333333333333);
   const uint64_t m4  = UINT64_C(0x0F0F0F0F0F0F0F0F);
@@ -92,9 +95,6 @@ _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
 int
 _chemfp_intersect_popcount_lauradoux(int byte_size,
 				     const uint64_t *fp1, const uint64_t *fp2) {
-  assert(fp1 != NULL && fp2 != NULL);
-  assert(size <= UINT32_MAX / (8 * sizeof(uint64_t)));
-  
   const uint64_t m1  = UINT64_C(0x5555555555555555);
   const uint64_t m2  = UINT64_C(0x3333333333333333);
   const uint64_t m4  = UINT64_C(0x0F0F0F0F0F0F0F0F);
@@ -161,4 +161,3 @@ _chemfp_intersect_popcount_lauradoux(int byte_size,
 #endif
   return bit_count;
 }
-
