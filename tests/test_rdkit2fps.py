@@ -225,6 +225,7 @@ class TestRDKMorgan(unittest2.TestCase):
                           "#type=RDKit-Morgan/1 radius=2 fpSize=2048 useFeatures=1 useChirality=1 useBondTypes=0")
         self.assertNotEquals(first, _morgan1 + "\t9425004")
         
+TestRDKMorgan = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestRDKMorgan)
 
 class TestIO(unittest2.TestCase, support.TestIdAndErrors):
     _runner = runner
