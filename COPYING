@@ -34,6 +34,7 @@ Other copyright holders are:
  - Stanford Univeristy (written by Imran S. Haque <ihaque@cs.stanford.edu>)
 
 This package also includes copies of
- - chemfp/progressbar/ by Nilton Volpato under the LGPL
+ - chemfp/progressbar/ by Nilton Volpato under the LGPL 2.1 and/or BSD license
  - chemfp/futures/ by Brian Quinlan under the Python license
  - chemfp/Watcher.py by Allen Downey under the Python license
+ - chemfp/argparse.py by Steven J. Bethard under the Apache License 2.0
