@@ -23,6 +23,7 @@ from . import ParseError
 from . import types
 from . import io
 from . import error_handlers
+from . import argparse
 
 __all__ = ["read_structures", "get_path_fingerprinter", "get_maccs_fingerprinter"]
 
@@ -102,10 +103,9 @@ def _get_type_value(a_or_b, table, description):
             value |= table[word]
         except KeyError:
             if not word:
-                raise TypeError("Missing %s flag" % (a_or_b,))
-            raise TypeError("Unknown %s type %r" % (a_or_b, word))
+                raise ValueError("Missing %s flag" % (a_or_b,))
+            raise ValueError("Unknown %s type %r" % (a_or_b, word))
     return value
-
 
 def atom_description_to_value(description):
     """atom_description_to_value(description) -> integer
@@ -166,18 +166,6 @@ def bond_value_to_description(value):
     """
     return _get_type_description("bond", _btype_flags, value)
 
-
-_maccs_decoders = {"numbits": int,
-                   "minbonds": int,
-                   "maxbonds": int,
-                   "atype": atom_description_to_value,
-                   "btype": bond_description_to_value}
-_maccs_defaults = {"numbits": 4096,
-                   "minbonds": 0,
-                   "maxbonds": 5,
-                   "atype": OEFPAtomType_DefaultAtom,
-                   "btype": OEFPBondType_DefaultBond}
-                   
 
 def decode_path_parameters(parameters):
     fingerprinter_kwargs = _maccs_defaults.copy()
@@ -468,33 +456,66 @@ def _read_fingerprints(structure_reader, fingerprinter):
     for (id, mol) in structure_reader:
         yield id, fingerprinter(mol)
 
-class _OpenEyeFingerprinter(types.Fingerprinter):
-    @staticmethod
-    def _read_structures(metadata, source, format, id_tag, errors):
-        return read_structures(source, format, id_tag=id_tag,
-                               aromaticity=metadata.aromaticity, errors=errors)
-    
-class OpenEyePathFingerprinter_v1(_OpenEyeFingerprinter):
-    name = "OpenEye-Path/1"
+from .types import FingerprintFamilyConfig, positive_int, nonnegative_int, zero_or_one
+
+def _read_structures(metadata, source, format, id_tag, errors):
+    return read_structures(source, format, id_tag=id_tag,
+                           aromaticity=metadata.aromaticity, errors=errors)
+
+def _correct_numbits(s):
+    try:
+        if not s.isdigit():
+            raise ValueError
+        i = int(s)
+        if not (16 <= i <= 65536):
+            raise ValueError
+    except ValueError:
+        raise argparse.ArgumentError(None, "numbits must be between 16 and 65536 bits")
+    return i
+
+_base = FingerprintFamilyConfig(
+    software = SOFTWARE,
+    read_structures = _read_structures)
+
+OpenEyePathFingerprintFamily_v1 = _base.clone(
+    name = "OpenEye-Path/1",
     format_string = ("numbits=%(numbits)s minbonds=%(minbonds)s "
-                     "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s")
-    software = SOFTWARE
-    def __init__(self, fingerprinter_kwargs):
-        self.num_bits = fingerprinter_kwargs["numbits"]
-        super(OpenEyePathFingerprinter_v1, self).__init__(fingerprinter_kwargs)
+                     "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s"),
+    num_bits = lambda d: d["numbits"],
+    make_fingerprinter = get_path_fingerprinter)
 
-    @classmethod
-    def from_parameters(cls, parameters):
-        return cls(decode_path_parameters(parameters))
+_path = OpenEyePathFingerprintFamily_v1
+_path.add_argument("numbits", type=_correct_numbits, metavar="INT", default=4096,
+                   help="number of bits in the path fingerprint")
 
-    def _encode_parameters(self):
-        return encode_path_parameters(self.fingerprinter_kwargs)
+_path.add_argument("minbonds", type=nonnegative_int("minbonds"), metavar="INT", default=0,
+                   help="minimum number of bonds in the path")
 
-    _get_fingerprinter = staticmethod(get_path_fingerprinter)
+_path.add_argument("maxbonds", type=nonnegative_int("maxbonds"), metavar="INT", default=5,
+                   help="maximum number of bonds in the path")
+
+def _atom_description(s):
+    try:
+        return atom_description_to_value(s)
+    except ValueError, x:
+        raise argparse.ArgumentError(None, str(x))
+
+_path.add_argument("atype", type=_atom_description, encoder=atom_value_to_description,
+                   help="atom type", default="DefaultAtom")
+
+def _bond_description(s):
+    try:
+        return bond_description_to_value(s)
+    except ValueError, x:
+        raise argparse.ArgumentError(None, str(x))
+
+
+
+_path.add_argument("btype", type=_bond_description, encoder=bond_value_to_description,
+                   help="bond type", default="DefaultBond")
+
     
-class OpenEyeMACCSFingerprinter_v1(_OpenEyeFingerprinter):
-    name = "OpenEye-MACCS166/1"
-    num_bits = 166
-    software = SOFTWARE
-
-    _get_fingerprinter = staticmethod(get_maccs_fingerprinter)
+OpenEyeMACCSFingerprintFamily_v1 = _base.clone(
+    name = "OpenEye-MACCS166/1",
+    num_bits = 166,
+    make_fingerprinter = get_maccs_fingerprinter)

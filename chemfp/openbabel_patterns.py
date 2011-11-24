@@ -5,8 +5,9 @@ from openbabel import OBSmartsPattern, OBBitVec
 from . import openbabel
 from . import pattern_fingerprinter
 from . import types
+from . import __version__ as chemfp_version
 
-SOFTWARE = openbabel.SOFTWARE
+SOFTWARE = openbabel.SOFTWARE + ("chemfp/%s" % (chemfp_version,))
 
 # HasMatch was added to OpenBabel 2.3 .
 _HAS_HASMATCH = hasattr(OBSmartsPattern(), "HasMatch")
@@ -182,32 +183,17 @@ _cached_fingerprinters = _CachedFingerprinters()
 # XXX Why are there two "Fingerprinter" classes?
 # XX Shouldn't they be merged?
 
-class _PatternFingerprinter(openbabel._OpenBabelFingerprinter):
-    software = SOFTWARE
-    def __init__(self, kwargs):
-        self._fingerprinter = _cached_fingerprinters[self._pattern_name]
-        super(_PatternFingerprinter, self).__init__(kwargs)
+_base = openbabel._base.clone(
+    software = SOFTWARE)
+    
 
-    def fingerprint(self, mol):
-        return self._fingerprinter(mol)
+SubstructOpenBabelFingerprinter_v1 = _base.clone(
+    name = "ChemFP-Substruct-OpenBabel/1",
+    num_bits = 881,
+    make_fingerprinter = lambda: _cached_fingerprinters["substruct"].fingerprint)
+    
 
-    def describe(self, bitno):
-        return self._fingerprinter.describe(bitno)
-
-class SubstructOpenBabelFingerprinter_v1(_PatternFingerprinter):
-    name = "ChemFP-Substruct-OpenBabel/1"
-    num_bits = 881
-    _pattern_name = "substruct"
-    software = SOFTWARE
-
-    def _get_fingerprinter(self):
-        return _cached_fingerprinters["substruct"].fingerprint
-
-class RDMACCSOpenBabelFingerprinter_v1(_PatternFingerprinter):
-    name = "RDMACCS-OpenBabel/1"
-    num_bits = 166
-    _pattern_name = "rdmaccs"
-    software = SOFTWARE
-
-    def _get_fingerprinter(self):
-        return _cached_fingerprinters["rdmaccs"].fingerprint
+RDMACCSOpenBabelFingerprinter_v1 = _base.clone(
+    name = "RDMACCS-OpenBabel/1",
+    num_bits = 166,
+    make_fingerprinter = lambda: _cached_fingerprinters["rdmaccs"].fingerprint)

@@ -68,7 +68,7 @@ class Runner(object):
         return result
 
     def verify_result(self, result):
-        assert result[0] == "#FPS1"
+        assert result[0] == "#FPS1", result[0]
         # TODO: .. verify more more line format ...
 
     def run_stdin(self, cmdline):

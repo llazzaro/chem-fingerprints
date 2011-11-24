@@ -5,8 +5,9 @@ from rdkit import Chem
 from . import pattern_fingerprinter
 from . import rdkit
 from . import types
+from . import __version__ as chemfp_version
 
-SOFTWARE = rdkit.SOFTWARE
+SOFTWARE = rdkit.SOFTWARE + (" chemfp/%s" % (chemfp_version,))
 
 class HydrogenMatcher(object):
     def has_match(self, mol):
@@ -144,35 +145,19 @@ _cached_fingerprinters = _CachedFingerprinters()
 
 
 
-# XXX Why are there two "Fingerprinter" classes?
-# XX Shouldn't they be merged?
+_base = rdkit._base.clone(
+    software = SOFTWARE)
 
-class _PatternFingerprinter(rdkit._RDKitFingerprinter):
-    software = SOFTWARE
-    def __init__(self, kwargs):
-        self._fingerprinter = _cached_fingerprinters[self._pattern_name]
-        super(_PatternFingerprinter, self).__init__(kwargs)
+SubstructRDKitFingerprinter_v1 = _base.clone(
+    name = "ChemFP-Substruct-RDKit/1",
+    num_bits = 881,
+    make_fingerprinter = lambda: _cached_fingerprinters["substruct"].fingerprint)
 
-    def fingerprint(self, mol):
-        return self._fingerprinter(mol)
 
-    def describe(self, bitno):
-        return self._fingerprinter.describe(bitno)
+#    def describe(self, bitno):
+#        return self._fingerprinter.describe(bitno)
 
-class SubstructRDKitFingerprinter_v1(_PatternFingerprinter):
-    name = "ChemFP-Substruct-RDKit/1"
-    num_bits = 881
-    _pattern_name = "substruct"
-    software = SOFTWARE
-
-    def _get_fingerprinter(self):
-        return _cached_fingerprinters["substruct"].fingerprint
-
-class RDMACCSRDKitFingerprinter_v1(_PatternFingerprinter):
-    name = "RDMACCS-RDKit/1"
-    num_bits = 166
-    _pattern_name = "rdmaccs"
-    software = SOFTWARE
-
-    def _get_fingerprinter(self):
-        return _cached_fingerprinters["rdmaccs"].fingerprint
+RDMACCSRDKitFingerprinter_v1 = _base.clone(
+    name = "RDMACCS-RDKit/1",
+    num_bits = 166,
+    make_fingerprinter = lambda: _cached_fingerprinters["rdmaccs"].fingerprint)

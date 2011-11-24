@@ -9,6 +9,7 @@ from openeye.oechem import (
 from . import openeye
 from . import pattern_fingerprinter
 from . import types
+from . import __version__ as chemfp_version
         
 class HydrogenMatcher(object):
     def __init__(self, max_count):
@@ -184,6 +185,8 @@ class OEChemPatternFingerprinter(pattern_fingerprinter.PatternFingerprinter):
     def fingerprint(self, mol):
         bytes = [0] * self.num_bytes
         for matcher, largest_count, count_info_tuple in self.matcher_definitions:
+            if matcher is NotImplemented:
+                continue
             #print matcher, largest_count, count_info_tuple
             if largest_count == 1:
                 if matcher.SingleMatch(mol):
@@ -208,41 +211,27 @@ class _CachedFingerprinters(dict):
 _cached_fingerprinters = _CachedFingerprinters()
         
 
-# XXX include ChemFP version information? Probably
-SOFTWARE = "OEChem/%(release)s (%(version)s)" % dict(
+SOFTWARE = "OEChem/%(release)s (%(version)s) chemfp/%(chemfp)s" % dict(
     release = OEChemGetRelease(),
-    version = OEChemGetVersion())
+    version = OEChemGetVersion(),
+    chemfp = chemfp_version)
 
 
 # XXX Why are there two "Fingerprinter" classes?
 # XX Shouldn't they be merged?
 
-class _PatternFingerprinter(openeye._OpenEyeFingerprinter):
-    software = SOFTWARE
-    def __init__(self, kwargs):
-        self._fingerprinter = _cached_fingerprinters[self._pattern_name]
-        
-        super(_PatternFingerprinter, self).__init__(kwargs)
+_base = openeye._base.clone(
+    software = SOFTWARE)
 
-    def fingerprint(self, mol):
-        return self._fingerprinter(mol)
+SubstructOpenEyeFingerprinter_v1 = _base.clone(
+    name = "ChemFP-Substruct-OpenEye/1",
+    num_bits = 881,
+    make_fingerprinter = lambda : _cached_fingerprinters["substruct"].fingerprint)
+    
+#    def describe(self, bitno):
+#        return self._fingerprinter.describe(bitno)
 
-    def describe(self, bitno):
-        return self._fingerprinter.describe(bitno)
-
-class SubstructOpenEyeFingerprinter_v1(_PatternFingerprinter):
-    name = "ChemFP-Substruct-OpenEye/1"
-    num_bits = 881
-    _pattern_name = "substruct"
-
-    def _get_fingerprinter(self):
-        return _cached_fingerprinters["rdmaccs"].fingerprint
-
-
-class RDMACCSOpenEyeFingerprinter_v1(_PatternFingerprinter):
-    name = "RDMACCS-OpenEye/1"
-    num_bits = 166
-    _pattern_name = "rdmaccs"
-
-    def _get_fingerprinter(self):
-        return _cached_fingerprinters["rdmaccs"].fingerprint
+RDMACCSOpenEyeFingerprinter_v1 = _base.clone(
+    name = "RDMACCS-OpenEye/1",
+    num_bits = 166,
+    make_fingerprinter = lambda : _cached_fingerprinters["rdmaccs"].fingerprint)

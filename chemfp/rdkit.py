@@ -250,6 +250,7 @@ def read_structures(source, format=None, id_tag=None, errors="strict"):
 # Some constants shared by the fingerprinter and the command-line code.
 
 NUM_BITS = 2048
+NUM_BITS_MORGAN = 1024
 MIN_PATH = 1
 MAX_PATH = 7
 BITS_PER_HASH = 4
@@ -300,7 +301,7 @@ USE_FEATURES = 0
 USE_CHIRALITY = 0
 USE_BOND_TYPES = 1
 
-def make_morgan_fingerprinter(fpSize=NUM_BITS,
+def make_morgan_fingerprinter(fpSize=NUM_BITS_MORGAN,
                               radius=RADIUS,
                               useFeatures=USE_FEATURES,
                               useChirality=USE_CHIRALITY,
@@ -318,100 +319,89 @@ def make_morgan_fingerprinter(fpSize=NUM_BITS,
     return morgan_fingerprinter
 
 
-_fingerprint_decoders = {"minPath": int,
-                         "maxPath": int,
-                         "fpSize": int,
-                         "nBitsPerHash": int,
-                         "useHs": int,
-                         }
-
-
-_morgan_fingerprint_decoders = _fingerprint_decoders.copy()
-_morgan_fingerprint_decoders.update({
-    "useChirality": int,
-    "radius":int,
-    "useFeatures":int,
-    "useBondTypes":int})
-
-_fingerprint_defaults = {"minPath": 1,
-                         "maxPath": 7,
-                         "fpSize": 2048,
-                         "nBitsPerHash": 4,
-                         "useHs": 1,
-                         }
-
-_morgan_fingerprint_defaults = _fingerprint_defaults.copy()
-_morgan_fingerprint_defaults.update({
-    "useChirality": 0,
-    "radius":2,
-    "useFeatures":0,
-    "useBondTypes":1})
-    
-
-def decode_fingerprint_parameters(parameters, decoders, defaults):
-    fingerprinter_kwargs = defaults.copy()
-    for name, value in parameters:
-        if name not in decoders:
-            raise ValueError("Unknown RDKit-Fingerprint parameter %r" % (name,))
-        decoder = decoders[name]
-        fingerprinter_kwargs[name] = decoder(value)
-    return fingerprinter_kwargs
-
-
-
 ####################
 
-class _RDKitFingerprinter(types.Fingerprinter):
-    @staticmethod
-    def _read_structures(metadata, source, format, id_tag, errors):
-        if metadata.aromaticity is not None:
-            raise ValueError("RDKit does not support alternate aromaticity models "
-                             "(want aromaticity=%r)" % metadata.aromaticity)
-        return read_structures(source, format, id_tag=id_tag, errors=errors)
+from .types import FingerprintFamilyConfig, positive_int, nonnegative_int, zero_or_one
 
-class RDKitMACCSFingerprinter_v1(_RDKitFingerprinter):
-    name = "RDKit-MACCS166/1"
-    num_bits = 166
-    software = SOFTWARE
+def _read_structures(metadata, source, format, id_tag, errors):
+    if metadata.aromaticity is not None:
+        raise ValueError("RDKit does not support alternate aromaticity models "
+                         "(want aromaticity=%r)" % metadata.aromaticity)
+    return read_structures(source, format, id_tag, errors)
 
-    def _get_fingerprinter(self):
-        return maccs166_fingerprinter
+# Check for metadata.aromaticity
+_base = FingerprintFamilyConfig(
+    software = SOFTWARE,
+    read_structures = _read_structures,
+    )
 
-    _get_fingerprinter = staticmethod(make_maccs166_fingerprinter)
+def _fpSize(s):
+    i = int(s)
+    if 16 <= i <= 65536:
+        return i
+    raise ValueError("must be between 16 and 65536 bits")
+_fpSize.__name__ = "fpSize"
 
-class RDKitFingerprinter_v1(_RDKitFingerprinter):
-    name = "RDKit-Fingerprint/1"
-    format_string = (
-             "minPath=%(minPath)s maxPath=%(maxPath)s fpSize=%(fpSize)s "
-             "nBitsPerHash=%(nBitsPerHash)s useHs=%(useHs)s")
-    software = SOFTWARE
-    def __init__(self, kwargs):
-        self.num_bits = kwargs["fpSize"]
-        super(RDKitFingerprinter_v1, self).__init__(kwargs)
+_base.add_argument("fpSize", type=_fpSize, metavar="INT",
+                   help = ("number of bits in the fingerprint "
+                           "(default is %s for --RDK and %s for --morgan)") % (
+                       NUM_BITS, NUM_BITS_MORGAN
+                       ))
 
-    @classmethod
-    def from_parameters(cls, parameters):
-        kwargs = decode_fingerprint_parameters(parameters, _fingerprint_decoders,
-                                               _fingerprint_defaults)
-        return cls(kwargs)
+_base.add_argument("minPath", type=positive_int("minPath"), metavar="INT", default=MIN_PATH,
+                   help = "minimum number of bonds to include in the subgraph")
 
-    _get_fingerprinter = staticmethod(make_rdk_fingerprinter)
+_base.add_argument("maxPath", type=positive_int("maxPath"), metavar="INT", default=MAX_PATH,
+                   help = "maximum number of bonds to include in the subgraph")
 
-class RDKitMorganFingerprinter_v1(_RDKitFingerprinter):
-    name = "RDKit-Morgan/1"
+_base.add_argument("nBitsPerHash", type=positive_int("nBitsPerHash"), metavar="INT",
+                   default=BITS_PER_HASH, help = "number of bits to set per path")
+
+_base.add_argument("useHs", type=zero_or_one("useHs"), metavar="0|1", default=USE_HS,
+                   help = "include information about the number of hydrogens on each atom")              
+_base.add_argument("radius", type=nonnegative_int("radius"), metavar="INT", default=RADIUS,
+                   help = "radius for the Morgan algorithm")
+
+_base.add_argument("useFeatures", type=zero_or_one("useFeatures"), metavar="0|1",
+                   default=USE_FEATURES, help = "use chemical-feature invariants")
+
+_base.add_argument("useChirality", type=zero_or_one("useChirality"), metavar="0|1",
+                   default=USE_CHIRALITY, help = "include chirality information")
+
+_base.add_argument("useBondTypes", type=zero_or_one("useBondTypes"), metavar="0|1",
+                   default=USE_BOND_TYPES, help = "include bond type information")
+
+RDKitMACCSFingerprintFamily_v1 = _base.clone(
+    name = "RDKit-MACCS166/1",
+    num_bits = 166,
+    make_fingerprinter = maccs166_fingerprinter,
+    )
+
+RDKitMACCSFingerprintFamily_v1.add_argument(
+    "fpSize", type=_fpSize, metavar="INT", default=NUM_BITS,
+    help = "number of bits in the fingerprint")
+
+
+def _get_num_bits(d):
+    return d["fpSize"]
+
+RDKitFingerprintFamily_v1 = _base.clone(
+    name = "RDKit-Fingerprint/1",
+    format_string = ("minPath=%(minPath)s maxPath=%(maxPath)s fpSize=%(fpSize)s "
+                     "nBitsPerHash=%(nBitsPerHash)s useHs=%(useHs)s"),
+    num_bits = _get_num_bits,
+    make_fingerprinter = make_rdk_fingerprinter,
+    )
+
+
+RDKitMorganFingerprintFamily_v1 = _base.clone(
+    name = "RDKit-Morgan/1",
     format_string = (
              "radius=%(radius)d fpSize=%(fpSize)s useFeatures=%(useFeatures)d "
-             "useChirality=%(useChirality)d useBondTypes=%(useBondTypes)d")
-    software = SOFTWARE
-    def __init__(self, kwargs):
-        self.num_bits = kwargs["fpSize"]
-        super(RDKitMorganFingerprinter_v1, self).__init__(kwargs)
-
-    @classmethod
-    def from_parameters(cls, parameters):
-        kwargs = decode_fingerprint_parameters(parameters, _morgan_fingerprint_decoders,
-                                               _morgan_fingerprint_defaults)
-        return cls(kwargs)
-
-    _get_fingerprinter = staticmethod(make_morgan_fingerprinter)
-    
+             "useChirality=%(useChirality)d useBondTypes=%(useBondTypes)d"),
+    num_bits = _get_num_bits,
+    make_fingerprinter = make_morgan_fingerprinter,
+    )
+RDKitMorganFingerprintFamily_v1.add_argument(
+    "fpSize", type=positive_int, metavar="INT", default=NUM_BITS_MORGAN,
+    help = "number of bits in the fingerprint")

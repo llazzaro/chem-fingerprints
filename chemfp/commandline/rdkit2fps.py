@@ -23,42 +23,36 @@ supported format extensions are:
 parser = argparse.ArgumentParser(
     description="Generate FPS fingerprints from a structure file using RDKit",
     epilog=epilog,
-    formatter_class=argparse.RawDescriptionHelpFormatter,    
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+    conflict_handler="resolve",
     )
+
+_base = rdkit._base
+
+# --RDK and --morgan both have fpSize but argparse doesn't allow the
+# same option in different groups. Especially with different defaults.
+
+_base.add_argument_to_argparse("fpSize", parser)
+
 rdk_group = parser.add_argument_group("RDKit topological fingerprints")
 rdk_group.add_argument("--RDK", action="store_true",
                        help="generate RDK fingerprints (default)")
-rdk_group.add_argument(
-    "--fpSize", type=int, metavar="INT", default=rdkit.NUM_BITS,
-    help="number of bits in the fingerprint (default=%d)" % rdkit.NUM_BITS)
-rdk_group.add_argument(
-    "--minPath", type=int, metavar="INT", default=rdkit.MIN_PATH,
-    help="minimum number of bonds to include in the subgraphs (default=%d)" % rdkit.MIN_PATH)
-rdk_group.add_argument(
-    "--maxPath", type=int, metavar="INT", default=rdkit.MAX_PATH,
-    help="maximum number of bonds to include in the subgraphs (default=%d)" % rdkit.MAX_PATH)
-rdk_group.add_argument(
-    "--nBitsPerHash", type=int, metavar="INT", default=rdkit.BITS_PER_HASH,
-    help="number of bits to set per path (default=%d)" % rdkit.BITS_PER_HASH)
-rdk_group.add_argument(
-    "--useHs", type=int, default=rdkit.USE_HS, metavar="0|1",
-    help="include information about the number of hydrogens on each atom (default=%d)" % rdkit.USE_HS)
+_base.add_argument_to_argparse("minPath", rdk_group)
+_base.add_argument_to_argparse("maxPath", rdk_group)
+_base.add_argument_to_argparse("nBitsPerHash", rdk_group)
+_base.add_argument_to_argparse("useHs", rdk_group)
+
 
 morgan_group = parser.add_argument_group("RDKit Morgan fingerprints")
+
 morgan_group.add_argument("--morgan", action="store_true",
                           help="generate Morgan fingerprints")
-morgan_group.add_argument(
-    "--radius", type=int, metavar="INT", default=rdkit.RADIUS,
-    help="radius for the morgan algorithm (default=%d)" % rdkit.RADIUS)
-morgan_group.add_argument(
-    "--useFeatures", type=int, metavar="0|1", default=rdkit.USE_FEATURES,
-    help="use chemical-feature invariants (default=%d)" % rdkit.USE_FEATURES)
-morgan_group.add_argument(
-    "--useChirality", type=int, metavar="0|1", default=rdkit.USE_CHIRALITY,
-    help="include information about chirality (default=%d)" % rdkit.USE_CHIRALITY)
-morgan_group.add_argument(
-    "--useBondTypes", type=int, metavar="0|1", default=rdkit.USE_BOND_TYPES,
-    help="include information about bond types (default=%d)" % rdkit.USE_BOND_TYPES)
+
+_morgan = rdkit.RDKitMorganFingerprintFamily_v1
+_morgan.add_argument_to_argparse("useFeatures", morgan_group)
+_morgan.add_argument_to_argparse("useChirality", morgan_group)
+_morgan.add_argument_to_argparse("useBondTypes", morgan_group)
+
 
 maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
@@ -100,7 +94,7 @@ def main(args=None):
     if args.maccs166:
         opener = types.get_fingerprint_family("RDKit-MACCS166")()
     elif args.RDK:
-        fpSize = args.fpSize
+        fpSize = args.fpSize or rdkit.NUM_BITS
         minPath = args.minPath
         maxPath = args.maxPath
         nBitsPerHash = args.nBitsPerHash
@@ -115,7 +109,7 @@ def main(args=None):
 
         useHs = args.useHs
         if useHs not in (0, 1):
-            parser.error("--useHs parameter must be 0 or 1")
+            parser.error("--useHs parameter must be 0 or 1 (%r)" % useHs)
 
         opener = types.get_fingerprint_family("RDKit-Fingerprint")(
             minPath=minPath,
@@ -130,22 +124,11 @@ def main(args=None):
         opener = types.get_fingerprint_family("RDMACCS-RDKit")()
     elif args.morgan:
         radius = args.radius
-        fpSize = args.fpSize
+        fpSize = args.fpSize or rdkit.NUM_BITS_MORGAN
         useFeatures = args.useFeatures
         useChirality = args.useChirality
         useBondTypes = args.useBondTypes
 
-        if radius < 0:
-            parser.error("--radius must not be negative")
-        if fpSize < 1:
-            parser.error("--fpSize must be positive")
-        if useFeatures not in (0, 1):
-            parser.error("--useFeatures parameter must be 0 or 1")
-        if useChirality not in (0, 1):
-            parser.error("--useChirality parameter must be 0 or 1")
-        if useBondTypes not in (0, 1):
-            parser.error("--useBondTypes parameter must be 0 or 1")
-        
         opener = types.get_fingerprint_family("RDKit-Morgan")(
             radius=radius,
             fpSize=fpSize,

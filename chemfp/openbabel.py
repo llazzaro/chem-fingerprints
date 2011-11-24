@@ -326,54 +326,53 @@ def _file_reader(obconversion, obmol, success, id_tag, filename_repr, error_hand
 
 #####
 
-class _OpenBabelFingerprinter(types.Fingerprinter):
-    software = SOFTWARE
+from .types import FingerprintFamilyConfig
 
-    @staticmethod
-    def _read_structures(metadata, source, format, id_tag, errors):
-        if metadata.aromaticity is not None:
-            raise ValueError("Open Babel does not support alternate aromaticity models "
-                             "(want aromaticity=%r)" % metadata.aromaticity)
-        return read_structures(source, format, id_tag, errors)
+def _read_structures(metadata, source, format, id_tag, errors):
+    if metadata.aromaticity is not None:
+        raise ValueError("Open Babel does not support alternate aromaticity models "
+                         "(want aromaticity=%r)" % metadata.aromaticity)
+    return read_structures(source, format, id_tag, errors)
 
-    @classmethod
-    def _get_fingerprinter(cls):
-        return cls._fingerprinter
+_base = FingerprintFamilyConfig(
+    software = SOFTWARE,
+    read_structures = _read_structures,
+    )
 
-class OpenBabelFP2Fingerprinter_v1(_OpenBabelFingerprinter):
-    name = "OpenBabel-FP2/1"
-    num_bits = 1021
 
-    _fingerprinter = staticmethod(calc_FP2)
+OpenBabelFP2FingerprintFamily_v1 = _base.clone(
+    name = "OpenBabel-FP2/1",
+    num_bits = 1021,
+    make_fingerprinter = lambda: calc_FP2)
 
-class OpenBabelFP3Fingerprinter_v1(_OpenBabelFingerprinter):
-    name = "OpenBabel-FP3/1"
-    num_bits = 55
+OpenBabelFP3FingerprintFamily_v1 = _base.clone(
+    name = "OpenBabel-FP3/1",
+    num_bits = 55,
+    make_fingerprinter = lambda: calc_FP3)
+
+OpenBabelFP4FingerprintFamily_v1 = _base.clone(
+    name = "OpenBabel-FP4/1",
+    num_bits = 307,
+    make_fingerprinter = lambda: calc_FP4)
+
+
+def _check_calc_MACCS_v1():
+    assert HAS_MACCS
+    assert MACCS_VERSION == 2
+    return calc_MACCS
+
+OpenBabelMACCSFingerprintFamily_v1 = _base.clone(
+    name = "OpenBabel-MACCS/1",
+    num_bits = 166,
+    make_fingerprinter = lambda: _check_calc_MACCS_v1)
+
+
+def _check_calc_MACCS_v2():
+    assert HAS_MACCS
+    assert MACCS_VERSION == 2
+    return calc_MACCS
     
-    _fingerprinter = staticmethod(calc_FP3)
-
-class OpenBabelFP4Fingerprinter_v1(_OpenBabelFingerprinter):
-    name = "OpenBabel-FP4/1"
-    num_bits = 307
-    _fingerprinter = staticmethod(calc_FP4)
-
-
-class OpenBabelMACCSFingerprinter_v1(_OpenBabelFingerprinter):
-    name = "OpenBabel-MACCS/1"
-    num_bits = 166
-
-    @staticmethod
-    def _get_fingerprinter():
-        assert HAS_MACCS
-        assert MACCS_VERSION == 1
-        return calc_MACCS
-    
-class OpenBabelMACCSFingerprinter_v2(_OpenBabelFingerprinter):
-    name = "OpenBabel-MACCS/2"
-    num_bits = 166
-
-    @staticmethod
-    def _get_fingerprinter():
-        assert HAS_MACCS
-        assert MACCS_VERSION == 2
-        return calc_MACCS
+OpenBabelMACCSFingerprintFamily_v2 = _base.clone(
+    name = "OpenBabel-MACCS/2",
+    num_bits = 166,
+    make_fingerprinter = lambda: _check_calc_MACCS_v2)

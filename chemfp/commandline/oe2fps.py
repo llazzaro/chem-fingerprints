@@ -55,19 +55,13 @@ parser = argparse.ArgumentParser(
 path_group = parser.add_argument_group("path fingerprints")
 path_group.add_argument(
     "--path", action="store_true", help="generate path fingerprints (default)")
-path_group.add_argument(
-    "--numbits", type=int, metavar="INT",
-    help="number of bits in the path fingerprint (default=4096)", default=4096)
-path_group.add_argument(
-    "--minbonds", type=int, metavar="INT",
-    help="minimum number of bonds in path (default=0)", default=0)
-path_group.add_argument(
-    "--maxbonds", type=int, metavar="INT",
-    help="maximum number of bonds in path (default=5)", default=5)
-path_group.add_argument(
-    "--atype", help="atom type (default=DefaultAtom)", default="DefaultAtom")
-path_group.add_argument(
-    "--btype", help="bond type (default=DefaultBond)", default="DefaultBond")
+
+PathFamily = oe.OpenEyePathFingerprintFamily_v1
+PathFamily.add_argument_to_argparse("numbits", path_group)
+PathFamily.add_argument_to_argparse("minbonds", path_group)
+PathFamily.add_argument_to_argparse("maxbonds", path_group)
+PathFamily.add_argument_to_argparse("atype", path_group)
+PathFamily.add_argument_to_argparse("btype", path_group)
 
 maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
@@ -125,20 +119,12 @@ def main(args=None):
         if not (args.minbonds <= args.maxbonds):
             parser.error("--maxbonds must not be smaller than --minbonds")
 
-        # Parse the arguments
-        try:
-            atype = oe.atom_description_to_value(args.atype)
-            btype = oe.bond_description_to_value(args.btype)
-        except TypeError, err:
-            parser.error(str(err))
-
-
         opener = types.get_fingerprint_family("OpenEye-Path")(
             numbits = args.numbits,
             minbonds = args.minbonds,
             maxbonds = args.maxbonds,
-            atype = atype,
-            btype = btype)
+            atype = args.atype,
+            btype = args.btype)
     elif args.substruct:
         opener = types.get_fingerprint_family("ChemFP-Substruct-OpenEye")()
     elif args.rdmaccs:
