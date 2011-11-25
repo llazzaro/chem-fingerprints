@@ -358,13 +358,13 @@ OpenBabelFP4FingerprintFamily_v1 = _base.clone(
 
 def _check_calc_MACCS_v1():
     assert HAS_MACCS
-    assert MACCS_VERSION == 2
+    assert MACCS_VERSION == 1
     return calc_MACCS
 
 OpenBabelMACCSFingerprintFamily_v1 = _base.clone(
     name = "OpenBabel-MACCS/1",
     num_bits = 166,
-    make_fingerprinter = lambda: _check_calc_MACCS_v1)
+    make_fingerprinter = _check_calc_MACCS_v1)
 
 
 def _check_calc_MACCS_v2():
@@ -375,4 +375,4 @@ def _check_calc_MACCS_v2():
 OpenBabelMACCSFingerprintFamily_v2 = _base.clone(
     name = "OpenBabel-MACCS/2",
     num_bits = 166,
-    make_fingerprinter = lambda: _check_calc_MACCS_v2)
+    make_fingerprinter = _check_calc_MACCS_v2)
