@@ -104,7 +104,7 @@ class TestRDKFingerprints(unittest2.TestCase):
 
     def test_num_bits_too_small(self):
         result = runner.run_exit("--fpSize 0")
-        self.assertIn("--fpSize must be positive", result)
+        self.assertIn("fpSize must be 1 or greater", result)
 
     def test_bits_per_hash_default(self):
         field, first = get_field_and_first("--nBitsPerHash 4", "#type=")
@@ -120,7 +120,7 @@ class TestRDKFingerprints(unittest2.TestCase):
 
     def test_bits_per_hash_too_small(self):
         result = runner.run_exit("--nBitsPerHash 0")
-        self.assertIn("--nBitsPerHash must be a positive value", result)
+        self.assertIn("nBitsPerHash must be 1 or greater", result)
 
     def test_min_path_default(self):
         field, first = get_field_and_first("--minPath 1", "#type")
@@ -136,7 +136,7 @@ class TestRDKFingerprints(unittest2.TestCase):
 
     def test_min_path_too_small(self):
         result = runner.run_exit("--minPath 0")
-        self.assertIn("--minPath must be a positive value", result)
+        self.assertIn("minPath must be 1 or greater", result)
 
     def test_min_path_too_large(self):
         result = runner.run_exit("--minPath 5 --maxPath 4")
@@ -194,7 +194,7 @@ class TestRDKMorgan(unittest2.TestCase):
 
     def test_num_bits_too_small(self):
         result = runner.run_exit("--morgan --fpSize 0")
-        self.assertIn("--fpSize must be positive", result)
+        self.assertIn("fpSize must be 1 or greater", result)
 
     def test_radius_default(self):
         result = runner.run_fps("--morgan --radius 2", 19)
@@ -208,7 +208,7 @@ class TestRDKMorgan(unittest2.TestCase):
 
     def test_radius_too_small(self):
         result = runner.run_exit("--morgan --radius -1")
-        self.assertIn("--radius must not be negative", result)
+        self.assertIn("radius must be 0 or greater", result)
 
     def test_default_use_options(self):
         field, first = get_field_and_first("--morgan --useFeatures 0 --useChirality 0 --useBondTypes 1",
