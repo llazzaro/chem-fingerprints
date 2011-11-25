@@ -105,7 +105,7 @@ def main(args=None):
 
     cmdsupport.mutual_exclusion(parser, args, "RDK",
                                 ("maccs166", "RDK", "substruct", "rdmaccs", "morgan",
-                                 "torsion", "pairs"))
+                                 "torsions", "pairs"))
 
     if args.maccs166:
         opener = types.get_fingerprint_family("RDKit-MACCS166")()
@@ -138,12 +138,12 @@ def main(args=None):
             useChirality=args.useChirality,
             useBondTypes=args.useBondTypes)
 
-    elif args.torsion:
-        opener = type.get_fingerprint_family("RDKit-Torsion")(
-            fpSize=fpSize,
+    elif args.torsions:
+        opener = types.get_fingerprint_family("RDKit-Torsion")(
+            fpSize=args.fpSize,
             targetSize=args.targetSize)
     elif args.pairs:
-        opener = type.get_fingerprint_family("RDKit-Pair")(
+        opener = types.get_fingerprint_family("RDKit-Pair")(
             fpSize=fpSize,
             targetSize=args.targetSize)
         
