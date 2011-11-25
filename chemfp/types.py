@@ -38,6 +38,8 @@ _family_config_paths = (
     ("RDKit-MACCS166/1", "chemfp.rdkit.RDKitMACCSFingerprintFamily_v1"),
     ("RDKit-Fingerprint/1", "chemfp.rdkit.RDKitFingerprintFamily_v1"),
     ("RDKit-Morgan/1", "chemfp.rdkit.RDKitMorganFingerprintFamily_v1"),
+    ("RDKit-Torsion/1", "chemfp.rdkit.RDKitTorsionFingerprintFamily_v1"),
+    ("RDKit-Pair/1", "chemfp.rdkit.RDKitPairFingerprintFamily_v1"),
     
     ("OpenBabel-FP2/1", "chemfp.openbabel.OpenBabelFP2FingerprintFamily_v1"),
     ("OpenBabel-FP3/1", "chemfp.openbabel.OpenBabelFP3FingerprintFamily_v1"),

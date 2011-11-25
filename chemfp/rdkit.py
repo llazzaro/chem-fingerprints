@@ -250,7 +250,6 @@ def read_structures(source, format=None, id_tag=None, errors="strict"):
 # Some constants shared by the fingerprinter and the command-line code.
 
 NUM_BITS = 2048
-NUM_BITS_MORGAN = 1024
 MIN_PATH = 1
 MAX_PATH = 7
 BITS_PER_HASH = 4
@@ -295,13 +294,12 @@ def make_maccs166_fingerprinter():
 
 # Some constants shared by the fingerprinter and the command-line code.
 
-# NUM_BITS borrowed from above
 RADIUS = 2
 USE_FEATURES = 0
 USE_CHIRALITY = 0
 USE_BOND_TYPES = 1
 
-def make_morgan_fingerprinter(fpSize=NUM_BITS_MORGAN,
+def make_morgan_fingerprinter(fpSize=NUM_BITS,
                               radius=RADIUS,
                               useFeatures=USE_FEATURES,
                               useChirality=USE_CHIRALITY,
@@ -319,6 +317,45 @@ def make_morgan_fingerprinter(fpSize=NUM_BITS_MORGAN,
     return morgan_fingerprinter
 
 
+########### Torsion fingerprinter
+
+TARGET_SIZE = 4
+
+def make_torsion_fingerprinter(fpSize=NUM_BITS,
+                               targetSize=TARGET_SIZE):
+    if not (fpSize > 0):
+        raise ValueError("fpSize must be positive")
+    if not (targetSize >= 0):
+        raise ValueError("targetSize cannot be negative")
+
+    def torsion_fingerprinter(mol):
+        fp = rdMolDescriptors.GetHashedTopologicalTorsionFingerprintAsBitVect(
+            mol, nBits=fpSize, targetSize=targetSize)
+        return decoders.from_binary_lsb(fp.ToBitString())[1]
+    return torsion_fingerprinter
+
+########### Pair fingerprinter
+
+MIN_LENGTH = 1
+MAX_LENGTH = 30
+
+def make_pair_fingerprinter(fpSize=NUM_BITS,
+                            minLength=MIN_LENGTH,
+                            maxLength=MAX_LENGTH):
+    if not (fpSize > 0):
+        raise ValueError("fpSize must be positive")
+    if not (minLength >= 0):
+        raise ValueError("minLength cannot be negative")
+    if not (maxLength >= minLength):
+        raise ValueError("maxLength cannot be less than minLength")
+
+    def pair_fingerprinter(mol):
+        fp = rdMolDescriptors.GetHashedAtomPairFingerprintAsBitVect(
+            mol, nBits=fpSize, minLength=minLength, maxLength=maxLength)
+        return decoders.from_binary_lsb(fp.ToBitString())[1]
+    return pair_fingerprinter
+
+
 ####################
 
 from .types import FingerprintFamilyConfig, positive_int, nonnegative_int, zero_or_one
@@ -333,6 +370,7 @@ def _read_structures(metadata, source, format, id_tag, errors):
 _base = FingerprintFamilyConfig(
     software = SOFTWARE,
     read_structures = _read_structures,
+    format_string = "%(fpSize)d", # fake
     )
 
 def _fpSize(s):
@@ -340,13 +378,9 @@ def _fpSize(s):
     if 16 <= i <= 65536:
         return i
     raise ValueError("must be between 16 and 65536 bits")
-_fpSize.__name__ = "fpSize"
 
-_base.add_argument("fpSize", type=_fpSize, metavar="INT",
-                   help = ("number of bits in the fingerprint "
-                           "(default is %s for --RDK and %s for --morgan)") % (
-                       NUM_BITS, NUM_BITS_MORGAN
-                       ))
+_base.add_argument("fpSize", type=_fpSize, metavar="INT", default=NUM_BITS,
+                   help = "number of bits in the fingerprint")
 
 _base.add_argument("minPath", type=positive_int("minPath"), metavar="INT", default=MIN_PATH,
                    help = "minimum number of bonds to include in the subgraph")
@@ -359,6 +393,7 @@ _base.add_argument("nBitsPerHash", type=positive_int("nBitsPerHash"), metavar="I
 
 _base.add_argument("useHs", type=zero_or_one("useHs"), metavar="0|1", default=USE_HS,
                    help = "include information about the number of hydrogens on each atom")              
+# Morgan
 _base.add_argument("radius", type=nonnegative_int("radius"), metavar="INT", default=RADIUS,
                    help = "radius for the Morgan algorithm")
 
@@ -371,17 +406,28 @@ _base.add_argument("useChirality", type=zero_or_one("useChirality"), metavar="0|
 _base.add_argument("useBondTypes", type=zero_or_one("useBondTypes"), metavar="0|1",
                    default=USE_BOND_TYPES, help = "include bond type information")
 
+
+# torsion
+_base.add_argument("targetSize", type=positive_int("targetSize"), metavar="INT",
+                   default=TARGET_SIZE, help = "number of bits in the fingerprint")
+
+# pair
+_base.add_argument("minLength", type=positive_int("minLength"), metavar="INT",
+                   default=MIN_LENGTH, help = "minimum bond count for a pair")
+
+_base.add_argument("maxLength", type=positive_int("maxLength"), metavar="INT",
+                   default=MAX_LENGTH, help = "maximum bond count for a pair")
+
+#########
+
 RDKitMACCSFingerprintFamily_v1 = _base.clone(
     name = "RDKit-MACCS166/1",
     num_bits = 166,
     make_fingerprinter = maccs166_fingerprinter,
     )
 
-RDKitMACCSFingerprintFamily_v1.add_argument(
-    "fpSize", type=_fpSize, metavar="INT", default=NUM_BITS,
-    help = "number of bits in the fingerprint")
 
-
+# The number of bits depends on the parameters
 def _get_num_bits(d):
     return d["fpSize"]
 
@@ -393,6 +439,7 @@ RDKitFingerprintFamily_v1 = _base.clone(
     make_fingerprinter = make_rdk_fingerprinter,
     )
 
+###
 
 RDKitMorganFingerprintFamily_v1 = _base.clone(
     name = "RDKit-Morgan/1",
@@ -402,6 +449,21 @@ RDKitMorganFingerprintFamily_v1 = _base.clone(
     num_bits = _get_num_bits,
     make_fingerprinter = make_morgan_fingerprinter,
     )
-RDKitMorganFingerprintFamily_v1.add_argument(
-    "fpSize", type=positive_int, metavar="INT", default=NUM_BITS_MORGAN,
-    help = "number of bits in the fingerprint")
+
+###
+
+RDKitTorsionFingerprintFamily_v1 = _base.clone(
+    name = "RDKit-Torsion/1",
+    format_string = "fpSize=%(fpSize)s targetSize=%(targetSize)d",
+    num_bits = _get_num_bits,
+    make_fingerprinter = make_torsion_fingerprinter,
+    )
+
+###
+
+RDKitPairFingerprintFamily_v1 = _base.clone(
+    name = "RDKit-Pair/1",
+    format_string = "fpSize=%(fpSize)s minLength=%(minLength)d maxLength=%(maxLength)d",
+    num_bits = _get_num_bits,
+    make_fingerprinter = make_pair_fingerprinter,
+    )

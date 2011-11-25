@@ -53,6 +53,21 @@ _morgan.add_argument_to_argparse("useFeatures", morgan_group)
 _morgan.add_argument_to_argparse("useChirality", morgan_group)
 _morgan.add_argument_to_argparse("useBondTypes", morgan_group)
 
+torsion_group = parser.add_argument_group("RDKit Topological Torsion fingerprints")
+torsion_group.add_argument("--torsions", action="store_true",
+                           help="generate Topological Torsion fingerprints")
+rdkit.RDKitTorsionFingerprintFamily_v1.add_argument_to_argparse(
+    "targetSize", torsion_group)
+
+pair_group = parser.add_argument_group("RDKit Atom Pair fingerprints")
+pair_group.add_argument("--pairs", action="store_true",
+                        help="generate Atom Pair fingerprints")
+rdkit.RDKitTorsionFingerprintFamily_v1.add_argument_to_argparse(
+    "minLength", pair_group)
+rdkit.RDKitTorsionFingerprintFamily_v1.add_argument_to_argparse(
+    "maxLength", pair_group)
+
+
 
 maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
@@ -89,7 +104,8 @@ def main(args=None):
     args = parser.parse_args(args)
 
     cmdsupport.mutual_exclusion(parser, args, "RDK",
-                                ("maccs166", "RDK", "substruct", "rdmaccs", "morgan"))
+                                ("maccs166", "RDK", "substruct", "rdmaccs", "morgan",
+                                 "torsion", "pairs"))
 
     if args.maccs166:
         opener = types.get_fingerprint_family("RDKit-MACCS166")()
@@ -98,18 +114,10 @@ def main(args=None):
         minPath = args.minPath
         maxPath = args.maxPath
         nBitsPerHash = args.nBitsPerHash
-        if fpSize < 1:
-            parser.error("--fpSize must be positive")
-        if nBitsPerHash < 1:
-            parser.error("--nBitsPerHash must be a positive value")
-        if minPath < 1:
-            parser.error("--minPath must be a positive value")
         if maxPath < minPath:
             parser.error("--minPath must not be greater than --maxPath")
 
         useHs = args.useHs
-        if useHs not in (0, 1):
-            parser.error("--useHs parameter must be 0 or 1 (%r)" % useHs)
 
         opener = types.get_fingerprint_family("RDKit-Fingerprint")(
             minPath=minPath,
@@ -123,18 +131,22 @@ def main(args=None):
     elif args.rdmaccs:
         opener = types.get_fingerprint_family("RDMACCS-RDKit")()
     elif args.morgan:
-        radius = args.radius
-        fpSize = args.fpSize or rdkit.NUM_BITS_MORGAN
-        useFeatures = args.useFeatures
-        useChirality = args.useChirality
-        useBondTypes = args.useBondTypes
-
         opener = types.get_fingerprint_family("RDKit-Morgan")(
-            radius=radius,
+            radius=args.radius,
+            fpSize=args.fpSize,
+            useFeatures=args.useFeatures,
+            useChirality=args.useChirality,
+            useBondTypes=args.useBondTypes)
+
+    elif args.torsion:
+        opener = type.get_fingerprint_family("RDKit-Torsion")(
             fpSize=fpSize,
-            useFeatures=useFeatures,
-            useChirality=useChirality,
-            useBondTypes=useBondTypes)
+            targetSize=args.targetSize)
+    elif args.pairs:
+        opener = type.get_fingerprint_family("RDKit-Pair")(
+            fpSize=fpSize,
+            targetSize=args.targetSize)
+        
     else:
         raise AssertionError("Unknown fingerprinter")
 
