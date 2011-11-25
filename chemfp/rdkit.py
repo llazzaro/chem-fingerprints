@@ -380,7 +380,7 @@ def _fpSize(s):
     raise ValueError("must be between 16 and 65536 bits")
 
 _base.add_argument("fpSize", type=_fpSize, metavar="INT", default=NUM_BITS,
-                   help = "number of bits in the fingerprint")
+                   help = "number of bits in the fingerprint (applies to RDK, Morgan, topological torsion, and atom pair fingerprints")
 
 _base.add_argument("minPath", type=positive_int("minPath"), metavar="INT", default=MIN_PATH,
                    help = "minimum number of bonds to include in the subgraph")
