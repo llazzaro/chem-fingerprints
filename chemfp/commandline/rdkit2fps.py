@@ -49,6 +49,7 @@ morgan_group.add_argument("--morgan", action="store_true",
                           help="generate Morgan fingerprints")
 
 _morgan = rdkit.RDKitMorganFingerprintFamily_v1
+_morgan.add_argument_to_argparse("radius", morgan_group)
 _morgan.add_argument_to_argparse("useFeatures", morgan_group)
 _morgan.add_argument_to_argparse("useChirality", morgan_group)
 _morgan.add_argument_to_argparse("useBondTypes", morgan_group)
