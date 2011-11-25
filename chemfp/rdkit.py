@@ -370,52 +370,45 @@ def _read_structures(metadata, source, format, id_tag, errors):
 _base = FingerprintFamilyConfig(
     software = SOFTWARE,
     read_structures = _read_structures,
-    format_string = "%(fpSize)d", # fake
     )
 
-def _fpSize(s):
-    i = int(s)
-    if 16 <= i <= 65536:
-        return i
-    raise ValueError("must be between 16 and 65536 bits")
-
-_base.add_argument("fpSize", type=_fpSize, metavar="INT", default=NUM_BITS,
+_base.add_argument("fpSize", decoder=positive_int, metavar="INT", default=NUM_BITS,
                    help = "number of bits in the fingerprint (applies to RDK, Morgan, topological torsion, and atom pair fingerprints")
 
-_base.add_argument("minPath", type=positive_int("minPath"), metavar="INT", default=MIN_PATH,
+_base.add_argument("minPath", decoder=positive_int, metavar="INT", default=MIN_PATH,
                    help = "minimum number of bonds to include in the subgraph")
 
-_base.add_argument("maxPath", type=positive_int("maxPath"), metavar="INT", default=MAX_PATH,
+_base.add_argument("maxPath", decoder=positive_int, metavar="INT", default=MAX_PATH,
                    help = "maximum number of bonds to include in the subgraph")
 
-_base.add_argument("nBitsPerHash", type=positive_int("nBitsPerHash"), metavar="INT",
+_base.add_argument("nBitsPerHash", decoder=positive_int, metavar="INT",
                    default=BITS_PER_HASH, help = "number of bits to set per path")
 
-_base.add_argument("useHs", type=zero_or_one("useHs"), metavar="0|1", default=USE_HS,
+_base.add_argument("useHs", decoder=zero_or_one, metavar="0|1", default=USE_HS,
                    help = "include information about the number of hydrogens on each atom")              
 # Morgan
-_base.add_argument("radius", type=nonnegative_int("radius"), metavar="INT", default=RADIUS,
+_base.add_argument("radius", decoder=nonnegative_int, metavar="INT", default=RADIUS,
                    help = "radius for the Morgan algorithm")
 
-_base.add_argument("useFeatures", type=zero_or_one("useFeatures"), metavar="0|1",
+_base.add_argument("useFeatures", decoder=zero_or_one, metavar="0|1",
                    default=USE_FEATURES, help = "use chemical-feature invariants")
 
-_base.add_argument("useChirality", type=zero_or_one("useChirality"), metavar="0|1",
+_base.add_argument("useChirality", decoder=zero_or_one, metavar="0|1",
                    default=USE_CHIRALITY, help = "include chirality information")
 
-_base.add_argument("useBondTypes", type=zero_or_one("useBondTypes"), metavar="0|1",
+_base.add_argument("useBondTypes", decoder=zero_or_one, metavar="0|1",
                    default=USE_BOND_TYPES, help = "include bond type information")
 
 
 # torsion
-_base.add_argument("targetSize", type=positive_int("targetSize"), metavar="INT",
+_base.add_argument("targetSize", decoder=positive_int, metavar="INT",
                    default=TARGET_SIZE, help = "number of bits in the fingerprint")
 
 # pair
-_base.add_argument("minLength", type=positive_int("minLength"), metavar="INT",
+_base.add_argument("minLength", decoder=positive_int, metavar="INT",
                    default=MIN_LENGTH, help = "minimum bond count for a pair")
 
-_base.add_argument("maxLength", type=positive_int("maxLength"), metavar="INT",
+_base.add_argument("maxLength", decoder=positive_int, metavar="INT",
                    default=MAX_LENGTH, help = "maximum bond count for a pair")
 
 #########
@@ -423,7 +416,7 @@ _base.add_argument("maxLength", type=positive_int("maxLength"), metavar="INT",
 RDKitMACCSFingerprintFamily_v1 = _base.clone(
     name = "RDKit-MACCS166/1",
     num_bits = 166,
-    make_fingerprinter = maccs166_fingerprinter,
+    make_fingerprinter = make_maccs166_fingerprinter,
     )
 
 
