@@ -356,15 +356,20 @@ class FingerprintFamilyConfig(object):
             verify_args = OR(verify_args, self.verify_args),
             args = OR(args, self.args))
 
-    def add_argument(self, name, type=None, encoder=None, default=None,
+    def add_argument(self, name, decoder=None, encoder=None, default=None,
                      action=None, metavar=None, help=None):
         #if name in self.args:
         #    raise AssertionError("Argument %r already added" % (name,))
         if default is not None:
             if help is not None:
                 help = "%s (default=%s)" % (help, default)
-        arg = FingerprintArgument(name, type, encoder,
-                                  kwargs = dict(type=type,
+        def parse_argument(s):
+            try:
+                return decoder(s)
+            except ValueError, err:
+                raise argparse.ArgumentError(None, "%s %s" % (name, err))
+        arg = FingerprintArgument(name, decoder, encoder,
+                                  kwargs = dict(type=parse_argument,
                                                 default=default,
                                                 action=action,
                                                 metavar=metavar,
@@ -378,31 +383,26 @@ class FingerprintFamilyConfig(object):
 
 # Helper functions
 
-def positive_int(name):
-    def positive_int(s):
-        # Don't do int(s) because that allows "+3" and " 3 ", which I don't want
-        if not s.isdigit():
-            raise argparse.ArgumentError(None, "%s must be 1 or greater" % (name,))
-        i = int(s)
-        if i == 0:
-            raise argparse.ArgumentError(None, "%s must be 1 or greater" % (name,))
-    return positive_int
+def positive_int(s):
+    # Don't do int(s) because that allows "+3" and " 3 ", which I don't want
+    if not s.isdigit():
+        raise ValueError("must be 1 or greater")
+    i = int(s)
+    if i == 0:
+        raise ValueError("must be 1 or greater")
+    return i
 
-def nonnegative_int(name):
-    def nonnegative_int(s):
-        if not s.isdigit():
-            raise argparse.ArgumentError(None, "%s must be a 0 or greater" % (name,))
-        return int(s)
-    return nonnegative_int
+def nonnegative_int(s):
+    if not s.isdigit():
+        raise ValueError("must be 0 or greater")
+    return int(s)
 
-def zero_or_one(name):
-    def zero_or_one(s):
-        if s == "0":
-            return 0
-        if s == "1":
-            return 1
-        raise argparse.ArgumentError(None, "%s must be 0 or a 1" % (name,))
-    return zero_or_one
+def zero_or_one(s):
+    if s == "0":
+        return 0
+    if s == "1":
+        return 1
+    raise ValueError("must be 0 or a 1")
         
 
 def parse_type(type):

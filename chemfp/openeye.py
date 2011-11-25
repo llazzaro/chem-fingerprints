@@ -470,7 +470,7 @@ def _correct_numbits(s):
         if not (16 <= i <= 65536):
             raise ValueError
     except ValueError:
-        raise argparse.ArgumentError(None, "numbits must be between 16 and 65536 bits")
+        raise ValueError("must be between 16 and 65536 bits")
     return i
 
 _base = FingerprintFamilyConfig(
@@ -485,33 +485,21 @@ OpenEyePathFingerprintFamily_v1 = _base.clone(
     make_fingerprinter = get_path_fingerprinter)
 
 _path = OpenEyePathFingerprintFamily_v1
-_path.add_argument("numbits", type=_correct_numbits, metavar="INT", default=4096,
+_path.add_argument("numbits", decoder=_correct_numbits, metavar="INT", default=4096,
                    help="number of bits in the path fingerprint")
 
-_path.add_argument("minbonds", type=nonnegative_int("minbonds"), metavar="INT", default=0,
+_path.add_argument("minbonds", decoder=nonnegative_int, metavar="INT", default=0,
                    help="minimum number of bonds in the path")
 
-_path.add_argument("maxbonds", type=nonnegative_int("maxbonds"), metavar="INT", default=5,
+_path.add_argument("maxbonds", decoder=nonnegative_int, metavar="INT", default=5,
                    help="maximum number of bonds in the path")
 
-def _atom_description(s):
-    try:
-        return atom_description_to_value(s)
-    except ValueError, x:
-        raise argparse.ArgumentError(None, str(x))
-
-_path.add_argument("atype", type=_atom_description, encoder=atom_value_to_description,
+_path.add_argument("atype", decoder=atom_description_to_value,
+                   encoder=atom_value_to_description,
                    help="atom type", default="DefaultAtom")
 
-def _bond_description(s):
-    try:
-        return bond_description_to_value(s)
-    except ValueError, x:
-        raise argparse.ArgumentError(None, str(x))
-
-
-
-_path.add_argument("btype", type=_bond_description, encoder=bond_value_to_description,
+_path.add_argument("btype", decoder=bond_description_to_value,
+                   encoder=bond_value_to_description,
                    help="bond type", default="DefaultBond")
 
     
