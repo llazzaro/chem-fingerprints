@@ -2,12 +2,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/time.h>
 
 #include "chemfp.h"
 #include "chemfp_internal.h"
 #include "popcount.h"
-
 #include "cpuid.h"
 
 static unsigned long 
@@ -382,13 +380,29 @@ chemfp_select_intersect_popcount(int num_bits,
 
 /*********** Automatically select the fastest method ***********/
 
-static unsigned long
-get_usecs(void) {
+#if defined(_MSC_VER)
+  #include <windows.h> /* QueryPerformanceCounter(LARGE_INTEGER*) */
+#else
+  #include <sys/time.h>
+#endif
+
+static long long
+high_resolution_timer(void) {
+#if defined(_MSC_VER)
+  LARGE_INTEGER counter;
+  if (!QueryPerformanceCounter(&counter) || 
+      counter.QuadPart == 0) {
+    fprintf(stderr, "Error: high resolution timer not available!\n");
+    return 0;
+  }
+  return counter.QuadPart;
+#else
   struct timeval tv;
   gettimeofday(&tv, NULL);
+  /* return usecs */
   return tv.tv_sec*1000000+tv.tv_usec;
+#endif
 }
-
 
 /* Use uint64_t so it's 64-bit/8 byte aligned */
 /* The contents are randomly generated. */
@@ -656,13 +670,13 @@ static uint64_t popcount_buffer[256] = {
 
 static unsigned long 
 timeit(chemfp_popcount_f popcount, int size, int repeat) {
-  unsigned long t1, t2;
+  long long t1, t2;
   unsigned char *start_buffer, *end_buffer, *fp;
   int i;
   if (size > sizeof(popcount_buffer)) {
     size = sizeof(popcount_buffer);
   }
-  t1 = get_usecs();
+  t1 = high_resolution_timer();
   start_buffer = (unsigned char *) popcount_buffer;
   end_buffer = start_buffer + sizeof(popcount_buffer);
 
@@ -671,8 +685,8 @@ timeit(chemfp_popcount_f popcount, int size, int repeat) {
       popcount(size, fp);
     }
   }
-  t2 = get_usecs();
-  return t2-t1;
+  t2 = high_resolution_timer();
+  return (unsigned long)(t2-t1);
 }
 
 
