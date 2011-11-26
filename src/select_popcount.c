@@ -62,7 +62,6 @@ static chemfp_method_type compile_time_methods[] = {
   {0, CHEMFP_SSSE3, "ssse3", 64, 64, has_ssse3,
    (chemfp_popcount_f) _chemfp_popcount_SSSE3,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_SSSE3},
-
 };
 
 
@@ -115,9 +114,7 @@ set_default_alignment_methods(void) {
   int lut_method, best64_method, large_method, ssse3_method;
   unsigned long first_time, lut8_time, lut16_time, lut_time;
   unsigned long gillies_time, best64_time, lauradoux_time;
-#if defined(GENERATE_SSSE3)
   unsigned long ssse3_time;
-#endif
 
   /* Make sure we haven't already initialized the alignments */
   if (_chemfp_alignments[0].method_p != NULL) {
@@ -209,23 +206,19 @@ set_default_alignment_methods(void) {
     }
     _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[large_method];
 
+  ssse3_method = large_method;
 
-    ssse3_method = large_method;
-
-#if defined(GENERATE_SSSE3)
-    if (has_ssse3()) {
-      first_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
-      ssse3_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
-      if (first_time < ssse3_time) {
-        ssse3_time = first_time;
-      }
-      if (ssse3_time < best64_time) {
-        ssse3_method = CHEMFP_SSSE3;
-      }
+  if (has_ssse3()) {
+    first_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
+    ssse3_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
+    if (first_time < ssse3_time) {
+      ssse3_time = first_time;
     }
-#endif
-    _chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p = &compile_time_methods[ssse3_method];
-
+    if (ssse3_time < best64_time) {
+      ssse3_method = CHEMFP_SSSE3;
+    }
+  }
+  _chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p = &compile_time_methods[ssse3_method];
   }
 }
 
