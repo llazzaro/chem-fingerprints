@@ -1,6 +1,12 @@
 /**
- * Enable the UINT64_C(c) macro from <stdint.h>.
+ * @brief   Contains fast and portable bit population count functions
+ *          for molecular fingerprints.
+ * @author  Kim Walisch, <kim.walisch@gmail.com>
+ * @version 1.1
+ * @date    2011
  */
+
+/** Enable the UINT64_C(c) macro from <stdint.h>. */
 #if !defined(__STDC_CONSTANT_MACROS)
 #  define __STDC_CONSTANT_MACROS
 #endif
@@ -8,20 +14,10 @@
 
 #include "popcount.h"
 
-// popcount_lauradoux.c, v 1.1
-// Created by Kim Walisch on 11/10/11.
-//
-// Changes:
-//
-// The main outer loop of the two functions now processes
-// 12*8 = 96 bytes per iteration (previously 240 bytes).
-// This makes the functions more efficient for small fingerprints
-// e.g. 881 bits.
-
 /**
- * Count the number of 1 bits (population count) in an array using
- * 64-bit tree merging. This implementation uses only 8 operations per
- * 8 bytes on 64-bit CPUs.
+ * Count the number of 1 bits (population count) in a fingerprint
+ * using 64-bit tree merging. This implementation uses only 8
+ * operations per 8 bytes on 64-bit CPUs.
  * The algorithm is due to Cédric Lauradoux, it is described and
  * benchmarked against other bit population count solutions (lookup
  * tables, bit-slicing) in his paper:
@@ -43,12 +39,14 @@ _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
 #if defined(ORIGINAL)
   uint64_t x;
 #endif
-  int i, j;    
+  int i, j;
   int size = (byte_size + 7) / 8;
   int limit = size - size % 12;
   int bit_count = 0;
-  
-  // 64-bit tree merging
+
+  /* The main outer loop processes 12*8 = 96 bytes per iteration
+     (previously 240 bytes). This makes the popcount more efficient
+     for small fingerprints e.g. 881 bits. */
   for (i = 0; i < limit; i += 12, fp += 12) {
     acc = 0;
     for (j = 0; j < 12; j += 3) {
@@ -77,10 +75,10 @@ _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
   bit_count += _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p->popcount(
                         byte_size - limit*8, (unsigned char *) fp);
 #else
-  // count the bits of the remaining bytes (MAX 88) using 
-  // "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
-  // the code uses wikipedia's 64-bit popcount_3() implementation:
-  // http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation
+  /* Count the bits of the remaining bytes (MAX 88) using 
+     "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
+     the code uses wikipedia's 64-bit popcount_3() implementation:
+     http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation */
   for (i = 0; i < size - limit; i++) {
     x = fp[i];
     x =  x       - ((x >> 1)  & m1);
@@ -109,13 +107,11 @@ _chemfp_intersect_popcount_lauradoux(int byte_size,
   uint64_t x;
 #endif
   int i, j;
-  /* Adjust the input size because the size isn't necessarily a multiple of 8 */
-  /* even though the storage area will be a multiple of 8. */
   int size = (byte_size + 7) / 8;
   int limit = size - size % 12;
   int bit_count = 0;
-  
-  // 64-bit tree merging
+
+  /* 64-bit tree merging */
   for (i = 0; i < limit; i += 12, fp1 += 12, fp2 += 12) {
     acc = 0;
     for (j = 0; j < 12; j += 3) {
@@ -147,10 +143,10 @@ _chemfp_intersect_popcount_lauradoux(int byte_size,
                         (unsigned char *) fp1, (unsigned char *) fp2);
     
 #else
-  // intersect count the bits of the remaining bytes (MAX 88) using 
-  // "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
-  // the code uses wikipedia's 64-bit popcount_3() implementation:
-  // http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation
+  /* intersect count the bits of the remaining bytes (MAX 88) using 
+     "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
+     the code uses wikipedia's 64-bit popcount_3() implementation:
+     http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation */
   for (i = 0; i < size - limit; i++) {
     x = fp1[i] & fp2[i];
     x =  x       - ((x >> 1)  & m1);
