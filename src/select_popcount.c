@@ -113,7 +113,7 @@ chemfp_get_method_name(int method) {
 }
 
 
-static inline void
+static void
 set_default_alignment_methods(void) {
   int lut_method, best64_method, large_method, ssse3_method;
   unsigned long first_time, lut8_time, lut16_time, lut_time;
