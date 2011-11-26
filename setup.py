@@ -54,6 +54,7 @@ copt =  {
     }
 
 lopt =  {
+    "msvc": ["/MANIFEST"],
     "mingw32" : OMP("-fopenmp"),
 
     "gcc-4.1": ["-O3"], # Doesn't support OpenMP
