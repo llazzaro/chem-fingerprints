@@ -24,7 +24,7 @@
  */
 
 #if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
-  #include <intrin.h>    /* __cpuid() */
+  #include <intrin.h> /* __cpuid() */
 #endif
 
 /* %ecx bit flags */
