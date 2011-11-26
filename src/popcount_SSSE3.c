@@ -1,48 +1,59 @@
-/* The original version of this code was written by Imran Haque and is
-   in the supplementary information to
+/*
+  The original version of this code was written by Imran Haque and is
+  in the supplementary information to Haque IS, Pande VS, and Walters
+  WP. Anatomy of High-Performance 2D Similarity Calculations. Journal
+  of Chemical Information and Modeling 2011
+  See http://cs.stanford.edu/people/ihaque/
 
-      Haque IS, Pande VS, and Walters WP. Anatomy of High-Performance
-      2D Similarity Calculations. Journal of Chemical Information and
-      Modeling 2011
-
-See http://cs.stanford.edu/people/ihaque/
-
-
-Kim Walisch make a few modifications to adapt it for work with chemfp.
-
+  Kim Walisch modified the code for use in chemfp and implemented two
+  new *_chemfp_*() popcount functions for molecular fingerprints.
+  Copyright (c) 2011 Kim Walisch, <kim.walisch@gmail.com>.
+  License: MIT license.
 */
 
-/*  Written by Imran S. Haque (ihaque@cs.stanford.edu)
+/*
+  Written by Imran S. Haque (ihaque@cs.stanford.edu)
+  Copyright (c) 2011 Stanford University.
+  All rights reserved.
 
- Copyright (c) 2011 Stanford University.
- All rights reserved.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
 
- Redistribution and use in source and binary forms, with or without modification,
- are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+    * Neither the name of the author nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
 
-     * Redistributions of source code must retain the above copyright notice,
-       this list of conditions and the following disclaimer.
-     * Redistributions in binary form must reproduce the above copyright notice,
-       this list of conditions and the following disclaimer in the documentation
-       and/or other materials provided with the distribution.
-     * Neither the name of Stanford University nor the names of its contributors
-       may be used to endorse or promote products derived from this software without
-       specific prior written permission.
-
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- POSSIBILITY OF SUCH DAMAGE.
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+  OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 
 #include "popcount.h"
+
+#if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
+  #define GENERATE_SSSE3
+#elif defined(__i386__) || defined(__i386) || defined(__x86_64__)
+  #if defined(__SSSE3__) || !defined(__GNUC__)
+    #define GENERATE_SSSE3
+  #endif
+#endif
 
 #if defined(GENERATE_SSSE3)
 
