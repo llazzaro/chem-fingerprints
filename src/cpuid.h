@@ -5,7 +5,7 @@
  * @brief   Contains a portable cpuid implementation for x86 and
  *          x86-64 CPUs.
  * @author  Kim Walisch, <kim.walisch@gmail.com>
- * @version 1.0
+ * @version 1.1
  * @date    2011
  *
  * The code within this file has been tested successfully with the
@@ -25,10 +25,7 @@
 
 #if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
   #include <intrin.h>    /* __cpuid() */
-  #include <nmmintrin.h> /* _mm_popcnt_u32(), _mm_popcnt_u64() */
 #endif
-
-#include <stdint.h>
 
 /* %ecx bit flags */
 #define bit_SSE3    (1 <<  0)
@@ -45,12 +42,13 @@
 /**
  * Portable cpuid implementation for x86 and x86-64 CPUs
  * (supports PIC and non-PIC code).
+ * @return  1 if the CPU supports the cpuid instruction else -1.
  */
-static void cpuid(unsigned int info,
-                  unsigned int *eax,
-                  unsigned int *ebx,
-                  unsigned int *ecx,
-                  unsigned int *edx)
+static int cpuid(unsigned int info,
+                 unsigned int *eax,
+                 unsigned int *ebx,
+                 unsigned int *ecx,
+                 unsigned int *edx)
 {
 #if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
   int regs[4];
@@ -59,6 +57,7 @@ static void cpuid(unsigned int info,
   *ebx = regs[1];
   *ecx = regs[2];
   *edx = regs[3];
+  return 1;
 #elif defined(__i386__) || defined(__i386)
   *eax = info;
   #if defined(__PIC__)
@@ -78,6 +77,7 @@ static void cpuid(unsigned int info,
      "=c" (*ecx),
      "=d" (*edx));
   #endif
+  return 1;
 #elif defined(__x86_64__)
   *eax = info;
   __asm__ __volatile__ (
@@ -86,6 +86,10 @@ static void cpuid(unsigned int info,
      "=b" (*ebx),
      "=c" (*ecx),
      "=d" (*edx));
+  return 1;
+#else
+  /* compiler or CPU architecture do not support cpuid. */
+  return -1;
 #endif
 }
 
@@ -95,17 +99,20 @@ static void cpuid(unsigned int info,
  */
 static int get_cpuid_flags()
 {
+  int flags = 0;
   unsigned int info = 0x00000001;
-  unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
-  cpuid(info, &eax, &ebx, &ecx, &edx);
-  return (edx & (bit_SSE    | 
-                 bit_SSE2)) | 
-         (ecx & (bit_SSE3   | 
-                 bit_SSSE3  | 
-                 bit_SSE4_1 | 
-                 bit_SSE4_2 | 
-                 bit_POPCNT | 
-                 bit_AVX));
+  unsigned int eax, ebx, ecx, edx;
+  if (cpuid(info, &eax, &ebx, &ecx, &edx) != -1) {
+    flags = (edx & (bit_SSE    | 
+                    bit_SSE2)) | 
+            (ecx & (bit_SSE3   | 
+                    bit_SSSE3  | 
+                    bit_SSE4_1 | 
+                    bit_SSE4_2 | 
+                    bit_POPCNT | 
+                    bit_AVX));
+  }
+  return flags;
 }
 
 #endif /* CPUID_H */
