@@ -59,12 +59,9 @@ static chemfp_method_type compile_time_methods[] = {
    (chemfp_popcount_f) _chemfp_popcount_gillies,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_gillies},
 
-#if defined(GENERATE_SSSE3)
   {0, CHEMFP_SSSE3, "ssse3", 64, 64, has_ssse3,
    (chemfp_popcount_f) _chemfp_popcount_SSSE3,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_SSSE3},
-#endif
-   
 
 };
 
