@@ -66,15 +66,6 @@ int _chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const ui
 int _chemfp_popcount_popcnt(int size, const uint64_t *fp);
 int _chemfp_intersect_popcount_popcnt(int size, const uint64_t *fp1, const uint64_t *fp2);
 
-
-#if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
-  #define GENERATE_SSSE3
-#elif defined(__i386__) || defined(__i386) || defined(__x86_64__)
-  #if defined(__SSSE3__) || !defined(__GNUC__)
-    #define GENERATE_SSSE3
-  #endif
-#endif
-
 int _chemfp_popcount_SSSE3(int, const unsigned*);
 int _chemfp_intersect_popcount_SSSE3(int, const unsigned*, const unsigned*);
 
