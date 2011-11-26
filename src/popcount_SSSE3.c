@@ -43,7 +43,7 @@ Kim Walisch make a few modifications to adapt it for work with chemfp.
 
 
 #include "popcount.h"
-  
+
 #if defined(GENERATE_SSSE3)
 
 #include <emmintrin.h>
@@ -52,8 +52,7 @@ Kim Walisch make a few modifications to adapt it for work with chemfp.
 static __m128i popcount_SSSE3_helper(const unsigned *buf, int N) {
   /* LUT of count of set bits in each possible 4-bit nibble,
      from low-to-high: 0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4 */
-  const unsigned _LUT[] = {0x02010100, 0x03020201, 0x03020201, 0x04030302};
-  const __m128i LUT   = _mm_load_si128((__m128i*) _LUT);
+  const __m128i LUT   = _mm_set_epi32(0x02010100, 0x03020201, 0x03020201, 0x04030302);
   const __m128i mask  = _mm_set1_epi32(0x0F0F0F0F);
   const __m128i *vbuf = (__m128i*) buf;
 
@@ -94,8 +93,7 @@ static __m128i popcount_SSSE3_helper(const unsigned *buf, int N) {
 static __m128i intersect_popcount_SSSE3_helper(const unsigned *buf, const unsigned *buf2, int N) {
   /* LUT of count of set bits in each possible 4-bit nibble,
      from low-to-high: 0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4 */
-  const unsigned _LUT[] = {0x02010100, 0x03020201, 0x03020201, 0x04030302};
-  const __m128i LUT    = _mm_load_si128((__m128i*) _LUT);
+  const __m128i LUT    = _mm_set_epi32(0x02010100, 0x03020201, 0x03020201, 0x04030302);
   const __m128i mask   = _mm_set1_epi32(0x0F0F0F0F);
   const __m128i *vbuf  = (__m128i*) buf;
   const __m128i *vbuf2 = (__m128i*) buf2;
@@ -159,7 +157,7 @@ int _chemfp_popcount_SSSE3(int size, const unsigned *fp) {
     count32 = _mm_add_epi32(count32, popcount_SSSE3_helper(&fp[i], (N - i) / 4));
   }
   /* Layout coming from PSADBW accumulation is 2*{0,32}: 0 S1 0 S0 */
-  _mm_store_ss((float*)&count, (__m128)(_mm_add_epi32(
+  _mm_store_ss((float*)&count, _mm_cvtepi32_ps(_mm_add_epi32(
       count32, _mm_shuffle_epi32(count32, _MM_SHUFFLE(2, 2, 2, 2)))));
 #endif
   return count;
@@ -188,7 +186,7 @@ int _chemfp_intersect_popcount_SSSE3(int size, const unsigned *fp1, const unsign
     count32 = _mm_add_epi32(count32, intersect_popcount_SSSE3_helper(&fp1[i], &fp2[i], (N - i) / 4));
   }
   /* Layout coming from PSADBW accumulation is 2*{0,32}: 0 S1 0 S0 */
-  _mm_store_ss((float*)&count, (__m128)(_mm_add_epi32(
+  _mm_store_ss((float*)&count, _mm_cvtepi32_ps(_mm_add_epi32(
       count32, _mm_shuffle_epi32(count32, _MM_SHUFFLE(2, 2, 2, 2)))));
 #endif
   return count;
