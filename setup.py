@@ -44,7 +44,7 @@ def SSSE3(*args):
 # Compiler-specific configuration settings due to:
 #  http://stackoverflow.com/questions/724664/python-distutils-how-to-get-a-compiler-that-is-going-to-be-used/5192738#5192738
 copt =  {
-    "msvc": OMP("/openmp") + ["/Ox"],
+    "msvc": OMP("/openmp") + ["/Ox", "/GL"],
     "mingw32" : OMP("-fopenmp") + ["-O3", "-ffast-math", "-march=native"],
 
     "gcc-4.1": ["-O3"], # Doesn't support OpenMP, doesn't support -mssse3
@@ -54,7 +54,7 @@ copt =  {
     }
 
 lopt =  {
-    "msvc": ["/MANIFEST"],
+    "msvc": ["/LTCG", "/MANIFEST"],
     "mingw32" : OMP("-fopenmp"),
 
     "gcc-4.1": ["-O3"], # Doesn't support OpenMP
