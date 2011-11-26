@@ -1,8 +1,6 @@
-#include "popcount.h"
-
 /**
- * @brief   Contains a portable POPCNT (SSE4.2) functions 
- *          for molecular fingerprints.
+ * @brief   Contains portable popcount functions using the POPCNT
+ *          (SSE4.2) instruction for molecular fingerprints.
  * @author  Kim Walisch, <kim.walisch@gmail.com>
  * @version 1.0
  * @date    2011
@@ -21,6 +19,13 @@
  * Microsoft Visual Studio 2010,  Windows 7 64-bit
  * MinGW-w64 GCC 4.6,             Windows 7 64-bit
  */
+
+#include "popcount.h"
+#include <stdint.h>
+
+#if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
+  #include <nmmintrin.h> /* _mm_popcnt_u32(), _mm_popcnt_u64() */
+#endif
 
 /** Convenience functions for the POPCNT instruction. */
 
@@ -94,4 +99,3 @@ int _chemfp_intersect_popcount_popcnt(int size, const uint64_t *fp1, const uint6
 #endif
   return bit_count;
 }
-
