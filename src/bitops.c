@@ -297,7 +297,7 @@ double chemfp_byte_hex_tanimoto(int size,
     w2 = hex_to_value[*hex_fp++];
     /* Check for illegal characters */
     union_w |= (w1|w2);
-    wc = (w1<<4) | w2;
+    wc = (unsigned char)((w1<<4) | w2);
     byte = *byte_fp++;
     union_popcount += byte_popcounts[byte | wc];
     intersect_popcount += byte_popcounts[byte & wc];

@@ -24,7 +24,7 @@ int chemfp_fps_find_id(
   const char *s;
 
   /* Find the hex fingerprint and check that the length is appropriate */
-  fp_field_len = strspn(line, "0123456789abcdefABCDEF");
+  fp_field_len = (int) strspn(line, "0123456789abcdefABCDEF");
   if (fp_field_len == 0)
     return CHEMFP_MISSING_FINGERPRINT;
   if (fp_field_len % 2 != 0)
@@ -47,7 +47,7 @@ int chemfp_fps_find_id(
   /* You must pass in a newline-terminated string to this function.
      Therefore, this function will finish while inside the string.
      Note that I'm also checking for illegal whitespace here. */
-  id_len = strcspn(s, "\t\n\r");
+  id_len = (int) strcspn(s, "\t\n\r");
   switch (s[id_len]) {
   case '\0': return CHEMFP_BAD_ID;
   case '\r': if (s[id_len+1] != '\n') return CHEMFP_UNSUPPORTED_WHITESPACE;
@@ -171,10 +171,10 @@ int chemfp_fps_threshold_tanimoto_search(
          query_index++, query_fp += query_storage_size) {
       score = chemfp_byte_hex_tanimoto(fp_size, query_fp, line);
       if (score >= threshold) {
-        current_cell->score = score;
+        current_cell->score       = score;
         current_cell->query_index = query_index;
-        current_cell->id_start = id_start - target_block;
-        current_cell->id_end = id_end - target_block;
+        current_cell->id_start    = (int)(id_start - target_block);
+        current_cell->id_end      = (int)(id_end - target_block);
         current_cell++;
         num_cells--;
       }
@@ -188,7 +188,7 @@ int chemfp_fps_threshold_tanimoto_search(
  finish:
   *stopped_at = line;
   *num_lines_processed = num_lines;
-  *num_cells_processed = current_cell - cells;
+  *num_cells_processed = (int)(current_cell - cells);
   return retval;
 }
 
@@ -290,7 +290,7 @@ int chemfp_fps_knearest_search_init(
 }
 
 static char *new_string(const char *start, const char *end) {
-  int n = end-start;
+  size_t n = end-start;
   char *s = malloc(n+1);
   if (s) {
     memcpy(s, start, n);

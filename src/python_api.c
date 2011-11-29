@@ -539,14 +539,14 @@ fps_parse_id_fp(PyObject *self, PyObject *args) {
     return Py_BuildValue("i(ss)", err, NULL, NULL);
   }
   if (hex_size == -1) {
-    hex_size = (id_start-line)-1;
+    hex_size = (int)(id_start-line)-1;
   }
   fp = PyString_FromStringAndSize(NULL, hex_size/2);
   if (!fp)
     return NULL;
   s = PyString_AS_STRING(fp);
   for (i=0; i<hex_size; i+=2) {
-    *s++ = ((_hex_digit_to_value[(int)line[i]]<<4)+_hex_digit_to_value[(int)line[i+1]]);
+    *s++ = (char)((_hex_digit_to_value[(int)line[i]]<<4)+_hex_digit_to_value[(int)line[i+1]]);
   }
 
   retval = Py_BuildValue("i(s#O)", err, id_start, id_end-id_start, fp);
@@ -976,7 +976,7 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
     return NULL;
   }
   if (bad_num_bits(num_bits) ||
-      bad_arena_limits("", input_arena_size, storage_size, &start, &num_fingerprints) ||
+      bad_arena_limits("", (int) input_arena_size, storage_size, &start, &num_fingerprints) ||
       bad_popcount_indices("", 0, num_bits, popcount_indices_size, NULL)) {
     return NULL;
   }
