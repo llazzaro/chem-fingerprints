@@ -1,0 +1,107 @@
+What's new in 1.1 (in development)
+==================
+
+New popcount algorithms:
+  - Lauradoux and POPCNT versions contributed by Kim Walisch
+      (These are 2x and 3x faster than the original method.)
+  - SSSE3 version by Imran Haque, Stanford University
+      (This is about 2.5x faster than the original method.)
+  - Gilles method, which can be better than the original method.
+
+The timings depend very much on the compiler, CPU features, and choice
+of 32- vs 64- bit architecture. For example, Lauradoux is slower than
+the lookup tables for 32 bit systems. chemfp selects the best method
+at import run-time. Use chemfp.bitops.set_alignment_method to force a
+specific method.
+
+The new popcount algorithms require a specific fingerprint alignment
+and padding. Use the new "alignment" option in load_fingerprints() to
+specify an alignment. The default uses an alignment based on the
+available methods and the fingerprint size. (It will be 8 or less
+unless you have SSSE3 hardware but not SSE4.2, and your fingerprint is
+larger than 224 bits, in which case it's 64 bytes.)
+
+Support for RDKit's Morgan fingerprints.
+
+New decoder for Daylight's "binary2ascii" encoding.
+
+Fixed a memory overflow bug which caused crashes on some Windows and
+Linux machines.
+
+Added Alex Grönholm's 'futures' package as a submodule. It greatly
+simplifies making a thread- or process pool. It is a backport of the
+code in Python 3.2.
+
+Added Nilton Volpato's 'progressbar' package as a submodule. Use it to
+show a text-based progress bar in chemfp-based search tools.
+
+Added an experimental "Watcher" module by Allen Downey. Use it to
+handle ^C events, which otherwise get sent to an arbitary thread. It
+works by spawning a child process. The main process listens for a ^C
+and forwards that as a os.kill() to the child process. This will
+likely only work on Unix systems.
+
+What's new in 1.0
+==================
+
+The chemfp format is now a tab-delimited format. I talked with two
+people who have spaces in their ids: one in their corporate ids and
+the other wants to use IUPAC names. In discussion with others, having
+a pure tab-delimited format would not be a problem with the primary
+audience.
+
+The simsearch output format is also tab delimited.
+
+Completely redeveloped the in-memory search interface. The core data
+structure is a "FingerprintArena", which can optionally hold
+population count information.
+
+The similarity searches use a compressed row representation,
+which is a more efficient use of memory and reduces the number
+Python-to-C calls I need to make.
+
+The FPS knearest search is push oriented, and keeps track of the
+identifiers at the C level.
+
+Major restructuring of the API so that public functions are at the top
+of the "chemfp" package. Made high-level functions for the expected
+common tasks of searching an FPSReader and a FingerprintArena.
+
+The oe2fps, ob2fps, and rdkit2fps readers now support multiple
+structure filenames. Each filename is listed on its own "source" line.
+
+New --id-tag to use one of the SD tag fields rather than the title
+line. This is needed for ChEBI where you should use --id-tag "ChEBI ID"
+to get ids like "CHEBI:776".
+
+New --aromaticity option for oe2fps, and a corresponding "aromaticity"
+field in the FPS header.
+
+Improved docstring comments.
+
+Improved error reporting.
+
+Added error handling options "strict", "report", and "ignore."
+
+More comprehensive test suite (which, yes, caught several errors).
+
+
+What's new in 0.95
+==================
+
+Cross-platform pattern-based fingerprint generation, and specific
+implementations of a CACTVS/PubChem-like substructure fingerprint and
+of RDKit's MACCS patterns.
+
+
+What's new in 0.9.1
+===================
+
+Support for Python 2.5.
+
+What's new in 0.9
+=================
+
+Major update from 0.5. Changes to the API, code
+cleanup, new search API, and more. Since there are
+no earlier users, I won't go into the details. :)
