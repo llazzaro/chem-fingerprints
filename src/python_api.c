@@ -5,6 +5,9 @@
 
 static PyObject *
 version(PyObject *self, PyObject *args) {
+  /* unused parameters */
+  (void)(args);
+  (void)(self);
   return PyString_FromString(chemfp_version());
 }
 
@@ -13,6 +16,8 @@ version(PyObject *self, PyObject *args) {
 static PyObject *
 strerror_(PyObject *self, PyObject *args) {
   int err;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "i:strerror", &err))
     return NULL;
   return PyString_FromString(chemfp_strerror(err));
@@ -24,6 +29,8 @@ static PyObject *
 hex_isvalid(PyObject *self, PyObject *args) {
   char *s;
   int len;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#:hex_isvalid", &s, &len))
     return NULL;
   return PyInt_FromLong(chemfp_hex_isvalid(len, s));
@@ -33,6 +40,8 @@ static PyObject *
 hex_popcount(PyObject *self, PyObject *args) {
   char *s;
   int len;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#:hex_popcount", &s, &len))
     return NULL;
   return PyInt_FromLong(chemfp_hex_popcount(len, s));
@@ -42,6 +51,8 @@ static PyObject *
 hex_intersect_popcount(PyObject *self, PyObject *args) {
   char *s1, *s2;
   int len1, len2;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#s#:hex_intersect_popcount", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
@@ -56,6 +67,8 @@ static PyObject *
 hex_tanimoto(PyObject *self, PyObject *args) {
   char *s1, *s2;
   int len1, len2;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#s#:hex_tanimoto", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
@@ -70,6 +83,8 @@ static PyObject *
 hex_contains(PyObject *self, PyObject *args) {
   char *s1, *s2;
   int len1, len2;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#s#:hex_contains", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
@@ -86,6 +101,8 @@ static PyObject *
 byte_popcount(PyObject *self, PyObject *args) {
   unsigned char *s;
   int len;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#:byte_popcount", &s, &len))
     return NULL;
   return PyInt_FromLong(chemfp_byte_popcount(len, s));
@@ -95,6 +112,8 @@ static PyObject *
 byte_intersect_popcount(PyObject *self, PyObject *args) {
   unsigned char *s1, *s2;
   int len1, len2;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#s#:byte_intersect_popcount", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
@@ -109,6 +128,8 @@ static PyObject *
 byte_tanimoto(PyObject *self, PyObject *args) {
   unsigned char *s1, *s2;
   int len1, len2;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#s#:byte_tanimoto", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
@@ -123,6 +144,8 @@ static PyObject *
 byte_contains(PyObject *self, PyObject *args) {
   unsigned char *s1, *s2;
   int len1, len2;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#s#:byte_contains", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
@@ -138,6 +161,8 @@ byte_intersect(PyObject *self, PyObject *args) {
   unsigned char *s, *s1, *s2;
   int i, len1, len2;
   PyObject *new_obj;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#s#:byte_intersect", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
@@ -161,6 +186,8 @@ byte_union(PyObject *self, PyObject *args) {
   unsigned char *s, *s1, *s2;
   int i, len1, len2;
   PyObject *new_obj;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#s#:byte_union", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
@@ -184,6 +211,8 @@ byte_difference(PyObject *self, PyObject *args) {
   unsigned char *s, *s1, *s2;
   int i, len1, len2;
   PyObject *new_obj;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "s#s#:byte_difference", &s1, &len1, &s2, &len2))
     return NULL;
   if (len1 != len2) {
@@ -290,7 +319,7 @@ bad_arena_size(const char *which, int num_bits, int storage_size) {
 static int 
 bad_fps_cells(int *num_cells, int cells_size, int num_queries) {
   char msg[100];
-  *num_cells = cells_size / sizeof(chemfp_tanimoto_cell);
+  *num_cells = (int)(cells_size / sizeof(chemfp_tanimoto_cell));
   if (*num_cells < num_queries) {
     sprintf(msg, "%d queries requires at least %d cells, not %d",
             num_queries, num_queries, *num_cells);
@@ -302,7 +331,7 @@ bad_fps_cells(int *num_cells, int cells_size, int num_queries) {
 
 static int
 bad_knearest_search_size(int knearest_search_size) {
-  if (knearest_search_size < sizeof(chemfp_fps_knearest_search)) {
+  if (knearest_search_size < (int) sizeof(chemfp_fps_knearest_search)) {
     PyErr_SetString(PyExc_ValueError,
                     "Not enough space allocated for a chemfp_fps_knearest_search");
     return 1;
@@ -391,7 +420,7 @@ bad_popcount_indices(const char *which, int check_indices, int num_bits,
   /*   indices[0]...indices[1] ==> fingerprints with 0 bits set */
   /*   indices[1]...indices[2] ==> fingerprints with 1 bit set */
 
-  num_popcounts = popcount_indices_size / sizeof(int);
+  num_popcounts = (int)(popcount_indices_size / sizeof(int));
 
   if (num_bits > num_popcounts - 2) {
     sprintf(msg, "%d bits requires at least %d %spopcount indices, not %d",
@@ -424,7 +453,7 @@ bad_popcount_indices(const char *which, int check_indices, int num_bits,
 
 static int
 bad_offsets(int num_queries, int size, int start) {
-  int num_offsets = size/sizeof(int);
+  int num_offsets = (int)(size/sizeof(int));
 
   /* There must be enough space for num_queries, plus 1 for the end */
   char msg[100];
@@ -447,8 +476,8 @@ bad_offsets(int num_queries, int size, int start) {
 
 static int
 bad_cells(int min_row_size,int indices_size, int scores_size, int *num_cells) {
-  int num_indices = indices_size / sizeof(int);
-  int num_scores = scores_size / sizeof(double);
+  int num_indices = (int)(indices_size / sizeof(int));
+  int num_scores = (int)(scores_size / sizeof(double));
 
   if (num_indices < min_row_size) {
     PyErr_SetString(PyExc_ValueError, "Insufficient space to store indices for a row");
@@ -468,7 +497,7 @@ bad_cells(int min_row_size,int indices_size, int scores_size, int *num_cells) {
 
 static int
 bad_counts(int count_size, int num_queries) {
-  if (count_size / sizeof(int) < num_queries) {
+  if ((int)(count_size / sizeof(int)) < num_queries) {
     PyErr_SetString(PyExc_ValueError, "Insufficient space to store all of the counts");
     return 1;
   }
@@ -498,7 +527,8 @@ static PyObject *
 fps_line_validate(PyObject *self, PyObject *args) {
   int hex_size, line_size;
   char *line;
-  
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "is#:fps_line_validate", &hex_size, &line, &line_size))
     return NULL;
   if (bad_hex_size(hex_size))
@@ -525,7 +555,8 @@ fps_parse_id_fp(PyObject *self, PyObject *args) {
   const char *id_start, *id_end;
   PyObject *fp, *retval;
   char *s;
-  
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "is#:fps_line_validate", &hex_size, &line, &line_size))
     return NULL;
   if (bad_hex_size(hex_size))
@@ -576,7 +607,8 @@ fps_count_tanimoto_hits(PyObject *self, PyObject *args) {
   int *counts, counts_size;
   int num_lines_processed = 0;
   int err;
-
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "iiiit#iit#iidw#:fps_count_tanimoto_hits",
                         &num_bits,
                         &query_start_padding, &query_end_padding,
@@ -634,7 +666,8 @@ fps_threshold_tanimoto_search(PyObject *self, PyObject *args) {
   int cells_size;
   int num_lines_processed = 0, num_cells_processed = 0;
   int num_cells, err;
-
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "iiiit#iit#iidw#:fps_threshold_tanimoto_search",
                         &num_bits,
                         &query_start_padding, &query_end_padding,
@@ -684,7 +717,8 @@ fps_knearest_search_init(PyObject *self, PyObject *args) {
   int query_arena_size, query_start, query_end, k;
   double threshold;
   int err;
-
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "w#iiiit#iiid:fps_knearest_search_init",
                         &knearest_search, &knearest_search_size,
                         &num_bits, &start_padding, &end_padding, &query_storage_size,
@@ -723,7 +757,8 @@ fps_knearest_tanimoto_search_feed(PyObject *self, PyObject *args) {
   const char *target_block;
   int target_block_size, target_start, target_end;
   int err;
-
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "w#t#ii:fps_knearest_tanimoto_search_feed",
                         &knearest_search, &knearest_search_size,
                         &target_block, &target_block_size, &target_start, &target_end))
@@ -743,7 +778,8 @@ static PyObject *
 fps_knearest_search_finish(PyObject *self, PyObject *args) {
   chemfp_fps_knearest_search *knearest_search;  
   int knearest_search_size;
-  
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "w#:fps_knearest_search_finish",
                         &knearest_search, &knearest_search_size))
     return NULL;
@@ -762,7 +798,8 @@ static PyObject *
 fps_knearest_search_free(PyObject *self, PyObject *args) {
   chemfp_fps_knearest_search *knearest_search;  
   int knearest_search_size;
-  
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "w#:fps_knearest_search_free",
                         &knearest_search, &knearest_search_size))
     return NULL;
@@ -788,7 +825,7 @@ _alloc_aligned_arena(Py_ssize_t size, int alignment,
                      int *start_padding, int *end_padding) {
   PyObject *new_py_string;
   char *s;
-  int i;
+  uintptr_t i;
 
   new_py_string = PyString_FromStringAndSize(NULL, size+alignment-1);
   if (!new_py_string) {
@@ -800,8 +837,8 @@ _alloc_aligned_arena(Py_ssize_t size, int alignment,
     *start_padding = 0;
     *end_padding = alignment-1;
   } else {
-    *start_padding = alignment - i;
-    *end_padding = i-1;
+    *start_padding = (int)(alignment - i);
+    *end_padding   = (int)(i-1);
   }
   memset(s, 0, *start_padding);
   memset(s+size+*start_padding, 0, *end_padding);
@@ -814,7 +851,7 @@ _align_arena(PyObject *input_arena_obj, int alignment,
   const char *input_arena;
   char *output_arena;
   Py_ssize_t input_arena_size;
-  int i;
+  uintptr_t i;
   PyObject *output_arena_obj;
 
   if (PyObject_AsCharBuffer(input_arena_obj, &input_arena, &input_arena_size)) {
@@ -847,7 +884,8 @@ make_unsorted_aligned_arena(PyObject *self, PyObject *args) {
   int alignment;
   int start_padding, end_padding;
   PyObject *input_arena_obj, *output_arena_obj;
-
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "Oi:make_unsorted_aligned_arena",
                         &input_arena_obj, &alignment)) {
     return NULL;
@@ -958,7 +996,8 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
   int *popcount_indices;
   int need_to_sort, i;
   int alignment;
-  
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "iiOiw#w#i:make_sorted_aligned_arena",
                         &num_bits,
                         &storage_size, &input_arena_obj,
@@ -980,7 +1019,7 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
       bad_popcount_indices("", 0, num_bits, popcount_indices_size, NULL)) {
     return NULL;
   }
-  if ((ordering_size / sizeof(ChemFPOrderedPopcount)) < num_fingerprints) {
+  if ((int)(ordering_size / sizeof(ChemFPOrderedPopcount)) < num_fingerprints) {
     PyErr_SetString(PyExc_ValueError, "allocated ordering space is too small");
     return NULL;
   }
@@ -1048,11 +1087,10 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
   int query_storage_size, query_arena_size=0, query_start=0, query_end=0;
   int target_start_padding, target_end_padding;
   int target_storage_size, target_arena_size=0, target_start=0, target_end=0;
-  
   int *target_popcount_indices, target_popcount_indices_size;
-  
   int result_counts_size, *result_counts;
-
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "diiiis#iiiiis#iis#w#:count_tanimoto_arena",
                         &threshold,
                         &num_bits,
@@ -1086,7 +1124,7 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
     Py_RETURN_NONE;
   }
 
-  if (result_counts_size < (query_end - query_start)*sizeof(int)) {
+  if (result_counts_size < (int)((query_end - query_start)*sizeof(int))) {
     PyErr_SetString(PyExc_ValueError, "not enough space allocated for result_counts");
     return NULL;
   }
@@ -1123,7 +1161,8 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
   double *result_scores;
 
   int result;
-
+  /* unused parameter */
+  (void)(self);
     
   if (!PyArg_ParseTuple(args, "diiiit#iiiiit#iit#w#iw#w#:threshold_tanimoto_arena",
                         &threshold,
@@ -1197,7 +1236,8 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
   double *result_scores;
 
   int result;
-
+  /* unused parameter */
+  (void)(self);
     
   if (!PyArg_ParseTuple(args, "idiiiit#iiiiit#iit#w#iw#w#:knearest_tanimoto_arena",
                         &k, &threshold,
@@ -1255,6 +1295,9 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
 
 static PyObject *
 get_num_methods(PyObject *self, PyObject *args) {
+  /* unused parameters */
+  (void)(args);
+  (void)(self);
   return PyInt_FromLong(chemfp_get_num_methods());
 }
 
@@ -1262,6 +1305,8 @@ static PyObject *
 get_method_name(PyObject *self, PyObject *args) {
   int method;
   const char *s;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "i:get_method_name", &method)) {
     return NULL;
   }
@@ -1275,6 +1320,9 @@ get_method_name(PyObject *self, PyObject *args) {
 
 static PyObject *
 get_num_alignments(PyObject *self, PyObject *args) {
+  /* unused parameters */
+  (void)(args);
+  (void)(self);
   return PyInt_FromLong(chemfp_get_num_alignments());
 }
 
@@ -1282,6 +1330,8 @@ static PyObject *
 get_alignment_name(PyObject *self, PyObject *args) {
   int alignment;
   const char *s;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "i:get_alignment_name", &alignment)) {
     return NULL;
   }
@@ -1296,6 +1346,8 @@ get_alignment_name(PyObject *self, PyObject *args) {
 static PyObject *
 get_alignment_method(PyObject *self, PyObject *args) {
   int alignment, method;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "i:get_alignment_method", &alignment)) {
     return NULL;
   }
@@ -1312,6 +1364,8 @@ static PyObject *
 set_alignment_method(PyObject *self, PyObject *args) {
   int alignment, method;
   int result;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "ii:get_alignment_method", &alignment, &method)) {
     return NULL;
   }
@@ -1326,6 +1380,8 @@ set_alignment_method(PyObject *self, PyObject *args) {
 static PyObject *
 select_fastest_method(PyObject *self, PyObject *args) {
   int alignment, repeat, result;
+  /* unused parameter */
+  (void)(self);
   if (!PyArg_ParseTuple(args, "ii:select_fastest_method", &alignment, &repeat)) {
     return NULL;
   }

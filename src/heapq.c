@@ -26,6 +26,8 @@ really changed at all.
 int chemfp_heapq_siftdown(int len, void *heap, int startpos, int pos,
                           chemfp_heapq_lt lt, chemfp_heapq_swap swap) {
   int parentpos, cmp;
+  /* unused parameter */
+  (void)(len);
   /* Follow the path to the root, moving parents down until finding
      a place newitem fits. */
   while (pos > startpos) {

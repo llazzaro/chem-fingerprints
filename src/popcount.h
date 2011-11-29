@@ -11,7 +11,7 @@ enum {
   CHEMFP_ALIGN4,
   CHEMFP_ALIGN8_SMALL,
   CHEMFP_ALIGN8_LARGE,
-  CHEMFP_ALIGN_SSSE3,
+  CHEMFP_ALIGN_SSSE3
 };
 
 /* These are in the same order as compile_time_methods */
@@ -22,7 +22,7 @@ enum {
   CHEMFP_LAURADOUX,
   CHEMFP_POPCNT,
   CHEMFP_GILLIES,
-  CHEMFP_SSSE3,
+  CHEMFP_SSSE3
 };
 
 typedef int (*chemfp_method_check_f)(void);

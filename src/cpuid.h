@@ -97,7 +97,7 @@ static int cpuid(unsigned int info,
  * @return  An int value with the SSE and AVX bit flags set if the CPU
  *          supports the corresponding instruction sets.
  */
-static int get_cpuid_flags()
+static int get_cpuid_flags(void)
 {
   int flags = 0;
   unsigned int info = 0x00000001;
