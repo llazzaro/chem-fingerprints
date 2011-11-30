@@ -1,9 +1,10 @@
 from __future__ import with_statement
-import chemfp
 import math
-from chemfp import argparse, readers, io, SOFTWARE
 import sys
 import itertools
+
+import chemfp
+from chemfp import argparse, readers, io, SOFTWARE, bitops
 
 def write_simsearch_magic(outfile):
     outfile.write("#Simsearch/1\n")
@@ -151,6 +152,8 @@ def main(args=None):
         parser.error("--batch-size must be positive")
 
     batch_size = args.batch_size
+
+    bitops.use_environment_variables()
 
     # Open the target file. This reads just enough to get the header.
 
