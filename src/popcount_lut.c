@@ -4104,9 +4104,9 @@ static char lut[] = {
 int
 _chemfp_popcount_lut8_1(int n, const unsigned char *fp) {
   int cnt=0;
-  unsigned int i;
+  int i;
   int top = n-n%2;
-  /* I got a 30% performance gain by unrolling  */
+  /* I got a 30% performance gain by unrolling */
   for (i=0; i<top; i+=2) {
     cnt += lut[fp[i]<<8 | fp[i+1]];
   }
@@ -4120,7 +4120,7 @@ _chemfp_popcount_lut8_1(int n, const unsigned char *fp) {
 int
 _chemfp_intersect_popcount_lut8_1(int n, const unsigned char *fp1, const unsigned char *fp2) {
   int cnt=0;
-  unsigned int i;
+  int i;
   /* I tried unrolling and using a 16 bit popcount, but saw no time advantage */
   for (i=0; i<n; i++) {
     cnt += lut[fp1[i] & fp2[i]];

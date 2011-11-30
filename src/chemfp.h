@@ -18,7 +18,7 @@ enum chemfp_errors {
   CHEMFP_MISSING_NEWLINE = -36,
 
   /* Popcount errors */
-  CHEMFP_METHOD_MISMATCH = -50,
+  CHEMFP_METHOD_MISMATCH = -50
   
 };
 

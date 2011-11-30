@@ -111,7 +111,7 @@ detect_methods(void) {
     return;
   }
   /* Go through all of the compile-time methods and see if it's available */
-  for (i=0; i<sizeof(compile_time_methods)/sizeof(chemfp_method_type); i++) {
+  for (i=0; i<(int)(sizeof(compile_time_methods)/sizeof(chemfp_method_type)); i++) {
     if ((compile_time_methods[i].check == NULL) ||
         (compile_time_methods[i].check())) {
 
