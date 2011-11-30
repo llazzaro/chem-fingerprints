@@ -123,7 +123,7 @@ def use_environment_variables(environ=None):
     
     known.add("CHEMFP-PRINT-CONFIG")
     if (environ.get("CHEMFP-PRINT-CONFIG", "0") == "1" or report):
-        print_config(sys.stderr)
+        print_report(sys.stderr)
 
 
     for k in environ:
