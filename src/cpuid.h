@@ -89,6 +89,11 @@ static int cpuid(unsigned int info,
   return 1;
 #else
   /* compiler or CPU architecture do not support cpuid. */
+  UNUSED(info);
+  UNUSED(eax);
+  UNUSED(ebx);
+  UNUSED(ecx);
+  UNUSED(edx);
   return -1;
 #endif
 }

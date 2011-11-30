@@ -73,6 +73,10 @@ int _chemfp_popcount_popcnt(int size, const uint64_t *fp) {
   size = (size + 3) / 4;
   for (i = 0; i < size; i++)
     bit_count += (int) POPCNT32(fp_32[i]);
+#else
+  UNUSED(size);
+  UNUSED(fp);
+  i=0;
 #endif
   return bit_count;
 }
@@ -96,6 +100,11 @@ int _chemfp_intersect_popcount_popcnt(int size, const uint64_t *fp1, const uint6
   size = (size + 3) / 4;
   for (i = 0; i < size; i++)
     bit_count += (int) POPCNT32(fp1_32[i] & fp2_32[i]);
+#else
+  UNUSED(size);
+  UNUSED(fp1);
+  UNUSED(fp2);
+  i=0;
 #endif
   return bit_count;
 }
