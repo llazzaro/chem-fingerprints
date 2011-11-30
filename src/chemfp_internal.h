@@ -8,7 +8,7 @@
 /* Macro to use for variable names which exist as a */
 /* function parameter but otherwise aren't used */
 /* This is to prevent compiler warnings on msvc /W4 */
-#define UNUSED_PARAMETER(expr) do { (void)(expr); } while (0);
+#define UNUSED(x) (void)(x);
 
 
 int _chemfp_get_option_report_popcount(void);
