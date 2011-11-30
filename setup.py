@@ -50,7 +50,9 @@ copt =  {
     "gcc-4.1": ["-O3"], # Doesn't support OpenMP, doesn't support -mssse3
 
     # I'm going to presume that everyone is using an Intel-like processor
-    "gcc": OMP("-fopenmp") + SSSE3("-mssse3") + ["-O3", "-Wall", "-pedantic", "-Wunused-parameter", "-std=c99"],
+    "gcc": OMP("-fopenmp") + SSSE3("-mssse3") + ["-O3"],
+         #   Options to use before a release
+         # ["-Wall", "-pedantic", "-Wunused-parameter", "-std=c99"],
     }
 
 lopt =  {
