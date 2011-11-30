@@ -280,7 +280,7 @@ int chemfp_count_tanimoto_arena(
       end_target_popcount = num_bits;
     } else {
       start_target_popcount = (int)(query_popcount * threshold);
-      end_target_popcount   = (int)(ceil(query_popcount / threshold));
+      end_target_popcount = (int)(ceil(query_popcount / threshold));
       if (end_target_popcount > num_bits) {
         end_target_popcount = num_bits;
       }
@@ -439,7 +439,7 @@ int chemfp_threshold_tanimoto_arena(
       end_target_popcount = num_bits;
     } else {
       start_target_popcount = (int)(query_popcount * threshold);
-      end_target_popcount   = (int)(ceil(query_popcount / threshold));
+      end_target_popcount = (int)(ceil(query_popcount / threshold));
       if (end_target_popcount > num_bits) {
         end_target_popcount = num_bits;
       }

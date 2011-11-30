@@ -171,10 +171,10 @@ int chemfp_fps_threshold_tanimoto_search(
          query_index++, query_fp += query_storage_size) {
       score = chemfp_byte_hex_tanimoto(fp_size, query_fp, line);
       if (score >= threshold) {
-        current_cell->score       = score;
+        current_cell->score = score;
         current_cell->query_index = query_index;
-        current_cell->id_start    = (int)(id_start - target_block);
-        current_cell->id_end      = (int)(id_end - target_block);
+        current_cell->id_start = (int)(id_start - target_block);
+        current_cell->id_end = (int)(id_end - target_block);
         current_cell++;
         num_cells--;
       }
