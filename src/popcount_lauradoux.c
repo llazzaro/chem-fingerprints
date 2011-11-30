@@ -31,14 +31,10 @@ _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
   const uint64_t m4  = UINT64_C(0x0F0F0F0F0F0F0F0F);
   const uint64_t m8  = UINT64_C(0x00FF00FF00FF00FF);
   const uint64_t m16 = UINT64_C(0x0000FFFF0000FFFF);
-#if defined(ORIGINAL)
   const uint64_t h01 = UINT64_C(0x0101010101010101);
-#endif
   
   uint64_t count1, count2, half1, half2, acc;
-#if defined(ORIGINAL)
   uint64_t x;
-#endif
   int i, j;
   int size = (byte_size + 7) / 8;
   int limit = size - size % 12;
@@ -70,15 +66,23 @@ _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
     bit_count += (int) acc;
   }
 
-#if !defined(ORIGINAL)
-  /* Finish things up with the CHEMFP_ALIGN8_SMALL method */
-  bit_count += _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p->popcount(
-                        byte_size - limit*8, (unsigned char *) fp);
-#else
   /* Count the bits of the remaining bytes (MAX 88) using 
      "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
      the code uses wikipedia's 64-bit popcount_3() implementation:
      http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation */
+
+  /* Note: This is the "Gillies" algorithm, and timing tests show that
+     it's more effective to put it here than to call the method tied
+     to CHEMFP_ALIGN8_SMALL. You might think it best to use the
+     fastest algorithm, but if you are using Lauradoux then you are on
+     a machine which doesn't have POPCNT and where Lauradoux is faster
+     than the lookup table. That's the same type of machine where
+     Gillies is also faster than a lookup table.
+
+     Calling it here instead of through the the function table saves
+     time. It's 0.5% faster on my Mac (with gcc) and 5% faster on a
+     Windows box (with msvc 10). */
+
   for (i = 0; i < size - limit; i++) {
     x = fp[i];
     x =  x       - ((x >> 1)  & m1);
@@ -86,7 +90,6 @@ _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
     x = (x       +  (x >> 4)) & m4;
     bit_count += (int) ((x * h01) >> 56);
   }
-#endif
   return bit_count;
 }
 
