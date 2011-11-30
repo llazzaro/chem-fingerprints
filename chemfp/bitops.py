@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import os
 import sys
 import _chemfp
@@ -66,7 +68,10 @@ def get_option(option):
 def set_option(option, value):
     _chemfp.set_option(option, value)
 
-def print_config(out=sys.stdout):
+def print_report(out=sys.stdout):
+    from . import SOFTWARE
+    print >>out, "== Configuration report for", SOFTWARE, "=="
+    print >>out, "Available methods:", " ".join(get_methods())
     print >>out, "Alignment methods:"
     for alignment in get_alignments():
         method = get_alignment_method(alignment)
