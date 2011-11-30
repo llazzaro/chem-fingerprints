@@ -155,11 +155,11 @@ static __m128i intersect_popcount_SSSE3_helper(const unsigned *buf, const unsign
 int _chemfp_popcount_SSSE3(int size, const unsigned *fp) {
   /* 2^5 loop iters might overflow 8-bit counter,
      so cap it at 2^4 iters per chunk */
+#if defined(GENERATE_SSSE3)
   const int iters = 1 << 4;
   const int N = (size + 3) / 4;
   const int limit = N - N % (iters * 4);
   int i, count;
-#if defined(GENERATE_SSSE3)
   __m128i count32 = _mm_setzero_si128();
   for (i = 0; i < limit; i += iters * 4) {
     count32 = _mm_add_epi32(count32, popcount_SSSE3_helper(&fp[i], iters));
@@ -170,8 +170,12 @@ int _chemfp_popcount_SSSE3(int size, const unsigned *fp) {
   /* Layout coming from PSADBW accumulation is 2*{0,32}: 0 S1 0 S0 */
   _mm_store_ss((float*)&count, _mm_cvtepi32_ps(_mm_add_epi32(
       count32, _mm_shuffle_epi32(count32, _MM_SHUFFLE(2, 2, 2, 2)))));
-#endif
   return count;
+#else
+  UNUSED(size);
+  UNUSED(fp);
+  return 0;
+#endif
 }
 
 /**
@@ -184,11 +188,11 @@ int _chemfp_popcount_SSSE3(int size, const unsigned *fp) {
 int _chemfp_intersect_popcount_SSSE3(int size, const unsigned *fp1, const unsigned *fp2) {
   /* 2^5 loop iters might overflow 8-bit counter,
      so cap it at 2^4 iters per chunk */
+#if defined(GENERATE_SSSE3)
   const int iters = 1 << 4;
   const int N = (size + 3) / 4;
   const int limit = N - N % (iters * 4);
   int i, count;
-#if defined(GENERATE_SSSE3)
   __m128i count32 = _mm_setzero_si128();
   for (i = 0; i < limit; i += iters * 4) {
     count32 = _mm_add_epi32(count32, intersect_popcount_SSSE3_helper(&fp1[i], &fp2[i], iters));
@@ -199,6 +203,11 @@ int _chemfp_intersect_popcount_SSSE3(int size, const unsigned *fp1, const unsign
   /* Layout coming from PSADBW accumulation is 2*{0,32}: 0 S1 0 S0 */
   _mm_store_ss((float*)&count, _mm_cvtepi32_ps(_mm_add_epi32(
       count32, _mm_shuffle_epi32(count32, _MM_SHUFFLE(2, 2, 2, 2)))));
-#endif
   return count;
+#else
+  UNUSED(size);
+  UNUSED(fp1);
+  UNUSED(fp2);
+  return 0;
+#endif
 }
