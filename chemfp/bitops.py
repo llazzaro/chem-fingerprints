@@ -108,9 +108,18 @@ def use_environment_variables(environ=None):
                 print >>sys.stderr, "WARNING: Unable to use $%s = %r: %s" % (
                     (name, value, err))
 
+    known.add("CHEMFP-REPORT")
+    report = environ.get("CHEMFP-REPORT", "0") == "1"
+
+    if report:
+        set_option("report-popcount", 1)
+        set_option("report-intersect", 1)
+
+    
     known.add("CHEMFP-PRINT-CONFIG")
-    if environ.get("CHEMFP-PRINT-CONFIG", "0") == "1":
+    if (environ.get("CHEMFP-PRINT-CONFIG", "0") == "1" or report):
         print_config(sys.stderr)
+
 
     for k in environ:
         if not k.startswith("CHEMFP-"):
