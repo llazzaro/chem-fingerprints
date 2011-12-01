@@ -11,6 +11,9 @@
 static unsigned long 
 timeit(chemfp_popcount_f popcount, int size, int repeat);
 
+static void
+verify_methods(void);
+
 static int _chemfp_report_select_popcount = 0;
 static chemfp_method_type *_chemfp_popcount_method_p = NULL;
 
@@ -121,8 +124,10 @@ detect_methods(void) {
     }
   }
   num_methods = j;
-}
 
+  /* Verify that they all give the same answers */
+  verify_methods();
+}
 
 
 int
@@ -820,4 +825,41 @@ chemfp_select_fastest_method(int alignment, int repeat) {
   chemfp_set_alignment_method(alignment, best_method);
 
   return best_method;
+}
+
+static void
+verify_methods(void) {
+  int i;
+  int expected, got;
+  const unsigned char *start_buffer;
+
+  if (ALIGNMENT(popcount_buffer, 16) == 8) {
+    start_buffer = (unsigned char *) (popcount_buffer+1);
+  } else {
+    start_buffer = (unsigned char *) popcount_buffer;
+  }
+  if (ALIGNMENT(start_buffer, 16) != 0) {
+    fprintf(stderr, "chemfp: Misaligned data!\n");
+  }
+
+  expected = detected_methods[0]->popcount(256, start_buffer);
+
+  for (i=1; i<num_methods; i++) {
+    got = detected_methods[i]->popcount(256, start_buffer);
+    if (got != expected) {
+      fprintf(stderr, "chemfp: popcount validation error: method %s returned %d instead of %d\n",
+	      detected_methods[i]->name, got, expected);
+    }
+  }
+
+  expected = detected_methods[0]->intersect_popcount(256, start_buffer, start_buffer+128);
+
+  for (i=1; i<num_methods; i++) {
+    got = detected_methods[i]->intersect_popcount(256, start_buffer, start_buffer+128);
+    if (got != expected) {
+      fprintf(stderr, "chemfp: intersection popcount error: method %s returned %d instead of %d\n",
+	      detected_methods[i]->name, got, expected);
+    }
+  }
+
 }
