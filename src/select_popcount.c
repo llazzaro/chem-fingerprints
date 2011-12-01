@@ -237,7 +237,7 @@ set_default_alignment_methods(void) {
     }
     _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[large_method];
 
-  ssse3_method = large_method;
+  ssse3_method = CHEMFP_LUT16_4;
 
   if (has_ssse3()) {
     first_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
@@ -763,7 +763,7 @@ timeit(chemfp_popcount_f popcount, int size, int repeat) {
   end_buffer = start_buffer + popcount_buffer_size;
 
   for (i=0; i<repeat; i++) {
-    for (fp=start_buffer; fp<end_buffer; fp += size) {
+    for (fp=start_buffer; fp+size<end_buffer; fp += size) {
       popcount(size, fp);
     }
   }
@@ -801,7 +801,7 @@ chemfp_select_fastest_method(int alignment, int repeat) {
     }
     method_p = _chemfp_alignments[alignment].method_p;
 
-    /* Time the performance; do it twice in a timeslice happens in the middle  */
+    /* Time the performance; do it twice in case a context switch happens in the middle  */
     first_time = timeit(method_p->popcount, probe_size, repeat);
     dt = timeit(method_p->popcount, probe_size, repeat);
     if (first_time < dt) {
