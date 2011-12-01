@@ -1,9 +1,13 @@
+from __future__ import with_statement
+
 from cStringIO import StringIO
 
 import unittest2
+import ctypes
 
 import chemfp
 from chemfp import arena, bitops
+import _chemfp
 
 zeros = ("0000\tfirst\n"
          "0010\tsecond\n"
@@ -196,8 +200,59 @@ class TestOptimalAlignment(unittest2.TestCase):
         self.assertEquals(arena.get_optimal_alignment(800), 8)
 
 
+# I can't find a better solution than this. (!?)
+def _addressof(s):
+    t = str(ctypes.c_char_p(s))
+    after_open_paren = t.split("(")[1]
+    return int(after_open_paren.strip(")"))
+
+class TestFingerprintAlignment(unittest2.TestCase):
+    def test_different_cases(self):
+        for query in (
+            ("1", 4, 8),
+            ("12", 8, 8),
+            ("123", 16, 16),
+            ("abcd", 4, 8),
+            ("abcd", 8, 8),
+            ("abcd", 16, 16),
+            ):
+            fp, alignment, storage_size = query
+            
+            result = _chemfp.align_fingerprint(*query)
+            start_padding, end_padding, s = result
+            i = _addressof(s) + start_padding
+            self.assertEquals(i % alignment, 0, (query, result))
+
+            expected = fp + "\0" * (storage_size - len(fp))
+            self.assertEquals(s[start_padding:-end_padding], expected,
+                              (query, expected, result))
+
+            self.assertEquals(s[:start_padding], "\0"*start_padding)
+            self.assertEquals(s[-end_padding:], "\0"*end_padding)
+
+    def test_identical(self):
+        # This fingerprint is aligned; no need to create a new one
+        s = "blah"
+        start_padding, end_padding, t = _chemfp.align_fingerprint(s, 4, 4)
+        self.assertEquals(start_padding, 0)
+        self.assertEquals(end_padding, 0)
+        self.assertIs(s, t)
         
-        
+    def test_errors(self):
+        with self.assertRaisesRegexp(ValueError, "must be a character buffer"):
+            _chemfp.align_fingerprint(1, 4, 4)
+            
+        with self.assertRaisesRegexp(ValueError, "storage size is too small"):
+            _chemfp.align_fingerprint("too long", 4, 4)
+
+        with self.assertRaisesRegexp(ValueError, "storage size must be positive"):
+            _chemfp.align_fingerprint("", 1, 0)
+
+        with self.assertRaisesRegexp(ValueError, "storage size must be positive"):
+            _chemfp.align_fingerprint("X", 1, -12)
+            
+        with self.assertRaisesRegexp(ValueError, "alignment must be a positive power of two"):
+            _chemfp.align_fingerprint("1234", 3, 4)
 
 if __name__ == "__main__":
     unittest2.main()

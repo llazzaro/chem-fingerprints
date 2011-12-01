@@ -48,9 +48,14 @@ def require_matching_sizes(query_arena, target_arena):
 
 def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
     require_matching_fp_size(query_fp, target_arena)
+    # Improve the alignment so the faster algorithms can be used
+    query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
+        query_fp, target_arena.alignment, target_arena.storage_size)
+                                                 
     counts = array.array("i", (0 for i in xrange(len(query_fp))))
     _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
-                                 0, 0, len(query_fp), query_fp, 0, -1,
+                                 query_start_padding, query_end_padding,
+                                 target_arena.storage_size, query_fp, 0, 1,
                                  target_arena.start_padding, target_arena.end_padding,
                                  target_arena.storage_size, target_arena.arena,
                                  target_arena.start, target_arena.end,
@@ -164,6 +169,10 @@ class SearchResults(object):
 def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
     require_matching_fp_size(query_fp, target_arena)
 
+    # Improve the alignment so the faster algorithms can be used
+    query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
+        query_fp, target_arena.alignment, target_arena.storage_size)
+
     offsets = (ctypes.c_int * 2)()
     offsets[0] = 0
     
@@ -173,7 +182,7 @@ def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
 
     num_added = _chemfp.threshold_tanimoto_arena(
         threshold, target_arena.num_bits,
-        0, 0, len(query_fp), query_fp, 0, -1,
+        query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
         target_arena.start_padding, target_arena.end_padding,
         target_arena.storage_size, target_arena.arena,
         target_arena.start, target_arena.end,
@@ -237,6 +246,10 @@ def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
 
 def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
     require_matching_fp_size(query_fp, target_arena)
+    query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
+        query_fp, target_arena.alignment, target_arena.storage_size)
+    
+    
     if k < 0:
         raise ValueError("k must be non-negative")
 
@@ -247,7 +260,7 @@ def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
 
     num_added = _chemfp.knearest_tanimoto_arena(
         k, threshold, target_arena.num_bits,
-        0, 0, len(query_fp), query_fp, 0, 1,
+        query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
         target_arena.start_padding, target_arena.end_padding,
         target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
         target_arena.popcount_indices,
@@ -361,7 +374,7 @@ class FingerprintArena(FingerprintReader):
        ids
            list of identifiers, ordered by position
     """
-    def __init__(self, metadata,
+    def __init__(self, metadata, alignment,
                  start_padding, end_padding, storage_size, arena,
                  popcount_indices, ids, start=0, end=None):
         if metadata.num_bits is None:
@@ -369,6 +382,7 @@ class FingerprintArena(FingerprintReader):
         if metadata.num_bytes is None:
             raise TypeError("Missing metadata num_bytes information")
         self.metadata = metadata
+        self.alignment = alignment
         self.num_bits = metadata.num_bits
         self.start_padding = start_padding
         self.end_padding = end_padding
@@ -397,11 +411,13 @@ class FingerprintArena(FingerprintReader):
         if isinstance(i, slice):
             start, end, step = i.indices(self.end - self.start)
             if start >= end:
-                return FingerprintArena(self.metadata, 0, 0, self.storage_size, "",
+                return FingerprintArena(self.metadata, self.alignment,
+                                        0, 0, self.storage_size, "",
                                         "", [], 0, 0)
             if step != 1:
                 raise IndexError("arena slice step size must be 1")
-            return FingerprintArena(self.metadata, self.start_padding, self.end_padding,
+            return FingerprintArena(self.metadata, self.alignment,
+                                    self.start_padding, self.end_padding,
                                     self.storage_size, self.arena,
                                     self.popcount_indices, self.ids[start:end],
                                     self.start+start, self.start+end)
@@ -475,7 +491,8 @@ class FingerprintArena(FingerprintReader):
         for i in xrange(0, len(self), arena_size):
             ids = self.ids[i:i+arena_size]
             end = start+len(ids)
-            yield FingerprintArena(self.metadata, self.start_padding, self.end_padding,
+            yield FingerprintArena(self.metadata, self.alignment,
+                                   self.start_padding, self.end_padding,
                                    self.storage_size, self.arena,
                                    self.popcount_indices, ids, start, end)
             start = end
@@ -664,7 +681,7 @@ def fps_to_arena(fps_reader, metadata=None, reorder=True, alignment=None):
     if not reorder or not metadata.num_bits:
         start_padding, end_padding, unsorted_arena = _chemfp.make_unsorted_aligned_arena(
             unsorted_arena, alignment)
-        return FingerprintArena(metadata, start_padding, end_padding, storage_size,
+        return FingerprintArena(metadata, alignment, start_padding, end_padding, storage_size,
                                 unsorted_arena, "", ids)
 
     # Reorder
@@ -677,6 +694,6 @@ def fps_to_arena(fps_reader, metadata=None, reorder=True, alignment=None):
         ordering, popcounts, alignment)
 
     new_ids = [ids[item.index] for item in ordering]
-    return FingerprintArena(metadata,
+    return FingerprintArena(metadata, alignment,
                             start_padding, end_padding, storage_size,
                             unsorted_arena, popcounts.tostring(), new_ids)

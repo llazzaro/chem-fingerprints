@@ -901,6 +901,53 @@ make_unsorted_aligned_arena(PyObject *self, PyObject *args) {
   return Py_BuildValue("iiO", start_padding, end_padding, output_arena_obj);
 }
 
+static PyObject *
+align_fingerprint(PyObject *self, PyObject *args) {
+  PyObject *input_fp_obj, *new_fp_obj;
+  const char *fp;
+  char *new_fp;
+  Py_ssize_t fp_size;
+  int alignment, start_padding, storage_size, end_padding;
+  UNUSED(self);
+
+  if (!PyArg_ParseTuple(args, "Oii:align_fingerprint",
+                        &input_fp_obj, &alignment, &storage_size)) {
+    return NULL;
+  }
+  if (bad_alignment(alignment)) {
+    return NULL;
+  }
+
+  if (PyObject_AsCharBuffer(input_fp_obj, &fp, &fp_size)) {
+    PyErr_SetString(PyExc_ValueError, "fingerprint must be a character buffer");
+    return NULL;
+  }
+  if (storage_size < 1) {
+    PyErr_SetString(PyExc_ValueError, "storage size must be positive");
+    return NULL;
+  }
+  if (storage_size < fp_size) {
+    PyErr_SetString(PyExc_ValueError, "storage size is too small for the query");
+    return NULL;
+  }
+
+  /* Are we lucky? */
+  if (storage_size == fp_size) {
+    new_fp_obj = _align_arena(input_fp_obj, alignment, &start_padding, &end_padding);
+  } else {
+    /* Unlucky. Need to allocate more space */
+    new_fp_obj = _alloc_aligned_arena(storage_size, alignment, &start_padding, &end_padding);
+    if (!new_fp_obj) {
+      return NULL;
+    }
+    new_fp = PyString_AS_STRING(new_fp_obj);
+    /* Copy over into the new string */
+    memcpy(new_fp+start_padding, fp, fp_size);
+    /* Zero out the remaining bytes */
+    memset(new_fp+start_padding+fp_size, 0, storage_size-fp_size);
+  }
+  return Py_BuildValue("iiO", start_padding, end_padding, new_fp_obj);
+}
 
 static int
 calculate_arena_popcounts(int num_bits, int storage_size, const unsigned char *arena,
@@ -1527,8 +1574,12 @@ static PyMethodDef chemfp_methods[] = {
 
   {"make_sorted_aligned_arena", make_sorted_aligned_arena, METH_VARARGS,
    "make_sorted_aligned_arena (TODO: document)"},
+
   {"make_unsorted_aligned_arena", make_unsorted_aligned_arena, METH_VARARGS,
    "make_unsorted_aligned_arena (TODO: document)"},
+
+  {"align_fingerprint", align_fingerprint, METH_VARARGS,
+   "align_fingerprint (TODO: document)"},
 
   /* Select the popcount methods */
   {"get_num_methods", get_num_methods, METH_NOARGS,
