@@ -14,6 +14,8 @@
 
 #include "popcount.h"
 
+#define ORIGINAL
+
 /**
  * Count the number of 1 bits (population count) in a fingerprint
  * using 64-bit tree merging. This implementation uses only 8

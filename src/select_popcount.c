@@ -480,8 +480,8 @@ high_resolution_timer(void) {
 /* The contents are randomly generated. */
 /* My first version was too small, and caused the LUT to appear
    faster even when the Gillies was better on real data. */
-
-static uint64_t popcount_buffer[256] = {
+/* Overallocate by one to ensure that I can get a 16 byte aligned field */
+static uint64_t popcount_buffer[257] = {
   0x9b649615d1a50133ull,
   0xf3b8dada0e8b43deull,
   0x0197e207e4b9af2bull,
@@ -738,19 +738,27 @@ static uint64_t popcount_buffer[256] = {
   0xc8f7ec331fa3110cull,
   0x5ef7066f95c03fa1ull,
   0x48924db0f5d40254ull,
+  0xc0d546123dcd5ff2ull
 };
+/* Remember, keeping an extra value to ensure 16 byte alignment */
+static const int popcount_buffer_size = sizeof(popcount_buffer) - 1;
+
 
 static unsigned long 
 timeit(chemfp_popcount_f popcount, int size, int repeat) {
   long long t1, t2;
   unsigned char *start_buffer, *end_buffer, *fp;
   int i;
-  if (size > sizeof(popcount_buffer)) {
-    size = sizeof(popcount_buffer);
+  if (size > popcount_buffer_size) {
+    size = popcount_buffer_size;
   }
   t1 = high_resolution_timer();
-  start_buffer = (unsigned char *) popcount_buffer;
-  end_buffer = start_buffer + sizeof(popcount_buffer);
+  if (ALIGNMENT(popcount_buffer, 16) == 8) {
+    start_buffer = (unsigned char *) (popcount_buffer+1);
+  } else {
+    start_buffer = (unsigned char *) popcount_buffer;
+  }
+  end_buffer = start_buffer + popcount_buffer_size;
 
   for (i=0; i<repeat; i++) {
     for (fp=start_buffer; fp<end_buffer; fp += size) {
@@ -776,7 +784,7 @@ chemfp_select_fastest_method(int alignment, int repeat) {
     return old_method;
   }
 
-  /* NOTE: probe_size must evenly divide sizeof(popcount_buffer); */
+  /* NOTE: probe_size must evenly divide popcount_buffer_size; */
   if (alignment == CHEMFP_ALIGN8_SMALL) {
     probe_size = 64; /* 512 bits; must be < 96 bytes  */
   } else {
