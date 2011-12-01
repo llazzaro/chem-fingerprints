@@ -97,8 +97,8 @@ class SearchResults(object):
         self.offsets = offsets
         self.indices = indices
         self.scores = scores
-        self.query_ids = query_ids
-        self.target_ids = target_ids
+        self.query_ids = query_ids  # limited to the arena
+        self.target_ids = target_ids  # all of the target ids
         
     def __len__(self):
         """Number of search results"""
@@ -122,8 +122,9 @@ class SearchResults(object):
         """
         i = xrange(len(self.offsets)-1)[i]  # Use this trick to support negative index lookups
         start, end = self.offsets[i:i+2]
-        ids = self.target_ids
-        return zip((ids[idx] for idx in self.indices[start:end]), self.scores[start:end])
+        target_ids = self.target_ids
+        return zip((target_ids[idx]
+                        for idx in self.indices[start:end]), self.scores[start:end])
 
     def __iter__(self):
         """Iterate over the named hits for each result
@@ -198,7 +199,7 @@ def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
 def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
     require_matching_fp_size(query_fp, target_arena)
     result = threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold)
-    return [(target_arena.ids[index], score) for (index, score) in result]
+    return [(target_arena.ids[index-target_arena.start], score) for (index, score) in result]
 
 
 def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
@@ -242,7 +243,7 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
 
 def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
     result = knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold)
-    return [(target_arena.ids[index], score) for (index, score) in result]
+    return [(target_arena.ids[index-target_arena.start], score) for (index, score) in result]
 
 def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
     require_matching_fp_size(query_fp, target_arena)
@@ -349,6 +350,7 @@ class FingerprintLookup(object):
         return (len(self._arena)-self._start_padding-self._end_padding)/self._storage_size
 
     def __iter__(self):
+        raise NotImplementedError("what is self.ids?")
         fp_size = self._fp_size
         arena = self._arena
         for id, start_offset in zip(self.ids,
@@ -406,6 +408,10 @@ class FingerprintArena(FingerprintReader):
         """Number of fingerprint records in the FingerprintArena"""
         return self.end - self.start
 
+    @property
+    def arena_ids(self):
+        return self.ids[self.start:self.end]
+
     def __getitem__(self, i):
         """Return the (id, fingerprint) at position i"""
         if isinstance(i, slice):
@@ -419,7 +425,7 @@ class FingerprintArena(FingerprintReader):
             return FingerprintArena(self.metadata, self.alignment,
                                     self.start_padding, self.end_padding,
                                     self.storage_size, self.arena,
-                                    self.popcount_indices, self.ids[start:end],
+                                    self.popcount_indices, self.ids,
                                     self.start+start, self.start+end)
         try:
             i = self._range_check[i]
@@ -428,7 +434,7 @@ class FingerprintArena(FingerprintReader):
         arena_i = i + self.start
         start_offset = arena_i * self.storage_size + self.start_padding
         end_offset = start_offset + self.metadata.num_bytes
-        return self.ids[i], self.arena[start_offset:end_offset]
+        return self.ids[arena_i], self.arena[start_offset:end_offset]
 
 
     def save(self, destination):
@@ -461,7 +467,7 @@ class FingerprintArena(FingerprintReader):
             return
         target_fp_size = self.metadata.num_bytes
         arena = self.arena
-        for id, start_offset in zip(self.ids,
+        for id, start_offset in zip(self.ids[self.start:self.end],
                                     xrange(self.start*storage_size+self.start_padding,
                                            self.end*storage_size+self.start_padding,
                                            storage_size)):
@@ -489,12 +495,13 @@ class FingerprintArena(FingerprintReader):
         storage_size = self.storage_size
         start = self.start
         for i in xrange(0, len(self), arena_size):
-            ids = self.ids[i:i+arena_size]
-            end = start+len(ids)
+            end = start+arena_size
+            if end > len(self):
+                end = len(self)
             yield FingerprintArena(self.metadata, self.alignment,
                                    self.start_padding, self.end_padding,
                                    self.storage_size, self.arena,
-                                   self.popcount_indices, ids, start, end)
+                                   self.popcount_indices, self.ids, start, end)
             start = end
 
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):

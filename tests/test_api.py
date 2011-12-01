@@ -97,13 +97,13 @@ class CommonReaderAPI(object):
             self._check_target_metadata(arena.metadata)
             if count == 0:
                 # Check the values of the first arena
-                self.assertEqual(arena.ids[-5:],
+                self.assertEqual(arena.arena_ids[-5:],
                                   ['CHEBI:16316', 'CHEBI:16317', 'CHEBI:16318', 'CHEBI:16319', 'CHEBI:16320'])
                 
             self.assertEqual(len(arena), 1000)  # There should be two of these
             count += 1
         self.assertEqual(count, 2)
-        self.assertEqual(arena.ids[-5:],
+        self.assertEqual(arena.arena_ids[-5:],
                           ['CHEBI:17578', 'CHEBI:17579', 'CHEBI:17580', 'CHEBI:17581', 'CHEBI:17582'])
 
     def test_iter_arenas_select_size(self):
@@ -113,12 +113,12 @@ class CommonReaderAPI(object):
         for arena in reader.iter_arenas(100):
             self._check_target_metadata(arena.metadata)
             if count == 0:
-                self.assertEqual(arena.ids[-5:],
+                self.assertEqual(arena.arena_ids[-5:],
                                   ['CHEBI:5280', 'CHEBI:5445', 'CHEBI:5706', 'CHEBI:5722', 'CHEBI:5864'])
             self.assertEqual(len(arena), 100)
             count += 1
         self.assertEqual(count, 20)
-        self.assertEqual(arena.ids[:5],
+        self.assertEqual(arena.arena_ids[:5],
                           ['CHEBI:17457', 'CHEBI:17458', 'CHEBI:17459', 'CHEBI:17460', 'CHEBI:17464'])
 
     def test_read_from_file_object(self):
@@ -548,8 +548,8 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
 
     def test_slice_ids(self):
         fps = self._open(CHEBI_TARGETS)
-        self.assertEquals(fps.ids[4:10], fps[4:10].ids)
-        self.assertEquals(fps.ids[5:20][1:5], fps[6:10].ids)
+        self.assertEquals(fps.ids[4:10], fps[4:10].arena_ids)
+        self.assertEquals(fps.ids[5:20][1:5], fps[6:10].arena_ids)
 
     def test_slice_fingerprints(self):
         fps = self._open(CHEBI_TARGETS)
@@ -560,8 +560,8 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
     def test_slice_negative(self):
         fps = self._open(CHEBI_TARGETS)
         self.assertEquals(fps[len(fps)-1], fps[-1])
-        self.assertEquals(fps.ids[-2:], fps[-2:].ids)
-        self.assertEquals(fps.ids[-2:], fps[-2:].ids)
+        self.assertEquals(fps.ids[-2:], fps[-2:].arena_ids)
+        self.assertEquals(fps.ids[-2:], fps[-2:].arena_ids)
         self.assertEquals(list(fps[-2:]), [fps[-2], fps[-1]])
         self.assertEquals(fps[-5:-2][-1], fps[-3])
 
@@ -573,7 +573,30 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
             arena[-len(arena)-1]
         with self.assertRaisesRegexp(IndexError, "arena slice step size must be 1"):
             arena[4:45:2]
-        
+
+    def test_search_in_slice(self):
+        fps = self._open(CHEBI_TARGETS)
+        for i, (id, fp) in enumerate(fps):
+            subarena = fps[i:i+1]
+            self.assertEquals(len(subarena), 1)
+            self.assertEquals(subarena[0][0], id)
+            self.assertEquals(subarena[0][1], fp)
+            self.assertEquals(subarena.arena_ids[0], id)
+
+            result = subarena.threshold_tanimoto_search_arena(subarena)
+            self.assertEquals(len(result), 1)
+            self.assertEquals(result[0], [(id, 1.0)])
+            self.assertEquals(list(result), [[(id, 1.0)]])
+
+            result = subarena.knearest_tanimoto_search_arena(subarena)
+            self.assertEquals(len(result), 1)
+            self.assertEquals(result[0], [(id, 1.0)])
+            self.assertEquals(list(result), [[(id, 1.0)]])
+
+            result = subarena.count_tanimoto_hits_arena(subarena)
+            self.assertEquals(len(result), 1)
+            self.assertEquals(result[0], 1)
+            self.assertEquals(list(result), [1])
 
 # Use this to verify the other implementations
 from chemfp.slow import SlowFingerprints
