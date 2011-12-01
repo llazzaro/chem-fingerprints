@@ -333,40 +333,6 @@ def _search(query_start, query_end, offsets, indices, scores,
 
 
 
-
-class FingerprintLookup(object):
-    "This is an unpublished API and may be removed in the future"
-    def __init__(self, fp_size, start_padding, end_padding, storage_size, arena):
-        self._fp_size = fp_size
-        self._start_padding = start_padding
-        self._end_padding = end_padding
-        self._storage_size = storage_size
-        self._arena = arena
-        self._range_check = xrange(len(self))
-
-    def __len__(self):
-        if not self._storage_size:
-            return 0
-        return (len(self._arena)-self._start_padding-self._end_padding)/self._storage_size
-
-    def __iter__(self):
-        raise NotImplementedError("what is self.ids?")
-        fp_size = self._fp_size
-        arena = self._arena
-        for id, start_offset in zip(self.ids,
-                                    xrange(self._start_padding,
-                                           len(arena)-self.end_padding, storage_size)):
-            yield id, arena[start_offset:start_offset+target_fp_size]
-        
-        
-    def __getitem__(self, i):
-        try:
-            start_offset = self._range_check[i] * self._storage_size + self._start_padding
-        except IndexError:
-            raise IndexError("arena fingerprint index out of range")
-            
-        return self._arena[start_offset:start_offset+self._fp_size]
-
 class FingerprintArena(FingerprintReader):
     """Stores fingerprints in a contiguous block of memory
 
@@ -392,8 +358,6 @@ class FingerprintArena(FingerprintReader):
         self.arena = arena
         self.popcount_indices = popcount_indices
         self.ids = ids
-        self.fingerprints = FingerprintLookup(metadata.num_bytes, self.start_padding,
-                                              self.end_padding, storage_size, arena)
         self.start = start
         if end is None:
             if self.metadata.num_bytes:

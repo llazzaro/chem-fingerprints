@@ -23,13 +23,13 @@ def verify_popcount_indices(arena):
     format = "i"*(len(arena.popcount_indices)//4)
     values = struct.unpack(format, arena.popcount_indices)
     assert len(values) == arena.metadata.num_bits+2, (len(values), arena.metadata.num_bits)
-    assert values[-1] == len(arena.fingerprints), (values[-1], len(arena.fingerprints), values)
+    assert values[-1] == len(arena), (values[-1], len(arena), values)
     for i in range(len(values)-1):
         start = values[i]
         end = values[i+1]
 
         for j in range(start, end):
-            fp = arena.fingerprints[j]
+            fp = arena[j][1]
             assert byte_popcount(fp) == i, (byte_popcount(fp), i, start, end)
     
     
