@@ -4132,18 +4132,17 @@ _chemfp_intersect_popcount_lut8_1(int n, const unsigned char *fp1, const unsigne
 int
 _chemfp_popcount_lut8_4(int n, uint32_t *fp) {
   int cnt=0;
-  unsigned int i;
+  unsigned int i, value;
 
   /* Handle even cases where the fingerprint length is not a multiple of 4 */
   n = (n+3) / 4;
-  do {
-    i = *fp;
-    cnt += lut[i&255];
-    cnt += lut[i>>8&255];
-    cnt += lut[i>>16&255];
-    cnt += lut[i>>24];
-    fp++;
-  } while(--n);
+  for (i=0; i<n; i++) {
+    value = fp[i];
+    cnt += lut[value&255];
+    cnt += lut[value>>8&255];
+    cnt += lut[value>>16&255];
+    cnt += lut[value>>24];
+  }
   return cnt;
 }
 
