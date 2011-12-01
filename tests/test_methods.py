@@ -14,7 +14,9 @@ CHEBI_TARGETS = fullpath("chebi_rdmaccs.fps")
 CHEBI_QUERIES = fullpath("chebi_queries.fps.gz")
 
 targets = chemfp.load_fingerprints(CHEBI_TARGETS, alignment=8)
+targets_64 = chemfp.load_fingerprints(CHEBI_TARGETS, alignment=64)
 
+available_methods = chemfp.bitops.get_methods()
 alignment_methods = chemfp.bitops.get_alignment_methods()
 
 
@@ -92,7 +94,7 @@ class TestAlignments(unittest2.TestCase):
                 set_alignment_method("align4", method)
 
 
-    @unittest2.skipIf("ssse3" not in alignment_methods, "CPU does not implement SSSE3")
+    @unittest2.skipIf("ssse3" not in available_methods, "CPU does not implement SSSE3")
     def test_ssse3(self):
         method = get_alignment_method("align-ssse3")
         # This disables SSSE3 support
@@ -106,13 +108,18 @@ class TestAlignments(unittest2.TestCase):
 
 class TestAlign8SmallMethods(unittest2.TestCase):
     def setUp(self):
-        self.method = get_alignment_method("align8-small")
+        self.small_method = get_alignment_method("align8-small")
+        self.large_method = get_alignment_method("align8-large")
+        self.ssse3_method = get_alignment_method("align-ssse3")
     def tearDown(self):
-        set_alignment_method("align8-small", self.method)
+        set_alignment_method("align8-small", self.small_method)
+        set_alignment_method("align8-large", self.large_method)
+        set_alignment_method("align-ssse3", self.ssse3_method)
         
     def _doit(self, method):
-        set_alignment_method("align8-small", method)
-        self.assertEquals(get_alignment_method("align8-small"), method)
+        for alignment in ("align8-small", "align8-large", "align-ssse3"):
+            set_alignment_method(alignment, method)
+            self.assertEquals(get_alignment_method(alignment), method)
         
         hits = targets.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2)
         self.assertEqual(hits, [('CHEBI:8069', 1.0),
@@ -143,8 +150,62 @@ class TestAlign8SmallMethods(unittest2.TestCase):
 
     @unittest2.skipIf("POPCNT" not in alignment_methods, "CPU does not implement POPCNT")
     def test_popcnt(self):
-        set_alignment_method("align8-small", "POPCNT")
-        self._doit()
+        self._doit("POPCNT")
+
+class TestAlign8LargeMethods(unittest2.TestCase):
+    def setUp(self):
+        self.large_method = get_alignment_method("align8-large")
+        self.ssse3_method = get_alignment_method("align-ssse3")
+    def tearDown(self):
+        set_alignment_method("align8-large", self.large_method)
+        set_alignment_method("align-ssse3", self.ssse3_method)
+        
+    def _doit(self, method, use_ssse3=False):
+        set_alignment_method("align8-large", method)
+        self.assertEquals(get_alignment_method("align8-large"), method)
+        if use_ssse3:
+            set_alignment_method("align-ssse3", "ssse3")
+            self.assertEquals(get_alignment_method("align-ssse3"), "ssse3")
+        else:
+            set_alignment_method("align-ssse3", "LUT8-1")
+            self.assertEquals(get_alignment_method("align-ssse3"), "LUT8-1")
+        
+        hits = targets_64.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2)
+        self.assertEqual(hits, [('CHEBI:8069', 1.0),
+                                ('CHEBI:6758', 0.78723404255319152),
+                                ('CHEBI:7983', 0.73999999999999999),
+                                ('CHEBI:8107', 0.6956521739130435),
+                                ('CHEBI:17568', 0.6904761904761905),
+                                ('CHEBI:16294', 0.6818181818181818),
+                                ('CHEBI:16964', 0.673469387755102),
+                                ('CHEBI:17477', 0.6458333333333334),
+                                ('CHEBI:17025', 0.62),
+                                ('CHEBI:15901', 0.6122448979591837),
+                                ('CHEBI:16742', 0.6122448979591837),
+                                ('CHEBI:4888', 0.6078431372549019)])
+
+    def test_lut8_1(self):
+        self._doit("LUT8-1")
+        
+    def test_lut8_4(self):
+        self._doit("LUT8-4")
+        
+    def test_lut16_4(self):
+        self._doit("LUT16-4")
+        
+    def test_lauradoux(self):
+        self._doit("Lauradoux")
+        
+    def test_gillies(self):
+        self._doit("Gillies")
+
+    @unittest2.skipIf("ssse3" not in available_methods, "CPU does not implement SSSE3")
+    def test_ssse3(self):
+        self._doit("Lauradoux", use_ssse3=True)
+
+    @unittest2.skipIf("POPCNT" not in available_methods, "CPU does not implement POPCNT")
+    def test_popcnt(self):
+        self._doit("POPCNT")
         
 
 class TestSelectFastestMethod(unittest2.TestCase):
