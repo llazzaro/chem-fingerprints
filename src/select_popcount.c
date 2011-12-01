@@ -340,6 +340,8 @@ _chemfp_select_popcount(int num_bits,
 
 const char *
 _alignment_description(const unsigned char *arena) {
+  if (ALIGNMENT(arena, 64) == 0) { return "64"; }
+  if (ALIGNMENT(arena, 32) == 0) { return "32"; }
   if (ALIGNMENT(arena, 16) == 0) { return "16"; }
   if (ALIGNMENT(arena,  8) == 0) { return "8"; }
   if (ALIGNMENT(arena,  4) == 0) { return "4"; }
