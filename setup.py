@@ -20,7 +20,7 @@ toolkit. chemfp supports the Python libraries from Open Babel,
 OpenEye, and RDKit toolkits.
 """
 
-USE_OPENMP = True
+USE_OPENMP = False
 USE_SSSE3 = True
 
 # chemfp has experimental support for OpenMP, but only for the counts.
