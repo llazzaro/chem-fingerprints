@@ -32,8 +32,9 @@ The maintainer and primary copyright holder is
 Other copyright holders are:
  - Kim Walisch, <kim.walisch@gmail.com>
  - Stanford Univeristy (written by Imran S. Haque <ihaque@cs.stanford.edu>)
+ - Python Software Foundation (the heapq code)
 
-This package also includes copies of
+This package also includes (nearly) unmodified copies of
  - chemfp/progressbar/ by Nilton Volpato under the LGPL 2.1 and/or BSD license
  - chemfp/futures/ by Brian Quinlan under the Python license
  - chemfp/Watcher.py by Allen Downey under the Python license
