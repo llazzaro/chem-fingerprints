@@ -168,8 +168,8 @@ int _chemfp_popcount_SSSE3(int size, const unsigned *fp) {
     count32 = _mm_add_epi32(count32, popcount_SSSE3_helper(&fp[i], (N - i) / 4));
   }
   /* Layout coming from PSADBW accumulation is 2*{0,32}: 0 S1 0 S0 */
-  _mm_store_ss((float*)&count, _mm_cvtepi32_ps(_mm_add_epi32(
-      count32, _mm_shuffle_epi32(count32, _MM_SHUFFLE(2, 2, 2, 2)))));
+  count = _mm_cvt_ss2si(_mm_cvtepi32_ps(_mm_add_epi32(
+     count32, _mm_shuffle_epi32(count32, _MM_SHUFFLE(2, 2, 2, 2)))));
   return count;
 #else
   UNUSED(size);
@@ -201,8 +201,8 @@ int _chemfp_intersect_popcount_SSSE3(int size, const unsigned *fp1, const unsign
     count32 = _mm_add_epi32(count32, intersect_popcount_SSSE3_helper(&fp1[i], &fp2[i], (N - i) / 4));
   }
   /* Layout coming from PSADBW accumulation is 2*{0,32}: 0 S1 0 S0 */
-  _mm_store_ss((float*)&count, _mm_cvtepi32_ps(_mm_add_epi32(
-      count32, _mm_shuffle_epi32(count32, _MM_SHUFFLE(2, 2, 2, 2)))));
+  count = _mm_cvt_ss2si(_mm_cvtepi32_ps(_mm_add_epi32(
+     count32, _mm_shuffle_epi32(count32, _MM_SHUFFLE(2, 2, 2, 2)))));
   return count;
 #else
   UNUSED(size);
