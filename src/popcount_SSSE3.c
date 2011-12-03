@@ -46,6 +46,7 @@
 
 
 #include "popcount.h"
+#include "cpuid.h"
 
 #if defined(_MSC_VER) && (defined(_WIN32) || defined(_WIN64))
   #define GENERATE_SSSE3
@@ -209,6 +210,15 @@ int _chemfp_intersect_popcount_SSSE3(int size, const unsigned *fp1, const unsign
   UNUSED(size);
   UNUSED(fp1);
   UNUSED(fp2);
+  return 0;
+#endif
+}
+
+int _chemfp_has_ssse3(void) {
+#if defined(GENERATE_SSSE3)
+  return (get_cpuid_flags() & bit_SSSE3);
+#else
+  (void)(get_cpuid_flags); /* suppress compiler warning */
   return 0;
 #endif
 }

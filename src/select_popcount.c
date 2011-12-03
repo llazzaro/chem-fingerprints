@@ -62,11 +62,6 @@ has_popcnt_instruction(void) {
   return (get_cpuid_flags() & bit_POPCNT);
 }
 
-static int
-has_ssse3(void) {
-  return (get_cpuid_flags() & bit_SSSE3);
-}
-
 /* These are in the same order as an enum in popcount.h */
 static chemfp_method_type compile_time_methods[] = {
   {0, CHEMFP_LUT8_1, "LUT8-1", 1, 1, NULL,
@@ -93,7 +88,7 @@ static chemfp_method_type compile_time_methods[] = {
    (chemfp_popcount_f) _chemfp_popcount_gillies,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_gillies},
 
-  {0, CHEMFP_SSSE3, "ssse3", 64, 64, has_ssse3,
+  {0, CHEMFP_SSSE3, "ssse3", 64, 64, _chemfp_has_ssse3,
    (chemfp_popcount_f) _chemfp_popcount_SSSE3,
    (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_SSSE3},
 };
@@ -244,7 +239,7 @@ set_default_alignment_methods(void) {
 
   ssse3_method = CHEMFP_LUT16_4;
 
-  if (has_ssse3()) {
+  if (_chemfp_has_ssse3()) {
     first_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
     ssse3_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
     if (first_time < ssse3_time) {

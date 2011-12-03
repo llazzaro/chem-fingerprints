@@ -68,5 +68,5 @@ int _chemfp_intersect_popcount_popcnt(int size, const uint64_t *fp1, const uint6
 
 int _chemfp_popcount_SSSE3(int, const unsigned*);
 int _chemfp_intersect_popcount_SSSE3(int, const unsigned*, const unsigned*);
-
+int _chemfp_has_ssse3(void);
 #endif
