@@ -14,8 +14,6 @@
 
 #include "popcount.h"
 
-#define ORIGINAL
-
 /**
  * Count the number of 1 bits (population count) in a fingerprint
  * using 64-bit tree merging. This implementation uses only 8
@@ -103,14 +101,9 @@ _chemfp_intersect_popcount_lauradoux(int byte_size,
   const uint64_t m4  = UINT64_C(0x0F0F0F0F0F0F0F0F);
   const uint64_t m8  = UINT64_C(0x00FF00FF00FF00FF);
   const uint64_t m16 = UINT64_C(0x0000FFFF0000FFFF);
-#if defined(ORIGINAL)
   const uint64_t h01 = UINT64_C(0x0101010101010101);
-#endif
-  
   uint64_t count1, count2, half1, half2, acc;
-#if defined(ORIGINAL)
   uint64_t x;
-#endif
   int i, j;
   int size = (byte_size + 7) / 8;
   int limit = size - size % 12;
@@ -140,14 +133,6 @@ _chemfp_intersect_popcount_lauradoux(int byte_size,
     bit_count += (int) acc;
   }
 
-#if !defined(ORIGINAL)
-  /* Finish things up with the CHEMFP_ALIGN8_SMALL method */
-  /* In my test case with 2048 bits the time went from 15.5 to 12.6 seconds */
-  bit_count += _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p->intersect_popcount(
-                        byte_size - limit*8,
-                        (unsigned char *) fp1, (unsigned char *) fp2);
-    
-#else
   /* intersect count the bits of the remaining bytes (MAX 88) using 
      "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
      the code uses wikipedia's 64-bit popcount_3() implementation:
@@ -159,6 +144,5 @@ _chemfp_intersect_popcount_lauradoux(int byte_size,
     x = (x       +  (x >> 4)) & m4;
     bit_count += (int) ((x * h01) >> 56);
   }
-#endif
   return bit_count;
 }
