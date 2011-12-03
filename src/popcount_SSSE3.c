@@ -63,7 +63,7 @@
 static __m128i popcount_SSSE3_helper(const unsigned *buf, int N) {
   /* LUT of count of set bits in each possible 4-bit nibble,
      from low-to-high: 0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4 */
-  const __m128i LUT   = _mm_set_epi32(0x02010100, 0x03020201, 0x03020201, 0x04030302);
+  const __m128i LUT   = _mm_set_epi32(0x04030302, 0x03020201, 0x03020201, 0x02010100);
   const __m128i mask  = _mm_set1_epi32(0x0F0F0F0F);
   const __m128i *vbuf = (__m128i*) buf;
 
@@ -104,7 +104,7 @@ static __m128i popcount_SSSE3_helper(const unsigned *buf, int N) {
 static __m128i intersect_popcount_SSSE3_helper(const unsigned *buf, const unsigned *buf2, int N) {
   /* LUT of count of set bits in each possible 4-bit nibble,
      from low-to-high: 0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4 */
-  const __m128i LUT    = _mm_set_epi32(0x02010100, 0x03020201, 0x03020201, 0x04030302);
+  const __m128i LUT    = _mm_set_epi32(0x04030302, 0x03020201, 0x03020201, 0x02010100);
   const __m128i mask   = _mm_set1_epi32(0x0F0F0F0F);
   const __m128i *vbuf  = (__m128i*) buf;
   const __m128i *vbuf2 = (__m128i*) buf2;
@@ -168,6 +168,7 @@ int _chemfp_popcount_SSSE3(int size, const unsigned *fp) {
     count32 = _mm_add_epi32(count32, popcount_SSSE3_helper(&fp[i], (N - i) / 4));
   }
   /* Layout coming from PSADBW accumulation is 2*{0,32}: 0 S1 0 S0 */
+
   count = _mm_cvt_ss2si(_mm_cvtepi32_ps(_mm_add_epi32(
      count32, _mm_shuffle_epi32(count32, _MM_SHUFFLE(2, 2, 2, 2)))));
   return count;
