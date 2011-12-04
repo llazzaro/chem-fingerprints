@@ -1,0 +1,49 @@
+recursive-include chemfp *.py
+recursive-include tests *.py
+prune tests/chemfp
+
+exclude chemfp/indigo.py
+exclude chemfp/indigo_patterns.py
+exclude chemfp/commandline/indigo2fps.py
+
+recursive-include src *.c
+recursive-include src *.h
+
+include chemfp/progressbar/README.txt
+include chemfp/progressbar/LICENSE.txt
+include chemfp/futures/README
+
+include chemfp/rdmaccs.patterns
+include chemfp/substruct.patterns
+include src/CMakeLists.txt
+include tests/unit2
+include tests/testall
+include tests/*.sdf
+include tests/*.smi
+include tests/pubchem.*sdf*
+include tests/chebi_rdmaccs.fps
+include tests/chebi_queries.fps.gz
+
+include tests/queries.fps
+include tests/targets.fps
+include tests/simple.fps
+
+include docs/*.rst
+include docs/conf.py
+include docs/Makefile
+include docs/api.txt
+include docs/apply_template.py
+
+
+prune src/CMakeFiles
+
+include oe2fps
+include ob2fps
+include rdkit2fps
+include simsearch
+include fpsmerge
+
+include TODO
+include THANKS
+include COPYING
+include CHANGELOG
