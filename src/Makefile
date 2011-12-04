@@ -39,10 +39,10 @@ RM = /opt/local/bin/cmake -E remove -f
 CMAKE_EDIT_COMMAND = /opt/local/bin/ccmake
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /Users/dalke/cvses/chem-fingerprints/src
+CMAKE_SOURCE_DIR = /Users/dalke/cvses/chemfp-mt/src
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /Users/dalke/cvses/chem-fingerprints/src
+CMAKE_BINARY_DIR = /Users/dalke/cvses/chemfp-mt/src
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -69,9 +69,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/dalke/cvses/chem-fingerprints/src/CMakeFiles /Users/dalke/cvses/chem-fingerprints/src/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/dalke/cvses/chemfp-mt/src/CMakeFiles /Users/dalke/cvses/chemfp-mt/src/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/dalke/cvses/chem-fingerprints/src/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/dalke/cvses/chemfp-mt/src/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -220,6 +220,150 @@ heapq.c.s:
 	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/heapq.c.s
 .PHONY : heapq.c.s
 
+hits.o: hits.c.o
+.PHONY : hits.o
+
+# target to build an object file
+hits.c.o:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/hits.c.o
+.PHONY : hits.c.o
+
+hits.i: hits.c.i
+.PHONY : hits.i
+
+# target to preprocess a source file
+hits.c.i:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/hits.c.i
+.PHONY : hits.c.i
+
+hits.s: hits.c.s
+.PHONY : hits.s
+
+# target to generate assembly for a file
+hits.c.s:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/hits.c.s
+.PHONY : hits.c.s
+
+popcount_SSSE3.o: popcount_SSSE3.c.o
+.PHONY : popcount_SSSE3.o
+
+# target to build an object file
+popcount_SSSE3.c.o:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_SSSE3.c.o
+.PHONY : popcount_SSSE3.c.o
+
+popcount_SSSE3.i: popcount_SSSE3.c.i
+.PHONY : popcount_SSSE3.i
+
+# target to preprocess a source file
+popcount_SSSE3.c.i:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_SSSE3.c.i
+.PHONY : popcount_SSSE3.c.i
+
+popcount_SSSE3.s: popcount_SSSE3.c.s
+.PHONY : popcount_SSSE3.s
+
+# target to generate assembly for a file
+popcount_SSSE3.c.s:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_SSSE3.c.s
+.PHONY : popcount_SSSE3.c.s
+
+popcount_gillies.o: popcount_gillies.c.o
+.PHONY : popcount_gillies.o
+
+# target to build an object file
+popcount_gillies.c.o:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_gillies.c.o
+.PHONY : popcount_gillies.c.o
+
+popcount_gillies.i: popcount_gillies.c.i
+.PHONY : popcount_gillies.i
+
+# target to preprocess a source file
+popcount_gillies.c.i:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_gillies.c.i
+.PHONY : popcount_gillies.c.i
+
+popcount_gillies.s: popcount_gillies.c.s
+.PHONY : popcount_gillies.s
+
+# target to generate assembly for a file
+popcount_gillies.c.s:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_gillies.c.s
+.PHONY : popcount_gillies.c.s
+
+popcount_lauradoux.o: popcount_lauradoux.c.o
+.PHONY : popcount_lauradoux.o
+
+# target to build an object file
+popcount_lauradoux.c.o:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_lauradoux.c.o
+.PHONY : popcount_lauradoux.c.o
+
+popcount_lauradoux.i: popcount_lauradoux.c.i
+.PHONY : popcount_lauradoux.i
+
+# target to preprocess a source file
+popcount_lauradoux.c.i:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_lauradoux.c.i
+.PHONY : popcount_lauradoux.c.i
+
+popcount_lauradoux.s: popcount_lauradoux.c.s
+.PHONY : popcount_lauradoux.s
+
+# target to generate assembly for a file
+popcount_lauradoux.c.s:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_lauradoux.c.s
+.PHONY : popcount_lauradoux.c.s
+
+popcount_lut.o: popcount_lut.c.o
+.PHONY : popcount_lut.o
+
+# target to build an object file
+popcount_lut.c.o:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_lut.c.o
+.PHONY : popcount_lut.c.o
+
+popcount_lut.i: popcount_lut.c.i
+.PHONY : popcount_lut.i
+
+# target to preprocess a source file
+popcount_lut.c.i:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_lut.c.i
+.PHONY : popcount_lut.c.i
+
+popcount_lut.s: popcount_lut.c.s
+.PHONY : popcount_lut.s
+
+# target to generate assembly for a file
+popcount_lut.c.s:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_lut.c.s
+.PHONY : popcount_lut.c.s
+
+popcount_popcnt.o: popcount_popcnt.c.o
+.PHONY : popcount_popcnt.o
+
+# target to build an object file
+popcount_popcnt.c.o:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_popcnt.c.o
+.PHONY : popcount_popcnt.c.o
+
+popcount_popcnt.i: popcount_popcnt.c.i
+.PHONY : popcount_popcnt.i
+
+# target to preprocess a source file
+popcount_popcnt.c.i:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_popcnt.c.i
+.PHONY : popcount_popcnt.c.i
+
+popcount_popcnt.s: popcount_popcnt.c.s
+.PHONY : popcount_popcnt.s
+
+# target to generate assembly for a file
+popcount_popcnt.c.s:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/popcount_popcnt.c.s
+.PHONY : popcount_popcnt.c.s
+
 searches.o: searches.c.o
 .PHONY : searches.o
 
@@ -243,6 +387,30 @@ searches.s: searches.c.s
 searches.c.s:
 	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/searches.c.s
 .PHONY : searches.c.s
+
+select_popcount.o: select_popcount.c.o
+.PHONY : select_popcount.o
+
+# target to build an object file
+select_popcount.c.o:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/select_popcount.c.o
+.PHONY : select_popcount.c.o
+
+select_popcount.i: select_popcount.c.i
+.PHONY : select_popcount.i
+
+# target to preprocess a source file
+select_popcount.c.i:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/select_popcount.c.i
+.PHONY : select_popcount.c.i
+
+select_popcount.s: select_popcount.c.s
+.PHONY : select_popcount.s
+
+# target to generate assembly for a file
+select_popcount.c.s:
+	$(MAKE) -f CMakeFiles/chemfp.dir/build.make CMakeFiles/chemfp.dir/select_popcount.c.s
+.PHONY : select_popcount.c.s
 
 test_libchemfp.o: test_libchemfp.c.o
 .PHONY : test_libchemfp.o
@@ -290,9 +458,30 @@ help:
 	@echo "... heapq.o"
 	@echo "... heapq.i"
 	@echo "... heapq.s"
+	@echo "... hits.o"
+	@echo "... hits.i"
+	@echo "... hits.s"
+	@echo "... popcount_SSSE3.o"
+	@echo "... popcount_SSSE3.i"
+	@echo "... popcount_SSSE3.s"
+	@echo "... popcount_gillies.o"
+	@echo "... popcount_gillies.i"
+	@echo "... popcount_gillies.s"
+	@echo "... popcount_lauradoux.o"
+	@echo "... popcount_lauradoux.i"
+	@echo "... popcount_lauradoux.s"
+	@echo "... popcount_lut.o"
+	@echo "... popcount_lut.i"
+	@echo "... popcount_lut.s"
+	@echo "... popcount_popcnt.o"
+	@echo "... popcount_popcnt.i"
+	@echo "... popcount_popcnt.s"
 	@echo "... searches.o"
 	@echo "... searches.i"
 	@echo "... searches.s"
+	@echo "... select_popcount.o"
+	@echo "... select_popcount.i"
+	@echo "... select_popcount.s"
 	@echo "... test_libchemfp.o"
 	@echo "... test_libchemfp.i"
 	@echo "... test_libchemfp.s"
