@@ -17,4 +17,7 @@ int _chemfp_set_option_report_popcount(int);
 int _chemfp_get_option_report_intersect_popcount(void);
 int _chemfp_set_option_report_intersect_popcount(int);
 
+int _chemfp_add_hit(chemfp_threshold_result *result, int target_index, double score);
+
+
 #endif

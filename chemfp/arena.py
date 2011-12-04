@@ -174,27 +174,22 @@ def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
     query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
         query_fp, target_arena.alignment, target_arena.storage_size)
 
-    offsets = (ctypes.c_int * 2)()
-    offsets[0] = 0
-    
-    num_cells = len(target_arena)
-    indices = (ctypes.c_int * num_cells)()
-    scores = (ctypes.c_double * num_cells)()
 
-    num_added = _chemfp.threshold_tanimoto_arena(
-        threshold, target_arena.num_bits,
-        query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
-        target_arena.start_padding, target_arena.end_padding,
-        target_arena.storage_size, target_arena.arena,
-        target_arena.start, target_arena.end,
-        target_arena.popcount_indices,
-        offsets, 0,
-        indices, scores)
+    results = _chemfp.alloc_threshold_results(1)
+    try:
+        _chemfp.threshold_tanimoto_arena(
+            threshold, target_arena.num_bits,
+            query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
+            target_arena.start_padding, target_arena.end_padding,
+            target_arena.storage_size, target_arena.arena,
+            target_arena.start, target_arena.end,
+            target_arena.popcount_indices,
+            results, 0)
+        return _chemfp.threshold_result_get_hits(results, 0)
+    finally:
+        _chemfp.free_threshold_results(results, 0, 1)
 
-    assert num_added == 1
 
-    end = offsets[1]
-    return [(indices[i], scores[i]) for i in xrange(end)]
 
 def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
     require_matching_fp_size(query_fp, target_arena)

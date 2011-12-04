@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "heapq.h"
 #include "chemfp.h"
+#include "chemfp_internal.h"
 
 #if defined(_OPENMP)
   #include <omp.h>
@@ -315,7 +316,6 @@ int chemfp_count_tanimoto_arena(
   return query_index-query_start;
 }
 
-
 int chemfp_threshold_tanimoto_arena(
         /* Within the given threshold */
         double threshold,
@@ -336,29 +336,23 @@ int chemfp_threshold_tanimoto_arena(
         int *target_popcount_indices,
 
         /* Results go into these arrays  */
-        int *result_offsets,
-        int num_cells,
-        int *result_indices,
-        double *result_scores
-                                    ) {
+        chemfp_threshold_result *results) {
 
   int query_index, target_index;
   const unsigned char *query_fp, *target_fp;
   int start, end;
-  int count;
   int fp_size = (num_bits+7) / 8;
   double score;
   int query_popcount, start_target_popcount, end_target_popcount;
   int target_popcount;
   int intersect_popcount, popcount_sum;
-  int result_offset = *result_offsets++;
 
   chemfp_popcount_f calc_popcount;
   chemfp_intersect_popcount_f calc_intersect_popcount;
   
   if (query_start >= query_end) {
     /* No queries */
-    return 0;
+    return CHEMFP_OK;
   }
 
   /* Prevent overflow if someone uses a threshold of, say, 1E-80 */
@@ -367,11 +361,7 @@ int chemfp_threshold_tanimoto_arena(
     threshold = 0.5 / num_bits;
   }
   if ((target_start >= target_end) || threshold > 1.0) {
-    for (query_index = query_start; query_index < query_end; query_index++) {
-      /* No possible targets */
-      *result_offsets++ = result_offset;
-    }
-    return query_index-query_start;
+    return CHEMFP_OK;
   }
   if (target_popcount_indices == NULL) {
     /* Handle the case when precomputed targets aren't available. */
@@ -381,23 +371,18 @@ int chemfp_threshold_tanimoto_arena(
          query_index++, query_fp += query_storage_size) {
       target_fp = target_arena + (target_start * target_storage_size);
       /* Handle the popcount(query) == 0 special case? */
-      count = 0;
       for (target_index = target_start; target_index < target_end;
            target_index++, target_fp += target_storage_size) {
         score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
         if (score >= threshold) {
-          *result_indices++ = target_index;
-          *result_scores++ = score;
-          count++;
+          if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
+            return CHEMFP_NO_MEM;
+          };
         }
       }
-      result_offset += count;
-      num_cells -= count;
-      *result_offsets++ = result_offset;
     }
-    return query_index-query_start;
+    return CHEMFP_OK;
   }
-  
 
   calc_popcount = chemfp_select_popcount(num_bits, query_storage_size, query_arena);
   calc_intersect_popcount = chemfp_select_intersect_popcount(
@@ -412,25 +397,16 @@ int chemfp_threshold_tanimoto_arena(
   for (query_index = query_start; query_index < query_end;
        query_index++, query_fp += query_storage_size) {
 
-    if (num_cells < (target_end - target_start)) {
-      break;
-    }
-    
     query_popcount = calc_popcount(fp_size, query_fp);
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
     if (query_popcount == 0) {
       if (threshold == 0.0) {
         for (target_index = target_start; target_index < target_end; target_index++) {
-          *result_indices++ = target_index;
-          *result_scores++ = 0.0;
+          if (!_chemfp_add_hit(results+(query_index-query_start), target_index, 0.0)) {
+            return CHEMFP_NO_MEM;
+          };
         }
-        count = (target_index - target_start);
-      } else {
-        count = 0;
       }
-      result_offset += count;
-      num_cells -= count;
-      *result_offsets++ = result_offset;
       continue;
     }
     /* Figure out which fingerprints to search */
@@ -445,7 +421,6 @@ int chemfp_threshold_tanimoto_arena(
       }
     }
 
-    count = 0;
     for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
          target_popcount++) {
       start = target_popcount_indices[target_popcount];
@@ -464,15 +439,12 @@ int chemfp_threshold_tanimoto_arena(
         intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
         score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
         if (score >= threshold) {
-          *result_indices++ = target_index;
-          *result_scores++ = score;
-          count++;
+          if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
+            return CHEMFP_NO_MEM;
+          };
         }
       }
     }
-    result_offset += count;
-    num_cells -= count;
-    *result_offsets++ = result_offset;
   } /* went through each of the queries */
   return query_index-query_start;
 }

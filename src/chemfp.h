@@ -59,7 +59,7 @@ const char *chemfp_strerror(int err);
 typedef struct {
   int popcount;
   int index;
-} ChemFPOrderedPopcount;
+} ChemFPOrderedPopcount; /* XXX Why mixed case? */
 
 typedef struct {
   double score;
@@ -69,6 +69,33 @@ typedef struct {
 } chemfp_tanimoto_cell;
 
 
+/* Linked list of blocks */
+#define CHEMFP_HIT_BLOCK_SIZE 16
+
+typedef struct chemfp_hit_block {
+  int target_indices[CHEMFP_HIT_BLOCK_SIZE];
+  double scores[CHEMFP_HIT_BLOCK_SIZE];
+  struct chemfp_hit_block *next;
+} chemfp_hit_block;
+
+
+typedef struct chemfp_threshold_result {
+  int num_hits;
+  int index0;
+  double score0;
+  chemfp_hit_block *first;
+  chemfp_hit_block *last;
+} chemfp_threshold_result;
+
+chemfp_threshold_result *chemfp_alloc_threshold_results(int num_results);
+void chemfp_free_results(int num_results, chemfp_threshold_result *);
+int chemfp_get_num_hits(chemfp_threshold_result *results);
+//int chemfp_results_as_compressed_rows(int num_results, chemfp_threshold_result *results,
+//                                      int *offsets, int *indices, double *scores);
+
+typedef int (*chemfp_assign_hits_p)(void *data, int i, int target_index, double score);
+int chemfp_threshold_result_get_hits(chemfp_threshold_result *results,
+                                     chemfp_assign_hits_p add_callback, void *payload);
 
 /*** Low-level operations directly on hex fingerprints ***/
 
@@ -82,7 +109,7 @@ int chemfp_hex_popcount(int len, const char *fp);
    otherwise return -1. */
 int chemfp_hex_intersect_popcount(int len, const char *fp1, const char *fp2);
 
-/* Return the Tanitoto between two hex fingerprints, or -1.0 for invalid fingerprints
+/* Return the Tanimoto between two hex fingerprints, or -1.0 for invalid fingerprints
    If neither fingerprint has any set bits then return 1.0 */
 double chemfp_hex_tanimoto(int len, const char *fp1, const char *fp2);
 
@@ -271,11 +298,8 @@ int chemfp_threshold_tanimoto_arena(
         /*  (must have at least num_bits+1 elements) */
         int *target_popcount_indices,
 
-        /* Results go into these arrays  */
-        int *result_offsets,
-        int num_cells,
-        int *result_indices,
-        double *result_scores
+        /* Results go into this data structure  */
+        chemfp_threshold_result *results
                                     );
 
 
