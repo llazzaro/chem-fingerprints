@@ -346,6 +346,7 @@ int chemfp_threshold_tanimoto_arena(
   int query_popcount, start_target_popcount, end_target_popcount;
   int target_popcount;
   int intersect_popcount, popcount_sum;
+  int numerator, denominator;
 
   chemfp_popcount_f calc_popcount;
   chemfp_intersect_popcount_f calc_intersect_popcount;
@@ -363,6 +364,7 @@ int chemfp_threshold_tanimoto_arena(
   if ((target_start >= target_end) || threshold > 1.0) {
     return CHEMFP_OK;
   }
+
   if (target_popcount_indices == NULL) {
     /* Handle the case when precomputed targets aren't available. */
     /* This is a slower algorithm because it tests everything. */
@@ -390,6 +392,8 @@ int chemfp_threshold_tanimoto_arena(
                 num_bits, query_storage_size, query_arena,
                 target_storage_size, target_arena);
   
+  denominator = num_bits * 10;
+  numerator = (int)(threshold * denominator);
 
   /* This uses the limits from Swamidass and Baldi */
   /* It doesn't use the ordering because it's supposed to find everything */
@@ -438,8 +442,14 @@ int chemfp_threshold_tanimoto_arena(
       for (target_index = start; target_index < end;
            target_index++, target_fp += target_storage_size) {
         intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
-        score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
-        if (score >= threshold) {
+
+        /* In my timings (on a Mac), the comparison against a double was a hotspot, */
+        /* but division is not. I switch to integer math and gained a 3-4% performance, */
+        /* at the cost of slightly more complicated code. */
+        if (denominator * intersect_popcount  >=
+            numerator * (popcount_sum - intersect_popcount)) {
+
+          score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
           if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
             return CHEMFP_NO_MEM;
           };
