@@ -457,7 +457,7 @@ int chemfp_threshold_tanimoto_arena(
       }
     }
   } /* went through each of the queries */
-  return query_index-query_start;
+  return CHEMFP_OK;
 }
 
 
