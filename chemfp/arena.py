@@ -269,18 +269,23 @@ def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
     if k < 0:
         raise ValueError("k must be non-negative")
 
-    results = _chemfp.alloc_threshold_results(1)
-    try:
-        _chemfp.knearest_tanimoto_arena(
-            k, threshold, target_arena.num_bits,
-            query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-        return _chemfp.threshold_result_get_hits(results, 0)
-    finally:
-        _chemfp.free_threshold_results(results, 0, 1)
+    offsets = (ctypes.c_int * 2)()
+    offsets[0] = 0
+    indices = (ctypes.c_int * k)()
+    scores = (ctypes.c_double * k)()
+
+    num_added = _chemfp.knearest_tanimoto_arena(
+        k, threshold, target_arena.num_bits,
+        query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
+        target_arena.start_padding, target_arena.end_padding,
+        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+        target_arena.popcount_indices,
+        offsets, 0,
+        indices, scores)
+    assert num_added > 0, num_added
+    end = offsets[1]
+    return [(indices[i], scores[i]) for i in xrange(end)]
+
 
 def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
     require_matching_sizes(query_arena, target_arena)
