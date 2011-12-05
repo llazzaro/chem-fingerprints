@@ -1,0 +1,39 @@
+                       chemfp 1.1a4
+
+A Python library and set of tools for working with cheminformatics
+fingerprint data.
+
+Copyright under "the MIT license." See COPYING for details.
+
+See THANKS for the people who have contributed in some fashion.  (If
+I've left your name out or didn't credit you correctly, let me know.)
+
+Install in the normal Python way:
+
+  python setup.py install
+
+(You may need a 'sudo' or be root, depending on your system.)
+
+Note: chemfp requires a C compiler to build the _chemfp extension. 
+
+Documentation? Certainly! Go to:
+
+   http://readthedocs.org/docs/chemfp/en/latest/
+
+or use '--help' on any of the command-line programs:
+
+  rdkit2fps --help
+  ob2fps --help
+  oe2fps --help
+  sdf2fps --help
+  simsearch --help
+
+or (for parts of the public API), look at the doc strings
+
+  import chemfp
+  help(chemfp)
+
+There are many tests. To run them:
+
+  cd tests
+  python unit2 discover

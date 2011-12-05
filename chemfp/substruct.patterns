@@ -1,0 +1,966 @@
+# Substructure fingerprints based on the Pubchem/CACTVS substructure keys.
+
+# Format is:
+#  - lines with only whitespace are ignored
+#  - as are lines with "#" as the first non-whitespace character
+#  - leading and trailing whitespace are ignored
+#  - the pattern line contains whitespace separated columns in the form
+#       $bit $min-count $pattern description ...
+#  - columns 5 and onwards make the description, joined by a single " "
+#  - the pattern is either a SMARTS or a term in <>s which cannot be represented
+#      as SMARTS and must be specially recognized or ignored
+
+# The <> terms are:
+#   <0> this bit is always 0
+#   <1> this bit is always 1
+#   <H> the hydrogen count
+#   <aromatic-rings> the number of aromatic rings
+#   <hetero-aromatic-rings>  the number of hetero-aromatic rings
+
+# In the future I'll probably support metadata like the following
+#num_bits=881
+#type=ChemFP-Substruct/1
+
+# Section 1: Hierarchic Element Counts - These bits test for the
+# presence or count of individual chemical atoms represented by their
+# atomic symbol.
+
+0 4 <H> >= 4 H
+1 8 <H> >= 8 H
+2 16 <H> >= 16 H
+3 32 <H> >= 32 H
+4 1 [Li] >= 1 Li
+5 2 [Li] >= 2 Li
+6 1 [#5] >= 1 B
+7 2 [#5] >= 2 B
+8 4 [#5] >= 4 B
+9 2 [#6] >= 2 C
+10 4 [#6] >= 4 C
+11 8 [#6] >= 8 C
+12 16 [#6] >= 16 C
+13 32 [#6] >= 32 C
+14 1 [#7] >= 1 N
+15 2 [#7] >= 2 N
+16 4 [#7] >= 4 N
+17 8 [#7] >= 8 N
+18 1 [#8] >= 1 O
+19 2 [#8] >= 2 O
+20 4 [#8] >= 4 O
+21 8 [#8] >= 8 O
+22 16 [#8] >= 16 O
+23 1 [F] >= 1 F
+24 2 [F] >= 2 F
+25 4 [F] >= 4 F
+26 1 [Na] >= 1 Na
+27 2 [Na] >= 2 Na
+28 1 [#14] >= 1 Si
+29 2 [#14] >= 2 Si
+30 1 [#15] >= 1 P
+31 2 [#15] >= 2 P
+32 4 [#15] >= 4 P
+33 1 [#16] >= 1 S
+34 2 [#16] >= 2 S
+35 4 [#16] >= 4 S
+36 8 [#16] >= 8 S
+37 1 [Cl] >= 1 Cl
+38 2 [Cl] >= 2 Cl
+39 4 [Cl] >= 4 Cl
+40 8 [Cl] >= 8 Cl
+41 1 [K] >= 1 K
+42 2 [K] >= 2 K
+43 1 [Br] >= 1 Br
+44 2 [Br] >= 2 Br
+45 4 [Br] >= 4 Br
+46 1 [I] >= 1 I
+47 2 [I] >= 2 I
+48 4 [I] >= 4 I
+49 1 [Be] >= 1 Be
+50 1 [Mg] >= 1 Mg
+51 1 [Al] >= 1 Al
+52 1 [Ca] >= 1 Ca
+53 1 [Sc] >= 1 Sc
+54 1 [Ti] >= 1 Ti
+55 1 [V] >= 1 V
+56 1 [Cr] >= 1 Cr
+57 1 [Mn] >= 1 Mn
+58 1 [Fe] >= 1 Fe
+59 1 [Co] >= 1 Co
+60 1 [Ni] >= 1 Ni
+61 1 [Cu] >= 1 Cu
+62 1 [Zn] >= 1 Zn
+63 1 [Ga] >= 1 Ga
+64 1 [#32] >= 1 Ge
+65 1 [#33] >= 1 As
+66 1 [#34] >= 1 Se
+67 1 [Kr] >= 1 Kr
+68 1 [Rb] >= 1 Rb
+69 1 [Sr] >= 1 Sr
+70 1 [Y] >= 1 Y
+71 1 [Zr] >= 1 Zr
+72 1 [Nb] >= 1 Nb
+73 1 [Mo] >= 1 Mo
+74 1 [Ru] >= 1 Ru
+75 1 [Rh] >= 1 Rh
+76 1 [Pd] >= 1 Pd
+77 1 [Ag] >= 1 Ag
+78 1 [Cd] >= 1 Cd
+79 1 [In] >= 1 In
+80 1 [Sn] >= 1 Sn
+81 1 [Sb] >= 1 Sb
+82 1 [#52] >= 1 Te
+83 1 [Xe] >= 1 Xe
+84 1 [Cs] >= 1 Cs
+85 1 [Ba] >= 1 Ba
+86 1 [Lu] >= 1 Lu
+87 1 [Hf] >= 1 Hf
+88 1 [Ta] >= 1 Ta
+89 1 [W] >= 1 W
+90 1 [Re] >= 1 Re
+91 1 [Os] >= 1 Os
+92 1 [Ir] >= 1 Ir
+93 1 [Pt] >= 1 Pt
+94 1 [Au] >= 1 Au
+95 1 [Hg] >= 1 Hg
+96 1 [Tl] >= 1 Tl
+97 1 [Pb] >= 1 Pb
+98 1 [Bi] >= 1 Bi
+99 1 [La] >= 1 La
+100 1 [Ce] >= 1 Ce
+101 1 [Pr] >= 1 Pr
+102 1 [Nd] >= 1 Nd
+103 1 [Pm] >= 1 Pm
+104 1 [Sm] >= 1 Sm
+105 1 [Eu] >= 1 Eu
+106 1 [Gd] >= 1 Gd
+107 1 [Tb] >= 1 Tb
+108 1 [Dy] >= 1 Dy
+109 1 [Ho] >= 1 Ho
+110 1 [Er] >= 1 Er
+111 1 [Tm] >= 1 Tm
+112 1 [Yb] >= 1 Yb
+113 1 [Tc] >= 1 Tc
+114 1 [U] >= 1 U
+
+# Section 2: Rings in a canonic Extended Smallest Set of Smallest
+# Rings (ESSSR) ring set - These bits test for the presence or count
+# of the described chemical ring system.  An ESSSR ring is any ring
+# which does not share three consecutive atoms with any other ring in
+# the chemical structure.  For example, naphthalene has three ESSSR
+# rings (two phenyl fragments and the 10-membered envelope), while
+# biphenyl will yield a count of only two ESSSR rings.
+
+115 1 *~1~*~*1 >= 1 any ring size 3
+116 1 c1cc1 >= 1 aromatic carbon-only ring size 3
+117 1 n1aa1 >= 1 aromatic nitrogen-containing ring size 3
+118 1 [a;!#6]1aa1 >= 1 aromatic heteroatom-containing ring size 3
+119 1 C~1~C~C1 >= 1 non-aromatic carbon-only ring size 3
+120 1 N~1~A~A1 >= 1 non-aromatic nitrogen-containing ring size 3
+121 1 [A;!#6]~1~A~A1 >= 1 non-aromatic heteroatom-containing ring size 3
+122 2 *~1~*~*1 >= 2 any ring size 3
+123 2 c1cc1 >= 2 aromatic carbon-only ring size 3
+124 2 n1aa1 >= 2 aromatic nitrogen-containing ring size 3
+125 2 [a;!#6]1aa1 >= 2 aromatic heteroatom-containing ring size 3
+126 2 C~1~C~C1 >= 2 non-aromatic carbon-only ring size 3
+127 2 N~1~A~A1 >= 2 non-aromatic nitrogen-containing ring size 3
+128 2 [A;!#6]~1~A~A1 >= 2 non-aromatic heteroatom-containing ring size 3
+
+129 1 *~1~*~*~*1 >= 1 any ring size 4
+130 1 c1ccc1 >= 1 carbon-only ring size 4
+131 1 n1aaa1 >= 1 nitrogen-containing ring size 4
+132 1 [a;!#6]1aaa1 >= 1 heteroatom-containing ring size 4
+133 1 C~1~C~C~C1 >= 1 non-aromatic carbon-only ring size 4
+134 1 N~1~A~A~A1 >= 1 non-aromatic nitrogen-containing ring size 4
+135 1 [A;!#6]~1~A~A~A1 >= 1 non-aromatic heteroatom-containing ring size 4
+136 2 *~1~*~*~*1 >= 2 any ring size 4
+137 2 c1ccc1 >= 2 aromatic carbon-only ring size 4
+138 2 n1aaa1 >= 2 aromatic nitrogen-containing ring size 4
+139 2 [a;!#6]1aaa1 >= 2 aromatic heteroatom-containing ring size 4
+140 2 C~1~C~C~C1 >= 2 non-aromatic carbon-only ring size 4
+141 2 N~1~A~A~A1 >= 2 non-aromatic nitrogen-containing ring size 4
+142 2 [A;!#6]~1~A~A~A1 >= 2 non-aromatic heteroatom-containing ring size 4
+
+143 1 *~1~*~*~*~*1 >= 1 any ring size 5
+144 1 c1cccc1 >= 1 aromatic carbon-only ring size 5
+145 1 n1aaaa1 >= 1 aromatic nitrogen-containing ring size 5
+146 1 [a;!#6]1aaaa1 >= 1 aromatic heteroatom-containing ring size 5
+147 1 C~1~C~C~C~C1 >= 1 non-aromatic carbon-only ring size 5
+148 1 N~1~A~A~A~A1 >= 1 non-aromatic nitrogen-containing ring size 5
+149 1 [A;!#6]~1A~A~A~A1 >= 1 non-aromatic heteroatom-containing ring size 5
+150 2 *~1~*~*~*~*1 >= 2 any ring size 5
+151 2 c1cccc1 >= 2 aromatic carbon-only ring size 5
+152 2 n1aaaa1 >= 2 aromatic nitrogen-containing ring size 5
+153 2 [a;!#6]1aaaa1 >= 2 aromatic heteroatom-containing ring size 5
+154 2 C~1~C~C~C~C1 >= 2 non-aromatic carbon-only ring size 5
+155 2 N~1~A~A~A~A1 >= 2 non-aromatic nitrogen-containing ring size 5
+156 2 [A;!#6]~1A~A~A~A1 >= 2 non-aromatic heteroatom-containing ring size 5
+157 3 *~1~*~*~*~*1 >= 3 any ring size 5
+158 3 c1cccc1 >= 3 aromatic carbon-only ring size 5
+159 3 n1aaaa1 >= 3 aromatic nitrogen-containing ring size 5
+160 3 [a;!#6]1aaaa1 >= 3 aromatic heteroatom-containing ring size 5
+161 3 C~1~C~C~C~C1 >= 3 non-aromatic carbon-only ring size 5
+162 3 N~1~A~A~A~A1 >= 3 non-aromatic nitrogen-containing ring size 5
+163 3 [A;!#6]~1A~A~A~A1 >= 3 non-aromatic heteroatom-containing ring size 5
+164 4 *~1~*~*~*~*1 >= 4 any ring size 5
+165 4 c1cccc1 >= 4 aromatic carbon-only ring size 5
+166 4 n1aaaa1 >= 4 aromatic nitrogen-containing ring size 5
+167 4 [a;!#6]1aaaa1 >= 4 aromatic heteroatom-containing ring size 5
+168 4 C~1~C~C~C~C1 >= 4 non-aromatic carbon-only ring size 5
+169 4 N~1~A~A~A~A1 >= 4 non-aromatic nitrogen-containing ring size 5
+170 4 [A;!#6]~1A~A~A~A1 >= 4 non-aromatic heteroatom-containing ring size 5
+171 5 *~1~*~*~*~*1 >= 5 any ring size 5
+172 5 c1cccc1 >= 5 aromatic carbon-only ring size 5
+173 5 n1aaaa1 >= 5 aromatic nitrogen-containing ring size 5
+174 5 [a;!#6]1aaaa1 >= 5 aromatic heteroatom-containing ring size 5
+175 5 C~1~C~C~C~C1 >= 5 non-aromatic carbon-only ring size 5
+176 5 N~1~A~A~A~A1 >= 5 non-aromatic nitrogen-containing ring size 5
+177 5 [A;!#6]~1A~A~A~A1 >= 5 non-aromatic heteroatom-containing ring size 5
+
+ # Rings of size 6
+
+178 1 *~1~*~*~*~*~*1 >= 1 any ring size 6
+179 1 c1ccccc1 >= 1 aromatic carbon-only ring size 6
+180 1 n1aaaaa1 >= 1 aromatic nitrogen-containing ring size 6
+181 1 [a;!#6]1aaaaa1 >= 1 aromatic heteroatom-containing ring size 6
+182 1 C~1~C~C~C~C~C1 >= 1 non-aromatic carbon-only ring size 6
+183 1 N~1~A~A~A~A~A1 >= 1 non-aromatic nitrogen-containing ring size 6
+184 1 [A;!#6]~1~A~A~A~A~A1 >= 1 non-aromatic heteroatom-containing ring size 6
+185 2 *~1~*~*~*~*~*1 >= 2 any ring size 6
+186 2 c1ccccc1 >= 2 aromatic carbon-only ring size 6
+187 2 n1aaaaa1 >= 2 aromatic nitrogen-containing ring size 6
+188 2 [a;!#6]1aaaaa1 >= 2 aromatic heteroatom-containing ring size 6
+189 2 C~1~C~C~C~C~C1 >= 2 non-aromatic carbon-only ring size 6
+190 2 N~1~A~A~A~A~A1 >= 2 non-aromatic nitrogen-containing ring size 6
+191 2 [A;!#6]~1~A~A~A~A~A1 >= 2 non-aromatic heteroatom-containing ring size 6
+192 3 *~1~*~*~*~*~*1 >= 3 any ring size 6
+193 3 c1ccccc1 >= 3 aromatic carbon-only ring size 6
+194 3 n1aaaaa1 >= 3 aromatic nitrogen-containing ring size 6
+195 3 [a;!#6]1aaaaa1 >= 3 aromatic heteroatom-containing ring size 6
+196 3 C~1~C~C~C~C~C1 >= 3 non-aromatic carbon-only ring size 6
+197 3 N~1~A~A~A~A~A1 >= 3 non-aromatic nitrogen-containing ring size 6
+198 3 [A;!#6]~1~A~A~A~A~A1 >= 3 non-aromatic heteroatom-containing ring size 6
+199 4 *~1~*~*~*~*~*1 >= 4 any ring size 6
+200 4 c1ccccc1 >= 4 aromatic carbon-only ring size 6
+201 4 n1aaaaa1 >= 4 aromatic nitrogen-containing ring size 6
+202 4 [a;!#6]1aaaaa1 >= 4 aromatic heteroatom-containing ring size 6
+203 4 C~1~C~C~C~C~C1 >= 4 non-aromatic carbon-only ring size 6
+204 4 N~1~A~A~A~A~A1 >= 4 non-aromatic nitrogen-containing ring size 6
+205 4 [A;!#6]~1~A~A~A~A~A1 >= 4 non-aromatic heteroatom-containing ring size 6
+206 5 *~1~*~*~*~*~*1 >= 5 any ring size 6
+207 5 c1ccccc1 >= 5 aromatic carbon-only ring size 6
+208 5 n1aaaaa1 >= 5 aromatic nitrogen-containing ring size 6
+209 5 [a;!#6]1aaaaa1 >= 5 aromatic heteroatom-containing ring size 6
+210 5 C~1~C~C~C~C~C1 >= 5 non-aromatic carbon-only ring size 6
+211 5 N~1~A~A~A~A~A1 >= 5 non-aromatic nitrogen-containing ring size 6
+212 5 [A;!#6]~1~A~A~A~A~A1 >= 5 non-aromatic heteroatom-containing ring size 6
+
+  # Rings of size 7
+
+213 1 *~1~*~*~*~*~*~*1 >= 1 any ring size 7
+214 1 c1cccccc1 >= 1 aromatic carbon-only ring size 7
+215 1 n1aaaaaa1 >= 1 aromatic nitrogen-containing ring size 7
+216 1 [a;!#6]1aaaaaa1 >= 1 aromatic heteroatom-containing ring size 7
+217 1 C~1~C~C~C~C~C~C1 >= 1 non-aromatic carbon-only ring size 7
+218 1 N~1~A~A~A~A~A~A1 >= 1 non-aromatic nitrogen-containing ring size 7
+219 1 [A;!#6]~1~A~A~A~A~A~A1 >= 1 non-aromatic heteroatom-containing ring size 7
+220 2 *~1~*~*~*~*~*~*1 >= 2 any ring size 7
+221 2 c1cccccc1 >= 2 aromatic carbon-only ring size 7
+222 2 n1aaaaaa1 >= 2 aromatic nitrogen-containing ring size 7
+223 2 [a;!#6]1aaaaaa1 >= 2 aromatic heteroatom-containing ring size 7
+224 2 C~1~C~C~C~C~C~C1 >= 2 non-aromatic carbon-only ring size 7
+225 2 N~1~A~A~A~A~A~A1 >= 2 non-aromatic nitrogen-containing ring size 7
+226 2 [A;!#6]~1~A~A~A~A~A~A1 >= 2 non-aromatic heteroatom-containing ring size 7
+
+  # Rings of size 8
+
+227 1 *~1~*~*~*~*~*~*~*1 >= 1 any ring size 8
+228 1 c1ccccccc1 >= 1 aromatic carbon-only ring size 8
+229 1 n1aaaaaaa1 >= 1 aromatic nitrogen-containing ring size 8
+230 1 [a;!#6]1aaaaaaa1 >= 1 aromatic heteroatom-containing ring size 8
+231 1 C~1~C~C~C~C~C~C~C1 >= 1 non-aromatic carbon-only ring size 8
+232 1 N~1~A~A~A~A~A~A~A1 >= 1 non-aromatic nitrogen-containing ring size 8
+233 1 [A;!#6]~1~A~A~A~A~A~A~A1 >= 1 non-aromatic heteroatom-containing ring size 8
+234 2 *~1~*~*~*~*~*~*~*1 >= 2 any ring size 8
+235 2 c1ccccccc1 >= 2 aromatic carbon-only ring size 8
+236 2 n1aaaaaaa1 >= 2 aromatic nitrogen-containing ring size 8
+237 2 [a;!#6]1aaaaaaa1 >= 2 aromatic heteroatom-containing ring size 8
+238 2 C~1~C~C~C~C~C~C~C1 >= 2 non-aromatic carbon-only ring size 8
+239 2 N~1~A~A~A~A~A~A~A1 >= 2 non-aromatic nitrogen-containing ring size 8
+240 2 [A;!#6]~1~A~A~A~A~A~A~A1 >= 2 non-aromatic heteroatom-containing ring size 8
+
+  # Rings of size 9
+
+241 1 *~1~*~*~*~*~*~*~*~*1 >= 1 any ring size 9
+242 1 c1cccccccc1 >= 1 aromatic carbon-only ring size 9
+243 1 n1aaaaaaaa1 >= 1 aromatic nitrogen-containing ring size 9
+244 1 [a;!#6]1aaaaaaaa1 >= 1 aromatic heteroatom-containing ring size 9
+245 1 C~1~C~C~C~C~C~C~C~C1 >= 1 non-aromatic carbon-only ring size 9
+246 1 N~1~A~A~A~A~A~A~A~A1 >= 1 non-aromatic nitrogen-containing ring size 9
+247 1 [A;!#6]~1~A~A~A~A~A~A~A~A1 >= 1 non-aromatic heteroatom-containing ring size 9
+
+  # Rings of size 10
+
+248 1 *~1~*~*~*~*~*~*~*~*~*1 >= 1 any ring size 10
+249 1 c1ccccccccc1 >= 1 aromatic carbon-only ring size 10
+250 1 n1aaaaaaaaa1 >= 1 aromatic nitrogen-containing ring size 10
+251 1 [a;!#6]1aaaaaaaaa1 >= 1 aromatic heteroatom-containing ring size 10
+252 1 C~1~C~C~C~C~C~C~C~C~C1 >= 1 non-aromatic carbon-only ring size 10
+253 1 N~1~A~A~A~A~A~A~A~A~A1 >= 1 non-aromatic nitrogen-containing ring size 10
+254 1 [A;!#6]~1~A~A~A~A~A~A~A~A~A1 >= 1 non-aromatic heteroatom-containing ring size 10
+
+255 1 [aR] >= 1 aromatic ring
+# Interesting. RDkit doesn't support [aR!#6]. Is that a legal SMARTS?
+256 1 [aR;!#6] >= 1 hetero-aromatic ring
+257 2 <aromatic-rings> >= 2 aromatic rings
+258 2 <hetero-aromatic-rings> >= 2 hetero-aromatic rings
+259 3 <aromatic-rings> >= 3 aromatic rings
+260 3 <hetero-aromatic-rings> >= 3 hetero-aromatic rings
+261 4 <aromatic-rings> >= 4 aromatic rings
+262 4 <hetero-aromatic-rings> >= 4 hetero-aromatic rings
+
+# Section 3: Simple atom pairs - These bits test for the presence of
+# patterns of bonded atom pairs, regardless of bond order or count.
+
+263 1 [Li;!H0]    Li-H
+264 1 [Li]~[Li]    Li-Li
+265 1 [Li]~[#5]    Li-B
+266 1 [Li]~[#6]    Li-C
+267 1 [Li]~[#8]    Li-O
+268 1 [Li]~[F]    Li-F
+269 1 [Li]~[#15]    Li-P
+270 1 [Li]~[#16]    Li-S
+271 1 [Li]~[Cl]    Li-Cl
+272 1 [#5;!H0]    B-H
+273 1 [#5]~[#5]    B-B
+274 1 [#5]~[#6]    B-C
+275 1 [#5]~[#7]    B-N
+276 1 [#5]~[#8]    B-O
+277 1 [#5]~[F]    B-F
+278 1 [#5]~[#6]    B-Si
+279 1 [#5]~[#15]    B-P
+280 1 [#5]~[#16]    B-S
+281 1 [#5]~[Cl]    B-Cl
+282 1 [#5]~[Br]    B-Br
+283 1 [#6;!H0]    C-H
+284 1 [#6]~[#6]    C-C
+285 1 [#6]~[#7]    C-N
+286 1 [#6]~[#8]    C-O
+287 1 [#6]~[F]    C-F
+288 1 [#6]~[Na]    C-Na
+289 1 [#6]~[Mg]    C-Mg
+290 1 [#6]~[Al]    C-Al
+291 1 [#6]~[#14]    C-Si
+292 1 [#6]~[#15]    C-P
+293 1 [#6]~[#16]    C-S
+294 1 [#6]~[Cl]    C-Cl
+295 1 [#6]~[#33]    C-As
+296 1 [#6]~[#34]    C-Se
+297 1 [#6]~[Br]    C-Br
+298 1 [#6]~[I]    C-I
+299 1 [#7;!H0]    N-H
+300 1 [#7]~[#7]    N-N
+301 1 [#7]~[#8]    N-O
+302 1 [#7]~[F]    N-F
+303 1 [#7]~[#14]    N-Si
+304 1 [#7]~[#15]    N-P
+305 1 [#7]~[#16]    N-S
+306 1 [#7]~[Cl]    N-Cl
+307 1 [#7]~[Br]    N-Br
+308 1 [#8;!H0]    O-H
+309 1 [#8]~[#8]    O-O
+310 1 [#8]~[Mg]    O-Mg
+311 1 [#8]~[Na]    O-Na
+312 1 [#8]~[Al]    O-Al
+313 1 [#8]~[#14]    O-Si
+314 1 [#8]~[#15]    O-P
+315 1 [#8]~[K]    O-K
+316 1 [F]~[#15]    F-P
+317 1 [F]~[#16]    F-S
+318 1 [Al;!H0]    Al-H
+319 1 [Al]~[Cl]    Al-Cl
+320 1 [#14;!H0]    Si-H
+321 1 [#14]~[#14]    Si-Si
+322 1 [#14]~[Cl]    Si-Cl
+323 1 [#15;!H0]    P-H
+324 1 [#15]~[#15]    P-P
+325 1 [#33;!H0]    As-H
+326 1 [#33]~[#33]    As-As
+
+
+# Section 4: Simple atom nearest neighbors - These bits test for the
+# presence of atom nearest neighbor patterns, regardless of bond order
+# (denoted by "~") or count, but where bond aromaticity (denoted by
+# ":") is significant.
+
+327 1 [#6](~Br)(~[#6])    C(~Br)(~C)
+328 1 [#6](~Br)(~[#6])(~[#6])    C(~Br)(~C)(~C)
+329 1 [#6;!H0](~Br)    C(~Br)(~H)
+330 1 c(~Br)(:c)    C(~Br)(:C)
+331 1 c(~Br)(:n)    C(~Br)(:N)
+332 1 [#6](~[#6])(~[#6])    C(~C)(~C)
+333 1 [#6](~[#6])(~[#6])(~[#6])    C(~C)(~C)(~C)
+334 1 [#6](~[#6])(~[#6])(~[#6])(~[#6])    C(~C)(~C)(~C)(~C)
+335 1 [#6;!H0](~[#6])(~[#6])(~[#6])    C(~C)(~C)(~C)(~H)
+336 1 [#6](~[#6])(~[#6])(~[#6])(~[#7])    C(~C)(~C)(~C)(~N)
+337 1 [#6](~[#6])(~[#6])(~[#6])(~[#8])    C(~C)(~C)(~C)(~O)
+338 1 [#6;!H0](~[#6])(~[#6])(~[#7])    C(~C)(~C)(~H)(~N)
+339 1 [#6;!H0](~[#6])(~[#6])(~[#8])    C(~C)(~C)(~H)(~O)
+340 1 [#6](~[#6])(~[#6])(~[#7])    C(~C)(~C)(~N)
+341 1 [#6](~[#6])(~[#6])(~[#8])    C(~C)(~C)(~O)
+342 1 [#6](~[#6])(~Cl)    C(~C)(~Cl)
+343 1 [#6;!H0](~[#6])(~Cl)    C(~C)(~Cl)(~H)
+344 1 [#6;!H0](~[#6])    C(~C)(~H)
+345 1 [#6;!H0](~[#6])(~[#7])    C(~C)(~H)(~N)
+346 1 [#6;!H0](~[#6])(~[#8])    C(~C)(~H)(~O)
+347 1 [#6;!H0](~[#6])(~[#8])(~[#8])    C(~C)(~H)(~O)(~O)
+348 1 [#6;!H0](~[#6])(~[#15])    C(~C)(~H)(~P)
+349 1 [#6;!H0](~[#6])(~[#16])    C(~C)(~H)(~S)
+350 1 [#6](~[#6])(~I)    C(~C)(~I)
+351 1 [#6](~[#6])(~[#7])    C(~C)(~N)
+352 1 [#6](~[#6])(~[#8])    C(~C)(~O)
+353 1 [#6](~[#6])(~[#16])    C(~C)(~S)
+354 1 [#6](~[#6])(~[#14])    C(~C)(~Si)
+355 1 c(~[#6])(:c)    C(~C)(:C)
+356 1 c(~[#6])(:c)(:c)    C(~C)(:C)(:C)
+357 1 c(~[#6])(:c)(:n)    C(~C)(:C)(:N)
+358 1 c(~[#6])(:n)    C(~C)(:N)
+359 1 c(~[#6])(:n)(:n)    C(~C)(:N)(:N)
+360 1 [#6](~Cl)(~Cl)    C(~Cl)(~Cl)
+361 1 [#6;!H0](~Cl)    C(~Cl)(~H)
+362 1 c(~Cl)(:c)    C(~Cl)(:C)
+363 1 [#6](~F)(~F)    C(~F)(~F)
+364 1 c(~F)(:c)    C(~F)(:C)
+365 1 [#6;!H0](~[#7])    C(~H)(~N)
+366 1 [#6;!H0](~[#8])    C(~H)(~O)
+367 1 [#6;!H0](~[#8])(~[#8])    C(~H)(~O)(~O)
+368 1 [#6;!H0](~[#16])    C(~H)(~S)
+369 1 [#6;!H0](~[#14])    C(~H)(~Si)
+370 1 [c;!H0](:c)    C(~H)(:C)
+371 1 [c;!H0](:c)(:c)    C(~H)(:C)(:C)
+372 1 [c;!H0](:c)(:n)    C(~H)(:C)(:N)
+373 1 [c;!H0](:n)    C(~H)(:N)
+374 1 [#6;!H0;!H1;!H2]    C(~H)(~H)(~H)
+375 1 [#6](~[#7])(~[#7])    C(~N)(~N)
+376 1 c(~[#7])(:c)    C(~N)(:C)
+377 1 c(~[#7])(:c)(:c)    C(~N)(:C)(:C)
+378 1 c(~[#7])(:c)(:n)    C(~N)(:C)(:N)
+379 1 c(~[#7])(:n)    C(~N)(:N)
+380 1 [#6](~[#8])(~[#8])    C(~O)(~O)
+381 1 c(~[#8])(:c)    C(~O)(:C)
+382 1 c(~[#8])(:c)(:c)    C(~O)(:C)(:C)
+383 1 c(~[#16])(:c)    C(~S)(:C)
+384 1 c(:c)(:c)    C(:C)(:C)
+385 1 c(:c)(:c)(:c)    C(:C)(:C)(:C)
+386 1 c(:c)(:c)(:n)    C(:C)(:C)(:N)
+387 1 c(:c)(:n)    C(:C)(:N)
+388 1 c(:c)(:n)(:n)    C(:C)(:N)(:N)
+389 1 c(:n)(:n)    C(:N)(:N)
+390 1 [#7](~[#6])(~[#6])    N(~C)(~C)
+391 1 [#7](~[#6])(~[#6])(~[#6])    N(~C)(~C)(~C)
+392 1 [#7;!H0](~[#6])(~[#6])    N(~C)(~C)(~H)
+393 1 [#7;!H0](~[#6])    N(~C)(~H)
+394 1 [#7;!H0](~[#6])(~[#7])    N(~C)(~H)(~N)
+395 1 [#7](~[#6])(~[#8])    N(~C)(~O)
+396 1 n(~[#6])(:c)    N(~C)(:C)
+397 1 n(~[#6])(:c)(:c)    N(~C)(:C)(:C)
+398 1 [#7;!H0](~[#7])    N(~H)(~N)
+399 1 [n;!H0](:c)    N(~H)(:C)
+400 1 [n;!H0](:c)(:c)    N(~H)(:C)(:C)
+401 1 [#7](~[#8])(~[#8])    N(~O)(~O)
+402 1 n(~[#8])(:o)    N(~O)(:O)
+403 1 n(:c)(:c)    N(:C)(:C)
+404 1 n(:c)(:c)(:c)    N(:C)(:C)(:C)
+405 1 [#8](~[#6])(~[#6])    O(~C)(~C)
+406 1 [#8;!H0](~[#6])    O(~C)(~H)
+407 1 [#8](~[#6])(~[#15])    O(~C)(~P)
+408 1 [#8;!H0](~[#16])    O(~H)(~S)
+409 1 o(:c)(:c)    O(:C)(:C)
+410 1 [#15](~[#6])(~[#6])    P(~C)(~C)
+411 1 [#15](~[#8])(~[#8])    P(~O)(~O)
+412 1 [#16](~[#6])(~[#6])    S(~C)(~C)
+413 1 [#16;!H0](~[#6])    S(~C)(~H)
+414 1 [#16](~[#6])(~[#8])    S(~C)(~O)
+415 1 [#14](~[#6])(~[#6])    Si(~C)(~C)
+
+
+# Section 5: Detailed atom neighborhoods - These bits test for the
+# presence of detailed atom neighborhood patterns, regardless of
+# count, but where bond orders are specific, bond aromaticity matches
+# both single and double bonds, and where "-", "=", and "#" matches a
+# single bond, double bond, and triple bond order, respectively.
+
+416 1 [#6]=,:[#6]   C=C
+417 1 [#6]#[#6]   C#C
+418 1 [#6]=,:[#7]   C=N
+419 1 [#6]#[#7]   C#N
+420 1 [#6]=,:[#8]   C=O
+421 1 [#6]=,:[s,S]   C=S
+422 1 [#7]=,:[#7]   N=N
+423 1 [#7]=,:[#8]   N=O
+424 1 [#7]=,:[#15]   N=P
+425 1 [#15]=,:[#8]   P=O
+426 1 [#15]=,:[#15]   P=P
+427 1 [#6]#[#6]-,:[#6]   C(#C)(-C)
+428 1 [#6;!H0]#[#6]   C(#C)(-H)
+429 1 [#7]#[#6]-,:[#6]   C(#N)(-C)
+430 1 [#6](-,:[#6])(-,:[#6])(=,:[#6])   C(-C)(-C)(=C)
+431 1 [#6](-,:[#6])(-,:[#6])(=,:[#7])   C(-C)(-C)(=N)
+432 1 [#6](-,:[#6])(-,:[#6])(=,:[#8])   C(-C)(-C)(=O)
+433 1 [#6](-,:[#6])(Cl)(=,:[#8])   C(-C)(-Cl)(=O)
+434 1 [#6&!H0](-,:[#6])(=,:[#6])   C(-C)(-H)(=C)
+435 1 [#6&!H0](-,:[#6])(=,:[#7])   C(-C)(-H)(=N)
+436 1 [#6&!H0](-,:[#6])(=,:[#8])   C(-C)(-H)(=O)
+437 1 [#6](-,:[#6])(-,:[#7])(=,:[#6])   C(-C)(-N)(=C)
+438 1 [#6](-,:[#6])(-,:[#7])(=,:[#7])   C(-C)(-N)(=N)
+439 1 [#6](-,:[#6])(-,:[#7])(=,:[#8])   C(-C)(-N)(=O)
+440 1 [#6](-,:[#6])(-,:[#8])(=,:[#8])   C(-C)(-O)(=O)
+441 1 [#6](-,:[#6])(=,:[#6])   C(-C)(=C)
+442 1 [#6](-,:[#6])(=,:[#7])   C(-C)(=N)
+443 1 [#6](-,:[#6])(=,:[#8])   C(-C)(=O)
+444 1 [#6](Cl)(=,:[#8])   C(-Cl)(=O)
+445 1 [#6;!H0](-,:[#7])(=,:[#6])   C(-H)(-N)(=C)
+446 1 [#6;!H0](=,:[#6])   C(-H)(=C)
+447 1 [#6;!H0](=,:[#7])   C(-H)(=N)
+448 1 [#6;!H0](=,:[#8])   C(-H)(=O)
+449 1 [#6](-,:[#7])(=,:[#6])   C(-N)(=C)
+450 1 [#6](-,:[#7])(=,:[#7])   C(-N)(=N)
+451 1 [#6](-,:[#7])(=,:[#8])   C(-N)(=O)
+452 1 [#6](-,:[#8])(=,:[#8])   C(-O)(=O)
+453 1 [#7](-,:[#6])(=,:[#6])   N(-C)(=C)
+454 1 [#7](-,:[#6])(=,:[#8])   N(-C)(=O)
+455 1 [#7](-,:[#8])(=,:[#8])   N(-O)(=O)
+456 1 [#15](-,:[#8])(=,:[#8])   P(-O)(=O)
+457 1 [#16](-,:[#6])(=,:[#8])   S(-C)(=O)
+458 1 [#16](-,:[#8])(=,:[#8])   S(-O)(=O)
+459 1 [#16](=,:[#8])(=,:[#8])   S(=O)(=O)
+
+# Section 6: Simple SMARTS patterns - These bits test for the presence
+# of simple SMARTS patterns, regardless of count, but where bond
+# orders are specific and bond aromaticity matches both single and
+# double bonds.
+
+460 1 [#6]-,:[#6]-,:[#6]#C   C-C-C#C
+461 1 [#8]-,:[#6]-,:[#6]=,:[#7]   O-C-C=N
+462 1 [#8]-,:[#6]-,:[#6]=,:[#8]   O-C-C=O
+463 1 n:c-,:[#16;!H0]   N:C-S-[#1]
+464 1 [#7]-,:[#6]-,:[#6]=,:[#6]   N-C-C=C
+465 1 [#8]=,:[#16]-,:[#6]-,:[#6]   O=S-C-C
+466 1 N#[#6]-,:[#6]=,:[#6]   N#C-C=C
+467 1 [#6]=,:[#7]-,:[#7]-,:[#6]   C=N-N-C
+468 1 [#8]=,:[#16]-,:[#6]-,:[#7]   O=S-C-N
+469 1 [#16]-,:[#16]-,:c:c   S-S-C:C
+470 1 c:c-,:[#6]=,:[#6]   C:C-C=C
+471 1 s:c:c:c   S:C:C:C
+472 1 c:n:c-,:[#6]   C:N:C-C
+473 1 [#16]-,:c:n:c   S-C:N:C
+474 1 s:c:c:n   S:C:C:N
+475 1 [#16]-,:[#6]=,:[#7]-,:[#6]   S-C=N-C
+476 1 [#6]-,:[#8]-,:[#6]=,:[#6]   C-O-C=C
+477 1 [#7]-,:[#7]-,:c:c   N-N-C:C
+478 1 [#16]-,:[#6]=,:[#7;!H0]   S-C=N-[#1]
+479 1 [#16]-,:[#6]-,:[#16]-,:[#6]   S-C-S-C
+480 1 c:s:c-,:[#6]   C:S:C-C
+481 1 [#8]-,:[#16]-,:c:c   O-S-C:C
+482 1 c:n-,:c:c   C:N-C:C
+483 1 [#7]-,:[#16]-,:c:c   N-S-C:C
+484 1 [#7]-,:c:n:c   N-C:N:C
+485 1 n:c:c:n   N:C:C:N
+486 1 [#7]-,:c:n:n   N-C:N:N
+487 1 [#7]-,:[#6]=,:[#7]-,:[#6]   N-C=N-C
+488 1 [#7]-,:[#6]=,:[#7;!H0]   N-C=N-[#1]
+489 1 [#7]-,:[#6]-,:[#16]-,:[#6]   N-C-S-C
+490 1 [#6]-,:[#6]-,:[#6]=,:[#6]   C-C-C=C
+491 1 [#6]-,:n:[c;!H0]   C-N:C-[#1]
+492 1 [#7]-,:c:o:c   N-C:O:C
+493 1 [#8]=,:[#6]-,:c:c   O=C-C:C
+494 1 [#8]=,:[#6]-,:c:n   O=C-C:N
+495 1 [#6]-,:[#7]-,:c:c   C-N-C:C
+496 1 n:n-,:[#6;!H0]   N:N-C-[#1]
+497 1 [#8]-,:c:c:n   O-C:C:N
+498 1 [#8]-,:[#6]=,:[#6]-,:[#6]   O-C=C-C
+499 1 [#7]-,:c:c:n   N-C:C:N
+500 1 [#6]-,:[#16]-,:c:c   C-S-C:C
+501 1 Cl-,:c:c-,:[#6]   Cl-C:C-C
+502 1 [#7]-,:[#6]=,:[#6;!H0]   N-C=C-[#1]
+503 1 Cl-,:c:[c;!H0]   Cl-C:C-[#1]
+504 1 n:c:n-,:[#6]   N:C:N-C
+505 1 Cl-,:c:c-,:[#8]   Cl-C:C-O
+506 1 [#6]-,:c:n:c   C-C:N:C
+507 1 [#6]-,:[#6]-,:[#16]-,:[#6]   C-C-S-C
+508 1 [#16]=,:[#6]-,:[#7]-,:[#6]   S=C-N-C
+509 1 Br-,:c:c-,:[#6]   Br-C:C-C
+510 1 [#7;!H0]-,:[#7;!H0]   [#1]-N-N-[#1]
+511 1 [#16]=,:[#6]-,:[#7;!H0]   S=C-N-[#1]
+512 1 [#6]-,:[#33]-,:[#8;!H0]   C-[As]-O-[#1]
+513 1 s:c:[c;!H0]   S:C:C-[#1]
+514 1 [#8]-,:[#7]-,:[#6]-,:[#6]   O-N-C-C
+515 1 [#7]-,:[#7]-,:[#6]-,:[#6]   N-N-C-C
+516 1 [#6;!H0]=,:[#6;!H0]   [#1]-C=C-[#1]
+517 1 [#7]-,:[#7]-,:[#6]-,:[#7]   N-N-C-N
+518 1 [#8]=,:[#6]-,:[#7]-,:[#7]   O=C-N-N
+519 1 [#7]=,:[#6]-,:[#7]-,:[#6]   N=C-N-C
+520 1 [#6]=,:[#6]-,:c:c   C=C-C:C
+521 1 c:n-,:[#6;!H0]   C:N-C-[#1]
+522 1 [#6]-,:[#7]-,:[#7;!H0]   C-N-N-[#1]
+523 1 n:c:c-,:[#6]   N:C:C-C
+524 1 [#6]-,:[#6]=,:[#6]-,:[#6]   C-C=C-C
+525 1 [#33]-,:c:[c;!H0]   [As]-C:C-[#1]
+526 1 Cl-,:c:c-,:Cl   Cl-C:C-Cl
+527 1 c:c:[n;!H0]   C:C:N-[#1]
+528 1 [#7;!H0]-,:[#6;!H0]   [#1]-N-C-[#1]
+529 1 Cl-,:[#6]-,:[#6]-,:Cl   Cl-C-C-Cl
+530 1 n:c-,:c:c   N:C-C:C
+531 1 [#16]-,:c:c-,:[#6]   S-C:C-C
+532 1 [#16]-,:c:[c;!H0]   S-C:C-[#1]
+533 1 [#16]-,:c:c-,:[#7]   S-C:C-N
+534 1 [#16]-,:c:c-,:[#8]   S-C:C-O
+535 1 [#8]=,:[#6]-,:[#6]-,:[#6]   O=C-C-C
+536 1 [#8]=,:[#6]-,:[#6]-,:[#7]   O=C-C-N
+537 1 [#8]=,:[#6]-,:[#6]-,:[#8]   O=C-C-O
+538 1 [#7]=,:[#6]-,:[#6]-,:[#6]   N=C-C-C
+539 1 [#7]=,:[#6]-,:[#6;!H0]   N=C-C-[#1]
+540 1 [#6]-,:[#7]-,:[#6;!H0]   C-N-C-[#1]
+541 1 [#8]-,:c:c-,:[#6]   O-C:C-C
+542 1 [#8]-,:c:[c;!H0]   O-C:C-[#1]
+543 1 [#8]-,:c:c-,:[#7]   O-C:C-N
+544 1 [#8]-,:c:c-,:[#8]   O-C:C-O
+545 1 [#7]-,:c:c-,:[#6]   N-C:C-C
+546 1 [#7]-,:c:[c;!H0]   N-C:C-[#1]
+547 1 [#7]-,:c:c-,:[#7]   N-C:C-N
+548 1 [#8]-,:[#6]-,:c:c   O-C-C:C
+549 1 [#7]-,:[#6]-,:c:c   N-C-C:C
+550 1 Cl-,:[#6]-,:[#6]-,:[#6]   Cl-C-C-C
+551 1 Cl-,:[#6]-,:[#6]-,:[#8]   Cl-C-C-O
+552 1 c:c-,:c:c   C:C-C:C
+553 1 [#8]=,:[#6]-,:[#6]=,:[#6]   O=C-C=C
+554 1 Br-,:[#6]-,:[#6]-,:[#6]   Br-C-C-C
+555 1 [#7]=,:[#6]-,:[#6]=,:[#6]   N=C-C=C
+556 1 [#6]=,:[#6]-,:[#6]-,:[#6]   C=C-C-C
+557 1 n:c-,:[#8;!H0]   N:C-O-[#1]
+558 1 [#8]=,:[#7]-,:c:c   O=N-C:C
+559 1 [#8]-,:[#6]-,:[#7;!H0]   O-C-N-[#1]
+560 1 [#7]-,:[#6]-,:[#7]-,:[#6]   N-C-N-C
+561 1 Cl-,:[#6]-,:[#6]=,:[#8]   Cl-C-C=O
+562 1 Br-,:[#6]-,:[#6]=,:[#8]   Br-C-C=O
+563 1 [#8]-,:[#6]-,:[#8]-,:[#6]   O-C-O-C
+564 1 [#6]=,:[#6]-,:[#6]=,:[#6]   C=C-C=C
+565 1 c:c-,:[#8]-,:[#6]   C:C-O-C
+566 1 [#8]-,:[#6]-,:[#6]-,:[#7]   O-C-C-N
+567 1 [#8]-,:[#6]-,:[#6]-,:[#8]   O-C-C-O
+568 1 N#[#6]-,:[#6]-,:[#6]   N#C-C-C
+569 1 [#7]-,:[#6]-,:[#6]-,:[#7]   N-C-C-N
+570 1 c:c-,:[#6]-,:[#6]   C:C-C-C
+571 1 [#6;!H0]-,:[#8;!H0]   [#1]-C-O-[#1]
+572 1 n:c:n:c   N:C:N:C
+573 1 [#8]-,:[#6]-,:[#6]=,:[#6]   O-C-C=C
+574 1 [#8]-,:[#6]-,:c:c-,:[#6]   O-C-C:C-C
+575 1 [#8]-,:[#6]-,:c:c-,:[#8]   O-C-C:C-O
+576 1 [#7]=,:[#6]-,:c:[c;!H0]   N=C-C:C-[#1]
+577 1 c:c-,:[#7]-,:c:c   C:C-N-C:C
+578 1 [#6]-,:c:c-,:c:c   C-C:C-C:C
+579 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]   O=C-C-C-C
+580 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#7]   O=C-C-C-N
+581 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#8]   O=C-C-C-O
+582 1 [#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   C-C-C-C-C
+583 1 Cl-,:c:c-,:[#8]-,:[#6]   Cl-C:C-O-C
+584 1 c:c-,:[#6]=,:[#6]-,:[#6]   C:C-C=C-C
+585 1 [#6]-,:c:c-,:[#7]-,:[#6]   C-C:C-N-C
+586 1 [#6]-,:[#16]-,:[#6]-,:[#6]-,:[#6]   C-S-C-C-C
+587 1 [#7]-,:c:c-,:[#8;!H0]   N-C:C-O-[#1]
+588 1 [#8]=,:[#6]-,:[#6]-,:[#6]=,:[#8]   O=C-C-C=O
+589 1 [#6]-,:c:c-,:[#8]-,:[#6]   C-C:C-O-C
+590 1 [#6]-,:c:c-,:[#8;!H0]   C-C:C-O-[#1]
+591 1 Cl-,:[#6]-,:[#6]-,:[#6]-,:[#6]   Cl-C-C-C-C
+592 1 [#7]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   N-C-C-C-C
+593 1 [#7]-,:[#6]-,:[#6]-,:[#6]-,:[#7]   N-C-C-C-N
+594 1 [#6]-,:[#8]-,:[#6]-,:[#6]=,:[#6]   C-O-C-C=C
+595 1 c:c-,:[#6]-,:[#6]-,:[#6]   C:C-C-C-C
+596 1 [#7]=,:[#6]-,:[#7]-,:[#6]-,:[#6]   N=C-N-C-C
+597 1 [#8]=,:[#6]-,:[#6]-,:c:c   O=C-C-C:C
+598 1 Cl-,:c:c:c-,:[#6]   Cl-C:C:C-C
+599 1 [#6;!H0]-,:[#6]=,:[#6;!H0]   [#1]-C-C=C-[#1]
+600 1 [#7]-,:c:c:c-,:[#6]   N-C:C:C-C
+601 1 [#7]-,:c:c:c-,:[#7]   N-C:C:C-N
+602 1 [#8]=,:[#6]-,:[#6]-,:[#7]-,:[#6]   O=C-C-N-C
+603 1 [#6]-,:c:c:c-,:[#6]   C-C:C:C-C
+604 1 [#6]-,:[#8]-,:[#6]-,:c:c   C-O-C-C:C
+605 1 [#8]=,:[#6]-,:[#6]-,:[#8]-,:[#6]   O=C-C-O-C
+606 1 [#8]-,:c:c-,:[#6]-,:[#6]   O-C:C-C-C
+607 1 [#7]-,:[#6]-,:[#6]-,:c:c   N-C-C-C:C
+608 1 [#6]-,:[#6]-,:[#6]-,:c:c   C-C-C-C:C
+609 1 Cl-,:[#6]-,:[#6]-,:[#7]-,:[#6]   Cl-C-C-N-C
+610 1 [#6]-,:[#8]-,:[#6]-,:[#8]-,:[#6]   C-O-C-O-C
+611 1 [#7]-,:[#6]-,:[#6]-,:[#7]-,:[#6]   N-C-C-N-C
+612 1 [#7]-,:[#6]-,:[#8]-,:[#6]-,:[#6]   N-C-O-C-C
+613 1 [#6]-,:[#7]-,:[#6]-,:[#6]-,:[#6]   C-N-C-C-C
+614 1 [#6]-,:[#6]-,:[#8]-,:[#6]-,:[#6]   C-C-O-C-C
+615 1 [#7]-,:[#6]-,:[#6]-,:[#8]-,:[#6]   N-C-C-O-C
+616 1 c:c:n:n:c   C:C:N:N:C
+617 1 [#6]-,:[#6]-,:[#6]-,:[#8;!H0]   C-C-C-O-[#1]
+618 1 c:c-,:[#6]-,:c:c   C:C-C-C:C
+619 1 [#8]-,:[#6]-,:[#6]=,:[#6]-,:[#6]   O-C-C=C-C
+620 1 c:c-,:[#8]-,:[#6]-,:[#6]   C:C-O-C-C
+621 1 [#7]-,:c:c:c:n   N-C:C:C:N
+622 1 [#8]=,:[#6]-,:[#8]-,:c:c   O=C-O-C:C
+623 1 [#8]=,:[#6]-,:c:c-,:[#6]   O=C-C:C-C
+624 1 [#8]=,:[#6]-,:c:c-,:[#7]   O=C-C:C-N
+625 1 [#8]=,:[#6]-,:c:c-,:[#8]   O=C-C:C-O
+626 1 [#6]-,:[#8]-,:c:c-,:[#6]   C-O-C:C-C
+627 1 [#8]=,:[#33]-,:c:c:c   O=[As]-C:C:C
+628 1 [#6]-,:[#7]-,:[#6]-,:c:c   C-N-C-C:C
+629 1 [#16]-,:c:c:c-,:[#7]   S-C:C:C-N
+630 1 [#8]-,:c:c-,:[#8]-,:[#6]   O-C:C-O-C
+631 1 [#8]-,:c:c-,:[#8;!H0]   O-C:C-O-[#1]
+632 1 [#6]-,:[#6]-,:[#8]-,:c:c   C-C-O-C:C
+633 1 [#7]-,:[#6]-,:c:c-,:[#6]   N-C-C:C-C
+634 1 [#6]-,:[#6]-,:c:c-,:[#6]   C-C-C:C-C
+635 1 [#7]-,:[#7]-,:[#6]-,:[#7;!H0]   N-N-C-N-[#1]
+636 1 [#6]-,:[#7]-,:[#6]-,:[#7]-,:[#6]   C-N-C-N-C
+637 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   O-C-C-C-C
+638 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#7]   O-C-C-C-N
+639 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#8]   O-C-C-C-O
+640 1 [#6]=,:[#6]-,:[#6]-,:[#6]-,:[#6]   C=C-C-C-C
+641 1 [#8]-,:[#6]-,:[#6]-,:[#6]=,:[#6]   O-C-C-C=C
+642 1 [#8]-,:[#6]-,:[#6]-,:[#6]=,:[#8]   O-C-C-C=O
+643 1 [#6;!H0]-,:[#6]-,:[#7;!H0]   [#1]-C-C-N-[#1]
+644 1 [#6]-,:[#6]=,:[#7]-,:[#7]-,:[#6]   C-C=N-N-C
+645 1 [#8]=,:[#6]-,:[#7]-,:[#6]-,:[#6]   O=C-N-C-C
+646 1 [#8]=,:[#6]-,:[#7]-,:[#6;!H0]   O=C-N-C-[#1]
+647 1 [#8]=,:[#6]-,:[#7]-,:[#6]-,:[#7]   O=C-N-C-N
+648 1 [#8]=,:[#7]-,:c:c-,:[#7]   O=N-C:C-N
+649 1 [#8]=,:[#7]-,:c:c-,:[#8]   O=N-C:C-O
+650 1 [#8]=,:[#6]-,:[#7]-,:[#6]=,:[#8]   O=C-N-C=O
+651 1 [#8]-,:c:c:c-,:[#6]   O-C:C:C-C
+652 1 [#8]-,:c:c:c-,:[#7]   O-C:C:C-N
+653 1 [#8]-,:c:c:c-,:[#8]   O-C:C:C-O
+654 1 [#7]-,:[#6]-,:[#7]-,:[#6]-,:[#6]   N-C-N-C-C
+655 1 [#8]-,:[#6]-,:[#6]-,:c:c   O-C-C-C:C
+656 1 [#6]-,:[#6]-,:[#7]-,:[#6]-,:[#6]   C-C-N-C-C
+657 1 [#6]-,:[#7]-,:c:c-,:[#6]   C-N-C:C-C
+658 1 [#6]-,:[#6]-,:[#16]-,:[#6]-,:[#6]   C-C-S-C-C
+659 1 [#8]-,:[#6]-,:[#6]-,:[#7]-,:[#6]   O-C-C-N-C
+660 1 [#6]-,:[#6]=,:[#6]-,:[#6]-,:[#6]   C-C=C-C-C
+661 1 [#8]-,:[#6]-,:[#8]-,:[#6]-,:[#6]   O-C-O-C-C
+662 1 [#8]-,:[#6]-,:[#6]-,:[#8]-,:[#6]   O-C-C-O-C
+663 1 [#8]-,:[#6]-,:[#6]-,:[#8;!H0]   O-C-C-O-[#1]
+664 1 [#6]-,:[#6]=,:[#6]-,:[#6]=,:[#6]   C-C=C-C=C
+665 1 [#7]-,:c:c-,:[#6]-,:[#6]   N-C:C-C-C
+666 1 [#6]=,:[#6]-,:[#6]-,:[#8]-,:[#6]   C=C-C-O-C
+667 1 [#6]=,:[#6]-,:[#6]-,:[#8;!H0]   C=C-C-O-[#1]
+668 1 [#6]-,:c:c-,:[#6]-,:[#6]   C-C:C-C-C
+669 1 Cl-,:c:c-,:[#6]=,:[#8]   Cl-C:C-C=O
+670 1 Br-,:c:c:c-,:[#6]   Br-C:C:C-C
+671 1 [#8]=,:[#6]-,:[#6]=,:[#6]-,:[#6]   O=C-C=C-C
+672 1 [#8]=,:[#6]-,:[#6]=,:[#6;!H0]   O=C-C=C-[#1]
+673 1 [#8]=,:[#6]-,:[#6]=,:[#6]-,:[#7]   O=C-C=C-N
+674 1 [#7]-,:[#6]-,:[#7]-,:c:c   N-C-N-C:C
+675 1 Br-,:[#6]-,:[#6]-,:c:c   Br-C-C-C:C
+676 1 N#[#6]-,:[#6]-,:[#6]-,:[#6]   N#C-C-C-C
+677 1 [#6]-,:[#6]=,:[#6]-,:c:c   C-C=C-C:C
+678 1 [#6]-,:[#6]-,:[#6]=,:[#6]-,:[#6]   C-C-C=C-C
+679 1 [#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   C-C-C-C-C-C
+680 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   O-C-C-C-C-C
+681 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#8]   O-C-C-C-C-O
+682 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#7]   O-C-C-C-C-N
+683 1 [#7]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   N-C-C-C-C-C
+684 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   O=C-C-C-C-C
+685 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#7]   O=C-C-C-C-N
+686 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#8]   O=C-C-C-C-O
+687 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]=,:[#8]   O=C-C-C-C=O
+688 1 [#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   C-C-C-C-C-C-C
+689 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   O-C-C-C-C-C-C
+690 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#8]   O-C-C-C-C-C-O
+691 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#7]   O-C-C-C-C-C-N
+692 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   O=C-C-C-C-C-C
+693 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#8]   O=C-C-C-C-C-O
+694 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]=,:[#8]   O=C-C-C-C-C=O
+695 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#7]   O=C-C-C-C-C-N
+696 1 [#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   C-C-C-C-C-C-C-C
+697 1 [#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6](-,:[#6])-,:[#6]   C-C-C-C-C-C(C)-C
+698 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   O-C-C-C-C-C-C-C
+699 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6](-,:[#6])-,:[#6]   O-C-C-C-C-C(C)-C
+700 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#8]-,:[#6]   O-C-C-C-C-C-O-C
+701 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6](-,:[#8])-,:[#6]   O-C-C-C-C-C(O)-C
+702 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#7]-,:[#6]   O-C-C-C-C-C-N-C
+703 1 [#8]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6](-,:[#7])-,:[#6]   O-C-C-C-C-C(N)-C
+704 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6]   O=C-C-C-C-C-C-C
+705 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6](-,:[#8])-,:[#6]   O=C-C-C-C-C(O)-C
+706 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6](=,:[#8])-,:[#6]   O=C-C-C-C-C(=O)-C
+707 1 [#8]=,:[#6]-,:[#6]-,:[#6]-,:[#6]-,:[#6](-,:[#7])-,:[#6]   O=C-C-C-C-C(N)-C
+708 1 [#6]-,:[#6](-,:[#6])-,:[#6]-,:[#6]   C-C(C)-C-C
+709 1 [#6]-,:[#6](-,:[#6])-,:[#6]-,:[#6]-,:[#6]   C-C(C)-C-C-C
+710 1 [#6]-,:[#6]-,:[#6](-,:[#6])-,:[#6]-,:[#6]   C-C-C(C)-C-C
+711 1 [#6]-,:[#6](-,:[#6])(-,:[#6])-,:[#6]-,:[#6]   C-C(C)(C)-C-C
+712 1 [#6]-,:[#6](-,:[#6])-,:[#6](-,:[#6])-,:[#6]       C-C(C)-C(C)-C
+
+# Section 7: Complex SMARTS patterns - These bits test for the
+# presence of complex SMARTS patterns, regardless of count, but where
+# bond orders and bond aromaticity are specific.
+
+713 1 [#6]c1ccc([#6])cc1   Cc1ccc(C)cc1
+714 1 [#6]c1ccc([#8])cc1   Cc1ccc(O)cc1
+715 1 [#6]c1ccc([#16])cc1   Cc1ccc(S)cc1
+716 1 [#6]c1ccc([#7])cc1   Cc1ccc(N)cc1
+717 1 [#6]c1ccc(Cl)cc1   Cc1ccc(Cl)cc1
+718 1 [#6]c1ccc(Br)cc1   Cc1ccc(Br)cc1
+719 1 [#8]c1ccc([#8])cc1   Oc1ccc(O)cc1
+720 1 [#8]c1ccc([#16])cc1   Oc1ccc(S)cc1
+721 1 [#8]c1ccc([#7])cc1   Oc1ccc(N)cc1
+722 1 [#8]c1ccc(Cl)cc1   Oc1ccc(Cl)cc1
+723 1 [#8]c1ccc(Br)cc1   Oc1ccc(Br)cc1
+724 1 [#16]c1ccc([#16])cc1   Sc1ccc(S)cc1
+725 1 [#16]c1ccc([#7])cc1   Sc1ccc(N)cc1
+726 1 [#16]c1ccc(Cl)cc1   Sc1ccc(Cl)cc1
+727 1 [#16]c1ccc(Br)cc1   Sc1ccc(Br)cc1
+728 1 [#7]c1ccc([#7])cc1   Nc1ccc(N)cc1
+729 1 [#7]c1ccc(Cl)cc1   Nc1ccc(Cl)cc1
+730 1 [#7]c1ccc(Br)cc1   Nc1ccc(Br)cc1
+731 1 Clc1ccc(Cl)cc1   Clc1ccc(Cl)cc1
+732 1 Clc1ccc(Br)cc1   Clc1ccc(Br)cc1
+733 1 Brc1ccc(Br)cc1   Brc1ccc(Br)cc1
+734 1 [#6]c1cc([#6])ccc1   Cc1cc(C)ccc1
+735 1 [#6]c1cc([#8])ccc1   Cc1cc(O)ccc1
+736 1 [#6]c1cc([#16])ccc1   Cc1cc(S)ccc1
+737 1 [#6]c1cc([#7])ccc1   Cc1cc(N)ccc1
+738 1 [#6]c1cc(Cl)ccc1   Cc1cc(Cl)ccc1
+739 1 [#6]c1cc(Br)ccc1   Cc1cc(Br)ccc1
+740 1 [#8]c1cc([#8])ccc1   Oc1cc(O)ccc1
+741 1 [#8]c1cc([#16])ccc1   Oc1cc(S)ccc1
+742 1 [#8]c1cc([#7])ccc1   Oc1cc(N)ccc1
+743 1 [#8]c1cc(Cl)ccc1   Oc1cc(Cl)ccc1
+744 1 [#8]c1cc(Br)ccc1   Oc1cc(Br)ccc1
+745 1 [#16]c1cc([#16])ccc1   Sc1cc(S)ccc1
+746 1 [#16]c1cc([#7])ccc1   Sc1cc(N)ccc1
+747 1 [#16]c1cc(Cl)ccc1   Sc1cc(Cl)ccc1
+748 1 [#16]c1cc(Br)ccc1   Sc1cc(Br)ccc1
+749 1 [#7]c1cc([#7])ccc1   Nc1cc(N)ccc1
+750 1 [#7]c1cc(Cl)ccc1   Nc1cc(Cl)ccc1
+751 1 [#7]c1cc(Br)ccc1   Nc1cc(Br)ccc1
+752 1 Clc1cc(Cl)ccc1   Clc1cc(Cl)ccc1
+753 1 Clc1cc(Br)ccc1   Clc1cc(Br)ccc1
+754 1 Brc1cc(Br)ccc1   Brc1cc(Br)ccc1
+755 1 [#6]c1c([#6])cccc1   Cc1c(C)cccc1
+756 1 [#6]c1c([#8])cccc1   Cc1c(O)cccc1
+757 1 [#6]c1c([#16])cccc1   Cc1c(S)cccc1
+758 1 [#6]c1c([#7])cccc1   Cc1c(N)cccc1
+759 1 [#6]c1c(Cl)cccc1   Cc1c(Cl)cccc1
+760 1 [#6]c1c(Br)cccc1   Cc1c(Br)cccc1
+761 1 [#8]c1c([#8])cccc1   Oc1c(O)cccc1
+762 1 [#8]c1c([#16])cccc1   Oc1c(S)cccc1
+763 1 [#8]c1c([#7])cccc1   Oc1c(N)cccc1
+764 1 [#8]c1c(Cl)cccc1   Oc1c(Cl)cccc1
+765 1 [#8]c1c(Br)cccc1   Oc1c(Br)cccc1
+766 1 [#16]c1c([#16])cccc1   Sc1c(S)cccc1
+767 1 [#16]c1c([#7])cccc1   Sc1c(N)cccc1
+768 1 [#16]c1c(Cl)cccc1   Sc1c(Cl)cccc1
+769 1 [#16]c1c(Br)cccc1   Sc1c(Br)cccc1
+770 1 [#7]c1c([#7])cccc1   Nc1c(N)cccc1
+771 1 [#7]c1c(Cl)cccc1   Nc1c(Cl)cccc1
+772 1 [#7]c1c(Br)cccc1   Nc1c(Br)cccc1
+773 1 Clc1c(Cl)cccc1   Clc1c(Cl)cccc1
+774 1 Clc1c(Br)cccc1   Clc1c(Br)cccc1
+775 1 Brc1c(Br)cccc1   Brc1c(Br)cccc1
+776 1 [#6][#6]1[#6][#6][#6]([#6])[#6][#6]1   CC1CCC(C)CC1
+777 1 [#6][#6]1[#6][#6][#6]([#8])[#6][#6]1   CC1CCC(O)CC1
+778 1 [#6][#6]1[#6][#6][#6]([#16])[#6][#6]1   CC1CCC(S)CC1
+779 1 [#6][#6]1[#6][#6][#6]([#7])[#6][#6]1   CC1CCC(N)CC1
+780 1 [#6][#6]1[#6][#6][#6](Cl)[#6][#6]1   CC1CCC(Cl)CC1
+781 1 [#6][#6]1[#6][#6][#6](Br)[#6][#6]1   CC1CCC(Br)CC1
+782 1 [#8][#6]1[#6][#6][#6]([#8])[#6][#6]1   OC1CCC(O)CC1
+783 1 [#8][#6]1[#6][#6][#6]([#16])[#6][#6]1   OC1CCC(S)CC1
+784 1 [#8][#6]1[#6][#6][#6]([#7])[#6][#6]1   OC1CCC(N)CC1
+785 1 [#8][#6]1[#6][#6][#6](Cl)[#6][#6]1   OC1CCC(Cl)CC1
+786 1 [#8][#6]1[#6][#6][#6](Br)[#6][#6]1   OC1CCC(Br)CC1
+787 1 [#16][#6]1[#6][#6][#6]([#16])[#6][#6]1   SC1CCC(S)CC1
+788 1 [#16][#6]1[#6][#6][#6]([#7])[#6][#6]1   SC1CCC(N)CC1
+789 1 [#16][#6]1[#6][#6][#6](Cl)[#6][#6]1   SC1CCC(Cl)CC1
+790 1 [#16][#6]1[#6][#6][#6](Br)[#6][#6]1   SC1CCC(Br)CC1
+791 1 [#7][#6]1[#6][#6][#6]([#7])[#6][#6]1   NC1CCC(N)CC1
+792 1 [#7][#6]1[#6][#6][#6](Cl)[#6][#6]1   NC1CCC(Cl)CC1
+793 1 [#7][#6]1[#6][#6][#6](Br)[#6][#6]1   NC1CCC(Br)CC1
+794 1 Cl[#6]1[#6][#6][#6](Cl)[#6][#6]1   ClC1CCC(Cl)CC1
+795 1 Cl[#6]1[#6][#6][#6](Br)[#6][#6]1   ClC1CCC(Br)CC1
+796 1 Br[#6]1[#6][#6][#6](Br)[#6][#6]1   BrC1CCC(Br)CC1
+797 1 [#6][#6]1[#6][#6]([#6])[#6][#6][#6]1   CC1CC(C)CCC1
+798 1 [#6][#6]1[#6][#6]([#8])[#6][#6][#6]1   CC1CC(O)CCC1
+799 1 [#6][#6]1[#6][#6]([#16])[#6][#6][#6]1   CC1CC(S)CCC1
+800 1 [#6][#6]1[#6][#6]([#7])[#6][#6][#6]1   CC1CC(N)CCC1
+801 1 [#6][#6]1[#6][#6](Cl)[#6][#6][#6]1   CC1CC(Cl)CCC1
+802 1 [#6][#6]1[#6][#6](Br)[#6][#6][#6]1   CC1CC(Br)CCC1
+803 1 [#8][#6]1[#6][#6]([#8])[#6][#6][#6]1   OC1CC(O)CCC1
+804 1 [#8][#6]1[#6][#6]([#16])[#6][#6][#6]1   OC1CC(S)CCC1
+805 1 [#8][#6]1[#6][#6]([#7])[#6][#6][#6]1   OC1CC(N)CCC1
+806 1 [#8][#6]1[#6][#6](Cl)[#6][#6][#6]1   OC1CC(Cl)CCC1
+807 1 [#8][#6]1[#6][#6](Br)[#6][#6][#6]1   OC1CC(Br)CCC1
+808 1 [#16][#6]1[#6][#6]([#16])[#6][#6][#6]1   SC1CC(S)CCC1
+809 1 [#16][#6]1[#6][#6]([#7])[#6][#6][#6]1   SC1CC(N)CCC1
+810 1 [#16][#6]1[#6][#6](Cl)[#6][#6][#6]1   SC1CC(Cl)CCC1
+811 1 [#16][#6]1[#6][#6](Br)[#6][#6][#6]1   SC1CC(Br)CCC1
+812 1 [#7][#6]1[#6][#6]([#7])[#6][#6][#6]1   NC1CC(N)CCC1
+813 1 [#7][#6]1[#6][#6](Cl)[#6][#6][#6]1   NC1CC(Cl)CCC1
+814 1 [#7][#6]1[#6][#6](Br)[#6][#6][#6]1   NC1CC(Br)CCC1
+815 1 Cl[#6]1[#6][#6](Cl)[#6][#6][#6]1   ClC1CC(Cl)CCC1
+816 1 Cl[#6]1[#6][#6](Br)[#6][#6][#6]1   ClC1CC(Br)CCC1
+817 1 Br[#6]1[#6][#6](Br)[#6][#6][#6]1   BrC1CC(Br)CCC1
+818 1 [#6][#6]1[#6]([#6])[#6][#6][#6][#6]1   CC1C(C)CCCC1
+819 1 [#6][#6]1[#6]([#8])[#6][#6][#6][#6]1   CC1C(O)CCCC1
+820 1 [#6][#6]1[#6]([#16])[#6][#6][#6][#6]1   CC1C(S)CCCC1
+821 1 [#6][#6]1[#6]([#7])[#6][#6][#6][#6]1   CC1C(N)CCCC1
+822 1 [#6][#6]1[#6](Cl)[#6][#6][#6][#6]1   CC1C(Cl)CCCC1
+823 1 [#6][#6]1[#6](Br)[#6][#6][#6][#6]1   CC1C(Br)CCCC1
+824 1 [#8][#6]1[#6]([#8])[#6][#6][#6][#6]1   OC1C(O)CCCC1
+825 1 [#8][#6]1[#6]([#16])[#6][#6][#6][#6]1   OC1C(S)CCCC1
+826 1 [#8][#6]1[#6]([#7])[#6][#6][#6][#6]1   OC1C(N)CCCC1
+827 1 [#8][#6]1[#6](Cl)[#6][#6][#6][#6]1   OC1C(Cl)CCCC1
+828 1 [#8][#6]1[#6](Br)[#6][#6][#6][#6]1   OC1C(Br)CCCC1
+829 1 [#16][#6]1[#6]([#16])[#6][#6][#6][#6]1   SC1C(S)CCCC1
+830 1 [#16][#6]1[#6]([#7])[#6][#6][#6][#6]1   SC1C(N)CCCC1
+831 1 [#16][#6]1[#6](Cl)[#6][#6][#6][#6]1   SC1C(Cl)CCCC1
+832 1 [#16][#6]1[#6](Br)[#6][#6][#6][#6]1   SC1C(Br)CCCC1
+833 1 [#7][#6]1[#6]([#7])[#6][#6][#6][#6]1   NC1C(N)CCCC1
+834 1 [#7][#6]1[#6](Cl)[#6][#6][#6][#6]1   NC1C(Cl)CCCC1
+835 1 [#7][#6]1[#6](Br)[#6][#6][#6][#6]1   NC1C(Br)CCCC1
+836 1 Cl[#6]1[#6](Cl)[#6][#6][#6][#6]1   ClC1C(Cl)CCCC1
+837 1 Cl[#6]1[#6](Br)[#6][#6][#6][#6]1   ClC1C(Br)CCCC1
+838 1 Br[#6]1[#6](Br)[#6][#6][#6][#6]1   BrC1C(Br)CCCC1
+839 1 [#6][#6]1[#6][#6]([#6])[#6][#6]1   CC1CC(C)CC1
+840 1 [#6][#6]1[#6][#6]([#8])[#6][#6]1   CC1CC(O)CC1
+841 1 [#6][#6]1[#6][#6]([#16])[#6][#6]1   CC1CC(S)CC1
+842 1 [#6][#6]1[#6][#6]([#7])[#6][#6]1   CC1CC(N)CC1
+843 1 [#6][#6]1[#6][#6](Cl)[#6][#6]1   CC1CC(Cl)CC1
+844 1 [#6][#6]1[#6][#6](Br)[#6][#6]1   CC1CC(Br)CC1
+845 1 [#8][#6]1[#6][#6]([#8])[#6][#6]1   OC1CC(O)CC1
+846 1 [#8][#6]1[#6][#6]([#16])[#6][#6]1   OC1CC(S)CC1
+847 1 [#8][#6]1[#6][#6]([#7])[#6][#6]1   OC1CC(N)CC1
+848 1 [#8][#6]1[#6][#6](Cl)[#6][#6]1   OC1CC(Cl)CC1
+849 1 [#8][#6]1[#6][#6](Br)[#6][#6]1   OC1CC(Br)CC1
+850 1 [#16][#6]1[#6][#6]([#16])[#6][#6]1   SC1CC(S)CC1
+851 1 [#16][#6]1[#6][#6]([#7])[#6][#6]1   SC1CC(N)CC1
+852 1 [#16][#6]1[#6][#6](Cl)[#6][#6]1   SC1CC(Cl)CC1
+853 1 [#16][#6]1[#6][#6](Br)[#6][#6]1   SC1CC(Br)CC1
+854 1 [#7][#6]1[#6][#6]([#7])[#6][#6]1   NC1CC(N)CC1
+855 1 [#7][#6]1[#6][#6](Cl)[#6][#6]1   NC1CC(Cl)CC1
+856 1 [#7][#6]1[#6][#6](Br)[#6][#6]1   NC1CC(Br)CC1
+857 1 Cl[#6]1[#6][#6](Cl)[#6][#6]1   ClC1CC(Cl)CC1
+858 1 Cl[#6]1[#6][#6](Br)[#6][#6]1   ClC1CC(Br)CC1
+859 1 Br[#6]1[#6][#6](Br)[#6][#6]1   BrC1CC(Br)CC1
+860 1 [#6][#6]1[#6]([#6])[#6][#6][#6]1   CC1C(C)CCC1
+861 1 [#6][#6]1[#6]([#8])[#6][#6][#6]1   CC1C(O)CCC1
+862 1 [#6][#6]1[#6]([#16])[#6][#6][#6]1   CC1C(S)CCC1
+863 1 [#6][#6]1[#6]([#7])[#6][#6][#6]1   CC1C(N)CCC1
+864 1 [#6][#6]1[#6](Cl)[#6][#6][#6]1   CC1C(Cl)CCC1
+865 1 [#6][#6]1[#6](Br)[#6][#6][#6]1   CC1C(Br)CCC1
+866 1 [#8][#6]1[#6]([#8])[#6][#6][#6]1   OC1C(O)CCC1
+867 1 [#8][#6]1[#6]([#16])[#6][#6][#6]1   OC1C(S)CCC1
+868 1 [#8][#6]1[#6]([#7])[#6][#6][#6]1   OC1C(N)CCC1
+869 1 [#8][#6]1[#6](Cl)[#6][#6][#6]1   OC1C(Cl)CCC1
+870 1 [#8][#6]1[#6](Br)[#6][#6][#6]1   OC1C(Br)CCC1
+871 1 [#16][#6]1[#6]([#16])[#6][#6][#6]1   SC1C(S)CCC1
+872 1 [#16][#6]1[#6]([#7])[#6][#6][#6]1   SC1C(N)CCC1
+873 1 [#16][#6]1[#6](Cl)[#6][#6][#6]1   SC1C(Cl)CCC1
+874 1 [#16][#6]1[#6](Br)[#6][#6][#6]1   SC1C(Br)CCC1
+875 1 [#7][#6]1[#6]([#7])[#6][#6][#6]1   NC1C(N)CCC1
+876 1 [#7][#6]1[#6](Cl)[#6][#6]1   NC1C(Cl)CC1
+877 1 [#7][#6]1[#6](Br)[#6][#6][#6]1   NC1C(Br)CCC1
+878 1 Cl[#6]1[#6](Cl)[#6][#6][#6]1   ClC1C(Cl)CCC1
+879 1 Cl[#6]1[#6](Br)[#6][#6][#6]1   ClC1C(Br)CCC1
+880 1 Br[#6]1[#6](Br)[#6][#6][#6]1   BrC1C(Br)CCC1
