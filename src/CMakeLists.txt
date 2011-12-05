@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 2.8)
 
 option(BUILD_SHARED "enable static build support" ON)
 
+IF(CMAKE_COMPILER_IS_GNUCXX)
+   SET(CMAKE_C_FLAGS "-O3")
+ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 ADD_LIBRARY(chemfp SHARED bitops.c chemfp.c heapq.c searches.c fps.c
                    popcount_SSSE3.c popcount_gillies.c
