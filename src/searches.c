@@ -456,10 +456,6 @@ int chemfp_threshold_tanimoto_arena(
           if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
             add_hit_error = 1;
           };
-        } else {
-          if (score >= threshold) {
-            printf("Bad!\n");
-          }
         }
       }
     }
