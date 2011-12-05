@@ -347,6 +347,7 @@ int chemfp_threshold_tanimoto_arena(
   int target_popcount;
   int intersect_popcount, popcount_sum;
   int numerator, denominator;
+  int add_hit_error = 0;
 
   chemfp_popcount_f calc_popcount;
   chemfp_intersect_popcount_f calc_intersect_popcount;
@@ -378,10 +379,13 @@ int chemfp_threshold_tanimoto_arena(
         score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
         if (score >= threshold) {
           if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
-            return CHEMFP_NO_MEM;
+            add_hit_error = 1;
           };
         }
       }
+    }
+    if (add_hit_error) {
+      return CHEMFP_NO_MEM;
     }
     return CHEMFP_OK;
   }
@@ -408,7 +412,7 @@ int chemfp_threshold_tanimoto_arena(
       if (threshold == 0.0) {
         for (target_index = target_start; target_index < target_end; target_index++) {
           if (!_chemfp_add_hit(results+(query_index-query_start), target_index, 0.0)) {
-            return CHEMFP_NO_MEM;
+            add_hit_error = 1;
           };
         }
       }
@@ -446,17 +450,23 @@ int chemfp_threshold_tanimoto_arena(
         /* In my timings (on a Mac), the comparison against a double was a hotspot, */
         /* but division is not. I switch to integer math and gained a 3-4% performance, */
         /* at the cost of slightly more complicated code. */
+        score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
         if (denominator * intersect_popcount  >=
             numerator * (popcount_sum - intersect_popcount)) {
-
-          score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
           if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
-            return CHEMFP_NO_MEM;
+            add_hit_error = 1;
           };
+        } else {
+          if (score >= threshold) {
+            printf("Bad!\n");
+          }
         }
       }
     }
   } /* went through each of the queries */
+  if (add_hit_error) {
+    return CHEMFP_NO_MEM;
+  }
   return CHEMFP_OK;
 }
 
