@@ -333,7 +333,7 @@ def _search(query_start, query_end, offsets, indices, scores,
         num_added = add_rows(query_start, offset_start)
         assert num_added > 0
 
-        prev_last = offsets[query_start]
+        prev_last = offsets[offset_start]
         all_indices[prev_last:] = indices
         all_scores[prev_last:] = scores
 
