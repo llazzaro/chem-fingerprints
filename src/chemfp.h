@@ -89,8 +89,6 @@ typedef struct chemfp_threshold_result {
 chemfp_threshold_result *chemfp_alloc_threshold_results(int num_results);
 void chemfp_free_results(int num_results, chemfp_threshold_result *);
 int chemfp_get_num_hits(chemfp_threshold_result *results);
-//int chemfp_results_as_compressed_rows(int num_results, chemfp_threshold_result *results,
-//                                      int *offsets, int *indices, double *scores);
 
 typedef int (*chemfp_assign_hits_p)(void *data, int i, int target_index, double score);
 int chemfp_threshold_result_get_hits(chemfp_threshold_result *results,
