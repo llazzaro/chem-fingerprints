@@ -330,7 +330,7 @@ bad_fps_cells(int *num_cells, int cells_size, int num_queries) {
 }
 
 static int
-bad_results(long results_long, int results_offset) {
+bad_results(long results_long, int results_offset, chemfp_threshold_result **results) {
   if (results_long == (long)((uintptr_t) NULL)) {
     PyErr_SetString(PyExc_ValueError, "results is NULL??");
     return 1;
@@ -339,6 +339,7 @@ bad_results(long results_long, int results_offset) {
     PyErr_SetString(PyExc_ValueError, "results_offsets must be non-negative");
     return 1;
   }
+  *results = (chemfp_threshold_result *)((uintptr_t) results_long);  
   return 0;
 }
 
@@ -1239,16 +1240,30 @@ free_threshold_results(PyObject *self, PyObject *args) {
                         &results_long, &results_offset, &num_results)) {
     return NULL;
   }
-  if (bad_results(results_long, results_offset) ||
+  if (bad_results(results_long, results_offset, &results) ||
       bad_num_results(num_results)) {
     return NULL;
   }
-  results = (chemfp_threshold_result *)((uintptr_t) results_long);
   chemfp_free_results(num_results, results);
   return Py_BuildValue("");
 }
 
+static PyObject *
+get_num_threshold_hits(PyObject *self, PyObject *args) {
+  int index;
+  long results_long;
+  chemfp_threshold_result *results;
+  UNUSED(self);
 
+  if (!PyArg_ParseTuple(args, "li:get_num_threshold_hits",
+                        &results_long, &index)) {
+    return NULL;
+  }
+  if (bad_results(results_long, 0, &results)) {
+    return NULL;
+  }
+  return PyInt_FromLong(chemfp_get_num_hits(results+index));
+}
 
 
 static PyObject *
@@ -1666,6 +1681,8 @@ static PyMethodDef chemfp_methods[] = {
    "alloc_threshold_results (TODO: document)"},
   {"free_threshold_results", free_threshold_results, METH_VARARGS,
    "free_threshold_results (TODO: document)"},
+  {"get_num_threshold_hits", get_num_threshold_hits, METH_VARARGS,
+   "get_num_threshold_hits (TODO: document)"},
   {"threshold_tanimoto_arena", threshold_tanimoto_arena, METH_VARARGS,
    "threshold_tanimoto_arena (TODO: document)"},
   {"threshold_result_get_hits", threshold_result_get_hits, METH_VARARGS,

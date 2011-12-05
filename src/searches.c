@@ -383,6 +383,7 @@ int chemfp_threshold_tanimoto_arena(
     }
     return CHEMFP_OK;
   }
+  
 
   calc_popcount = chemfp_select_popcount(num_bits, query_storage_size, query_arena);
   calc_intersect_popcount = chemfp_select_intersect_popcount(
