@@ -207,7 +207,7 @@ int chemfp_count_tanimoto_arena(
   
   if (query_start >= query_end) {
     /* No queries */
-    return 0;
+    return CHEMFP_OK;
   }
   /* Prevent overflow if someone uses a threshold of, say, 1E-80 */
   /* (Not really needed unless you trap IEE 754 overflow errors) */
@@ -215,27 +215,27 @@ int chemfp_count_tanimoto_arena(
     threshold = 0.5 / num_bits;
   }
   if ((target_start >= target_end) || threshold > 1.0) {
-    for (query_index = query_start; query_index < query_end; query_index++) {
+    for (query_index = 0; query_index < (query_end-query_start); query_index++) {
       /* No possible targets */
-      *result_counts++ = 0;
+      result_counts[query_index] = 0;
     }
-    return query_index-query_start;
+    return CHEMFP_OK;
   }
 
   if (threshold <= 0.0) {
     /* Everything will match, so there's no need to figure that out */
-    for (query_index = query_start; query_index < query_end; query_index++) {
-      *result_counts++ = (target_end-target_start);
+    for (query_index = 0; query_index < (query_end-query_start); query_index++) {
+      result_counts[query_index] = (target_end - target_start);
     }
-    return query_index-query_start;
+    return CHEMFP_OK;
   }
 
   if (target_popcount_indices == NULL) {
     /* Handle the case when precomputed targets aren't available. */
     /* This is a slower algorithm because it tests everything. */
-    query_fp = query_arena + (query_start * query_storage_size);
-    for (query_index = query_start; query_index < query_end;
-         query_index++, query_fp += query_storage_size) {
+    #pragma omp parallel for private(query_fp, target_fp, count, target_index, score) schedule(dynamic)
+    for (query_index = 0; query_index < (query_end-query_start); query_index++) {
+      query_fp = query_arena + (query_start + query_index) * query_storage_size;
       target_fp = target_arena + (target_start * target_storage_size);
       /* Handle the popcount(query) == 0 special case? */
       count = 0;
@@ -247,9 +247,9 @@ int chemfp_count_tanimoto_arena(
           count++;
         }
       }
-      *result_counts++ = count;
+      result_counts[query_index] = count;
     }
-    return query_index-query_start;
+    return CHEMFP_OK;
   }
                                                    
   /* Choose popcounts optimized for this case */
@@ -259,19 +259,18 @@ int chemfp_count_tanimoto_arena(
                 target_storage_size, target_arena);
 
   /* This uses the limits from Swamidass and Baldi */
-  /* It doesn't use the ordering because it's supposed to find everything */
-
-  query_fp = query_arena + (query_start * query_storage_size);
-  for (query_index = query_start; query_index < query_end;
-       query_index++, query_fp += query_storage_size) {
-    
+  /* It doesn't use the search ordering because it's supposed to find everything */
+  #pragma omp parallel for \
+      private(query_fp, query_popcount, start_target_popcount, end_target_popcount, \
+          count, target_popcount, start, end, target_fp, popcount_sum, target_index, intersect_popcount, score) \
+      schedule(dynamic)
+  for (query_index = 0; query_index < (query_end-query_start); query_index++) {
+    query_fp = query_arena + (query_start + query_index) * query_storage_size;
     query_popcount = calc_popcount(fp_size, query_fp);
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
     if (query_popcount == 0) {
       if (threshold == 0.0) {
-        *result_counts++ = (target_end - target_start);
-      } else {
-        result_counts++;
+        result_counts[query_index] = (target_end - target_start);
       }
       continue;
     }
@@ -287,8 +286,7 @@ int chemfp_count_tanimoto_arena(
       }
     }
     count = 0;
-    #pragma omp parallel for private(start, end, target_fp, popcount_sum, target_index, intersect_popcount, score) schedule(dynamic)
-    for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
+    for (target_popcount = start_target_popcount; target_popcount <= end_target_popcount;
          target_popcount++) {
       start = target_popcount_indices[target_popcount];
       end = target_popcount_indices[target_popcount+1];
@@ -306,14 +304,13 @@ int chemfp_count_tanimoto_arena(
         intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
         score = intersect_popcount / (popcount_sum - intersect_popcount);
         if (score >= threshold) {
-          #pragma omp atomic
           count++;
         }
       }
     }
-    *result_counts++ = count;
+    result_counts[query_index] = count;
   } /* went through each of the queries */
-  return query_index-query_start;
+  return CHEMFP_OK;
 }
 
 int chemfp_threshold_tanimoto_arena(
@@ -369,15 +366,16 @@ int chemfp_threshold_tanimoto_arena(
   if (target_popcount_indices == NULL) {
     /* Handle the case when precomputed targets aren't available. */
     /* This is a slower algorithm because it tests everything. */
-    query_fp = query_arena + (query_start * query_storage_size);
-    for (query_index = query_start; query_index < query_end;
-         query_index++, query_fp += query_storage_size) {
+    #pragma omp parallel for private(query_fp, target_fp, target_index, score) schedule(dynamic)
+    for (query_index = query_start; query_index < query_end; query_index++) {
+      query_fp = query_arena + (query_index * query_storage_size);
       target_fp = target_arena + (target_start * target_storage_size);
       /* Handle the popcount(query) == 0 special case? */
       for (target_index = target_start; target_index < target_end;
            target_index++, target_fp += target_storage_size) {
         score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
         if (score >= threshold) {
+          #pragma omp critical (add_hit_threshold)
           if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
             add_hit_error = 1;
           };
@@ -402,14 +400,17 @@ int chemfp_threshold_tanimoto_arena(
   /* This uses the limits from Swamidass and Baldi */
   /* It doesn't use the ordering because it's supposed to find everything */
 
-  query_fp = query_arena + (query_start * query_storage_size);
-  for (query_index = query_start; query_index < query_end;
-       query_index++, query_fp += query_storage_size) {
-
+  #pragma omp parallel for \
+      private(query_fp, query_popcount, target_index, target_fp, start_target_popcount, \
+          end_target_popcount, target_popcount, start, end, popcount_sum, intersect_popcount, score) \
+      schedule(dynamic)
+  for (query_index = query_start; query_index < query_end; query_index++) {
+    query_fp = query_arena + (query_index * query_storage_size);
     query_popcount = calc_popcount(fp_size, query_fp);
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
     if (query_popcount == 0) {
       if (threshold == 0.0) {
+        #pragma omp critical (add_hit_threshold)
         for (target_index = target_start; target_index < target_end; target_index++) {
           if (!_chemfp_add_hit(results+(query_index-query_start), target_index, 0.0)) {
             add_hit_error = 1;
@@ -453,6 +454,7 @@ int chemfp_threshold_tanimoto_arena(
         score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
         if (denominator * intersect_popcount  >=
             numerator * (popcount_sum - intersect_popcount)) {
+          #pragma omp critical (add_hit_threshold)
           if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
             add_hit_error = 1;
           };

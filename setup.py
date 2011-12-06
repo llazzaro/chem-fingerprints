@@ -20,10 +20,14 @@ toolkit. chemfp supports the Python libraries from Open Babel,
 OpenEye, and RDKit toolkits.
 """
 
-USE_OPENMP = False
-USE_SSSE3 = True
+# chemfp has two compile-time options.
+#  USE_OPENMP: Compile with OpenMP support
+#  USE_SSSE3: Compile with compiler- and CPU-specific SSSE3 instructions
 
-# chemfp has experimental support for OpenMP, but only for the counts.
+USE_OPENMP = True  # True means "enable", False means "disable"
+USE_SSSE3 = True  # True means "enable", False means "disable"
+
+# chemfp has experimental support for OpenMP.
 def OMP(*args):
     if USE_OPENMP:
         return list(args)
@@ -41,8 +45,8 @@ def SSSE3(*args):
     return list(args)
 
 
-# Compiler-specific configuration settings due to:
-#  http://stackoverflow.com/questions/724664/python-distutils-how-to-get-a-compiler-that-is-going-to-be-used/5192738#5192738
+# Set "USE_OPENMP" (above) to enable OpenMP support (disabled by default)
+# Set "USE_SSSE3" (above) to enable SSSE3 support (enabled by default)
 copt =  {
     "msvc": OMP("/openmp") + ["/Ox", "/GL"],
     "mingw32" : OMP("-fopenmp") + ["-O3", "-ffast-math", "-march=native"],
