@@ -80,91 +80,46 @@ def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
     return counts
 
 
-# Search results stored in a compressed sparse row form
+class ThresholdSearchResults(object):
+    def __init__(self, num_results, results, target_ids):
+        self.num_results = num_results
+        self._result_ptr = results
+        self.target_ids = target_ids
 
-class SearchResults(object):
-    """Contains the result of a Tanimoto threshold or k-nearest search
+    def __del__(self, free=_chemfp.free_threshold_results):
+        free(self._result_ptr, 0, self.num_results)
 
-    Each result contains a list of hits, where the hit is a
-    two-element tuple. If you iterate over the SearchResult then
-    you'll get the hits as (target_id, target_score) pairs.
-    tuples. If you iterate using the method `iter_hits()` then you'll
-    get the hits as (target_index, target_score) pairs.
-
-    """
-    def __init__(self, offsets, indices, scores, target_ids):
-        assert len(offsets) > 0
-        self.offsets = offsets
-        self.indices = indices
-        self.scores = scores
-        self.target_ids = target_ids  # all of the target ids
-        
     def __len__(self):
-        """Number of search results"""
-        return len(self.offsets)-1
+        return self.num_results
 
     def size(self, i):
-        """The number of hits for result at position i
+        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
+        return _chemfp.get_num_threshold_hits(self._result_ptr, i)
 
-        :param i: index into the search results
-        :type i: int
-        :returns: int
-        
-        """
-        i = xrange(len(self.offsets)-1)[i]  # Use this trick to support negative index lookups
-        return self.offsets[i+1]-self.offsets[i]
-    
     def __getitem__(self, i):
-        """The list of hits for result at position i
-
-        Each hit contains a (id, score) tuple.
-        """
-        i = xrange(len(self.offsets)-1)[i]  # Use this trick to support negative index lookups
-        start, end = self.offsets[i:i+2]
-        target_ids = self.target_ids
-        return zip((target_ids[idx]
-                        for idx in self.indices[start:end]), self.scores[start:end])
-
+        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
+        ids = self.target_ids
+        return [(ids[idx], score) for (idx, score) in
+                    _chemfp.threshold_result_get_hits(self._result_ptr, i)]
+    
     def __iter__(self):
-        """Iterate over the named hits for each result
-
-        Each term is a list of hits. A hit contains (id, score) tuples.
-        The order of the hits depends on the search algorithm.
-        """
-        target_ids = self.target_ids
-        indices = self.indices
-        scores = self.scores
-        start = self.offsets[0]
-        for end in self.offsets[1:]:
-            yield zip((target_ids[index] for index in indices[start:end]),
-                      scores[start:end])
-            start = end
+        ids = self.target_ids
+        for i in range(0, self.num_results):
+            yield [(ids[idx], score) for (idx, score) in
+                         _chemfp.threshold_result_get_hits(self._result_ptr, i)]
 
     def iter_hits(self):
-        """Iterate over the indexed hits for each result
-
-        Each term is a list of hits. A hit contains (index, score) tuples.
-        The order of the hits depends on the search algorithm.
-        """
-        indices = self.indices
-        scores = self.scores
-        start = self.offsets[0]
-        for end in self.offsets[1:]:
-            yield zip(indices[start:end], scores[start:end])
-            start = end
+        for i in range(0, self.num_results):
+            yield _chemfp.threshold_result_get_hits(self._result_ptr, i)
 
     def iter_indices(self):
-        """Iterate over the indices for each result
-
-        Each term is a list of indices. The order of the indices in a list
-        depends on the search algorithm.
-        """
-        indices = self.indices
-        start = self.offsets[0]
-        for end in self.offsets[1:]:
-            yield indices[start:end]
-            start = end
+        # This can be optimized with more C code
+        for i in range(0, self.num_results):
+            yield [idx for (idx, score) in
+                        _chemfp.threshold_result_get_hits(self._result_ptr, i)]
         
+
+
 
 def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
     require_matching_fp_size(query_fp, target_arena)
@@ -217,44 +172,6 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     
     return ThresholdSearchResults(num_queries, results, target_arena.ids)
 
-class ThresholdSearchResults(object):
-    def __init__(self, num_results, results, target_ids):
-        self.num_results = num_results
-        self._result_ptr = results
-        self.target_ids = target_ids
-
-    def __del__(self, free=_chemfp.free_threshold_results):
-        free(self._result_ptr, 0, self.num_results)
-
-    def __len__(self):
-        return self.num_results
-
-    def size(self, i):
-        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
-        return _chemfp.get_num_threshold_hits(self._result_ptr, i)
-
-    def __getitem__(self, i):
-        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
-        ids = self.target_ids
-        return [(ids[idx], score) for (idx, score) in
-                    _chemfp.threshold_result_get_hits(self._result_ptr, i)]
-    
-    def __iter__(self):
-        ids = self.target_ids
-        for i in range(0, self.num_results):
-            yield [(ids[idx], score) for (idx, score) in
-                         _chemfp.threshold_result_get_hits(self._result_ptr, i)]
-
-    def iter_hits(self):
-        for i in range(0, self.num_results):
-            yield _chemfp.threshold_result_get_hits(self._result_ptr, i)
-
-    def iter_indices(self):
-        # This can be optimized with more C code
-        for i in range(0, self.num_results):
-            yield [idx for (idx, score) in
-                        _chemfp.threshold_result_get_hits(self._result_ptr, i)]
-        
 ##########
             
 def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
@@ -278,9 +195,10 @@ def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
             target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
             target_arena.popcount_indices,
             results, 0)
+        _chemfp.knearest_results_finalize(results, 0, 1)
         return _chemfp.threshold_result_get_hits(results, 0)
     finally:
-        #_chemfp.free_threshold_results(results, 0, 1)
+        _chemfp.free_threshold_results(results, 0, 1)
         pass
 
 
@@ -299,41 +217,12 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
             target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
             target_arena.popcount_indices,
             results, 0)
+        _chemfp.knearest_results_finalize(results, 0, num_queries)
     except:
         _chemfp.free_threshold_results(results, 0, num_queries)
         raise
     
     return ThresholdSearchResults(num_queries, results, target_arena.ids)
-
-
-# Core of the Tanimoto search routine
-
-def _search(query_start, query_end, offsets, indices, scores,
-            add_rows, query_ids, target_ids):
-    num_added = add_rows(query_start, 0)
-    if num_added == query_end:
-        return SearchResults(offsets, indices, scores, target_ids)
-
-    query_start = query_start + num_added
-    offset_start = num_added
-
-    last = offsets[num_added]
-    all_indices = indices[:last]
-    all_scores = scores[:last]
-
-    while query_start < query_end:
-        num_added = add_rows(query_start, offset_start)
-        assert num_added > 0
-
-        prev_last = offsets[offset_start]
-        all_indices[prev_last:] = indices
-        all_scores[prev_last:] = scores
-
-        offset_start += num_added
-        query_start += num_added
-
-    return SearchResults(offsets, all_indices, all_scores, target_ids)
-
 
 
 class FingerprintArena(FingerprintReader):

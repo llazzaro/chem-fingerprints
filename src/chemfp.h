@@ -325,6 +325,9 @@ int chemfp_knearest_tanimoto_arena(
         chemfp_threshold_result *results
                                    );
 
+void chemfp_knearest_results_finalize(chemfp_threshold_result *results_start,
+                                      chemfp_threshold_result *results_end);
+
 
 typedef int (*chemfp_popcount_f)(int len, const unsigned char *p1);
 typedef int (*chemfp_intersect_popcount_f)(int len, const unsigned char *p1,

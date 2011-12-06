@@ -547,9 +547,11 @@ knearest_tanimoto_arena_no_popcounts(
                            (chemfp_heapq_swap) double_score_swap);
     }
 
+#if 0
     /* Sort the elements */
     chemfp_heapq_heapsort(result->num_hits, result, (chemfp_heapq_lt) double_score_lt,
                           (chemfp_heapq_swap) double_score_swap);
+#endif
     
   } /* Loop through the queries */
 
@@ -725,10 +727,17 @@ int chemfp_knearest_tanimoto_arena(
       chemfp_heapq_heapify(result->num_hits, result, (chemfp_heapq_lt) double_score_lt,
                            (chemfp_heapq_swap) double_score_swap);
     }
+  } /* looped over all queries */
+  return CHEMFP_OK;
+}
+
+void chemfp_knearest_results_finalize(chemfp_threshold_result *results_start,
+                                      chemfp_threshold_result *results_end) {
+  chemfp_threshold_result *result;
+  for (result = results_start; result < results_end; result++) {
     /* Sort the elements */
     chemfp_heapq_heapsort(result->num_hits, result, (chemfp_heapq_lt) double_score_lt,
                           (chemfp_heapq_swap) double_score_swap);
-  } /* looped over all queries */
-
-  return CHEMFP_OK;
+  }
 }
+                              

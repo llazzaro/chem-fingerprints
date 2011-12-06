@@ -1401,6 +1401,26 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
   return PyInt_FromLong(result);
 }
 
+static PyObject *
+knearest_results_finalize(PyObject *self, PyObject *args) {
+  long results_long;
+  int result_offset, num_results;
+  chemfp_threshold_result *results;
+  UNUSED(self);
+    
+  if (!PyArg_ParseTuple(args, "lii",
+                        &results_long, &result_offset, &num_results)) {
+    return NULL;
+  }
+  if (bad_results(results_long, result_offset, &results) ||
+      bad_num_results(num_results)) {
+    return NULL;
+  }
+  chemfp_knearest_results_finalize(results+result_offset,
+                                   results+result_offset+num_results);
+  return Py_BuildValue("");
+}
+
 /* Select the popcount methods */
 
 static PyObject *
@@ -1642,6 +1662,8 @@ static PyMethodDef chemfp_methods[] = {
 
   {"knearest_tanimoto_arena", knearest_tanimoto_arena, METH_VARARGS,
    "knearest_tanimoto_arena (TODO: document)"},
+  {"knearest_results_finalize", knearest_results_finalize, METH_VARARGS,
+   "knearest_results_finalize (TODO: document)"},
 
   {"make_sorted_aligned_arena", make_sorted_aligned_arena, METH_VARARGS,
    "make_sorted_aligned_arena (TODO: document)"},
