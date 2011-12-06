@@ -269,54 +269,41 @@ def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
     if k < 0:
         raise ValueError("k must be non-negative")
 
-    offsets = (ctypes.c_int * 2)()
-    offsets[0] = 0
-    indices = (ctypes.c_int * k)()
-    scores = (ctypes.c_double * k)()
-
-    num_added = _chemfp.knearest_tanimoto_arena(
-        k, threshold, target_arena.num_bits,
-        query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
-        target_arena.start_padding, target_arena.end_padding,
-        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-        target_arena.popcount_indices,
-        offsets, 0,
-        indices, scores)
-    assert num_added > 0, num_added
-    end = offsets[1]
-    return [(indices[i], scores[i]) for i in xrange(end)]
+    results = _chemfp.alloc_threshold_results(1)
+    try:
+        _chemfp.knearest_tanimoto_arena(
+            k, threshold, target_arena.num_bits,
+            query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
+            target_arena.start_padding, target_arena.end_padding,
+            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+            target_arena.popcount_indices,
+            results, 0)
+        return _chemfp.threshold_result_get_hits(results, 0)
+    finally:
+        #_chemfp.free_threshold_results(results, 0, 1)
+        pass
 
 
 def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
     require_matching_sizes(query_arena, target_arena)
-    num_bits = query_arena.metadata.num_bits
 
     num_queries = len(query_arena)
 
-    offsets = (ctypes.c_int * (num_queries+1))()
-    offsets[0] = 0
-
-    num_cells = min(100, len(query_arena))*k
-
-    indices = (ctypes.c_int * num_cells)()
-    scores = (ctypes.c_double * num_cells)()
-
-    query_start = query_arena.start
-    query_end = query_arena.end
-
-    def add_rows(query_start, offset_start):
-        return _chemfp.knearest_tanimoto_arena(
-            k, threshold, num_bits,
+    results = _chemfp.alloc_threshold_results(num_queries)
+    try:
+        _chemfp.knearest_tanimoto_arena(
+            k, threshold, target_arena.num_bits,
             query_arena.start_padding, query_arena.end_padding,
-            query_arena.storage_size, query_arena.arena, query_start, query_end,
+            query_arena.storage_size, query_arena.arena, query_arena.start, query_arena.end,
             target_arena.start_padding, target_arena.end_padding,
             target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
             target_arena.popcount_indices,
-            offsets, offset_start,
-            indices, scores)
-
-    return _search(query_start, query_end, offsets, indices, scores, add_rows,
-                   query_arena.ids, target_arena.ids)
+            results, 0)
+    except:
+        _chemfp.free_threshold_results(results, 0, num_queries)
+        raise
+    
+    return ThresholdSearchResults(num_queries, results, target_arena.ids)
 
 
 # Core of the Tanimoto search routine

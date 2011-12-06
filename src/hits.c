@@ -31,6 +31,7 @@ int _chemfp_add_hit(chemfp_threshold_result *result,
   int num_allocated = result->num_allocated;
   int *indices, *old_indices;
   double *scores;
+
   if (num_hits == num_allocated) {
     if (num_hits == 0) {
       num_allocated = 6;

@@ -17,21 +17,21 @@ typedef struct {
   double *scores;
 } IndexScoreData;
 
-static int double_score_lt(IndexScoreData *data, int i, int j) {
-  if (data->scores[i] < data->scores[j])
+static int double_score_lt(chemfp_threshold_result *result, int i, int j) {
+  if (result->scores[i] < result->scores[j])
     return 1;
-  if (data->scores[i] > data->scores[j])
+  if (result->scores[i] > result->scores[j])
     return 0;
   /* Sort in descending order by index. (XXX important or overkill?) */
-  return (data->indices[i] >= data->indices[j]);
+  return (result->indices[i] >= result->indices[j]);
 }
-static void double_score_swap(IndexScoreData *data, int i, int j) {
-  int tmp_index = data->indices[i];
-  double tmp_score = data->scores[i];
-  data->indices[i] = data->indices[j];
-  data->scores[i] = data->scores[j];
-  data->indices[j] = tmp_index;
-  data->scores[j] = tmp_score;
+static void double_score_swap(chemfp_threshold_result *result, int i, int j) {
+  int tmp_index = result->indices[i];
+  double tmp_score = result->scores[i];
+  result->indices[i] = result->indices[j];
+  result->scores[i] = result->scores[j];
+  result->indices[j] = tmp_index;
+  result->scores[j] = tmp_score;
 }
 
 enum scoring_directions {
@@ -491,32 +491,19 @@ knearest_tanimoto_arena_no_popcounts(
         int target_start, int target_end,
 
         /* Results go into these arrays  */
-        int *result_offsets,
-        int num_cells,
-        int *result_indices,
-        double *result_scores
+        chemfp_threshold_result *results
                                    ) {
   int query_index, target_index;
   int fp_size = (num_bits+7)/8;
   const unsigned char *query_fp, *target_fp;
   double query_threshold, score;
-  int heap_size;
-  IndexScoreData heap;
-  int result_offset=*result_offsets++;
+  chemfp_threshold_result *result;
 
-  query_fp = query_arena + (query_start * query_storage_size);
-  for (query_index = query_start; query_index < query_end;
-       query_index++, query_fp += query_storage_size) {
+  for (query_index = 0; query_index < (query_end-query_start); query_index++) {
+    query_fp = query_arena + (query_start+query_index) * query_storage_size;
 
-    if (num_cells < k) {
-      /* Not enough space to store everything, so stop here. */
-      return query_index-query_start;
-    }
-
+    result = results+query_index;
     query_threshold = threshold;
-    heap_size = 0;
-    heap.indices = result_indices;
-    heap.scores = result_scores;
     
     target_fp = target_arena + (target_start * query_storage_size);
     target_index = target_start;
@@ -525,13 +512,11 @@ knearest_tanimoto_arena_no_popcounts(
          target_index++, target_fp += target_storage_size) {
       score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
       if (score >= query_threshold) {
-        heap.indices[heap_size] = target_index;
-        heap.scores[heap_size] = score;
-        heap_size++;
-        if (heap_size == k) {
-          chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
+        _chemfp_add_hit(result, target_index, score);
+        if (result->num_hits == k) {
+          chemfp_heapq_heapify(k, result, (chemfp_heapq_lt) double_score_lt,
                                (chemfp_heapq_swap) double_score_swap);
-          query_threshold = heap.scores[0];
+          query_threshold = result->scores[0];
           /* Since we leave the loop early, I need to advance the pointers */
           target_index++;
           target_fp += target_storage_size;
@@ -540,7 +525,7 @@ knearest_tanimoto_arena_no_popcounts(
       }
     }
     /* Either we've reached the end of the fingerprints or the heap is full */
-    if (heap_size == k) {
+    if (result->num_hits == k) {
       /* Continue scanning through the fingerprints */
       for (; target_index < target_end;
            target_index++, target_fp += target_storage_size) {
@@ -548,35 +533,24 @@ knearest_tanimoto_arena_no_popcounts(
 
         /* We need to be strictly *better* than what's in the heap */
         if (score > query_threshold) {
-          heap.indices[0] = target_index;
-          heap.scores[0] = score;
-          chemfp_heapq_siftup(heap_size, &heap, 0, (chemfp_heapq_lt) double_score_lt,
+          result->indices[0] = target_index;
+          result->scores[0] = score;
+          chemfp_heapq_siftup(k, result, 0, (chemfp_heapq_lt) double_score_lt,
                               (chemfp_heapq_swap) double_score_swap);
-          query_threshold = heap.scores[0];
+          query_threshold = result->scores[0];
         } /* heapreplaced the old smallest item with the new item */
       }
       /* End of the fingerprint scan */
     } else {
       /* The heap isn't full, so we haven't yet heapified it. */
-      chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
+      chemfp_heapq_heapify(result->num_hits, result,  (chemfp_heapq_lt) double_score_lt,
                            (chemfp_heapq_swap) double_score_swap);
     }
 
     /* Sort the elements */
-    chemfp_heapq_heapsort(heap_size, &heap, (chemfp_heapq_lt) double_score_lt,
+    chemfp_heapq_heapsort(result->num_hits, result, (chemfp_heapq_lt) double_score_lt,
                           (chemfp_heapq_swap) double_score_swap);
     
-    /* Pass back the query results */
-    result_offset += heap_size;
-
-    *result_offsets++ = result_offset;
-    memcpy(result_indices, heap.indices, heap_size * sizeof(int));
-    memcpy(result_scores, heap.scores, heap_size * sizeof(double));
-
-    /* Move the pointers so I can report the next results */
-    result_indices += heap_size;
-    result_scores += heap_size;
-    num_cells -= heap_size;
   } /* Loop through the queries */
 
   return query_index-query_start;
@@ -604,21 +578,18 @@ int chemfp_knearest_tanimoto_arena(
         int *target_popcount_indices,
 
         /* Results go into these arrays  */
-        int *result_offsets,
-        int num_cells,
-        int *result_indices,
-        double *result_scores
+        chemfp_threshold_result *results
                                    ) {
 
-  int heap_size, fp_size;
+  int fp_size;
   int query_popcount, target_popcount, intersect_popcount;
   double score, best_possible_score, popcount_sum, query_threshold;
   const unsigned char *query_fp, *target_fp;
   int query_index, target_index;
   int start, end;
   PopcountSearchOrder popcount_order;
-  IndexScoreData heap;
-  int result_offset;
+  chemfp_threshold_result *result;
+  
 
   chemfp_popcount_f calc_popcount;
   chemfp_intersect_popcount_f calc_intersect_popcount;
@@ -628,14 +599,9 @@ int chemfp_knearest_tanimoto_arena(
   if (query_start >= query_end) {
     return 0;
   }
-
   /* k == 0 is a valid input, and of course the result is no matches */
   if (k == 0) {
-    result_offset = *result_offsets++;
-    for (query_index = query_start; query_index < query_end; query_index++) {
-      *result_offsets++ = result_offset;
-    }
-    return query_index-query_start;
+    return CHEMFP_OK;
   }
   fp_size = (num_bits+7)/8;
 
@@ -645,7 +611,7 @@ int chemfp_knearest_tanimoto_arena(
         k, threshold, num_bits,
         query_storage_size, query_arena, query_start, query_end,
         target_storage_size, target_arena, target_start, target_end,
-        result_offsets, num_cells, result_indices, result_scores);
+        results);
   }
 
   /* Choose popcounts optimized for this case */
@@ -654,16 +620,10 @@ int chemfp_knearest_tanimoto_arena(
                 num_bits, query_storage_size, query_arena,
                 target_storage_size, target_arena);
 
-  result_offset = *result_offsets++;
-
   /* Loop through the query fingerprints */
-  query_fp = query_arena + (query_start * query_storage_size);
-  for (query_index = query_start; query_index < query_end;
-       query_index++, query_fp += query_storage_size) {
-    if (num_cells < k) {
-      /* Not enough space to store everything, so stop here. */
-      return query_index-query_start;
-    }
+  for (query_index=0; query_index < (query_end-query_start); query_index++) {
+    result = results+query_index;
+    query_fp = query_arena + (query_start+query_index) * query_storage_size;
 
     query_threshold = threshold;
     query_popcount = calc_popcount(fp_size, query_fp);
@@ -672,16 +632,11 @@ int chemfp_knearest_tanimoto_arena(
       /* By definition this will never return hits. Even if threshold == 0.0. */
       /* (I considered returning the first k hits, but that's chemically meaninless.) */
       /* XXX change this. Make it returns the first k hits */
-      *result_offsets++ = result_offset;
       continue;
     }
 
     /* Search the bins using the ordering from Swamidass and Baldi.*/
     init_search_order(&popcount_order, query_popcount, num_bits);
-
-    heap_size = 0;
-    heap.indices = result_indices;
-    heap.scores = result_scores;
 
     /* Look through the sections of the arena in optimal popcount order */
     while (next_popcount(&popcount_order, query_threshold)) {
@@ -708,20 +663,18 @@ int chemfp_knearest_tanimoto_arena(
       target_index = start;
 
       /* There are fewer than 'k' elements in the heap*/
-      if (heap_size < k) {
+      if (result->num_hits < k) {
         for (; target_index<end; target_index++, target_fp += target_storage_size) {
           intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
           score = intersect_popcount / (popcount_sum - intersect_popcount);
 
           /* The heap isn't full; only check if we're at or above the query threshold */
           if (score >= query_threshold) {
-            heap.indices[heap_size] = target_index;
-            heap.scores[heap_size] = score;
-            heap_size++;
-            if (heap_size == k) {
-              chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
+            _chemfp_add_hit(result, target_index, score);
+            if (result->num_hits == k) {
+              chemfp_heapq_heapify(k, result,  (chemfp_heapq_lt) double_score_lt,
                                    (chemfp_heapq_swap) double_score_swap);
-              query_threshold = heap.scores[0];
+              query_threshold = result->scores[0];
               /* We're going to jump to the "heap is full" section */
               /* Since we leave the loop early, I need to advance the pointers */
               target_index++;
@@ -747,16 +700,17 @@ int chemfp_knearest_tanimoto_arena(
 
       /* Scan through the target fingerprints; can we improve over the threshold? */
       for (; target_index<end; target_index++, target_fp += target_storage_size) {
+
         intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
         score = intersect_popcount / (popcount_sum - intersect_popcount);
 
         /* We need to be strictly *better* than what's in the heap */
         if (score > query_threshold) {
-          heap.indices[0] = target_index;
-          heap.scores[0] = score;
-          chemfp_heapq_siftup(heap_size, &heap, 0, (chemfp_heapq_lt) double_score_lt,
+          result->indices[0] = target_index;
+          result->scores[0] = score;
+          chemfp_heapq_siftup(k, result, 0, (chemfp_heapq_lt) double_score_lt,
                               (chemfp_heapq_swap) double_score_swap);
-          query_threshold = heap.scores[0];
+          query_threshold = result->scores[0];
           if (query_threshold >= best_possible_score) {
             /* we can't do any better in this section (or in later ones) */
             break;
@@ -766,26 +720,15 @@ int chemfp_knearest_tanimoto_arena(
     } /* Went through all the popcount regions */
 
     /* We have scanned all the fingerprints. Is the heap full? */
-
-    if (heap_size < k) {
+    if (result->num_hits < k) {
       /* Not full, so need to heapify it. */
-      chemfp_heapq_heapify(heap_size, &heap,  (chemfp_heapq_lt) double_score_lt,
+      chemfp_heapq_heapify(result->num_hits, result, (chemfp_heapq_lt) double_score_lt,
                            (chemfp_heapq_swap) double_score_swap);
     }
     /* Sort the elements */
-    chemfp_heapq_heapsort(heap_size, &heap, (chemfp_heapq_lt) double_score_lt,
+    chemfp_heapq_heapsort(result->num_hits, result, (chemfp_heapq_lt) double_score_lt,
                           (chemfp_heapq_swap) double_score_swap);
-    
-    /* Pass back the query results */
-    result_offset += heap_size;
-    *result_offsets++ = result_offset;
-    if (heap_size) {
-      result_indices += heap_size;
-      result_scores += heap_size;
-      num_cells -= heap_size;
-    }
-
   } /* looped over all queries */
 
-  return query_index-query_start;
+  return CHEMFP_OK;
 }

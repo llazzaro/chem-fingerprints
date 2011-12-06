@@ -475,49 +475,6 @@ bad_popcount_indices(const char *which, int check_indices, int num_bits,
 
 
 
-static int
-bad_offsets(int num_queries, int size, int start) {
-  int num_offsets = (int)(size/sizeof(int));
-
-  /* There must be enough space for num_queries, plus 1 for the end */
-  char msg[100];
-  if (start < 0) {
-    PyErr_SetString(PyExc_ValueError, "result offsets start must not be negative");
-    return 1;
-  }
-  if (start > num_offsets) {
-    sprintf(msg, "result offsets start (%d) is too large", start);
-    PyErr_SetString(PyExc_ValueError, msg);
-    return 1;
-  }
-  if ((num_queries+1) < (num_offsets - start)) {
-    sprintf(msg, "Insufficient space to store %d result offsets", num_queries);
-    PyErr_SetString(PyExc_ValueError, msg);
-    return 1;
-  }
-  return 0;
-}
-
-static int
-bad_cells(int min_row_size,int indices_size, int scores_size, int *num_cells) {
-  int num_indices = (int)(indices_size / sizeof(int));
-  int num_scores = (int)(scores_size / sizeof(double));
-
-  if (num_indices < min_row_size) {
-    PyErr_SetString(PyExc_ValueError, "Insufficient space to store indices for a row");
-    return 1;
-  }
-  if (num_scores < min_row_size) {
-    PyErr_SetString(PyExc_ValueError, "Insufficient space to store scores for a row");
-    return 1;
-  }
-  if (num_indices < num_scores) {
-    *num_cells = num_indices;
-  } else {
-    *num_cells = num_scores;
-  }
-  return 0;
-}
 
 static int
 bad_counts(int count_size, int num_queries) {
@@ -1216,16 +1173,19 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
 /* threshold_tanimoto_arena */
 static PyObject *
 alloc_threshold_results(PyObject *self, PyObject *args) {
-  int num_queries;
+  int num_results;
   chemfp_threshold_result *results;
   UNUSED(self);
 
   if (!PyArg_ParseTuple(args, "i:alloc_threshold_results",
-                        &num_queries)) {
+                        &num_results)) {
     return NULL;
   }
-
-  results = chemfp_alloc_threshold_results(num_queries);
+  if (num_results <= 0) {
+    PyErr_SetString(PyExc_ValueError, "num_results must be positive");
+    return NULL;
+  }
+  results = chemfp_alloc_threshold_results(num_results);
   return PyInt_FromLong( (long)((uintptr_t) results) );
 }
 
@@ -1279,9 +1239,9 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
 
   int *target_popcount_indices, target_popcount_indices_size;
 
-  int result, threshold_offset;
-  long threshold_results_long;
-  chemfp_threshold_result *threshold_results;
+  int result, result_offset;
+  long results_long;
+  chemfp_threshold_result *results;
   UNUSED(self);
 
   if (!PyArg_ParseTuple(args, "diiiit#iiiiit#iit#li:threshold_tanimoto_arena",
@@ -1294,7 +1254,7 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
                         &target_storage_size, &target_arena, &target_arena_size,
                         &target_start, &target_end,
                         &target_popcount_indices, &target_popcount_indices_size,
-                        &threshold_results_long, &threshold_offset)) {
+                        &results_long, &result_offset)) {
     return NULL;
   }
 
@@ -1310,10 +1270,11 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
       bad_arena_limits("target ", target_arena_size, target_storage_size,
                        &target_start, &target_end) ||
       bad_popcount_indices("target ", 1, num_bits,
-                            target_popcount_indices_size, &target_popcount_indices)) {
+                            target_popcount_indices_size, &target_popcount_indices) ||
+      bad_results(results_long, result_offset, &results)
+      ) {
     return NULL;
   }
-  threshold_results = (chemfp_threshold_result *)((uintptr_t) threshold_results_long);
 
   Py_BEGIN_ALLOW_THREADS;
   result = chemfp_threshold_tanimoto_arena(
@@ -1322,7 +1283,7 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
         query_storage_size, query_arena, query_start, query_end,
         target_storage_size, target_arena, target_start, target_end,
         target_popcount_indices,
-        threshold_results + threshold_offset);
+        results + result_offset);
   Py_END_ALLOW_THREADS;
 
   return PyInt_FromLong(result);
@@ -1389,15 +1350,14 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
   const unsigned char *target_arena;
 
   int *target_popcount_indices, target_popcount_indices_size;
-  int num_cells;
-  int *result_offsets, result_offsets_size, result_offsets_start;
-  int *result_indices, result_indices_size, result_scores_size;
-  double *result_scores;
 
-  int result;
+  int result, result_offset;
+  long results_long;
+  chemfp_threshold_result *results;
+
   UNUSED(self);
     
-  if (!PyArg_ParseTuple(args, "idiiiit#iiiiit#iit#w#iw#w#:knearest_tanimoto_arena",
+  if (!PyArg_ParseTuple(args, "idiiiit#iiiiit#iit#li:knearest_tanimoto_arena",
                         &k, &threshold,
                         &num_bits,
                         &query_start_padding, &query_end_padding,
@@ -1407,11 +1367,9 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
                         &target_storage_size, &target_arena, &target_arena_size,
                         &target_start, &target_end,
                         &target_popcount_indices, &target_popcount_indices_size,
-                        &result_offsets, &result_offsets_size, &result_offsets_start,
-                        &result_indices, &result_indices_size,
-                        &result_scores, &result_scores_size
-                        ))
+                        &results_long, &result_offset)) {
     return NULL;
+  }
 
   if (bad_k(k) ||
       bad_threshold(threshold) ||
@@ -1426,15 +1384,11 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
       bad_arena_limits("target ", target_arena_size, target_storage_size,
                        &target_start, &target_end) ||
       bad_popcount_indices("target ", 1, num_bits,
-                            target_popcount_indices_size, &target_popcount_indices)) {
+                            target_popcount_indices_size, &target_popcount_indices) ||
+      bad_results(results_long, result_offset, &results)) {
     return NULL;
   }
-
-  if (bad_offsets(query_end-query_start, result_offsets_size, result_offsets_start) ||
-      bad_cells(k, result_indices_size, result_scores_size, &num_cells)) {
-    return NULL;
-  }
-
+  
   Py_BEGIN_ALLOW_THREADS;
   result = chemfp_knearest_tanimoto_arena(
         k, threshold,
@@ -1442,10 +1396,8 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
         query_storage_size, query_arena, query_start, query_end,
         target_storage_size, target_arena, target_start, target_end,
         target_popcount_indices,
-        result_offsets+result_offsets_start,
-        num_cells, result_indices, result_scores);
+        results);
   Py_END_ALLOW_THREADS;
-
   return PyInt_FromLong(result);
 }
 

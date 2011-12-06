@@ -321,11 +321,8 @@ int chemfp_knearest_tanimoto_arena(
         /*  (must have at least num_bits+1 elements) */
         int *target_popcount_indices,
 
-        /* Results go into these arrays  */
-        int *result_offsets,
-        int num_cells,
-        int *result_indices,
-        double *result_scores
+        /* Results go into this data structure  */
+        chemfp_threshold_result *results
                                    );
 
 
