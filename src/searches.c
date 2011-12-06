@@ -12,11 +12,6 @@
   #include <omp.h>
 #endif
 
-typedef struct {
-  int *indices;
-  double *scores;
-} IndexScoreData;
-
 static int double_score_lt(chemfp_threshold_result *result, int i, int j) {
   if (result->scores[i] < result->scores[j])
     return 1;
@@ -548,13 +543,6 @@ knearest_tanimoto_arena_no_popcounts(
       chemfp_heapq_heapify(result->num_hits, result,  (chemfp_heapq_lt) double_score_lt,
                            (chemfp_heapq_swap) double_score_swap);
     }
-
-#if 0
-    /* Sort the elements */
-    chemfp_heapq_heapsort(result->num_hits, result, (chemfp_heapq_lt) double_score_lt,
-                          (chemfp_heapq_swap) double_score_swap);
-#endif
-    
   } /* Loop through the queries */
 
   return query_index-query_start;
