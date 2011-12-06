@@ -236,5 +236,6 @@ class TestSelectFastestMethod(unittest2.TestCase):
         chemfp.bitops.select_fastest_method(repeat=-1000)
 
 if __name__ == "__main__":
+    chemfp.bitops.use_environment_variables()
     unittest2.main()
     
