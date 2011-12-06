@@ -745,7 +745,6 @@ static uint64_t popcount_buffer[257] = {
 /* Remember, keeping an extra value to ensure 16 byte alignment */
 static const int popcount_buffer_size = sizeof(popcount_buffer) - 1;
 
-
 static unsigned long 
 timeit(chemfp_popcount_f popcount, int size, int repeat) {
   long long t1, t2;
@@ -827,6 +826,21 @@ verify_methods(void) {
   int i;
   int expected, got;
   const unsigned char *start_buffer;
+  
+  /* Test that I can check byte 96 out of 128, with zero padding */
+  unsigned char *single_bit_buffer, *single_bit_buffer_start;
+
+  single_bit_buffer_start = single_bit_buffer = (unsigned char *) malloc(150);
+  if (!single_bit_buffer) {
+    fprintf(stderr, "chemfp: unable to malloc popcount verification scratch space\n");
+    return;
+  }
+  while (ALIGNMENT(single_bit_buffer, 16) != 0) {
+    single_bit_buffer++;
+  }
+  memset(single_bit_buffer, 0, 128);
+  single_bit_buffer[96] = 1;
+  
 
   if (ALIGNMENT(popcount_buffer, 16) == 8) {
     start_buffer = (unsigned char *) (popcount_buffer+1);
@@ -837,24 +851,53 @@ verify_methods(void) {
     fprintf(stderr, "chemfp: Misaligned data!\n");
   }
 
+  /* 64 byte aligned */
   expected = detected_methods[0]->popcount(256, start_buffer);
 
   for (i=1; i<num_methods; i++) {
     got = detected_methods[i]->popcount(256, start_buffer);
     if (got != expected) {
-      fprintf(stderr, "chemfp: popcount validation error: method %s returned %d instead of %d\n",
+      fprintf(stderr,
+              "chemfp: popcount validation error(1): method %s returned %d instead of %d\n",
 	      detected_methods[i]->name, got, expected);
     }
   }
 
+  /* check the bit in byte 97  */
+  expected = detected_methods[0]->popcount(97, single_bit_buffer);
+
+  for (i=1; i<num_methods; i++) {
+    got = detected_methods[i]->popcount(97, single_bit_buffer);
+    if (got != expected) {
+      fprintf(stderr,
+              "chemfp: popcount validation error(2): method %s returned %d instead of %d\n",
+	      detected_methods[i]->name, got, expected);
+    }
+  }
+
+  /* 64 byte aligned */
   expected = detected_methods[0]->intersect_popcount(256, start_buffer, start_buffer+128);
 
   for (i=1; i<num_methods; i++) {
     got = detected_methods[i]->intersect_popcount(256, start_buffer, start_buffer+128);
     if (got != expected) {
-      fprintf(stderr, "chemfp: intersection popcount error: method %s returned %d instead of %d\n",
+      fprintf(stderr,
+              "chemfp: intersection popcount error(1): method %s returned %d instead of %d\n",
 	      detected_methods[i]->name, got, expected);
     }
   }
 
+  /* check the bit in byte 97  */
+  expected = detected_methods[0]->intersect_popcount(97, single_bit_buffer, single_bit_buffer);
+
+  for (i=1; i<num_methods; i++) {
+    got = detected_methods[i]->intersect_popcount(97, single_bit_buffer, single_bit_buffer);
+    if (got != expected) {
+      fprintf(stderr,
+              "chemfp: intersection popcount error(2): method %s returned %d instead of %d\n",
+	      detected_methods[i]->name, got, expected);
+    }
+  }
+
+  free(single_bit_buffer_start);
 }
