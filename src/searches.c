@@ -736,8 +736,8 @@ void chemfp_knearest_results_finalize(chemfp_threshold_result *results_start,
 
 /***** Special support for the NxN symmetric case ******/
 
-/* (There is no k-nearest variant because a k-nearest search, combined
-   with the Swamidass and Baldi search limits, is not reflexive.) */
+/* TODO: implement the k-nearest variant. It's harder because a k-nearest
+   search, combined with the Swamidass and Baldi search limits, is not reflexive. */
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
@@ -1000,3 +1000,4 @@ int chemfp_threshold_tanimoto_arena_symmetric(
   }
   return CHEMFP_OK;
 }
+
