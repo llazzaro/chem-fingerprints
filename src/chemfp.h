@@ -327,7 +327,7 @@ int chemfp_knearest_tanimoto_arena(
 
 
 
-int chemfp_count_tanimoto_arena_symmetric(
+int chemfp_count_tanimoto_hits_arena_symmetric(
         /* Count all matches within the given threshold */
         double threshold,
 
@@ -388,6 +388,13 @@ chemfp_intersect_popcount_f
 chemfp_select_intersect_popcount(int num_bits,
                                  int storage_len1, const unsigned char *arena1,
                                  int storage_len2, const unsigned char *arena2);
+
+
+/* OpenMP interface */
+
+int chemfp_get_num_threads(void);
+void chemfp_set_num_threads(int num_threads);
+int chemfp_get_max_threads(void);
 
 
 #endif /* CHEMFP_H */

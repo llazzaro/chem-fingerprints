@@ -79,3 +79,48 @@ chemfp_set_option(const char *option, int value) {
   }
   return CHEMFP_BAD_ARG;
 }
+
+/********* OpenMP ************/
+
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
+
+/* The value 0 means "initialize using omp_get_max_threads()" */
+/* Otherwise, this will be a value between 1 and omp_get_max_threads() */
+static int _chemfp_num_threads = 0;
+
+int chemfp_get_num_threads(void) {
+#if defined(_OPENMP)
+  if (_chemfp_num_threads == 0) {
+    _chemfp_num_threads = omp_get_max_threads();
+  }
+  return _chemfp_num_threads;
+#else
+  return 1;
+#endif
+}
+
+void chemfp_set_num_threads(int num_threads) {
+#if defined(_OPENMP)
+  /* Can only have between 1 thread and the number of logical cores */
+  if (num_threads < 1) {
+    num_threads = 1;
+  } else if (num_threads > omp_get_max_threads()) {
+    num_threads = omp_get_max_threads();
+  }
+  _chemfp_num_threads = num_threads;
+#else
+  UNUSED(num_threads);
+#endif
+}
+
+int chemfp_get_max_threads(void) {
+#if defined(_OPENMP)
+  return omp_get_max_threads();
+#else
+  return 1;
+#endif
+
+}
+

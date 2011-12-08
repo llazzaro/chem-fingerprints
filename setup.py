@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 
 from distutils.core import setup, Extension
 from distutils.command.build_ext import build_ext
@@ -24,8 +25,32 @@ OpenEye, and RDKit toolkits.
 #  USE_OPENMP: Compile with OpenMP support
 #  USE_SSSE3: Compile with compiler- and CPU-specific SSSE3 instructions
 
+# These are available through the setup command-line as:
+#   --with-openmp / --without-openmp
+#   --with-ssse3 / --without-ssse3
+
+# There doesn't seem to be a clean way to do this with distutils, so
+# hack something together to make it work.
+
 USE_OPENMP = True  # True means "enable", False means "disable"
 USE_SSSE3 = True  # True means "enable", False means "disable"
+
+argv = []
+for arg in sys.argv:
+    if arg == "--with-openmp":
+        USE_OPENMP = True
+    elif arg == "--without-openmp":
+        USE_OPENMP = False
+    elif arg == "--with-ssse3":
+        USE_SSSE3 = True
+    elif arg == "--without-ssse3":
+        USE_SSSE3 = False
+    else:
+        # not one of the special command-line options; don't delete
+        argv.append(arg)
+sys.argv = argv
+        
+
 
 # chemfp has experimental support for OpenMP.
 def OMP(*args):

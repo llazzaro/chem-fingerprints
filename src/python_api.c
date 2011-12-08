@@ -1416,10 +1416,69 @@ knearest_results_finalize(PyObject *self, PyObject *args) {
       bad_num_results(num_results)) {
     return NULL;
   }
+  Py_BEGIN_ALLOW_THREADS;
   chemfp_knearest_results_finalize(results+result_offset,
                                    results+result_offset+num_results);
+  Py_END_ALLOW_THREADS;
   return Py_BuildValue("");
 }
+
+/***** Symmetric search code ****/
+
+static PyObject *
+count_tanimoto_hits_arena_symmetric(PyObject *self, PyObject *args) {
+  double threshold;
+  int num_bits, start_padding, end_padding, storage_size, arena_size;
+  int query_start, query_end, target_start, target_end;
+  const unsigned char *arena;
+  int *popcount_indices, *result_counts;
+  int popcount_indices_size, result_counts_size;
+
+  if (!PyArg_ParseTuple(args, "diiiis#iiiis#w#:count_tanimoto_arena",
+                        &threshold,
+                        &num_bits,
+                        &start_padding, &end_padding,
+                        &storage_size, &arena, &arena_size,
+                        &query_start, &query_end,
+                        &target_start, &target_end,
+                        &popcount_indices, &popcount_indices_size,
+                        &result_counts, &result_counts_size)) {
+    return NULL;
+  }
+  if (bad_threshold(threshold) ||
+      bad_num_bits(num_bits) ||
+      bad_padding("", start_padding, end_padding, &arena, &arena_size) ||
+      bad_fingerprint_sizes(num_bits, storage_size, storage_size) ||
+      bad_arena_limits("query ", arena_size, storage_size, &query_start, &query_end) ||
+      bad_arena_limits("target ", arena_size, storage_size, &target_start, &target_end) ||
+      bad_popcount_indices("", 1, num_bits, popcount_indices_size, &popcount_indices)) {
+    return NULL;
+  }
+  if (result_counts_size < (arena_size / storage_size) * sizeof(int) ) {
+    PyErr_SetString(PyExc_ValueError, "not enough space allocated for result_counts");
+    return NULL;
+  }
+  if (query_start > query_end) {
+    Py_RETURN_NONE;
+  }
+  Py_BEGIN_ALLOW_THREADS;
+  chemfp_count_tanimoto_hits_arena_symmetric(threshold,
+                                             num_bits,
+                                             storage_size, arena,
+                                             query_start, query_end,
+                                             target_start, target_end,
+                                             popcount_indices,
+                                             result_counts);
+  Py_END_ALLOW_THREADS;
+  
+  Py_RETURN_NONE;
+}
+
+static PyObject *
+threshold_tanimoto_arena_symmetric(PyObject *self, PyObject *args) {
+  return Py_BuildValue("");
+}
+
 
 /* Select the popcount methods */
 
@@ -1589,6 +1648,34 @@ set_option(PyObject *self, PyObject *args) {
   return Py_BuildValue("");
 }
 
+static PyObject*
+get_num_threads(PyObject *self, PyObject *args) {
+  UNUSED(self);
+  UNUSED(args);
+  return PyInt_FromLong(chemfp_get_num_threads());
+}
+
+static PyObject*
+set_num_threads(PyObject *self, PyObject *args) {
+  int num_threads;
+  UNUSED(args);
+  
+  if (!PyArg_ParseTuple(args, "i:set_num_threads", &num_threads)) {
+    return NULL;
+  }
+  chemfp_set_num_threads(num_threads);
+
+  Py_RETURN_NONE;
+}
+
+static PyObject*
+get_max_threads(PyObject *self, PyObject *args) {
+  UNUSED(self);
+  UNUSED(args);
+  return PyInt_FromLong(chemfp_get_max_threads());
+}
+
+  
 
 static PyMethodDef chemfp_methods[] = {
   {"version", version, METH_NOARGS,
@@ -1665,6 +1752,12 @@ static PyMethodDef chemfp_methods[] = {
   {"knearest_results_finalize", knearest_results_finalize, METH_VARARGS,
    "knearest_results_finalize (TODO: document)"},
 
+  {"count_tanimoto_hits_arena_symmetric", count_tanimoto_hits_arena_symmetric, METH_VARARGS,
+   "count_tanimoto_hits_arena_symmetric (TODO: document)"},
+  {"threshold_tanimoto_arena_symmetric", threshold_tanimoto_arena_symmetric, METH_VARARGS,
+   "threshold_tanimoto_arena_symmetric (TODO: document)"},
+
+
   {"make_sorted_aligned_arena", make_sorted_aligned_arena, METH_VARARGS,
    "make_sorted_aligned_arena (TODO: document)"},
 
@@ -1707,6 +1800,15 @@ static PyMethodDef chemfp_methods[] = {
 
   {"set_option", set_option, METH_VARARGS,
    "set option (TODO: document)"},
+
+  {"get_num_threads", get_num_threads, METH_NOARGS,
+   "get_num_threads()\n\nSet the number of OpenMP threads to use in a search"},
+
+  {"set_num_threads", set_num_threads, METH_VARARGS,
+   "set_num_threads()\n\nGet the number of OpenMP threads to use in a search"},
+
+  {"get_max_threads", get_max_threads, METH_NOARGS,
+   "get_max_threads()\n\nGet the maximum number of OpenMP threads available"},
 
 
   {NULL, NULL, 0, NULL}        /* Sentinel */

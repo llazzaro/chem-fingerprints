@@ -741,7 +741,7 @@ void chemfp_knearest_results_finalize(chemfp_threshold_result *results_start,
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 
-int chemfp_count_tanimoto_arena_symmetric(
+int chemfp_count_tanimoto_hits_arena_symmetric(
         /* Count all matches within the given threshold */
         double threshold,
 

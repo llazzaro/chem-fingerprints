@@ -29,7 +29,6 @@ __version_info = (1, 1, 0)
 SOFTWARE = "chemfp/" + __version__
 
 import os
-import __builtin__
 import itertools
 
 __all__ = ["open", "load_fingerprints", "read_structure_fingerprints",
@@ -587,3 +586,43 @@ class Fingerprints(FingerprintReader):
 
     # Question: should I support other parts of the list API?
     # I almost certainly want to support slice syntax like x[:5]
+
+def get_num_threads():
+    """Return the number of OpenMP threads to use in searches
+
+    Initially this is the value returned by omp_get_max_threads(),
+    which is generally 4 unless you set the environment variable
+    OMP_NUM_THREADS to some other value. 
+    
+    It may be any value in the range 1 to get_max_threads(), inclusive.
+    """
+    # I don't want the top-level chemfp module import to import a submodule.
+    import _chemfp
+
+    return _chemfp.get_num_threads()
+
+def set_num_threads(num_threads):
+    """Set the number of OpenMP threads to use in searches
+
+    If `num_threads` is less than one then it is treated as one, and a
+    value greater than get_max_threads() is treated as get_max_threads().
+    """
+    # I don't want the top-level chemfp module import to import a submodule.
+    import _chemfp
+
+    return _chemfp.set_num_threads(num_threads)
+
+def get_max_threads():
+    """Return the maximum number of threads available.
+
+    If OpenMP is not available then this will return 1. Otherwise it
+    returns the maximum number of threads available, as reported by
+    omp_get_num_threads().
+    
+    """
+    # I don't want the top-level chemfp module import to import a submodule.
+    import _chemfp
+
+    return _chemfp.get_max_threads()
+
+
