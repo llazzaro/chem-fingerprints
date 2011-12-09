@@ -46,7 +46,7 @@ class TestThreshold(unittest2.TestCase):
         x = list(x.iter_hits())
 
         # This only processes the upper-triangle, and not the diagonal
-        y = arena.threshold_tanimoto_search_arena_symmetric(fps, 0.9)
+        y = arena.threshold_tanimoto_search_arena_symmetric(fps, 0.9, upper_triangle_only=True)
 
 
         rows = list(y.iter_hits())
@@ -68,6 +68,23 @@ class TestThreshold(unittest2.TestCase):
             expected_row.sort()
 
             self.assertEquals(row, expected_row, rowno)
+
+    def test_lower_triangle(self):
+        # query[i] always matches target[i] so x[i] will always contain i
+        x = arena.threshold_tanimoto_search_arena(fps, fps, 0.9)
+
+        # This only processes the upper-triangle, and not the diagonal
+        y = arena.threshold_tanimoto_search_arena_symmetric(fps, 0.9)
+
+
+        for i, (x_row, y_row) in enumerate(zip(x.iter_hits(), y.iter_hits())):
+            y_row.append((i, 1.0))
+            x_row.sort()
+            y_row.sort()
+
+            self.assertEquals(x_row, y_row)
+
+        
 
 class TestKNearest(unittest2.TestCase):
     def test_symmetric(self):

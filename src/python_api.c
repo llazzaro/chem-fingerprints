@@ -1569,6 +1569,31 @@ knearest_tanimoto_arena_symmetric(PyObject *self, PyObject *args) {
   Py_RETURN_NONE;
 }
 
+static PyObject *
+fill_lower_triangle(PyObject *self, PyObject *args) {
+  int num_results, errval;
+  long results_long;
+  chemfp_threshold_result *results;
+  UNUSED(self);
+
+  if (!PyArg_ParseTuple(args, "li:fill_lower_triangle",
+                        &results_long, &num_results)) {
+    return NULL;
+  }
+  if (bad_results(results_long, 0, &results) ||
+      bad_num_results(num_results)) {
+    return NULL;
+  }
+  Py_BEGIN_ALLOW_THREADS;
+  errval = chemfp_fill_lower_triangle(num_results, results);
+  Py_END_ALLOW_THREADS;
+
+  if (errval) {
+    PyErr_SetString(PyExc_ValueError, chemfp_strerror(errval));
+  }
+  Py_RETURN_NONE;
+}
+
 
 /* Select the popcount methods */
 
@@ -1849,6 +1874,8 @@ static PyMethodDef chemfp_methods[] = {
   {"knearest_tanimoto_arena_symmetric", knearest_tanimoto_arena_symmetric, METH_VARARGS,
    "knearest_tanimoto_arena_symmetric (TODO: document)"},
 
+  {"fill_lower_triangle", fill_lower_triangle, METH_VARARGS,
+   "fill_lower_triangle (TODO: document)"},
 
   {"make_sorted_aligned_arena", make_sorted_aligned_arena, METH_VARARGS,
    "make_sorted_aligned_arena (TODO: document)"},

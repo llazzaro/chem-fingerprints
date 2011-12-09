@@ -395,9 +395,10 @@ int chemfp_knearest_tanimoto_arena_symmetric(
         /* NOTE: This must have enough space for all of the fingerprints! */
         chemfp_threshold_result *results);
 
-
 void chemfp_knearest_results_finalize(chemfp_threshold_result *results_start,
                                       chemfp_threshold_result *results_end);
+
+int chemfp_fill_lower_triangle(int n, chemfp_threshold_result *results);
 
 
 typedef int (*chemfp_popcount_f)(int len, const unsigned char *p1);

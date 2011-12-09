@@ -237,7 +237,7 @@ def count_tanimoto_hits_arena_symmetric(arena, threshold):
         
     return counts
     
-def threshold_tanimoto_search_arena_symmetric(arena, threshold):
+def threshold_tanimoto_search_arena_symmetric(arena, threshold, upper_triangle_only=False):
     num_queries = len(arena)
     results = _chemfp.alloc_threshold_results(num_queries)
     try:
@@ -250,7 +250,9 @@ def threshold_tanimoto_search_arena_symmetric(arena, threshold):
     except:
         _chemfp.free_threshold_results(results, 0, num_queries)
         raise
-    
+
+    if not upper_triangle_only:
+        _chemfp.fill_lower_triangle(results, num_queries)
     return SearchResults(num_queries, results, arena.ids)
 
 def knearest_tanimoto_search_arena_symmetric(arena, k, threshold):

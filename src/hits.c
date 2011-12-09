@@ -83,3 +83,31 @@ int chemfp_threshold_result_get_hits(chemfp_threshold_result *result,
   }
   return 0;
 }
+
+int chemfp_fill_lower_triangle(int n, chemfp_threshold_result *results) {
+  int i, j;
+  int *sizes = (int *) malloc(n * sizeof(int));
+  int retval;
+
+  if (!sizes) {
+    return CHEMFP_NO_MEM;
+  }
+  /* Save all of the count information */
+  for (i=0; i<n; i++) {
+    sizes[i] = chemfp_get_num_hits(results+i);
+  }
+
+  retval = CHEMFP_OK;
+  for (i=0; i<n; i++) {
+    for (j=0; j<sizes[i]; j++) {
+      if (!_chemfp_add_hit(results+results[i].indices[j], i, results[i].scores[j])) {
+        retval = CHEMFP_NO_MEM;
+        goto done;
+      }
+    }
+  }
+
+ done:
+  free(sizes);
+  return retval;
+}
