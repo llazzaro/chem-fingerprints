@@ -591,3 +591,270 @@ RESULT RENAME(chemfp_knearest_tanimoto_arena)(
   return CHEMFP_OK;
 }
 
+
+
+/***** Special support for the NxN symmetric case ******/
+
+/* TODO: implement the k-nearest variant. It's harder because a k-nearest
+   search, combined with the Swamidass and Baldi search limits, is not reflexive. */
+
+RESULT RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
+        /* Count all matches within the given threshold */
+        double threshold,
+
+        /* Number of bits in the fingerprint */
+        int num_bits,
+
+        /* Fingerprint arena */
+        int storage_size, const unsigned char *arena,
+
+        /* Row start and end indices */
+        int query_start, int query_end,
+
+        /* Column start and end indices */
+        int target_start, int target_end,
+
+        /* Target popcount distribution information */
+        int *target_popcount_indices,
+
+        /* Results _increment_ existing values in the array - remember to initialize! */
+        int *result_counts
+                                          ) {
+  int fp_size = (num_bits+7) / 8;
+  int query_index, target_index;
+  int start, end;
+  int query_popcount, target_popcount;
+  int start_target_popcount, end_target_popcount, intersect_popcount;
+  int count;
+  double popcount_sum, score;
+  const unsigned char *query_fp, *target_fp;
+  chemfp_popcount_f calc_popcount;
+  chemfp_intersect_popcount_f calc_intersect_popcount;
+
+  /* Check that we're not obviously in the lower triangle */
+  if (query_start >= target_end) {  /* No possible hits */
+    return CHEMFP_OK;
+  }
+
+  /* Shift the target towards the upper triangle, if needed */
+  if (target_start < query_start) {
+    target_start = query_start;
+  }
+
+  /* Check for edge cases */
+  if ((query_start >= query_end) ||
+      (target_start >= target_end) ||
+      (threshold > 1.0)) {
+    return CHEMFP_OK;
+  }
+
+  if (threshold <= 0.0) {
+    /* By definition, everything matches */
+    for (query_index = query_start; query_index < query_end; query_index++) {
+      start = MAX(query_index+1, target_start);
+      end = MAX(query_index+1, target_end);
+      if (start < end) {
+        result_counts[query_index] += (end - start);
+      }
+    }
+    return CHEMFP_OK;
+  }
+
+
+  /* Prevent overflow if someone uses a threshold of, say, 1E-80 */
+  /* (Not really needed unless you trap IEEE 754 overflow errors) */
+  if (threshold > 0.0 && threshold < 1.0/num_bits) {
+    threshold = 0.5 / num_bits;
+  }
+
+  /* target_popcount_indices must exist; if you don't care for the factor */
+  /* of two performance increase by precomputing/presorting based on popcount */
+  /* then why are you interested in the factor of two based on symmetry? */
+                                                   
+  /* Choose popcount methods optimized for this case */
+  calc_popcount = chemfp_select_popcount(num_bits, storage_size, arena);
+  calc_intersect_popcount = chemfp_select_intersect_popcount(
+                num_bits, storage_size, arena, storage_size, arena);
+
+  /* This uses the limits from Swamidass and Baldi */
+  for (query_index = query_start; query_index < query_end; query_index++) {
+    query_fp = arena + (query_index * storage_size);
+    query_popcount = calc_popcount(fp_size, query_fp);
+
+    /* Special case when popcount(query) == 0; everything has a score of 0.0 */
+    if (query_popcount == 0) {
+      continue;
+    }
+    /* Figure out which fingerprints to search */
+    start_target_popcount = (int)(query_popcount * threshold);
+    end_target_popcount = (int)(ceil(query_popcount / threshold));
+    if (end_target_popcount > num_bits) {
+      end_target_popcount = num_bits;
+    }
+
+    count = 0;
+    for (target_popcount = start_target_popcount; target_popcount <= end_target_popcount;
+         target_popcount++) {
+      start = target_popcount_indices[target_popcount];
+      end = target_popcount_indices[target_popcount+1];
+      if (start < target_start) {
+        start = target_start;
+      }
+      start = MAX(query_index+1, start);
+      if (end > target_end) {
+        end = target_end;
+      }
+
+      target_fp = arena + (start * storage_size);
+      popcount_sum = query_popcount + target_popcount;
+      for (target_index = start; target_index < end;
+           target_index++, target_fp += storage_size) {
+        intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
+        score = intersect_popcount / (popcount_sum - intersect_popcount);
+        if (score >= threshold) {
+          /* Can accumulate the score for the row */
+          count++;
+          /* But can't for the symmetric match */
+          result_counts[target_index]++;
+        }
+      }
+    }
+    result_counts[query_index] += count;
+  } /* went through each of the queries */
+  return CHEMFP_OK;
+}
+
+RESULT RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
+        /* Within the given threshold */
+        double threshold,
+
+        /* Number of bits in the fingerprint */
+        int num_bits,
+
+        /* Arena */
+        int storage_size, const unsigned char *arena,
+
+        /* start and end indices for the rows and columns */
+        int query_start, int query_end,
+        int target_start, int target_end,
+        
+        /* Target popcount distribution information */
+        /*  (must have at least num_bits+1 elements) */
+        int *target_popcount_indices,
+
+        /* Results go here */
+        /* NOTE: This must have enough space for all of the fingerprints! */
+        chemfp_threshold_result *results) {
+
+  int fp_size = (num_bits+7) / 8;
+  int query_index, target_index;
+  int start, end;
+  const unsigned char *query_fp, *target_fp;
+  int query_popcount, target_popcount;
+  int start_target_popcount, end_target_popcount;
+  chemfp_popcount_f calc_popcount;
+  chemfp_intersect_popcount_f calc_intersect_popcount;
+  int numerator, denominator, popcount_sum, intersect_popcount;
+  double score;
+  int add_hit_error = 0;
+
+  /* Check that we're not obviously in the lower triangle */
+  if (query_start >= target_end) {  /* No possible hits */
+    return CHEMFP_OK;
+  }
+
+  /* Shift the target towards the upper triangle, if needed */
+  if (target_start < query_start) {
+    target_start = query_start;
+  }
+
+  /* Corner cases where I don't need to do anything */
+  if ((query_start >= query_end) ||
+      (target_start >= target_end) ||
+      (threshold < 0)) {
+    return CHEMFP_OK;
+  }
+
+  /* if (threshold == 0.0) { */ /* TODO: Optimize this case */
+
+
+  /* Prevent overflow if someone uses a threshold of, say, 1E-80 */
+  if (threshold > 0.0 && threshold < 1.0/num_bits) {
+    threshold = 0.5 / num_bits;
+  }
+  if (threshold > 1.0) {
+    return CHEMFP_OK;
+  }
+
+  calc_popcount = chemfp_select_popcount(num_bits, storage_size, arena);
+  calc_intersect_popcount = chemfp_select_intersect_popcount(
+                num_bits, storage_size, arena, storage_size, arena);
+  
+  denominator = num_bits * 10;
+  numerator = (int)(threshold * denominator);
+
+  /* This uses the limits from Swamidass and Baldi */
+  /* It doesn't use the search ordering because it's supposed to find everything */
+  
+  for (query_index = query_start; query_index < query_end; query_index++) {
+    query_fp = arena + (query_index * storage_size);
+    query_popcount = calc_popcount(fp_size, query_fp);
+
+    /* Special case when popcount(query) == 0; everything has a score of 0.0 */
+    if (query_popcount == 0) {
+      if (threshold == 0.0) {
+        /* Only populate the upper triangle */
+        target_index = MAX(query_index+1, target_start);
+        for (;target_index < target_end; target_index++) {
+          if (!_chemfp_add_hit(results+query_index, target_index, 0.0)) {
+            add_hit_error = 1;
+          }
+        }
+      }
+      continue;
+    }
+    /* Figure out which fingerprints to search, based on the popcount */
+    if (threshold == 0.0) {
+      start_target_popcount = 0;
+      end_target_popcount = num_bits;
+    } else {
+      start_target_popcount = (int)(query_popcount * threshold);
+      end_target_popcount = (int)(ceil(query_popcount / threshold));
+      if (end_target_popcount > num_bits) {
+        end_target_popcount = num_bits;
+      }
+    }
+
+    for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
+         target_popcount++) {
+      start = target_popcount_indices[target_popcount];
+      end = target_popcount_indices[target_popcount+1];
+      if (start < target_start) {
+        start = target_start;
+      }
+      if (end > target_end) {
+        end = target_end;
+      }
+
+      popcount_sum = query_popcount + target_popcount;
+      for (target_index = MAX(query_index+1, start); target_index < end; target_index++) {
+        target_fp = arena + (target_index * storage_size);
+        intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
+
+        score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
+        if (denominator * intersect_popcount  >=
+            numerator * (popcount_sum - intersect_popcount)) {
+          /* Add to the upper triangle */
+          if (!_chemfp_add_hit(results+query_index, target_index, score)) {
+            add_hit_error = 1;
+          }
+        }
+      }
+    }
+  } /* went through each of the queries */
+  if (add_hit_error) {
+    return CHEMFP_NO_MEM;
+  }
+  return CHEMFP_OK;
+}
+
