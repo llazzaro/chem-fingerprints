@@ -461,6 +461,7 @@ class FingerprintArena(FingerprintReader):
         return knearest_tanimoto_search_arena(query_arena, self, k, threshold)
 
 
+# TODO: push more of this malloc-management down into C
 class ChemFPOrderedPopcount(ctypes.Structure):
     _fields_ = [("popcount", ctypes.c_int),
                 ("index", ctypes.c_int)]
