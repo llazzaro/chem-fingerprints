@@ -319,9 +319,9 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena)(
         /* In my timings (on a Mac), the comparison against a double was a hotspot, */
         /* but division is not. I switch to integer math and gained a 3-4% performance, */
         /* at the cost of slightly more complicated code. */
-        score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
         if (denominator * intersect_popcount  >=
             numerator * (popcount_sum - intersect_popcount)) {
+          score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
 #if USE_OPENMP == 1
           #pragma omp critical (add_hit_threshold)
 #endif
@@ -740,7 +740,7 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
         
         /* Target popcount distribution information */
         /*  (must have at least num_bits+1 elements) */
-        int *target_popcount_indices,
+        int *popcount_indices,
 
         /* Results go here */
         /* NOTE: This must have enough space for all of the fingerprints! */
@@ -827,8 +827,8 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
 
     for (target_popcount=start_target_popcount; target_popcount<=end_target_popcount;
          target_popcount++) {
-      start = target_popcount_indices[target_popcount];
-      end = target_popcount_indices[target_popcount+1];
+      start = popcount_indices[target_popcount];
+      end = popcount_indices[target_popcount+1];
       if (start < target_start) {
         start = target_start;
       }
@@ -858,3 +858,170 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
   return CHEMFP_OK;
 }
 
+/* I couldn't figure out a way to take advantage of symmetry */
+/* This is the same as the NxM algorithm except that it excludes self-matches */
+RESULT RENAME(chemfp_knearest_tanimoto_arena_symmetric)(
+        /* Find the 'k' nearest items */
+        int k,
+        /* Within the given threshold */
+        double threshold,
+
+        /* Number of bits in the fingerprint */
+        int num_bits,
+
+        /* Arena */
+        int storage_size, const unsigned char *arena,
+
+        /* start and end indices for the rows and columns */
+        int query_start, int query_end,
+        int target_start, int target_end,
+        
+        /* Target popcount distribution information */
+        /*  (must have at least num_bits+1 elements) */
+        int *popcount_indices,
+
+        /* Results go into these arrays  */
+        chemfp_threshold_result *results
+                                   ) {
+
+  int fp_size;
+  int query_popcount, target_popcount, intersect_popcount;
+  double score, best_possible_score, popcount_sum, query_threshold;
+  const unsigned char *query_fp, *target_fp;
+  int query_index, target_index;
+  int start, end;
+  PopcountSearchOrder popcount_order;
+  chemfp_threshold_result *result;
+  
+  chemfp_popcount_f calc_popcount;
+  chemfp_intersect_popcount_f calc_intersect_popcount;
+
+  if (query_start >= query_end) {
+    return 0;
+  }
+  /* k == 0 is a valid input, and of course the result is no matches */
+  if (k == 0) {
+    return CHEMFP_OK;
+  }
+  fp_size = (num_bits+7)/8;
+
+
+  /* Choose popcounts optimized for this case */
+  calc_popcount = chemfp_select_popcount(num_bits, storage_size, arena);
+  calc_intersect_popcount = chemfp_select_intersect_popcount(
+                num_bits, storage_size, arena, storage_size, arena);
+
+  /* Loop through the query fingerprints */
+  for (query_index=0; query_index < (query_end-query_start); query_index++) {
+    result = results+query_index;
+    query_fp = arena + (query_start+query_index) * storage_size;
+
+    query_threshold = threshold;
+    query_popcount = calc_popcount(fp_size, query_fp);
+
+    if (query_popcount == 0) {
+      /* By definition this will never return hits. Even if threshold == 0.0. */
+      /* (I considered returning the first k hits, but that's chemically meaningless.) */
+      /* XXX change this. Make it returns the first k hits */
+      continue;
+    }
+
+    /* Search the bins using the ordering from Swamidass and Baldi.*/
+    init_search_order(&popcount_order, query_popcount, num_bits);
+
+    /* Look through the sections of the arena in optimal popcount order */
+    while (next_popcount(&popcount_order, query_threshold)) {
+      target_popcount = popcount_order.popcount;
+      best_possible_score = popcount_order.score;
+
+      /* If we can't beat the query threshold then we're done with the targets */
+      if (best_possible_score < query_threshold) {
+        break;
+      }
+
+      /* Scan through the targets which have the given popcount */
+      start = popcount_indices[target_popcount];
+      end = popcount_indices[target_popcount+1];
+      
+      if (!check_bounds(&popcount_order, &start, &end, target_start, target_end)) {
+        continue;
+      }
+
+      /* Iterate over the target fingerprints */
+      target_fp = arena + start*storage_size;
+      popcount_sum = (double)(query_popcount + target_popcount);
+
+      target_index = start;
+
+      /* There are fewer than 'k' elements in the heap*/
+      if (result->num_hits < k) {
+        for (; target_index<end; target_index++, target_fp += storage_size) {
+          intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
+          score = intersect_popcount / (popcount_sum - intersect_popcount);
+
+          /* The heap isn't full; only check if we're at or above the query threshold */
+          if (score >= query_threshold) {
+            if (query_index == target_index) {
+              continue; /* Don't match self */
+            }
+            _chemfp_add_hit(result, target_index, score);
+            if (result->num_hits == k) {
+              chemfp_heapq_heapify(k, result,  (chemfp_heapq_lt) double_score_lt,
+                                   (chemfp_heapq_swap) double_score_swap);
+              query_threshold = result->scores[0];
+              /* We're going to jump to the "heap is full" section */
+              /* Since we leave the loop early, I need to advance the pointers */
+              target_index++;
+              target_fp += storage_size;
+              goto heap_replace;
+            }
+          } /* Added to heap */
+        } /* Went through target fingerprints */
+
+        /* If we're here then the heap did not fill up. Try the next popcount */
+        continue;
+      }
+
+    heap_replace:
+      /* We only get here if the heap contains k element */
+
+      /* Earlier we tested for "best_possible_score<query_threshold". */
+      /* The test to replace an element in the heap is more stringent. */
+      if (query_threshold >= best_possible_score) {
+        /* Can't do better. Might as well give up. */
+        break;
+      }
+
+      /* Scan through the target fingerprints; can we improve over the threshold? */
+      for (; target_index<end; target_index++, target_fp += storage_size) {
+
+        intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
+        score = intersect_popcount / (popcount_sum - intersect_popcount);
+
+        /* We need to be strictly *better* than what's in the heap */
+        if (score > query_threshold) {
+          if (query_index == target_index) {
+            continue; /* Don't match self */
+          }
+          result->indices[0] = target_index;
+          result->scores[0] = score;
+          chemfp_heapq_siftup(k, result, 0, (chemfp_heapq_lt) double_score_lt,
+                              (chemfp_heapq_swap) double_score_swap);
+          query_threshold = result->scores[0];
+          if (query_threshold >= best_possible_score) {
+            /* we can't do any better in this section (or in later ones) */
+            break;
+          }
+        } /* heapreplaced the old smallest item with the new item */
+      } /* looped over fingerprints */
+    } /* Went through all the popcount regions */
+
+    /* We have scanned all the fingerprints. Is the heap full? */
+    if (result->num_hits < k) {
+      /* Not full, so need to heapify it. */
+      chemfp_heapq_heapify(result->num_hits, result, (chemfp_heapq_lt) double_score_lt,
+                           (chemfp_heapq_swap) double_score_swap);
+    }
+  } /* looped over all queries */
+  return CHEMFP_OK;
+}

@@ -371,6 +371,30 @@ int chemfp_threshold_tanimoto_arena_symmetric(
         /* NOTE: This must have enough space for all of the fingerprints! */
         chemfp_threshold_result *results);
 
+int chemfp_knearest_tanimoto_arena_symmetric(
+        /* Find the 'k' nearest items */
+        int k,
+        /* Within the given threshold */
+        double threshold,
+
+        /* Number of bits in the fingerprint */
+        int num_bits,
+
+        /* Arena */
+        int storage_size, const unsigned char *arena,
+
+        /* start and end indices for the rows and columns */
+        int query_start, int query_end,
+        int target_start, int target_end,
+        
+        /* Target popcount distribution information */
+        /*  (must have at least num_bits+1 elements) */
+        int *target_popcount_indices,
+
+        /* Results go here */
+        /* NOTE: This must have enough space for all of the fingerprints! */
+        chemfp_threshold_result *results);
+
 
 void chemfp_knearest_results_finalize(chemfp_threshold_result *results_start,
                                       chemfp_threshold_result *results_end);

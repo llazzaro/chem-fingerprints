@@ -1433,6 +1433,7 @@ count_tanimoto_hits_arena_symmetric(PyObject *self, PyObject *args) {
   const unsigned char *arena;
   int *popcount_indices, *result_counts;
   int popcount_indices_size, result_counts_size;
+  UNUSED(self);
 
   if (!PyArg_ParseTuple(args, "diiiis#iiiis#w#:count_tanimoto_arena",
                         &threshold,
@@ -1476,7 +1477,96 @@ count_tanimoto_hits_arena_symmetric(PyObject *self, PyObject *args) {
 
 static PyObject *
 threshold_tanimoto_arena_symmetric(PyObject *self, PyObject *args) {
-  return Py_BuildValue("");
+  double threshold;
+  int num_bits, start_padding, end_padding, storage_size, arena_size;
+  int query_start, query_end, target_start, target_end;
+  const unsigned char *arena;
+  int *popcount_indices;
+  int popcount_indices_size;
+  long results_long;
+  chemfp_threshold_result *results;
+  UNUSED(self);
+
+  if (!PyArg_ParseTuple(args, "diiiis#iiiis#l:threshold_tanimoto_arena_symmetric",
+                        &threshold,
+                        &num_bits,
+                        &start_padding, &end_padding,
+                        &storage_size, &arena, &arena_size,
+                        &query_start, &query_end,
+                        &target_start, &target_end,
+                        &popcount_indices, &popcount_indices_size,
+                        &results_long)) {
+    return NULL;
+  }
+  if (bad_threshold(threshold) ||
+      bad_num_bits(num_bits) ||
+      bad_padding("", start_padding, end_padding, &arena, &arena_size) ||
+      bad_fingerprint_sizes(num_bits, storage_size, storage_size) ||
+      bad_arena_limits("query ", arena_size, storage_size, &query_start, &query_end) ||
+      bad_arena_limits("target ", arena_size, storage_size, &target_start, &target_end) ||
+      bad_popcount_indices("", 1, num_bits, popcount_indices_size, &popcount_indices) ||
+      bad_results(results_long, 0, &results)) {
+    return NULL;
+  }
+  Py_BEGIN_ALLOW_THREADS;
+  chemfp_threshold_tanimoto_arena_symmetric(threshold,
+                                            num_bits,
+                                            storage_size, arena,
+                                            query_start, query_end,
+                                            target_start, target_end,
+                                            popcount_indices,
+                                            results);
+  Py_END_ALLOW_THREADS;
+  
+  Py_RETURN_NONE;
+}
+
+/* knearest_tanimoto_arena */
+static PyObject *
+knearest_tanimoto_arena_symmetric(PyObject *self, PyObject *args) {
+  double threshold;
+  int k, num_bits, start_padding, end_padding, storage_size, arena_size;
+  int query_start, query_end, target_start, target_end;
+  const unsigned char *arena;
+  int *popcount_indices;
+  int popcount_indices_size;
+  long results_long;
+  chemfp_threshold_result *results;
+  UNUSED(self);
+
+  if (!PyArg_ParseTuple(args, "idiiiis#iiiis#l:knearest_tanimoto_arena_symmetric",
+                        &k, &threshold,
+                        &num_bits,
+                        &start_padding, &end_padding,
+                        &storage_size, &arena, &arena_size,
+                        &query_start, &query_end,
+                        &target_start, &target_end,
+                        &popcount_indices, &popcount_indices_size,
+                        &results_long)) {
+    return NULL;
+  }
+  if (bad_k(k) ||
+      bad_threshold(threshold) ||
+      bad_num_bits(num_bits) ||
+      bad_padding("", start_padding, end_padding, &arena, &arena_size) ||
+      bad_fingerprint_sizes(num_bits, storage_size, storage_size) ||
+      bad_arena_limits("query ", arena_size, storage_size, &query_start, &query_end) ||
+      bad_arena_limits("target ", arena_size, storage_size, &target_start, &target_end) ||
+      bad_popcount_indices("", 1, num_bits, popcount_indices_size, &popcount_indices) ||
+      bad_results(results_long, 0, &results)) {
+    return NULL;
+  }
+  Py_BEGIN_ALLOW_THREADS;
+  chemfp_knearest_tanimoto_arena_symmetric(k, threshold,
+                                           num_bits,
+                                           storage_size, arena,
+                                           query_start, query_end,
+                                           target_start, target_end,
+                                           popcount_indices,
+                                           results);
+  Py_END_ALLOW_THREADS;
+  
+  Py_RETURN_NONE;
 }
 
 
@@ -1756,6 +1846,8 @@ static PyMethodDef chemfp_methods[] = {
    "count_tanimoto_hits_arena_symmetric (TODO: document)"},
   {"threshold_tanimoto_arena_symmetric", threshold_tanimoto_arena_symmetric, METH_VARARGS,
    "threshold_tanimoto_arena_symmetric (TODO: document)"},
+  {"knearest_tanimoto_arena_symmetric", knearest_tanimoto_arena_symmetric, METH_VARARGS,
+   "knearest_tanimoto_arena_symmetric (TODO: document)"},
 
 
   {"make_sorted_aligned_arena", make_sorted_aligned_arena, METH_VARARGS,

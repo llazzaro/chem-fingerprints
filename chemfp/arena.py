@@ -80,7 +80,7 @@ def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
     return counts
 
 
-class ThresholdSearchResults(object):
+class SearchResults(object):
     def __init__(self, num_results, results, target_ids):
         self.num_results = num_results
         self._result_ptr = results
@@ -117,7 +117,7 @@ class ThresholdSearchResults(object):
         for i in range(0, self.num_results):
             yield [idx for (idx, score) in
                         _chemfp.threshold_result_get_hits(self._result_ptr, i)]
-        
+
 
 
 
@@ -170,7 +170,7 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
         _chemfp.free_threshold_results(results, 0, num_queries)
         raise
     
-    return ThresholdSearchResults(num_queries, results, target_arena.ids)
+    return SearchResults(num_queries, results, target_arena.ids)
 
 ##########
             
@@ -222,7 +222,7 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
         _chemfp.free_threshold_results(results, 0, num_queries)
         raise
     
-    return ThresholdSearchResults(num_queries, results, target_arena.ids)
+    return SearchResults(num_queries, results, target_arena.ids)
 
 
 def count_tanimoto_hits_arena_symmetric(arena, threshold):
@@ -247,12 +247,28 @@ def threshold_tanimoto_search_arena_symmetric(arena, threshold):
             0, num_queries, 0, num_queries,
             arena.popcount_indices,
             results)
+    except:
+        _chemfp.free_threshold_results(results, 0, num_queries)
+        raise
+    
+    return SearchResults(num_queries, results, arena.ids)
+
+def knearest_tanimoto_search_arena_symmetric(arena, k, threshold):
+    num_queries = len(arena)
+    results = _chemfp.alloc_threshold_results(num_queries)
+    try:
+        _chemfp.knearest_tanimoto_arena_symmetric(
+            k, threshold, arena.num_bits,
+            arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
+            0, num_queries, 0, num_queries,
+            arena.popcount_indices,
+            results)
         _chemfp.knearest_results_finalize(results, 0, num_queries)
     except:
         _chemfp.free_threshold_results(results, 0, num_queries)
         raise
     
-    return ThresholdSearchResults(num_queries, results, arena.ids)
+    return SearchResults(num_queries, results, arena.ids)
 
 
     

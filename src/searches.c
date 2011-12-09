@@ -332,7 +332,7 @@ int chemfp_count_tanimoto_hits_arena_symmetric(
         int target_start, int target_end,
 
         /* Target popcount distribution information */
-        int *target_popcount_indices,
+        int *popcount_indices,
 
         /* Results _increment_ existing values in the array - remember to initialize! */
         int *result_counts
@@ -341,12 +341,12 @@ int chemfp_count_tanimoto_hits_arena_symmetric(
     return _chemfp_count_tanimoto_hits_arena_symmetric_single(
                            threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
-                           target_popcount_indices, result_counts);
+                           popcount_indices, result_counts);
   } else {
     return _chemfp_count_tanimoto_hits_arena_symmetric_openmp(
                            threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
-                           target_popcount_indices, result_counts);
+                           popcount_indices, result_counts);
   }
 }
 
@@ -366,7 +366,7 @@ int chemfp_threshold_tanimoto_arena_symmetric(
         
         /* Target popcount distribution information */
         /*  (must have at least num_bits+1 elements) */
-        int *target_popcount_indices,
+        int *popcount_indices,
 
         /* Results go here */
         /* NOTE: This must have enough space for all of the fingerprints! */
@@ -375,14 +375,50 @@ int chemfp_threshold_tanimoto_arena_symmetric(
     return _chemfp_threshold_tanimoto_arena_symmetric_single(
                            threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
-                           target_popcount_indices, results);
+                           popcount_indices, results);
   } else {
     return _chemfp_threshold_tanimoto_arena_symmetric_openmp(
                            threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
-                           target_popcount_indices, results);
+                           popcount_indices, results);
   }
 }
+
+int chemfp_knearest_tanimoto_arena_symmetric(
+        /* Find the 'k' nearest items */
+        int k,
+        /* Within the given threshold */
+        double threshold,
+
+        /* Number of bits in the fingerprint */
+        int num_bits,
+
+        /* Arena */
+        int storage_size, const unsigned char *arena,
+
+        /* start and end indices for the rows and columns */
+        int query_start, int query_end,
+        int target_start, int target_end,
+        
+        /* Target popcount distribution information */
+        /*  (must have at least num_bits+1 elements) */
+        int *popcount_indices,
+
+        /* Results go into these arrays  */
+        chemfp_threshold_result *results) {
+  if (chemfp_get_num_threads() <= 1) {
+    return _chemfp_knearest_tanimoto_arena_symmetric_single(
+                           k, threshold, num_bits, storage_size, arena,
+                           query_start, query_end, target_start, target_end,
+                           popcount_indices, results);
+  } else {
+    return _chemfp_knearest_tanimoto_arena_symmetric_openmp(
+                           k, threshold, num_bits, storage_size, arena,
+                           query_start, query_end, target_start, target_end,
+                           popcount_indices, results);
+  }
+}  
+  
 
 #else
 
