@@ -225,6 +225,38 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
     return ThresholdSearchResults(num_queries, results, target_arena.ids)
 
 
+def count_tanimoto_hits_arena_symmetric(arena, threshold):
+    num_queries = len(arena)
+    counts = (ctypes.c_int*num_queries)()
+    _chemfp.count_tanimoto_hits_arena_symmetric(
+        threshold, arena.num_bits,
+        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
+        0, num_queries, 0, num_queries,
+        arena.popcount_indices,
+        counts)
+        
+    return counts
+    
+def threshold_tanimoto_search_arena_symmetric(arena, threshold):
+    num_queries = len(arena)
+    results = _chemfp.alloc_threshold_results(num_queries)
+    try:
+        _chemfp.threshold_tanimoto_arena_symmetric(
+            threshold, arena.num_bits,
+            arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
+            0, num_queries, 0, num_queries,
+            arena.popcount_indices,
+            results)
+        _chemfp.knearest_results_finalize(results, 0, num_queries)
+    except:
+        _chemfp.free_threshold_results(results, 0, num_queries)
+        raise
+    
+    return ThresholdSearchResults(num_queries, results, arena.ids)
+
+
+    
+
 class FingerprintArena(FingerprintReader):
     """Stores fingerprints in a contiguous block of memory
 
