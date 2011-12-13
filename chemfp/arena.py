@@ -77,47 +77,58 @@ def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
                                  target_arena.arena, target_arena.start, target_arena.end,
                                  target_arena.popcount_indices,
                                  counts)
-    return counts
+    return counts    
+    
+
+class SearchResultsHandle(object):
+    def __init__(self, size):
+        self.size = size
+        self.handle = _chemfp.alloc_threshold_results(size)
+
+    def __del__(self, free=_chemfp.free_threshold_results):
+        free(self.handle, self.size)
+
+    def __int__(self):
+        return self.handle
+    def __long__(self):
+        return self.handle
+
 
 
 class SearchResults(object):
-    def __init__(self, num_results, results, target_ids):
+    def __init__(self, num_results, target_ids):
         self.num_results = num_results
-        self._result_ptr = results
+        self._handle = SearchResultsHandle(num_results)
         self.target_ids = target_ids
-
-    def __del__(self, free=_chemfp.free_threshold_results):
-        free(self._result_ptr, 0, self.num_results)
 
     def __len__(self):
         return self.num_results
 
     def size(self, i):
         i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
-        return _chemfp.get_num_threshold_hits(self._result_ptr, i)
+        return _chemfp.get_num_threshold_hits(self._handle, i)
 
     def __getitem__(self, i):
         i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
         ids = self.target_ids
         return [(ids[idx], score) for (idx, score) in
-                    _chemfp.threshold_result_get_hits(self._result_ptr, i)]
+                    _chemfp.threshold_result_get_hits(self._handle, i)]
     
     def __iter__(self):
         ids = self.target_ids
         for i in range(0, self.num_results):
             yield [(ids[idx], score) for (idx, score) in
-                         _chemfp.threshold_result_get_hits(self._result_ptr, i)]
+                         _chemfp.threshold_result_get_hits(self._handle, i)]
 
     def iter_hits(self):
         for i in range(0, self.num_results):
-            yield _chemfp.threshold_result_get_hits(self._result_ptr, i)
+            yield _chemfp.threshold_result_get_hits(self._handle, i)
 
     def iter_indices(self):
         # This can be optimized with more C code
         for i in range(0, self.num_results):
             yield [idx for (idx, score) in
-                        _chemfp.threshold_result_get_hits(self._result_ptr, i)]
-
+                        _chemfp.threshold_result_get_hits(self._handle, i)]
 
 
 
@@ -141,7 +152,7 @@ def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
             results, 0)
         return _chemfp.threshold_result_get_hits(results, 0)
     finally:
-        _chemfp.free_threshold_results(results, 0, 1)
+        _chemfp.free_threshold_results(results, 1)
 
 
 
@@ -156,21 +167,18 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
 
     num_queries = len(query_arena)
 
-    results = _chemfp.alloc_threshold_results(num_queries)
-    try:
-        _chemfp.threshold_tanimoto_arena(
-            threshold, target_arena.num_bits,
-            query_arena.start_padding, query_arena.end_padding,
-            query_arena.storage_size, query_arena.arena, query_arena.start, query_arena.end,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-    except:
-        _chemfp.free_threshold_results(results, 0, num_queries)
-        raise
+    results = SearchResults(num_queries, target_arena.ids)
+
+    _chemfp.threshold_tanimoto_arena(
+        threshold, target_arena.num_bits,
+        query_arena.start_padding, query_arena.end_padding,
+        query_arena.storage_size, query_arena.arena, query_arena.start, query_arena.end,
+        target_arena.start_padding, target_arena.end_padding,
+        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+        target_arena.popcount_indices,
+        results._handle, 0)
     
-    return SearchResults(num_queries, results, target_arena.ids)
+    return results
 
 ##########
             
@@ -198,7 +206,7 @@ def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
         _chemfp.knearest_results_finalize(results, 0, 1)
         return _chemfp.threshold_result_get_hits(results, 0)
     finally:
-        _chemfp.free_threshold_results(results, 0, 1)
+        _chemfp.free_threshold_results(results, 1)
         pass
 
 
@@ -207,70 +215,98 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
 
     num_queries = len(query_arena)
 
-    results = _chemfp.alloc_threshold_results(num_queries)
-    try:
-        _chemfp.knearest_tanimoto_arena(
-            k, threshold, target_arena.num_bits,
-            query_arena.start_padding, query_arena.end_padding,
-            query_arena.storage_size, query_arena.arena, query_arena.start, query_arena.end,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-        _chemfp.knearest_results_finalize(results, 0, num_queries)
-    except:
-        _chemfp.free_threshold_results(results, 0, num_queries)
-        raise
+    results = SearchResults(num_queries, target_arena.ids)
+
+    _chemfp.knearest_tanimoto_arena(
+        k, threshold, target_arena.num_bits,
+        query_arena.start_padding, query_arena.end_padding,
+        query_arena.storage_size, query_arena.arena, query_arena.start, query_arena.end,
+        target_arena.start_padding, target_arena.end_padding,
+        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+        target_arena.popcount_indices,
+        results._handle, 0)
     
-    return SearchResults(num_queries, results, target_arena.ids)
+    _chemfp.knearest_results_finalize(results._handle, 0, num_queries)
+    
+    return results
 
 
-def count_tanimoto_hits_arena_symmetric(arena, threshold):
-    num_queries = len(arena)
-    counts = (ctypes.c_int*num_queries)()
+def count_tanimoto_hits_arena_symmetric(arena, threshold,
+                                        query_start=0, query_end=None,
+                                        target_start=0, target_end=None):
+    N = len(arena)
+    counts = (ctypes.c_int * N)()
+    
+    if query_end is None:
+        query_end = N
+    elif query_end > N:
+        query_end = N
+        
+    if target_end is None:
+        target_end = N
+    elif target_end > N:
+        target_end = N
+
+    if query_end > len(counts):
+        raise ValueError("counts array is too small for the given query range")
+    if target_end > len(counts):
+        raise ValueError("counts array is too small for the given target range")
+
+
     _chemfp.count_tanimoto_hits_arena_symmetric(
         threshold, arena.num_bits,
         arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-        0, num_queries, 0, num_queries,
+        query_start, query_end, target_start, target_end,
         arena.popcount_indices,
         counts)
-        
+
     return counts
+
     
-def threshold_tanimoto_search_arena_symmetric(arena, threshold, upper_triangle_only=False):
-    num_queries = len(arena)
-    results = _chemfp.alloc_threshold_results(num_queries)
-    try:
-        _chemfp.threshold_tanimoto_arena_symmetric(
-            threshold, arena.num_bits,
-            arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-            0, num_queries, 0, num_queries,
-            arena.popcount_indices,
-            results)
-    except:
-        _chemfp.free_threshold_results(results, 0, num_queries)
-        raise
+def threshold_tanimoto_search_arena_symmetric(arena, threshold,
+                                              query_start=0, query_end=None,
+                                              target_start=0, target_end=None,
+                                              upper_triangle_only=False):
+    N = len(arena)
+    
+    if query_end is None:
+        query_end = N
+    elif query_end > N:
+        query_end = N
+        
+    if target_end is None:
+        target_end = N
+    elif target_end > N:
+        target_end = N
+
+    results = SearchResults(N, arena.ids)
+
+    _chemfp.threshold_tanimoto_arena_symmetric(
+        threshold, arena.num_bits,
+        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
+        query_start, query_end, target_start, target_end,
+        arena.popcount_indices,
+        results._handle)
 
     if not upper_triangle_only:
-        _chemfp.fill_lower_triangle(results, num_queries)
-    return SearchResults(num_queries, results, arena.ids)
+        _chemfp.fill_lower_triangle(results._handle, N)
+        
+    return results
 
 def knearest_tanimoto_search_arena_symmetric(arena, k, threshold):
-    num_queries = len(arena)
-    results = _chemfp.alloc_threshold_results(num_queries)
-    try:
-        _chemfp.knearest_tanimoto_arena_symmetric(
-            k, threshold, arena.num_bits,
-            arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-            0, num_queries, 0, num_queries,
-            arena.popcount_indices,
-            results)
-        _chemfp.knearest_results_finalize(results, 0, num_queries)
-    except:
-        _chemfp.free_threshold_results(results, 0, num_queries)
-        raise
+    N = len(arena)
+
+    results = SearchResults(N, arena.ids)
+
+    _chemfp.knearest_tanimoto_arena_symmetric(
+        k, threshold, arena.num_bits,
+        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
+        0, N, 0, N,
+        arena.popcount_indices,
+        results._handle)
+    _chemfp.knearest_results_finalize(results._handle, 0, N)
     
-    return SearchResults(num_queries, results, arena.ids)
+    return results
 
 
     
