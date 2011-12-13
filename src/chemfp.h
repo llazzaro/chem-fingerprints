@@ -344,7 +344,7 @@ int chemfp_count_tanimoto_hits_arena_symmetric(
         int target_start, int target_end,
 
         /* Target popcount distribution information */
-        int *target_popcount_indices,
+        int *popcount_indices,
 
         /* Results _increment_ existing values in the array - remember to initialize! */
         int *result_counts);
@@ -365,7 +365,7 @@ int chemfp_threshold_tanimoto_arena_symmetric(
         
         /* Target popcount distribution information */
         /*  (must have at least num_bits+1 elements) */
-        int *target_popcount_indices,
+        int *popcount_indices,
 
         /* Results go here */
         /* NOTE: This must have enough space for all of the fingerprints! */
