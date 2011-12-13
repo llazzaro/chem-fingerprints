@@ -1191,16 +1191,16 @@ alloc_threshold_results(PyObject *self, PyObject *args) {
 
 static PyObject *
 free_threshold_results(PyObject *self, PyObject *args) {
-  int num_results, results_offset;
+  int num_results;
   long results_long;
   chemfp_threshold_result *results;
   UNUSED(self);
 
-  if (!PyArg_ParseTuple(args, "lii:free_threshold_results",
-                        &results_long, &results_offset, &num_results)) {
+  if (!PyArg_ParseTuple(args, "li:free_threshold_results",
+                        &results_long, &num_results)) {
     return NULL;
   }
-  if (bad_results(results_long, results_offset, &results) ||
+  if (bad_results(results_long, 0, &results) ||
       bad_num_results(num_results)) {
     return NULL;
   }
