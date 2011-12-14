@@ -66,6 +66,7 @@ def _read_blocks(infile):
             
 
 class FPSReader(object):
+    _search = fps_search
     def __init__(self, infile, metadata, first_fp_lineno, first_fp_block):
         self._infile = infile
         self._filename = getattr(infile, "name", "<unknown>")
@@ -142,23 +143,54 @@ class FPSReader(object):
                 yield id_fp
                 lineno += 1
 
+    def _check_at_start(self):
+        try:
+            self.reset()
+        except TypeError:
+            raise TypeError("FPS file is not at the start of the file; cannot search")
+
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
+        self._check_at_start()
         return fps_search.count_tanimoto_hits_fp(query_fp, self, threshold)
 
-    def count_tanimoto_hits_arena(self, query_arena, threshold=0.7):
-        return fps_search.count_tanimoto_hits_arena(query_arena, self, threshold)
+
+    def _iter_batches(self, queries, arena_size):
+        for query_arena in queries.iter_arenas(arena_size):
+            try:
+                self._check_at_start()
+            except TypeError:
+                if first_time:
+                    raise TypeError("Unable to process the second query batch because the FPS file is not longer at the start of the file. Try increasing the arena_size or use a FingerprintArena")
+            first_time = False
+            yield query_arena
+        
+    def batch_count_tanimoto_hits(self, queries, threshold=0.7, arena_size=100):
+        for query_arena in self._iter_batches(queries, arena_size):
+            results = fps_search.count_tanimoto_hits_arena(query_arena, self, threshold)
+            for item in results:
+                yield item
 
     def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
-        return fps_search.threshold_tanimoto_search_fp(query_fp, self, threshold)
+        self._check_at_start()
+        return fps_search.threshold_tanimoto_search_fp_with_ids(query_fp, self, threshold)
 
-    def threshold_tanimoto_search_arena(self, query_arena, threshold=0.7):
-        return fps_search.threshold_tanimoto_search_all(query_arena, self, threshold)
+    def batch_threshold_tanimoto_search_arena(self, queries, threshold=0.7, arena_size=100):
+        for query_arena in self._iter_batches(queries, arena_size):
+            results = fps_search.threshold_tanimoto_search_arena_with_ids(query_arena, self,
+                                                                          threshold)
+            for item in results:
+                yield item
 
     def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
-        return fps_search.knearest_tanimoto_search_fp(query_fp, self, k, threshold)
+        self._check_at_start()
+        return fps_search.knearest_tanimoto_search_fp_with_ids(query_fp, self, k, threshold)
 
-    def knearest_tanimoto_search_arena(self, query_arena, k=3, threshold=0.7):
-        return fps_search.knearest_tanimoto_search_all(query_arena, self, k, threshold)
+    def batch_knearest_tanimoto_search(self, queries, k=3, threshold=0.7, arena_size=100):
+        for query_arena in self._iter_batches(queries, arena_size):
+            results = fps_search.knearest_tanimoto_search_arena_with_ids(query_arena, self,
+                                                                         threshold)
+            for item in results:
+                yield item
 
 def _where(filename, lineno):
     if filename is None:

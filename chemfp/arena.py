@@ -26,289 +26,9 @@ import array
 
 from chemfp import FingerprintReader, check_fp_problems, check_metadata_problems
 import _chemfp
-from chemfp import bitops
+from chemfp import bitops, search
 
 __all__ = []
-
-def require_matching_fp_size(query_fp, target_arena):
-    if len(query_fp) != target_arena.metadata.num_bytes:
-        raise ValueError("query_fp uses %d bytes while target_arena uses %d bytes" % (
-            len(query_fp), target_arena.metadata.num_bytes))
-
-def require_matching_sizes(query_arena, target_arena):
-    assert query_arena.metadata.num_bits is not None, "arenas must define num_bits"
-    assert target_arena.metadata.num_bits is not None, "arenas must define num_bits"
-    if query_arena.metadata.num_bits != target_arena.metadata.num_bits:
-        raise ValueError("query_arena has %d bits while target_arena has %d bits" % (
-            query_arena.metadata.num_bits, target_arena.metadata.num_bits))
-    if query_arena.metadata.num_bytes != target_arena.metadata.num_bytes:
-        raise ValueError("query_arena uses %d bytes while target_arena uses %d bytes" % (
-            query_arena.metadata.num_bytes, target_arena.metadata.num_bytes))
-    
-
-def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
-    require_matching_fp_size(query_fp, target_arena)
-    # Improve the alignment so the faster algorithms can be used
-    query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
-        query_fp, target_arena.alignment, target_arena.storage_size)
-                                                 
-    counts = array.array("i", (0 for i in xrange(len(query_fp))))
-    _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
-                                 query_start_padding, query_end_padding,
-                                 target_arena.storage_size, query_fp, 0, 1,
-                                 target_arena.start_padding, target_arena.end_padding,
-                                 target_arena.storage_size, target_arena.arena,
-                                 target_arena.start, target_arena.end,
-                                 target_arena.popcount_indices,
-                                 counts)
-    return counts[0]
-
-
-def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
-    require_matching_sizes(query_arena, target_arena)
-
-    counts = (ctypes.c_int*len(query_arena))()
-    _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
-                                 query_arena.start_padding, query_arena.end_padding,
-                                 query_arena.storage_size,
-                                 query_arena.arena, query_arena.start, query_arena.end,
-                                 target_arena.start_padding, target_arena.end_padding,
-                                 target_arena.storage_size,
-                                 target_arena.arena, target_arena.start, target_arena.end,
-                                 target_arena.popcount_indices,
-                                 counts)
-    return counts    
-    
-
-class SearchResultsHandle(object):
-    def __init__(self, size):
-        self.size = size
-        self.handle = _chemfp.alloc_threshold_results(size)
-
-    def __del__(self, free=_chemfp.free_threshold_results):
-        free(self.handle, self.size)
-
-    def __int__(self):
-        return self.handle
-    def __long__(self):
-        return self.handle
-
-
-
-class SearchResults(object):
-    def __init__(self, num_results, target_ids):
-        self.num_results = num_results
-        self._handle = SearchResultsHandle(num_results)
-        self.target_ids = target_ids
-
-    def __len__(self):
-        return self.num_results
-
-    def size(self, i):
-        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
-        return _chemfp.get_num_threshold_hits(self._handle, i)
-
-    def __getitem__(self, i):
-        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
-        ids = self.target_ids
-        return [(ids[idx], score) for (idx, score) in
-                    _chemfp.threshold_result_get_hits(self._handle, i)]
-    
-    def __iter__(self):
-        ids = self.target_ids
-        for i in range(0, self.num_results):
-            yield [(ids[idx], score) for (idx, score) in
-                         _chemfp.threshold_result_get_hits(self._handle, i)]
-
-    def iter_hits(self):
-        for i in range(0, self.num_results):
-            yield _chemfp.threshold_result_get_hits(self._handle, i)
-
-    def iter_indices(self):
-        # This can be optimized with more C code
-        for i in range(0, self.num_results):
-            yield [idx for (idx, score) in
-                        _chemfp.threshold_result_get_hits(self._handle, i)]
-
-
-
-def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
-    require_matching_fp_size(query_fp, target_arena)
-
-    # Improve the alignment so the faster algorithms can be used
-    query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
-        query_fp, target_arena.alignment, target_arena.storage_size)
-
-
-    results = _chemfp.alloc_threshold_results(1)
-    try:
-        _chemfp.threshold_tanimoto_arena(
-            threshold, target_arena.num_bits,
-            query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena,
-            target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-        return _chemfp.threshold_result_get_hits(results, 0)
-    finally:
-        _chemfp.free_threshold_results(results, 1)
-
-
-
-def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
-    require_matching_fp_size(query_fp, target_arena)
-    result = threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold)
-    return [(target_arena.ids[index-target_arena.start], score) for (index, score) in result]
-
-
-def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
-    require_matching_sizes(query_arena, target_arena)
-
-    num_queries = len(query_arena)
-
-    results = SearchResults(num_queries, target_arena.ids)
-
-    _chemfp.threshold_tanimoto_arena(
-        threshold, target_arena.num_bits,
-        query_arena.start_padding, query_arena.end_padding,
-        query_arena.storage_size, query_arena.arena, query_arena.start, query_arena.end,
-        target_arena.start_padding, target_arena.end_padding,
-        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-        target_arena.popcount_indices,
-        results._handle, 0)
-    
-    return results
-
-##########
-            
-def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
-    result = knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold)
-    return [(target_arena.ids[index-target_arena.start], score) for (index, score) in result]
-
-def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
-    require_matching_fp_size(query_fp, target_arena)
-    query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
-        query_fp, target_arena.alignment, target_arena.storage_size)
-    
-    if k < 0:
-        raise ValueError("k must be non-negative")
-
-    results = _chemfp.alloc_threshold_results(1)
-    try:
-        _chemfp.knearest_tanimoto_arena(
-            k, threshold, target_arena.num_bits,
-            query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-        _chemfp.knearest_results_finalize(results, 0, 1)
-        return _chemfp.threshold_result_get_hits(results, 0)
-    finally:
-        _chemfp.free_threshold_results(results, 1)
-        pass
-
-
-def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
-    require_matching_sizes(query_arena, target_arena)
-
-    num_queries = len(query_arena)
-
-    results = SearchResults(num_queries, target_arena.ids)
-
-    _chemfp.knearest_tanimoto_arena(
-        k, threshold, target_arena.num_bits,
-        query_arena.start_padding, query_arena.end_padding,
-        query_arena.storage_size, query_arena.arena, query_arena.start, query_arena.end,
-        target_arena.start_padding, target_arena.end_padding,
-        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-        target_arena.popcount_indices,
-        results._handle, 0)
-    
-    _chemfp.knearest_results_finalize(results._handle, 0, num_queries)
-    
-    return results
-
-
-def count_tanimoto_hits_arena_symmetric(arena, threshold,
-                                        query_start=0, query_end=None,
-                                        target_start=0, target_end=None):
-    N = len(arena)
-    counts = (ctypes.c_int * N)()
-    
-    if query_end is None:
-        query_end = N
-    elif query_end > N:
-        query_end = N
-        
-    if target_end is None:
-        target_end = N
-    elif target_end > N:
-        target_end = N
-
-    if query_end > len(counts):
-        raise ValueError("counts array is too small for the given query range")
-    if target_end > len(counts):
-        raise ValueError("counts array is too small for the given target range")
-
-
-    _chemfp.count_tanimoto_hits_arena_symmetric(
-        threshold, arena.num_bits,
-        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-        query_start, query_end, target_start, target_end,
-        arena.popcount_indices,
-        counts)
-
-    return counts
-
-    
-def threshold_tanimoto_search_arena_symmetric(arena, threshold,
-                                              query_start=0, query_end=None,
-                                              target_start=0, target_end=None,
-                                              upper_triangle_only=False):
-    N = len(arena)
-    
-    if query_end is None:
-        query_end = N
-    elif query_end > N:
-        query_end = N
-        
-    if target_end is None:
-        target_end = N
-    elif target_end > N:
-        target_end = N
-
-    results = SearchResults(N, arena.ids)
-
-    _chemfp.threshold_tanimoto_arena_symmetric(
-        threshold, arena.num_bits,
-        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-        query_start, query_end, target_start, target_end,
-        arena.popcount_indices,
-        results._handle)
-
-    if not upper_triangle_only:
-        _chemfp.fill_lower_triangle(results._handle, N)
-        
-    return results
-
-def knearest_tanimoto_search_arena_symmetric(arena, k, threshold):
-    N = len(arena)
-
-    results = SearchResults(N, arena.ids)
-
-    _chemfp.knearest_tanimoto_arena_symmetric(
-        k, threshold, arena.num_bits,
-        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-        0, N, 0, N,
-        arena.popcount_indices,
-        results._handle)
-    _chemfp.knearest_results_finalize(results._handle, 0, N)
-    
-    return results
-
-
     
 
 class FingerprintArena(FingerprintReader):
@@ -449,6 +169,8 @@ class FingerprintArena(FingerprintReader):
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
         """Count the fingerprints which are similar enough to the query fingerprint
 
+        XXX
+        
         Return the number of fingerprints in this arena which are
         at least `threshold` similar to the query fingerprint `query_fp`.
 
@@ -458,26 +180,39 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: integer count
         """
-        return count_tanimoto_hits_fp(query_fp, self, threshold)
+        return search.count_tanimoto_hits_fp(query_fp, self, threshold)
 
-    def count_tanimoto_hits_arena(self, query_arena, threshold=0.7):
+    def batch_count_tanimoto_hits(self, queries, threshold=0.7, arena_size=100):
         """Count the fingerprints which are similar enough to each query fingerprint
 
-        For each fingerprint in the `query_arena`, count the number of
-        fingerprints in this arena with Tanimoto similarity of at
-        least `threshold`. The resulting list order is the same as the
-        query fingerprint order.
+        XXX
         
-        :param query_fp: query arena
-        :type query_fp: FingerprintArena
+        Returns an iterator containing the (query_id, count) for each
+        fingerprint in `queries`, where `query_id` is the query
+        fingerprint id and `count` is the number of fingerprints found
+        which are at least `threshold` similar to the query.
+
+        The order of results is the same as the order of the
+        queries. For efficiency reasons, `arena_size` queries are
+        processed at a time.
+        
+        :param queries: query fingerprints
+        :type query_fp: FingerprintArena or FPSReader (must implement iter_arenas())
         :param threshold: minimum similarity threshold (default: 0.7)
         :type threshold: float between 0.0 and 1.0, inclusive
-        :returns: list of integer counts
+        :param arena_size: number of queries to process at a time (default: 100)
+        :type arena_size: positive integer
+        :returns: list of (query_id, integer count) pairs, one for each query
         """
-        return count_tanimoto_hits_arena(query_arena, self, threshold)
+        for query_arena in queries.iter_arenas(arena_size):            
+            result = search.count_tanimoto_hits(query_arena, self, threshold)
+            for (query_id, count) in zip(query_arena.arena_ids, result):
+                yield query_id, count
 
-    def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
+    def threshold_tanimoto_search_fp_return_ids(self, query_fp, threshold=0.7):
         """Find the fingerprints which are similar enough to the query fingerprint
+
+        XXX
 
         Find all of the fingerprints in this arena which are at least
         `threshold` similar to the query fingerprint `query_fp`.
@@ -490,10 +225,14 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: list of (int, score) tuples
         """
-        return threshold_tanimoto_search_fp(query_fp, self, threshold)
+        result = search.threshold_tanimoto_search_fp(query_fp, self, threshold)
+        return [(self.ids[index], score) for (index, score) in result]
 
-    def threshold_tanimoto_search_arena(self, query_arena, threshold=0.7):
+    def batch_threshold_tanimoto_search_return_ids(self, queries, threshold=0.7,
+                                                   arena_size=100):
         """Find the fingerprints which are similar to each of the query fingerprints
+
+        XXX
 
         For each fingerprint in the `query_arena`, find all of the
         fingerprints in this arena which are at least `threshold`
@@ -505,11 +244,16 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: SearchResults
         """
-        return threshold_tanimoto_search_arena(query_arena, self, threshold)
+        for query_arena in queries.iter_arenas(arena_size):
+            result = search.threshold_tanimoto_search(query_arena, self, threshold)
+            for (query_id, hits) in zip(query_arena.arena_ids, result.iter_ids_and_scores()):
+                yield query_id, hits
 
-    def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
+    def knearest_tanimoto_search_fp_return_ids(self, query_fp, k=3, threshold=0.7):
         """Find the k-nearest fingerprints which are similar to the query fingerprint
 
+        XXX
+        
         Find the `k` fingerprints in this arena which are most similar
         to the query fingerprint `query_fp` and which are at least `threshold`
         similar to the query. The hits are returned as a list of
@@ -524,10 +268,13 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: SearchResults
         """
-        return knearest_tanimoto_search_fp(query_fp, self, k, threshold)
+        result = search.knearest_tanimoto_search_fp(query_fp, self, k, threshold)
+        return [(self.ids[index], score) for (index, score) in result]
 
-    def knearest_tanimoto_search_arena(self, query_arena, k=3, threshold=0.7):
+    def batch_knearest_tanimoto_search_return_ids(self, query_arena, k=3, threshold=0.7):
         """Find the k-nearest fingerprint which are similar to each of the query fingerprints
+
+        XXX
 
         For each fingerprint in the `query_arena`, find the `k`
         fingerprints in this arena which are most similar and which
@@ -544,7 +291,10 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: SearchResult
         """
-        return knearest_tanimoto_search_arena(query_arena, self, k, threshold)
+        for query_arena in queries.iter_arenas(arena_size):
+            result = search.knearest_tanimoto_search(query_arena, self, threshold)
+            for (query_id, hits) in zip(query_arena.arena_ids, result.iter_ids_and_scores()):
+                yield query_id, hits
 
 
 # TODO: push more of this malloc-management down into C
