@@ -650,11 +650,12 @@ RESULT RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
 
   if (threshold <= 0.0) {
     /* By definition, everything matches */
-    for (query_index = query_start; query_index < query_end; query_index++) {
-      start = MAX(query_index+1, target_start);
-      end = MAX(query_index+1, target_end);
-      if (start < end) {
-        result_counts[query_index] += (end - start);
+    /* FIXME: this is slow. I'm finding the symmetry and boundary conditions a bit tricky */
+    for (query_index=query_start; query_index<query_end; query_index++) {
+      for (target_index=MAX(query_index+1, target_start);
+           target_index<target_end; target_index++) {
+        result_counts[query_index] += 1;
+        result_counts[target_index] += 1;
       }
     }
     return CHEMFP_OK;
