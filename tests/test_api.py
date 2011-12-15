@@ -192,51 +192,61 @@ F0\tsmall
     def test_count_tanimoto_hits_fp_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.count_tanimoto_hits_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
-                                          threshold = 1.1)
+            for x in reader.count_tanimoto_hits_fp(
+                "000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                threshold = 1.1):
+                raise AssertionError("Should not happen!")
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.count_tanimoto_hits_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
-                                          threshold = -0.00001)
+            for x in reader.count_tanimoto_hits_fp(
+                "000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                threshold = -0.00001):
+                raise AssertionError("Should not happen")
 
     #
     # Count tanimoto hits using an arena
     #
 
-    def test_count_tanimoto_arena_default(self):
+    def test_id_count_tanimoto_default(self):
         targets = self._open(CHEBI_TARGETS)
-        hits = targets.count_tanimoto_hits_arena(QUERY_ARENA)
-        hits = list(hits)
-        self.assertSequenceEqual(hits, [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
+        results = targets.id_count_tanimoto_hits(QUERY_ARENA)
+        ids, counts = zip(*results)
+        self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
+        self.assertSequenceEqual(counts, [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
 
-    def test_count_tanimoto_arena_set_default(self):
+    def test_id_count_tanimoto_set_default(self):
         targets = self._open(CHEBI_TARGETS)
-        hits = targets.count_tanimoto_hits_arena(QUERY_ARENA, threshold=0.7)
-        hits = list(hits)
-        self.assertSequenceEqual(hits, [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
+        results = targets.id_count_tanimoto_hits(QUERY_ARENA, threshold=0.7)
+        ids, counts = zip(*results)
+        self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
+        self.assertSequenceEqual(counts, [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
 
-    def test_count_tanimoto_arena_set_threshold(self):
+    def test_id_count_tanimoto_set_threshold(self):
         targets = self._open(CHEBI_TARGETS)
-        hits = targets.count_tanimoto_hits_arena(QUERY_ARENA, threshold=0.9)
-        self.assertSequenceEqual(hits, [0, 97, 7, 1, 0, 1, 1, 0, 1, 1])
+        results = targets.id_count_tanimoto_hits(QUERY_ARENA, threshold=0.9)
+        ids, counts = zip(*results)
+        self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
+        self.assertSequenceEqual(counts, [0, 97, 7, 1, 0, 1, 1, 0, 1, 1])
 
-    def test_count_tanimoto_hits_arena_threshold_range_error(self):
+    def test_id_count_tanimoto_hits_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.count_tanimoto_hits_arena(QUERY_ARENA, threshold = 1.1)
+            for x in reader.id_count_tanimoto_hits(QUERY_ARENA, threshold = 1.1):
+                raise AssertionError("Shouldn't get here")
                                           
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.count_tanimoto_hits_arena(QUERY_ARENA, threshold = -0.00001)
+            for x in reader.id_count_tanimoto_hits(QUERY_ARENA, threshold = -0.00001):
+                raise AssertionError("Shouldn't get here!")
         
         
     #
     # Threshold tanimoto search using a fingerprint
     # 
 
-    def test_threshold_tanimoto_search_fp_default(self):
+    def test_id_threshold_tanimoto_search_fp_default(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"))
+        hits = reader.id_threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"))
         self.assertEqual(len(hits), 176)
         first_hits = [('CHEBI:3139', 0.72277227722772275), ('CHEBI:4821', 0.71134020618556704),
                       ('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
@@ -252,10 +262,10 @@ F0\tsmall
                 self.assertIn(x, hits)
 
 
-    def test_threshold_tanimoto_search_fp_set_default(self):
+    def test_id_threshold_tanimoto_search_fp_set_default(self):
         # This is set to the default value
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+        hits = reader.id_threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    threshold = 0.7)
         self.assertEqual(len(hits), 176)
         first_hits = [('CHEBI:3139', 0.72277227722772275), ('CHEBI:4821', 0.71134020618556704),
@@ -271,9 +281,9 @@ F0\tsmall
             for x in first_hits + last_hits:
                 self.assertIn(x, hits)
 
-    def test_threshold_tanimoto_search_fp_set_threshold(self):
+    def test_id_threshold_tanimoto_search_fp_set_threshold(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+        hits = reader.id_threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                  threshold = 0.8)
         self.assertEqual(len(hits), 108)
         first_hits = [('CHEBI:15345', 0.94505494505494503), ('CHEBI:15346', 0.92307692307692313),
@@ -289,44 +299,44 @@ F0\tsmall
             for x in first_hits + last_hits:
                 self.assertIn(x, hits)
 
-    def test_threshold_tanimoto_search_fp_set_max_threshold(self):
+    def test_id_threshold_tanimoto_search_fp_set_max_threshold(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+        hits = reader.id_threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    threshold = 1.0)
         self.assertEqual(hits, [('CHEBI:15523', 1.0)])
 
-    def test_threshold_tanimoto_search_fp_set_min_threshold(self):
+    def test_id_threshold_tanimoto_search_fp_set_min_threshold(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+        hits = reader.id_threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    threshold = DBL_MIN)
         # It isn't 2000 since there are some scores of 0.0
         self.assertEqual(len(hits), 1993)
 
-    def test_threshold_tanimoto_search_fp_0_on_0(self):
+    def test_id_threshold_tanimoto_search_fp_0_on_0(self):
         zeros = ("0000\tfirst\n"
                  "0010\tsecond\n"
                  "0000\tthird\n")
         f = StringIO(zeros)
         reader = self._open(f)
-        hits = reader.threshold_tanimoto_search_fp("0000".decode("hex"), threshold=0.0)
+        hits = reader.id_threshold_tanimoto_search_fp("0000".decode("hex"), threshold=0.0)
         self.assertEquals(self.hit_order(hits),
                           self.hit_order([ ("first", 0.0), ("second", 0.0), ("third", 0.0) ]))
 
-    def test_threshold_tanimoto_search_fp_0(self):
+    def test_id_threshold_tanimoto_search_fp_0(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.threshold_tanimoto_search_fp("000000000000000000000000000000000000000000".decode("hex"),
+        hits = reader.id_threshold_tanimoto_search_fp("000000000000000000000000000000000000000000".decode("hex"),
                                                    threshold = 1./1000)
         self.assertEqual(hits, [])
 
 
-    def test_threshold_tanimoto_search_fp_threshold_range_error(self):
+    def test_id_threshold_tanimoto_search_fp_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+            reader.id_threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                           threshold = 1.1)
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+            reader.id_threshold_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                           threshold = -0.00001)
 
     #
@@ -335,15 +345,17 @@ F0\tsmall
 
     def test_threshold_tanimoto_arena_default(self):
         targets = self._open(CHEBI_TARGETS)
-        hits = targets.threshold_tanimoto_search_arena(QUERY_ARENA)
-        self.assertEqual(map(len, hits), [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
-        self.assertEqual(hits[0], [('CHEBI:16148', 0.7142857142857143), ('CHEBI:17034', 0.8571428571428571),
+        hits = list(targets.id_threshold_tanimoto_search(QUERY_ARENA))
+        self.assertEqual([len(x[1]) for x in hits], [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
+        self.assertEqual(hits[0][1], [('CHEBI:16148', 0.7142857142857143), ('CHEBI:17034', 0.8571428571428571),
                                     ('CHEBI:17302', 0.8571428571428571), ('CHEBI:17539', 0.72222222222222221)])
 
 
     def test_threshold_tanimoto_arena_set_default(self):
         targets = self._open(CHEBI_TARGETS)
-        hits = targets.threshold_tanimoto_search_arena(QUERY_ARENA, threshold=0.7)
+        result = targets.id_threshold_tanimoto_search(QUERY_ARENA, threshold=0.7)
+        ids, hits = zip(*result)
+        self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
         self.assertEqual(map(len, hits), [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
         self.assertEqual(self.hit_order(hits[-1]),
                          self.hit_order([('CHEBI:15621', 0.8571428571428571), ('CHEBI:15882', 0.83333333333333337),
@@ -352,9 +364,11 @@ F0\tsmall
                                          ('CHEBI:17450', 0.75)]))
 
 
-    def test_threshold_tanimoto_arena_set_threshold(self):
+    def test_id_threshold_tanimoto_arena_set_threshold(self):
         targets = self._open(CHEBI_TARGETS)
-        hits = targets.threshold_tanimoto_search_arena(QUERY_ARENA, threshold=0.9)
+        result = targets.id_threshold_tanimoto_search(QUERY_ARENA, threshold=0.9)
+        ids, hits = zip(*result)
+        self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
         self.assertEqual(map(len, hits), [0, 97, 7, 1, 0, 1, 1, 0, 1, 1])
         self.assertEqual(self.hit_order(hits[2]),
                          self.hit_order([('CHEBI:15895', 1.0), ('CHEBI:16165', 1.0),
@@ -362,7 +376,7 @@ F0\tsmall
                                          ('CHEBI:17100', 0.93333333333333335), ('CHEBI:17242', 0.90000000000000002),
                                          ('CHEBI:17464', 1.0)]))
 
-    def test_threshold_tanimoto_search_0_on_0(self):
+    def test_id_threshold_tanimoto_search_0_on_0(self):
         zeros = ("0000\tfirst\n"
                  "0010\tsecond\n"
                  "0000\tthird\n")
@@ -370,41 +384,47 @@ F0\tsmall
         self.assertEqual(query_arena.ids, ["first", "second", "third"])
 
         targets = self._open(StringIO(zeros))
-        hits = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.0)
+        result = targets.id_threshold_tanimoto_search(query_arena, threshold=0.0)
+        ids, hits = zip(*result)
+        self.assertSequenceEqual(ids, query_arena.arena_ids)
         self.assertEquals(map(len, hits), [3, 3, 3])
 
         targets = self._open(StringIO(zeros))
-        hits = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.000001)
+        result = targets.id_threshold_tanimoto_search(query_arena, threshold=0.000001)
+        ids, hits = zip(*result)
+        self.assertSequenceEqual(ids, query_arena.arena_ids)
         self.assertEquals(map(len, hits), [0, 1, 0])
         
 
-    def test_threshold_tanimoto_search_arena_threshold_range_error(self):
+    def test_id_threshold_tanimoto_search_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.threshold_tanimoto_search_arena(QUERY_ARENA, threshold = 1.1)
+            for x in reader.id_threshold_tanimoto_search(QUERY_ARENA, threshold = 1.1):
+                raise AssertionError("should never get here")
                                           
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.threshold_tanimoto_search_arena(QUERY_ARENA, threshold = -0.00001)
+            for x in reader.id_threshold_tanimoto_search(QUERY_ARENA, threshold = -0.00001):
+                raise AssertionError("should never get here!")
         
         
     #
     # K-nearest tanimoto search using a fingerprint
     # 
 
-    def test_knearest_tanimoto_search_fp_default(self):
+    def test_id_knearest_tanimoto_search_fp_default(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"))
+        hits = reader.id_knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"))
         self.assertEqual(hits, [('CHEBI:8069', 1.0),
                                 ('CHEBI:6758', 0.78723404255319152),
                                 ('CHEBI:7983', 0.73999999999999999)])
 
-    def test_knearest_tanimoto_search_fp_set_default(self):
+    def test_id_knearest_tanimoto_search_fp_set_default(self):
         # This is set to the default values
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
-                                                   k = 3, threshold = 0.7)
-        self.assertEquals(len(hits), 3)
+        hits = reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+                                                     k = 3, threshold = 0.7)
+        self.assertEquals(len(hits), 3, hits)
         if hits[1][0] == "CHEBI:15483":
             self.assertEqual(hits, [('CHEBI:15523', 1.0), ('CHEBI:15483', 0.98913043478260865),
                                     ('CHEBI:15480', 0.98913043478260865)])
@@ -412,9 +432,9 @@ F0\tsmall
             self.assertEqual(hits, [('CHEBI:15523', 1.0), ('CHEBI:15480', 0.98913043478260865),
                                     ('CHEBI:15483', 0.98913043478260865)])
         
-    def test_knearest_tanimoto_search_fp_set_knearest(self):
+    def test_id_knearest_tanimoto_search_fp_set_knearest(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+        hits = reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                  k = 5, threshold = 0.8)
         expected = [('CHEBI:15523', 1.0), ('CHEBI:15483', 0.98913043478260865),
                     ('CHEBI:15480', 0.98913043478260865), ('CHEBI:15478', 0.98901098901098905),
@@ -424,84 +444,89 @@ F0\tsmall
         self.assertEqual(hits, expected)
 
 
-    def test_knearest_tanimoto_search_fp_set_max_threshold(self):
+    def test_id_knearest_tanimoto_search_fp_set_max_threshold(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+        hits = reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    threshold = 1.0)
         self.assertEqual(hits, [('CHEBI:15523', 1.0)])
 
-    def test_knearest_tanimoto_search_fp_set_knearest_1(self):
+    def test_id_knearest_tanimoto_search_fp_set_knearest_1(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+        hits = reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    k = 1)
         self.assertEqual(hits, [('CHEBI:15523', 1.0)])
 
-    def test_knearest_tanimoto_search_fp_set_knearest_0(self):
+    def test_id_knearest_tanimoto_search_fp_set_knearest_0(self):
         reader = self._open(CHEBI_TARGETS)
-        hits = reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+        hits = reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    k = 0)
         self.assertEqual(hits, [])
 
-    def test_knearest_tanimoto_search_fp_knearest_threshold_range_error(self):
+    def test_id_knearest_tanimoto_search_fp_knearest_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive"):
-            reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+            reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                           threshold = 1.1)
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive"):
-            reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+            reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                           threshold = -0.00001)
 
-    def test_knearest_tanimoto_search_fp_knearest_k_range_error(self):
+    def test_id_knearest_tanimoto_search_fp_knearest_k_range_error(self):
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "k must be non-negative") as e:
-            reader.knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
+            reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                k = -1)
 
     #
     # K-nearest tanimoto search using an arena
     #
 
-    def test_knearest_tanimoto_arena_default(self):
+    def test_id_knearest_tanimoto_default(self):
         targets = self._open(CHEBI_TARGETS)
-        hits = targets.knearest_tanimoto_search_arena(QUERY_ARENA)
+        result = targets.id_knearest_tanimoto_search(QUERY_ARENA)
+        ids, hits = zip(*result)
         self.assertEqual(map(len, hits), [3, 3, 3, 3, 1, 3, 3, 3, 3, 3])
-        if hits[0][0][0] == 'CHEBI:17302':
-            self.assertEqual(hits[0], [('CHEBI:17302', 0.8571428571428571),
-                                        ('CHEBI:17034', 0.8571428571428571),
-                                        ('CHEBI:17539', 0.72222222222222221)])
+        first_hits = hits[0]
+        if first_hits[0][0] == 'CHEBI:17302':
+            self.assertEqual(first_hits, [('CHEBI:17302', 0.8571428571428571),
+                                          ('CHEBI:17034', 0.8571428571428571),
+                                          ('CHEBI:17539', 0.72222222222222221)])
         else:
-            self.assertEqual(hits[0], [('CHEBI:17034', 0.8571428571428571),
-                                        ('CHEBI:17302', 0.8571428571428571),
-                                        ('CHEBI:17539', 0.72222222222222221)])
+            self.assertEqual(first_hits, [('CHEBI:17034', 0.8571428571428571),
+                                          ('CHEBI:17302', 0.8571428571428571),
+                                          ('CHEBI:17539', 0.72222222222222221)])
 
-    def test_knearest_tanimoto_arena_set_default(self):
+    def test_id_knearest_tanimoto_set_default(self):
         targets = self._open(CHEBI_TARGETS)
-        hits = targets.knearest_tanimoto_search_arena(QUERY_ARENA, k=3, threshold=0.7)
+        result = list(targets.id_knearest_tanimoto_search(QUERY_ARENA, k=3, threshold=0.7))
+        ids, hits = zip(*result)
+        self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
         self.assertEqual(map(len, hits), [3, 3, 3, 3, 1, 3, 3, 3, 3, 3])
         self.assertEqual(hits[-1], [('CHEBI:16207', 1.0), ('CHEBI:15621', 0.8571428571428571),
                                      ('CHEBI:15882', 0.83333333333333337)])
 
 
-    def test_knearest_tanimoto_arena_set_threshold(self):
+    def test_id_knearest_tanimoto_set_threshold(self):
         targets = self._open(CHEBI_TARGETS)
-        hits = targets.knearest_tanimoto_search_arena(QUERY_ARENA, threshold=0.8)
+        result = targets.id_knearest_tanimoto_search(QUERY_ARENA, threshold=0.8)
+        ids, hits = zip(*result)
+        self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
         self.assertEqual(map(len, hits), [2, 3, 3, 3, 1, 1, 3, 3, 3, 3])
         self.assertEqual(hits[6], [('CHEBI:16834', 0.90909090909090906),
                                     ('CHEBI:17061', 0.875),
                                     ('CHEBI:16319', 0.84848484848484851)])
 
-
-
-    def test_knearest_tanimoto_search_arena_knearest_range_error(self):
+    def test_id_knearest_tanimoto_search_knearest_range_error(self):
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.knearest_tanimoto_search_arena(QUERY_ARENA, threshold = 1.1)
-                                          
+            for x in reader.id_knearest_tanimoto_search(QUERY_ARENA, threshold = 1.1):
+                raise AssertionError("What?!")
+            
         reader = self._open(CHEBI_TARGETS)
         with self.assertRaisesRegexp(ValueError, "threshold must between 0.0 and 1.0, inclusive") as e:
-            reader.knearest_tanimoto_search_arena(QUERY_ARENA, threshold = -0.00001)
-        
+            for x in reader.id_knearest_tanimoto_search(QUERY_ARENA, threshold = -0.00001):
+                raise AssertionError("What2?!")
         
     
 class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
@@ -583,20 +608,24 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
             self.assertEquals(subarena[0][1], fp)
             self.assertEquals(subarena.arena_ids[0], id)
 
-            result = subarena.threshold_tanimoto_search_arena(subarena)
-            self.assertEquals(len(result), 1)
-            self.assertEquals(result[0], [(id, 1.0)])
-            self.assertEquals(list(result), [[(id, 1.0)]])
+            result = list(subarena.id_threshold_tanimoto_search(subarena))
+            query_ids, hits = zip(*result)
+            self.assertEquals(len(hits), 1)
+            self.assertEquals(hits[0], [(id, 1.0)])
+            self.assertEquals(list(hits), [[(id, 1.0)]])
 
-            result = subarena.knearest_tanimoto_search_arena(subarena)
-            self.assertEquals(len(result), 1)
-            self.assertEquals(result[0], [(id, 1.0)])
-            self.assertEquals(list(result), [[(id, 1.0)]])
+            result = list(subarena.id_knearest_tanimoto_search(subarena))
+            query_ids, hits = zip(*result)
+            self.assertEquals(len(hits), 1)
+            self.assertEquals(hits[0], [(id, 1.0)])
+            self.assertEquals(list(hits), [[(id, 1.0)]])
 
-            result = subarena.count_tanimoto_hits_arena(subarena)
-            self.assertEquals(len(result), 1)
-            self.assertEquals(result[0], 1)
-            self.assertEquals(list(result), [1])
+            result = subarena.id_count_tanimoto_hits(subarena)
+            query_ids, counts = zip(*result)
+            self.assertEquals(len(counts), 1)
+            self.assertEquals(counts[0], 1)
+            self.assertEquals(list(counts), [1])
+        self.assertEquals(i, len(fps)-1)
 
 # Use this to verify the other implementations
 from chemfp.slow import SlowFingerprints

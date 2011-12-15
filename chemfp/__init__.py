@@ -24,7 +24,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-__version__ = "1.1a4"
+__version__ = "1.1b1"
 __version_info = (1, 1, 0)
 SOFTWARE = "chemfp/" + __version__
 
@@ -202,7 +202,7 @@ def load_fingerprints(reader, metadata=None, reorder=True, alignment=None):
 
 ##### High-level search interfaces
 
-def batch_count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
+def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     """Count the number of targets within 'threshold' of each query term
 
     For each query in 'queries', count the number of targets in 'targets'
@@ -213,7 +213,7 @@ def batch_count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
 
       queries = chemfp.open("queries.fps")
       targets = chemfp.load_fingerprints("targets.fps.gz")
-      for (query_id, count) in chemfp.batch_count_tanimoto_hits(queries, targets, threshold=0.9):
+      for (query_id, count) in chemfp.id_count_tanimoto_hits(queries, targets, threshold=0.9):
           print query_id, "has", count, "neighbors with at least 0.9 similarity"
 
     Internally, queries are processed in batches of size 'arena_size'.
@@ -236,6 +236,8 @@ def batch_count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     :returns:
        An iterator containing (query_id, score) pairs, one for each query
     """
+    return targets.id_count_tanimoto_hits(queries, threshold, arena_size)
+'''
     search = targets._search
     if arena_size == 1:
         for (query_id, query_fp) in queries:
@@ -248,9 +250,9 @@ def batch_count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
         results = search.count_tanimoto_hits(query_arena, targets, threshold)
         for item in zip(query_arena.ids, results):
             yield item
-    
+''' 
 
-def batch_threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
+def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
     """Find all targets within 'threshold' of each query term
 
     For each query in 'queries', find all the targets in 'targets' which
@@ -262,7 +264,7 @@ def batch_threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=
 
       queries = chemfp.open("queries.fps")
       targets = chemfp.load_fingerprints("targets.fps.gz")
-      for (query_id, hits) in chemfp.batch_threshold_tanimoto_search(queries, targets, threshold=0.8):
+      for (query_id, hits) in chemfp.id_threshold_tanimoto_search(queries, targets, threshold=0.8):
           print query_id, "has", len(hits), "neighbors with at least 0.8 similarity"
           non_identical = [target_id for (target_id, score) in hits if score != 1.0]
           print "  The non-identical hits are:", non_identical
@@ -288,6 +290,8 @@ def batch_threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=
       An iterator containing (query_id, hits) pairs, one for each query.
       'hits' contains a list of (target_id, score) pairs.
     """
+    return targets.id_threshold_tanimoto_search(queries, threshold, arena_size)
+'''
     if arena_size == 1:
         fp_search = targets._search.threshold_tanimoto_search_fp_return_ids
         for (query_id, query_fp) in queries:
@@ -302,8 +306,9 @@ def batch_threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=
         results = search(query_arena, targets, threshold)
         for item in zip(query_arena.ids, results):
             yield item
+'''
 
-def batch_knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
+def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
     """Find the 'k'-nearest targets within 'threshold' of each query term
 
     For each query in 'queries', find the 'k'-nearest of all the targets
@@ -322,7 +327,7 @@ def batch_knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_s
       targets = chemfp.load_fingerprints("pubchem_subset.fps")
       
       # Find the 3 nearest hits with a similarity of at least 0.8
-      for (query_id, hits) in chemfp.batch_knearest_tanimoto_search(queries, targets, k=3, threshold=0.8):
+      for (query_id, hits) in chemfp.id_knearest_tanimoto_search(queries, targets, k=3, threshold=0.8):
           print query_id, "has", len(hits), "neighbors with at least 0.8 similarity"
           if hits:
               target_id, score = hits[-1]
@@ -351,6 +356,8 @@ def batch_knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_s
       An iterator containing (query_id, hits) pairs, one for each query.
       'hits' contains a list of (target_id, score) pairs, sorted by score.
     """
+    return targets.id_knearest_tanimoto_search(queries, k, threshold, arena_size)
+'''
     if arena_size == 1:
         fp_search = target._search.knearest_tanimoto_search_fp_return_ids
         for (query_id, query_fp) in queries:
@@ -364,6 +371,7 @@ def batch_knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_s
         results = search(query_arena, targets, k, threshold)
         for item in zip(query_arena.ids, results):
             yield item
+'''
 
 def check_fp_problems(fp, metadata):
     "This interface is not documented and may change in the future"

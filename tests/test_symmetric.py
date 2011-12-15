@@ -4,7 +4,7 @@ import unittest2
 from cStringIO import StringIO
 
 import chemfp
-from chemfp import arena
+from chemfp import search
 
 from support import fullpath, PUBCHEM_SDF, PUBCHEM_SDF_GZ
 
@@ -22,10 +22,10 @@ FFFF\tF
 class TestCounts(unittest2.TestCase):
     def test_symmetric(self):
         # query[i] always matches target[i] so x[i] will be at least one
-        x = arena.count_tanimoto_hits_arena(fps, fps, 0.9)
+        x = search.count_tanimoto_hits(fps, fps, 0.9)
 
         # This only processes the upper-triangle, and not the diagonal
-        y = arena.count_tanimoto_hits_arena_symmetric(fps, 0.9)
+        y = search.count_tanimoto_hits_symmetric(fps, 0.9)
 
         self.assertEquals(len(x), len(y))
         for i in range(len(x)):
@@ -33,20 +33,20 @@ class TestCounts(unittest2.TestCase):
 
 
     def test_zeros(self):
-        y = arena.count_tanimoto_hits_arena_symmetric(zeros, 0.9)
+        y = search.count_tanimoto_hits_symmetric(zeros, 0.9)
         self.assertEquals(list(y), [0, 0, 0, 0, 1, 1])
-        y = arena.count_tanimoto_hits_arena_symmetric(zeros, 0.001)
+        y = search.count_tanimoto_hits_symmetric(zeros, 0.001)
         self.assertEquals(list(y), [0, 0, 1, 2, 2, 3])
         
 
 class TestThreshold(unittest2.TestCase):
     def test_symmetric(self):
         # query[i] always matches target[i] so x[i] will always contain i
-        x = arena.threshold_tanimoto_search_arena(fps, fps, 0.9)
+        x = search.threshold_tanimoto_search(fps, fps, 0.9)
         x = list(x.iter_hits())
 
         # This only processes the upper-triangle, and not the diagonal
-        y = arena.threshold_tanimoto_search_arena_symmetric(fps, 0.9, upper_triangle_only=True)
+        y = search.threshold_tanimoto_search_symmetric(fps, 0.9, include_lower_triangle=False)
 
 
         rows = list(y.iter_hits())
@@ -71,11 +71,10 @@ class TestThreshold(unittest2.TestCase):
 
     def test_lower_triangle(self):
         # query[i] always matches target[i] so x[i] will always contain i
-        x = arena.threshold_tanimoto_search_arena(fps, fps, 0.9)
+        x = search.threshold_tanimoto_search(fps, fps, 0.9)
 
         # This only processes the upper-triangle, and not the diagonal
-        y = arena.threshold_tanimoto_search_arena_symmetric(fps, 0.9)
-
+        y = search.threshold_tanimoto_search_symmetric(fps, 0.9)
 
         for i, (x_row, y_row) in enumerate(zip(x.iter_hits(), y.iter_hits())):
             y_row.append((i, 1.0))
@@ -89,10 +88,10 @@ class TestThreshold(unittest2.TestCase):
 class TestKNearest(unittest2.TestCase):
     def test_symmetric(self):
         # query[i] always matches target[i] so x[i] will always contain element[i]
-        x = arena.knearest_tanimoto_search_arena(fps, fps, 31, 0.9)
+        x = search.knearest_tanimoto_search(fps, fps, 31, 0.9)
 
         # This only processes the upper-triangle, and not the diagonal
-        y = arena.knearest_tanimoto_search_arena_symmetric(fps, 30, 0.9)
+        y = search.knearest_tanimoto_search_symmetric(fps, 30, 0.9)
 
         for i, (x_row, y_row) in enumerate(zip(x.iter_hits(), y.iter_hits())):
             y_row.append((i, 1.0))
@@ -102,10 +101,10 @@ class TestKNearest(unittest2.TestCase):
 
     def test_symmetric2(self):
         # query[i] always matches target[i] so x[i] will always contain element[i]
-        x = arena.knearest_tanimoto_search_arena(fps, fps, 81, 0.9)
+        x = search.knearest_tanimoto_search(fps, fps, 81, 0.9)
 
         # This only processes the upper-triangle, and not the diagonal
-        y = arena.knearest_tanimoto_search_arena_symmetric(fps, 80, 0.9)
+        y = search.knearest_tanimoto_search_symmetric(fps, 80, 0.9)
 
         for i, (x_row, y_row) in enumerate(zip(x.iter_hits(), y.iter_hits())):
             y_row.append((i, 1.0))

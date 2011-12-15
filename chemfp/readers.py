@@ -164,31 +164,31 @@ class FPSReader(object):
             first_time = False
             yield query_arena
         
-    def batch_count_tanimoto_hits(self, queries, threshold=0.7, arena_size=100):
+    def id_count_tanimoto_hits(self, queries, threshold=0.7, arena_size=100):
         for query_arena in self._iter_batches(queries, arena_size):
             results = fps_search.count_tanimoto_hits_arena(query_arena, self, threshold)
+            for item in zip(query_arena.arena_ids, results):
+                yield item
+
+    def id_threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
+        self._check_at_start()
+        return fps_search.id_threshold_tanimoto_search_fp(query_fp, self, threshold)
+
+    def id_threshold_tanimoto_search(self, queries, threshold=0.7, arena_size=100):
+        for query_arena in self._iter_batches(queries, arena_size):
+            results = fps_search.id_threshold_tanimoto_search_arena(query_arena, self,
+                                                                    threshold)
             for item in results:
                 yield item
 
-    def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
+    def id_knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
         self._check_at_start()
-        return fps_search.threshold_tanimoto_search_fp_with_ids(query_fp, self, threshold)
+        return fps_search.id_knearest_tanimoto_search_fp(query_fp, self, k, threshold)
 
-    def batch_threshold_tanimoto_search_arena(self, queries, threshold=0.7, arena_size=100):
+    def id_knearest_tanimoto_search(self, queries, k=3, threshold=0.7, arena_size=100):
         for query_arena in self._iter_batches(queries, arena_size):
-            results = fps_search.threshold_tanimoto_search_arena_with_ids(query_arena, self,
-                                                                          threshold)
-            for item in results:
-                yield item
-
-    def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
-        self._check_at_start()
-        return fps_search.knearest_tanimoto_search_fp_with_ids(query_fp, self, k, threshold)
-
-    def batch_knearest_tanimoto_search(self, queries, k=3, threshold=0.7, arena_size=100):
-        for query_arena in self._iter_batches(queries, arena_size):
-            results = fps_search.knearest_tanimoto_search_arena_with_ids(query_arena, self,
-                                                                         threshold)
+            results = fps_search.id_knearest_tanimoto_search(query_arena, self,
+                                                             k, threshold)
             for item in results:
                 yield item
 

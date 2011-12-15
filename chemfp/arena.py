@@ -158,8 +158,8 @@ class FingerprintArena(FingerprintReader):
         start = self.start
         for i in xrange(0, len(self), arena_size):
             end = start+arena_size
-            if end > len(self):
-                end = len(self)
+            if end > self.end:
+                end = self.end
             yield FingerprintArena(self.metadata, self.alignment,
                                    self.start_padding, self.end_padding,
                                    self.storage_size, self.arena,
@@ -182,7 +182,7 @@ class FingerprintArena(FingerprintReader):
         """
         return search.count_tanimoto_hits_fp(query_fp, self, threshold)
 
-    def batch_count_tanimoto_hits(self, queries, threshold=0.7, arena_size=100):
+    def id_count_tanimoto_hits(self, queries, threshold=0.7, arena_size=100):
         """Count the fingerprints which are similar enough to each query fingerprint
 
         XXX
@@ -209,7 +209,7 @@ class FingerprintArena(FingerprintReader):
             for (query_id, count) in zip(query_arena.arena_ids, result):
                 yield query_id, count
 
-    def threshold_tanimoto_search_fp_return_ids(self, query_fp, threshold=0.7):
+    def id_threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
         """Find the fingerprints which are similar enough to the query fingerprint
 
         XXX
@@ -228,8 +228,7 @@ class FingerprintArena(FingerprintReader):
         result = search.threshold_tanimoto_search_fp(query_fp, self, threshold)
         return [(self.ids[index], score) for (index, score) in result]
 
-    def batch_threshold_tanimoto_search_return_ids(self, queries, threshold=0.7,
-                                                   arena_size=100):
+    def id_threshold_tanimoto_search(self, queries, threshold=0.7, arena_size=100):
         """Find the fingerprints which are similar to each of the query fingerprints
 
         XXX
@@ -249,7 +248,7 @@ class FingerprintArena(FingerprintReader):
             for (query_id, hits) in zip(query_arena.arena_ids, result.iter_ids_and_scores()):
                 yield query_id, hits
 
-    def knearest_tanimoto_search_fp_return_ids(self, query_fp, k=3, threshold=0.7):
+    def id_knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
         """Find the k-nearest fingerprints which are similar to the query fingerprint
 
         XXX
@@ -271,7 +270,7 @@ class FingerprintArena(FingerprintReader):
         result = search.knearest_tanimoto_search_fp(query_fp, self, k, threshold)
         return [(self.ids[index], score) for (index, score) in result]
 
-    def batch_knearest_tanimoto_search_return_ids(self, query_arena, k=3, threshold=0.7):
+    def id_knearest_tanimoto_search(self, queries, k=3, threshold=0.7, arena_size=100):
         """Find the k-nearest fingerprint which are similar to each of the query fingerprints
 
         XXX
@@ -292,7 +291,7 @@ class FingerprintArena(FingerprintReader):
         :returns: SearchResult
         """
         for query_arena in queries.iter_arenas(arena_size):
-            result = search.knearest_tanimoto_search(query_arena, self, threshold)
+            result = search.knearest_tanimoto_search(query_arena, self, k, threshold)
             for (query_id, hits) in zip(query_arena.arena_ids, result.iter_ids_and_scores()):
                 yield query_id, hits
 

@@ -93,7 +93,7 @@ class TanimotoCell(ctypes.Structure):
                 ("id_end", ctypes.c_int)]
 
 
-def threshold_tanimoto_search_fp_with_ids(query_fp, target_reader, threshold):
+def id_threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
     hits = []
 
     fp_size = len(query_fp)
@@ -123,7 +123,11 @@ def threshold_tanimoto_search_fp_with_ids(query_fp, target_reader, threshold):
                 break
     return hits
 
-def threshold_tanimoto_search_arena_with_ids(query_arena, target_reader, threshold):
+def id_threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
+    return zip(query_arena.arena_ids,
+               threshold_tanimoto_search_arena(query_arena, target_reader, threshold))
+
+def threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
     require_matching_sizes(query_arena, target_reader)
     all_hits = [[] for i in xrange(len(query_arena))]
     if not all_hits:
@@ -189,11 +193,15 @@ def _make_knearest_search(num_queries, k):
     return KNearestSearch()
 
 
-def knearest_tanimoto_search_fp_with_ids(query_fp, target_reader, k, threshold):
+def id_knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
     query_arena = _fp_to_arena(query_fp, target_reader.metadata)
-    return knearest_tanimoto_search_all(query_arena, target_reader, k, threshold)[0]
+    return knearest_tanimoto_search(query_arena, target_reader, k, threshold)[0]
 
-def knearest_tanimoto_search_arena_with_ids(query_arena, target_reader, k, threshold):
+def id_knearest_tanimoto_search(query_arena, target_reader, k, threshold):
+    return zip(query_arena.arena_ids,
+               knearest_tanimoto_search(query_arena, target_reader, k, threshold))
+
+def knearest_tanimoto_search(query_arena, target_reader, k, threshold):
     require_matching_sizes(query_arena, target_reader)
     if k < 0:
         raise ValueError("k must be non-negative")
