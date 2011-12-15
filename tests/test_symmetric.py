@@ -40,7 +40,7 @@ class TestCounts(unittest2.TestCase):
         
 
 class TestThreshold(unittest2.TestCase):
-    def test_symmetric(self):
+    def test_upper_only(self):
         # query[i] always matches target[i] so x[i] will always contain i
         x = search.threshold_tanimoto_search(fps, fps, 0.9)
         x = list(x.iter_hits())
@@ -69,7 +69,7 @@ class TestThreshold(unittest2.TestCase):
 
             self.assertEquals(row, expected_row, rowno)
 
-    def test_lower_triangle(self):
+    def test_upper_and_lower(self):
         # query[i] always matches target[i] so x[i] will always contain i
         x = search.threshold_tanimoto_search(fps, fps, 0.9)
 
