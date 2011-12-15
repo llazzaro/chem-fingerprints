@@ -32,10 +32,7 @@ import os
 import itertools
 
 __all__ = ["open", "load_fingerprints", "read_structure_fingerprints",
-           "count_tanimoto_hits", "threshold_tanimoto_search",
-           "knearest_tanimoto_search", "Metadata", "FingerprintIterator",
-           "Fingerprints"]
-           
+           "Metadata", "FingerprintIterator", "Fingerprints"]
            
 
 class ChemFPError(Exception):
@@ -202,7 +199,7 @@ def load_fingerprints(reader, metadata=None, reorder=True, alignment=None):
 
 ##### High-level search interfaces
 
-def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
+def Xcount_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     """Count the number of targets within 'threshold' of each query term
 
     For each query in 'queries', count the number of targets in 'targets'
@@ -252,7 +249,7 @@ def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
             yield item
 ''' 
 
-def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
+def Xthreshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
     """Find all targets within 'threshold' of each query term
 
     For each query in 'queries', find all the targets in 'targets' which
@@ -308,7 +305,7 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
             yield item
 '''
 
-def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
+def Xknearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
     """Find the 'k'-nearest targets within 'threshold' of each query term
 
     For each query in 'queries', find the 'k'-nearest of all the targets

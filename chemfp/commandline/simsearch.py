@@ -26,14 +26,13 @@ def write_simsearch_header(outfile, d):
 
 def report_threshold(outfile, float_formatter, query_arenas, targets, threshold):
     def search_function(query_arena):
-        return chemfp.threshold_tanimoto_search(query_arena, targets,
-                                                threshold=threshold)
+        return targets.id_threshold_tanimoto_search(query_arena, threshold=threshold)
     _report_search(outfile, float_formatter, query_arenas, search_function)
 
 def report_knearest(outfile, float_formatter, query_arenas, targets, k, threshold):
     def search_function(query_arena):
-        return chemfp.knearest_tanimoto_search(query_arena, targets,
-                                               k=k, threshold=threshold)
+        return targets.id_knearest_tanimoto_search(query_arena, k=k, threshold=threshold)
+                                               
     _report_search(outfile, float_formatter, query_arenas, search_function)
 
 def _report_search(outfile, float_formatter, query_arenas, search_function):
@@ -49,7 +48,7 @@ def _report_search(outfile, float_formatter, query_arenas, search_function):
 
 def report_counts(outfile, query_arenas, targets, threshold):
     for query_arena in query_arenas:
-        results = chemfp.count_tanimoto_hits(query_arena, targets, threshold)
+        results = targets.id_count_tanimoto_hits(query_arena, threshold)
         for query_id, hit_count in results:
             outfile.write("%d\t%s\n" % (hit_count, query_id))
         
