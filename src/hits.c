@@ -25,8 +25,8 @@ int chemfp_get_num_hits(chemfp_threshold_result *result) {
   return result->num_hits;
 }
 
-int _chemfp_add_hit(chemfp_threshold_result *result,
-                    int target_index, double score) {
+int chemfp_add_hit(chemfp_threshold_result *result,
+                   int target_index, double score) {
   int num_hits = result->num_hits;
   int num_allocated = result->num_allocated;
   int *indices, *old_indices;
@@ -100,7 +100,7 @@ int chemfp_fill_lower_triangle(int n, chemfp_threshold_result *results) {
   retval = CHEMFP_OK;
   for (i=0; i<n; i++) {
     for (j=0; j<sizes[i]; j++) {
-      if (!_chemfp_add_hit(results+results[i].indices[j], i, results[i].scores[j])) {
+      if (!chemfp_add_hit(results+results[i].indices[j], i, results[i].scores[j])) {
         retval = CHEMFP_NO_MEM;
         goto done;
       }

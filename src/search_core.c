@@ -11,12 +11,12 @@
 My solution is to compile the core code twice, one for each path. The
 RENAME macro rewrites
 
-   RESULT RENAME(chemfp_count_tanimoto_arena)
+   int RENAME(chemfp_count_tanimoto_arena)
 
 to one of:
 
- static int _chemfp_count_tanimoto_arena_single -- single-threaded, compiler supports OpenMP
- static int _chemfp_count_tanimoto_arena_openmp -- multiple OpenMP threads
+ static int chemfp_count_tanimoto_arena_single -- single-threaded, compiler supports OpenMP
+ static int chemfp_count_tanimoto_arena_openmp -- multiple OpenMP threads
  int chemfp_count_tanimoto_arena -- single-threaded, compiler does not support OpenMP
 
 depending on the circumstances. In a normal build, where OpenMP is
@@ -25,7 +25,7 @@ available, then this file will be #include'd twice.
 */
 
 /* count code */
-RESULT RENAME(chemfp_count_tanimoto_arena)(
+int RENAME(chemfp_count_tanimoto_arena)(
         /* Count all matches within the given threshold */
         double threshold,
 
@@ -171,7 +171,7 @@ RESULT RENAME(chemfp_count_tanimoto_arena)(
   return CHEMFP_OK;
 }
 
-RESULT RENAME(chemfp_threshold_tanimoto_arena)(
+int RENAME(chemfp_threshold_tanimoto_arena)(
         /* Within the given threshold */
         double threshold,
 
@@ -238,7 +238,7 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena)(
 #if USE_OPENMP == 1
           #pragma omp critical (add_hit_threshold)
 #endif
-          if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
+          if (!chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
             add_hit_error = 1;
           }
         }
@@ -279,7 +279,7 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena)(
         #pragma omp critical (add_hit_threshold)
 #endif
         for (target_index = target_start; target_index < target_end; target_index++) {
-          if (!_chemfp_add_hit(results+(query_index-query_start), target_index, 0.0)) {
+          if (!chemfp_add_hit(results+(query_index-query_start), target_index, 0.0)) {
             add_hit_error = 1;
           }
         }
@@ -325,7 +325,7 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena)(
 #if USE_OPENMP == 1
           #pragma omp critical (add_hit_threshold)
 #endif
-          if (!_chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
+          if (!chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
             add_hit_error = 1;
           }
         }
@@ -380,7 +380,7 @@ RENAME(knearest_tanimoto_arena_no_popcounts)(
          target_index++, target_fp += target_storage_size) {
       score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
       if (score >= query_threshold) {
-        _chemfp_add_hit(result, target_index, score);
+        chemfp_add_hit(result, target_index, score);
         if (result->num_hits == k) {
           chemfp_heapq_heapify(k, result, (chemfp_heapq_lt) double_score_lt,
                                (chemfp_heapq_swap) double_score_swap);
@@ -420,7 +420,7 @@ RENAME(knearest_tanimoto_arena_no_popcounts)(
 }
 
 
-RESULT RENAME(chemfp_knearest_tanimoto_arena)(
+int RENAME(chemfp_knearest_tanimoto_arena)(
         /* Find the 'k' nearest items */
         int k,
         /* Within the given threshold */
@@ -532,7 +532,7 @@ RESULT RENAME(chemfp_knearest_tanimoto_arena)(
 
           /* The heap isn't full; only check if we're at or above the query threshold */
           if (score >= query_threshold) {
-            _chemfp_add_hit(result, target_index, score);
+            chemfp_add_hit(result, target_index, score);
             if (result->num_hits == k) {
               chemfp_heapq_heapify(k, result,  (chemfp_heapq_lt) double_score_lt,
                                    (chemfp_heapq_swap) double_score_swap);
@@ -598,7 +598,7 @@ RESULT RENAME(chemfp_knearest_tanimoto_arena)(
 /* TODO: implement the k-nearest variant. It's harder because a k-nearest
    search, combined with the Swamidass and Baldi search limits, is not reflexive. */
 
-RESULT RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
+int RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
         /* Count all matches within the given threshold */
         double threshold,
 
@@ -725,7 +725,7 @@ RESULT RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
   return CHEMFP_OK;
 }
 
-RESULT RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
+int RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
         /* Within the given threshold */
         double threshold,
 
@@ -807,7 +807,7 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
         /* Only populate the upper triangle */
         target_index = MAX(query_index+1, target_start);
         for (;target_index < target_end; target_index++) {
-          if (!_chemfp_add_hit(results+query_index, target_index, 0.0)) {
+          if (!chemfp_add_hit(results+query_index, target_index, 0.0)) {
             add_hit_error = 1;
           }
         }
@@ -846,7 +846,7 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
         if (denominator * intersect_popcount  >=
             numerator * (popcount_sum - intersect_popcount)) {
           /* Add to the upper triangle */
-          if (!_chemfp_add_hit(results+query_index, target_index, score)) {
+          if (!chemfp_add_hit(results+query_index, target_index, score)) {
             add_hit_error = 1;
           }
         }
@@ -861,7 +861,7 @@ RESULT RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
 
 /* I couldn't figure out a way to take advantage of symmetry */
 /* This is the same as the NxM algorithm except that it excludes self-matches */
-RESULT RENAME(chemfp_knearest_tanimoto_arena_symmetric)(
+int RENAME(chemfp_knearest_tanimoto_arena_symmetric)(
         /* Find the 'k' nearest items */
         int k,
         /* Within the given threshold */
@@ -965,7 +965,7 @@ RESULT RENAME(chemfp_knearest_tanimoto_arena_symmetric)(
             if (query_index == target_index) {
               continue; /* Don't match self */
             }
-            _chemfp_add_hit(result, target_index, score);
+            chemfp_add_hit(result, target_index, score);
             if (result->num_hits == k) {
               chemfp_heapq_heapify(k, result,  (chemfp_heapq_lt) double_score_lt,
                                    (chemfp_heapq_swap) double_score_swap);

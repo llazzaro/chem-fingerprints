@@ -187,19 +187,17 @@ void chemfp_knearest_results_finalize(chemfp_threshold_result *results_start,
 
 #if defined(_OPENMP)
 
-#define RESULT static int
-#define RENAME(name) _ ## name ## _single
+#define RENAME(name) name ## _single
 #define USE_OPENMP 0
 #include "search_core.c"
 #undef RENAME
 #undef USE_OPENMP
 
-#define RENAME(name) _ ## name ## _openmp
+#define RENAME(name) name ## _openmp
 #define USE_OPENMP 1
 #include "search_core.c"
 #undef RENAME
 #undef USE_OPENMP
-#undef RESULT
 
 /* Dispatch based on the number of threads in use */
 
@@ -225,13 +223,13 @@ int chemfp_count_tanimoto_arena(
         int *result_counts
                                    ) {
   if (chemfp_get_num_threads() <= 1)  {
-    return _chemfp_count_tanimoto_arena_single(
+    return chemfp_count_tanimoto_arena_single(
                            threshold, num_bits,
                            query_storage_size, query_arena, query_start, query_end,
                            target_storage_size, target_arena, target_start, target_end,
                            target_popcount_indices, result_counts);
   } else {
-    return _chemfp_count_tanimoto_arena_openmp(
+    return chemfp_count_tanimoto_arena_openmp(
                            threshold, num_bits,
                            query_storage_size, query_arena, query_start, query_end,
                            target_storage_size, target_arena, target_start, target_end,
@@ -262,13 +260,13 @@ int chemfp_threshold_tanimoto_arena(
         chemfp_threshold_result *results) {
 
   if (chemfp_get_num_threads() <= 1) {
-    return _chemfp_threshold_tanimoto_arena_single(
+    return chemfp_threshold_tanimoto_arena_single(
                            threshold, num_bits,
                            query_storage_size, query_arena, query_start, query_end,
                            target_storage_size, target_arena, target_start, target_end,
                            target_popcount_indices, results);
   } else {
-    return _chemfp_threshold_tanimoto_arena_openmp(
+    return chemfp_threshold_tanimoto_arena_openmp(
                            threshold, num_bits,
                            query_storage_size, query_arena, query_start, query_end,
                            target_storage_size, target_arena, target_start, target_end,
@@ -301,13 +299,13 @@ int chemfp_knearest_tanimoto_arena(
         chemfp_threshold_result *results) {
 
   if (chemfp_get_num_threads() <= 1) {
-    return _chemfp_knearest_tanimoto_arena_single(
+    return chemfp_knearest_tanimoto_arena_single(
                            k, threshold, num_bits,
                            query_storage_size, query_arena, query_start, query_end,
                            target_storage_size, target_arena, target_start, target_end,
                            target_popcount_indices, results);
   } else {
-    return _chemfp_knearest_tanimoto_arena_openmp(
+    return chemfp_knearest_tanimoto_arena_openmp(
                            k, threshold, num_bits,
                            query_storage_size, query_arena, query_start, query_end,
                            target_storage_size, target_arena, target_start, target_end,
@@ -338,12 +336,12 @@ int chemfp_count_tanimoto_hits_arena_symmetric(
         int *result_counts
                                                ) {
   if (chemfp_get_num_threads() <= 1) {
-    return _chemfp_count_tanimoto_hits_arena_symmetric_single(
+    return chemfp_count_tanimoto_hits_arena_symmetric_single(
                            threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
                            popcount_indices, result_counts);
   } else {
-    return _chemfp_count_tanimoto_hits_arena_symmetric_openmp(
+    return chemfp_count_tanimoto_hits_arena_symmetric_openmp(
                            threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
                            popcount_indices, result_counts);
@@ -372,12 +370,12 @@ int chemfp_threshold_tanimoto_arena_symmetric(
         /* NOTE: This must have enough space for all of the fingerprints! */
         chemfp_threshold_result *results) {
   if (chemfp_get_num_threads() <= 1) {
-    return _chemfp_threshold_tanimoto_arena_symmetric_single(
+    return chemfp_threshold_tanimoto_arena_symmetric_single(
                            threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
                            popcount_indices, results);
   } else {
-    return _chemfp_threshold_tanimoto_arena_symmetric_openmp(
+    return chemfp_threshold_tanimoto_arena_symmetric_openmp(
                            threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
                            popcount_indices, results);
@@ -407,12 +405,12 @@ int chemfp_knearest_tanimoto_arena_symmetric(
         /* Results go into these arrays  */
         chemfp_threshold_result *results) {
   if (chemfp_get_num_threads() <= 1) {
-    return _chemfp_knearest_tanimoto_arena_symmetric_single(
+    return chemfp_knearest_tanimoto_arena_symmetric_single(
                            k, threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
                            popcount_indices, results);
   } else {
-    return _chemfp_knearest_tanimoto_arena_symmetric_openmp(
+    return chemfp_knearest_tanimoto_arena_symmetric_openmp(
                            k, threshold, num_bits, storage_size, arena,
                            query_start, query_end, target_start, target_end,
                            popcount_indices, results);
@@ -425,13 +423,11 @@ int chemfp_knearest_tanimoto_arena_symmetric(
 /* Not compiling for OpenMP; don't need the run-time switch */
 /* Instead, just rename the function */
 
-#define RESULT int
 #define RENAME(name) name
 #define USE_OPENMP 0
 #include "search_core.c"
 #undef USE_OPENMP
 #undef RENAME
-#undef RESULT
 
 #endif
 
