@@ -191,7 +191,7 @@ int RENAME(chemfp_threshold_tanimoto_arena)(
         int *target_popcount_indices,
 
         /* Results go here */
-        chemfp_threshold_result *results) {
+        chemfp_search_result *results) {
 
   int query_index, target_index;
   const unsigned char *query_fp, *target_fp;
@@ -359,13 +359,13 @@ RENAME(knearest_tanimoto_arena_no_popcounts)(
         int target_start, int target_end,
 
         /* Results go into these arrays  */
-        chemfp_threshold_result *results
+        chemfp_search_result *results
                                    ) {
   int query_index, target_index;
   int fp_size = (num_bits+7)/8;
   const unsigned char *query_fp, *target_fp;
   double query_threshold, score;
-  chemfp_threshold_result *result;
+  chemfp_search_result *result;
 
   for (query_index = 0; query_index < (query_end-query_start); query_index++) {
     query_fp = query_arena + (query_start+query_index) * query_storage_size;
@@ -441,7 +441,7 @@ int RENAME(chemfp_knearest_tanimoto_arena)(
         int *target_popcount_indices,
 
         /* Results go into these arrays  */
-        chemfp_threshold_result *results
+        chemfp_search_result *results
                                    ) {
 
   int fp_size;
@@ -451,7 +451,7 @@ int RENAME(chemfp_knearest_tanimoto_arena)(
   int query_index, target_index;
   int start, end;
   PopcountSearchOrder popcount_order;
-  chemfp_threshold_result *result;
+  chemfp_search_result *result;
   
   chemfp_popcount_f calc_popcount;
   chemfp_intersect_popcount_f calc_intersect_popcount;
@@ -745,7 +745,7 @@ int RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
 
         /* Results go here */
         /* NOTE: This must have enough space for all of the fingerprints! */
-        chemfp_threshold_result *results) {
+        chemfp_search_result *results) {
 
   int fp_size = (num_bits+7) / 8;
   int query_index, target_index;
@@ -882,7 +882,7 @@ int RENAME(chemfp_knearest_tanimoto_arena_symmetric)(
         int *popcount_indices,
 
         /* Results go into these arrays  */
-        chemfp_threshold_result *results
+        chemfp_search_result *results
                                    ) {
 
   int fp_size;
@@ -892,7 +892,7 @@ int RENAME(chemfp_knearest_tanimoto_arena_symmetric)(
   int query_index, target_index;
   int start, end;
   PopcountSearchOrder popcount_order;
-  chemfp_threshold_result *result;
+  chemfp_search_result *result;
   
   chemfp_popcount_f calc_popcount;
   chemfp_intersect_popcount_f calc_intersect_popcount;
