@@ -151,7 +151,7 @@ check_bounds(PopcountSearchOrder *popcount_order,
 
 /**** Support for the k-nearest code ****/
 
-static int double_score_lt(chemfp_threshold_result *result, int i, int j) {
+static int double_score_lt(chemfp_search_result *result, int i, int j) {
   if (result->scores[i] < result->scores[j])
     return 1;
   if (result->scores[i] > result->scores[j])
@@ -159,7 +159,7 @@ static int double_score_lt(chemfp_threshold_result *result, int i, int j) {
   /* Sort in descending order by index. (XXX important or overkill?) */
   return (result->indices[i] >= result->indices[j]);
 }
-static void double_score_swap(chemfp_threshold_result *result, int i, int j) {
+static void double_score_swap(chemfp_search_result *result, int i, int j) {
   int tmp_index = result->indices[i];
   double tmp_score = result->scores[i];
   result->indices[i] = result->indices[j];
@@ -169,9 +169,9 @@ static void double_score_swap(chemfp_threshold_result *result, int i, int j) {
 }
 
 
-void chemfp_knearest_results_finalize(chemfp_threshold_result *results_start,
-                                      chemfp_threshold_result *results_end) {
-  chemfp_threshold_result *result;
+void chemfp_knearest_results_finalize(chemfp_search_result *results_start,
+                                      chemfp_search_result *results_end) {
+  chemfp_search_result *result;
   for (result = results_start; result < results_end; result++) {
     /* Sort the elements */
     chemfp_heapq_heapsort(result->num_hits, result, (chemfp_heapq_lt) double_score_lt,
@@ -257,7 +257,7 @@ int chemfp_threshold_tanimoto_arena(
         int *target_popcount_indices,
 
         /* Results go here */
-        chemfp_threshold_result *results) {
+        chemfp_search_result *results) {
 
   if (chemfp_get_num_threads() <= 1) {
     return chemfp_threshold_tanimoto_arena_single(
@@ -296,7 +296,7 @@ int chemfp_knearest_tanimoto_arena(
         int *target_popcount_indices,
 
         /* Results go here */
-        chemfp_threshold_result *results) {
+        chemfp_search_result *results) {
 
   if (chemfp_get_num_threads() <= 1) {
     return chemfp_knearest_tanimoto_arena_single(
@@ -368,7 +368,7 @@ int chemfp_threshold_tanimoto_arena_symmetric(
 
         /* Results go here */
         /* NOTE: This must have enough space for all of the fingerprints! */
-        chemfp_threshold_result *results) {
+        chemfp_search_result *results) {
   if (chemfp_get_num_threads() <= 1) {
     return chemfp_threshold_tanimoto_arena_symmetric_single(
                            threshold, num_bits, storage_size, arena,
@@ -403,7 +403,7 @@ int chemfp_knearest_tanimoto_arena_symmetric(
         int *popcount_indices,
 
         /* Results go into these arrays  */
-        chemfp_threshold_result *results) {
+        chemfp_search_result *results) {
   if (chemfp_get_num_threads() <= 1) {
     return chemfp_knearest_tanimoto_arena_symmetric_single(
                            k, threshold, num_bits, storage_size, arena,
