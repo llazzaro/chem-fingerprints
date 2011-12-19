@@ -61,7 +61,7 @@ static uint32_t POPCNT32(uint32_t x) {
  * @warning  Use (get_cpuid_flags() & bit_POPCNT) to test if
  *           the CPU supports the POPCNT instruction.
  */
-int _chemfp_popcount_popcnt(int size, const uint64_t *fp) {
+int chemfp_popcount_popcnt(int size, const uint64_t *fp) {
   int bit_count = 0;
   int i;
 #if defined(_WIN64) || defined(__x86_64__)
@@ -87,7 +87,7 @@ int _chemfp_popcount_popcnt(int size, const uint64_t *fp) {
  * @warning  Use (get_cpuid_flags() & bit_POPCNT) to test if
  *           the CPU supports the POPCNT instruction.
  */
-int _chemfp_intersect_popcount_popcnt(int size, const uint64_t *fp1, const uint64_t *fp2) {
+int chemfp_intersect_popcount_popcnt(int size, const uint64_t *fp1, const uint64_t *fp2) {
   int bit_count = 0;
   int i;
 #if defined(_WIN64) || defined(__x86_64__)

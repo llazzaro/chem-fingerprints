@@ -46,27 +46,27 @@ typedef struct {
 } chemfp_alignment_type;
 
 
-extern chemfp_alignment_type _chemfp_alignments[];
+extern chemfp_alignment_type chemfp_alignments[];
 
-int _chemfp_popcount_lut8_1(int n, const unsigned char *fp);
-int _chemfp_intersect_popcount_lut8_1(int n, const unsigned char *fp1, const unsigned char *fp2);
+int chemfp_popcount_lut8_1(int n, const unsigned char *fp);
+int chemfp_intersect_popcount_lut8_1(int n, const unsigned char *fp1, const unsigned char *fp2);
 
-int _chemfp_popcount_lut8_4(int n, uint32_t *fp);
-int _chemfp_intersect_popcount_lut8_4(int n, uint32_t *fp1, uint32_t *fp2);
+int chemfp_popcount_lut8_4(int n, uint32_t *fp);
+int chemfp_intersect_popcount_lut8_4(int n, uint32_t *fp1, uint32_t *fp2);
 
-int _chemfp_popcount_lut16_4(int n, uint32_t *fp);
-int _chemfp_intersect_popcount_lut16_4(int n, uint32_t *fp1, uint32_t *fp2);
+int chemfp_popcount_lut16_4(int n, uint32_t *fp);
+int chemfp_intersect_popcount_lut16_4(int n, uint32_t *fp1, uint32_t *fp2);
 
-int _chemfp_popcount_gillies(int n, uint64_t *fp);
-int _chemfp_intersect_popcount_gillies(int n, uint64_t *fp1, uint64_t *fp2);
+int chemfp_popcount_gillies(int n, uint64_t *fp);
+int chemfp_intersect_popcount_gillies(int n, uint64_t *fp1, uint64_t *fp2);
 
-int _chemfp_popcount_lauradoux(int size, const uint64_t *fp);
-int _chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const uint64_t *fp2);
+int chemfp_popcount_lauradoux(int size, const uint64_t *fp);
+int chemfp_intersect_popcount_lauradoux(int size, const uint64_t *fp1, const uint64_t *fp2);
 
-int _chemfp_popcount_popcnt(int size, const uint64_t *fp);
-int _chemfp_intersect_popcount_popcnt(int size, const uint64_t *fp1, const uint64_t *fp2);
+int chemfp_popcount_popcnt(int size, const uint64_t *fp);
+int chemfp_intersect_popcount_popcnt(int size, const uint64_t *fp1, const uint64_t *fp2);
 
-int _chemfp_popcount_SSSE3(int, const unsigned*);
-int _chemfp_intersect_popcount_SSSE3(int, const unsigned*, const unsigned*);
-int _chemfp_has_ssse3(void);
+int chemfp_popcount_SSSE3(int, const unsigned*);
+int chemfp_intersect_popcount_SSSE3(int, const unsigned*, const unsigned*);
+int chemfp_has_ssse3(void);
 #endif

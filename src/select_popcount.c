@@ -14,31 +14,31 @@ timeit(chemfp_popcount_f popcount, int size, int repeat);
 static void
 verify_methods(void);
 
-static int _chemfp_report_select_popcount = 0;
-static chemfp_method_type *_chemfp_popcount_method_p = NULL;
+static int chemfp_report_select_popcount = 0;
+static chemfp_method_type *chemfp_popcount_method_p = NULL;
 
-static int _chemfp_report_select_intersect_popcount = 0;
-static chemfp_method_type *_chemfp_intersect_popcount_method_p = NULL;
+static int chemfp_report_select_intersect_popcount = 0;
+static chemfp_method_type *chemfp_intersect_popcount_method_p = NULL;
 
-int _chemfp_get_option_report_popcount(void) {
-  return _chemfp_report_select_popcount;
+int chemfp_get_option_report_popcount(void) {
+  return chemfp_report_select_popcount;
 }
-int _chemfp_set_option_report_popcount(int value) {
+int chemfp_set_option_report_popcount(int value) {
   if (value == 0 || value == 1) {
-    _chemfp_report_select_popcount = value;
-    _chemfp_popcount_method_p = NULL;
+    chemfp_report_select_popcount = value;
+    chemfp_popcount_method_p = NULL;
     return CHEMFP_OK;
   }
   return CHEMFP_BAD_ARG;
 }
 
-int _chemfp_get_option_report_intersect_popcount(void) {
-  return _chemfp_report_select_intersect_popcount;  
+int chemfp_get_option_report_intersect_popcount(void) {
+  return chemfp_report_select_intersect_popcount;  
 }
-int _chemfp_set_option_report_intersect_popcount(int value) {
+int chemfp_set_option_report_intersect_popcount(int value) {
   if (value == 0 || value == 1) {
-    _chemfp_report_select_intersect_popcount = value;
-    _chemfp_intersect_popcount_method_p = NULL;
+    chemfp_report_select_intersect_popcount = value;
+    chemfp_intersect_popcount_method_p = NULL;
     return CHEMFP_OK;
   }
   return CHEMFP_BAD_ARG;
@@ -47,7 +47,7 @@ int _chemfp_set_option_report_intersect_popcount(int value) {
 
 /* These are the alignment categories which I support */
 
-chemfp_alignment_type _chemfp_alignments[] = {
+chemfp_alignment_type chemfp_alignments[] = {
   {"align1", 1, 1, NULL},
   {"align4", 4, 4, NULL},
   {"align8-small", 8, 8, NULL},
@@ -65,32 +65,32 @@ has_popcnt_instruction(void) {
 /* These are in the same order as an enum in popcount.h */
 static chemfp_method_type compile_time_methods[] = {
   {0, CHEMFP_LUT8_1, "LUT8-1", 1, 1, NULL,
-   _chemfp_popcount_lut8_1, _chemfp_intersect_popcount_lut8_1},
+   chemfp_popcount_lut8_1, chemfp_intersect_popcount_lut8_1},
 
   {0, CHEMFP_LUT8_4, "LUT8-4", 4, 4, NULL,
-   (chemfp_popcount_f) _chemfp_popcount_lut8_4,
-   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lut8_4},
+   (chemfp_popcount_f) chemfp_popcount_lut8_4,
+   (chemfp_intersect_popcount_f) chemfp_intersect_popcount_lut8_4},
 
   {0, CHEMFP_LUT16_4, "LUT16-4", 4, 4, NULL,
-   (chemfp_popcount_f) _chemfp_popcount_lut16_4,
-   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lut16_4},
+   (chemfp_popcount_f) chemfp_popcount_lut16_4,
+   (chemfp_intersect_popcount_f) chemfp_intersect_popcount_lut16_4},
 
   {0, CHEMFP_LAURADOUX, "Lauradoux", 8, 96, NULL,
-   (chemfp_popcount_f) _chemfp_popcount_lauradoux,
-   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_lauradoux},
+   (chemfp_popcount_f) chemfp_popcount_lauradoux,
+   (chemfp_intersect_popcount_f) chemfp_intersect_popcount_lauradoux},
 
   {0, CHEMFP_POPCNT, "POPCNT", 8, 8,
    has_popcnt_instruction,
-   (chemfp_popcount_f) _chemfp_popcount_popcnt,
-   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_popcnt},
+   (chemfp_popcount_f) chemfp_popcount_popcnt,
+   (chemfp_intersect_popcount_f) chemfp_intersect_popcount_popcnt},
 
   {0, CHEMFP_GILLIES, "Gillies", 8, 8, NULL,
-   (chemfp_popcount_f) _chemfp_popcount_gillies,
-   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_gillies},
+   (chemfp_popcount_f) chemfp_popcount_gillies,
+   (chemfp_intersect_popcount_f) chemfp_intersect_popcount_gillies},
 
-  {0, CHEMFP_SSSE3, "ssse3", 64, 64, _chemfp_has_ssse3,
-   (chemfp_popcount_f) _chemfp_popcount_SSSE3,
-   (chemfp_intersect_popcount_f) _chemfp_intersect_popcount_SSSE3},
+  {0, CHEMFP_SSSE3, "ssse3", 64, 64, chemfp_has_ssse3,
+   (chemfp_popcount_f) chemfp_popcount_SSSE3,
+   (chemfp_intersect_popcount_f) chemfp_intersect_popcount_SSSE3},
 };
 
 
@@ -148,7 +148,7 @@ set_default_alignment_methods(void) {
   unsigned long ssse3_time;
 
   /* Make sure we haven't already initialized the alignments */
-  if (_chemfp_alignments[0].method_p != NULL) {
+  if (chemfp_alignments[0].method_p != NULL) {
     return;
   }
 
@@ -156,7 +156,7 @@ set_default_alignment_methods(void) {
   detect_methods();
 
   /* This is the only possibility for 1-byte aligned */
-  _chemfp_alignments[CHEMFP_ALIGN1].method_p = &compile_time_methods[CHEMFP_LUT8_1];
+  chemfp_alignments[CHEMFP_ALIGN1].method_p = &compile_time_methods[CHEMFP_LUT8_1];
 
   /* Now do some timing measurements and figure out which method is
      likely the fastest for this hardware. It's a bit tricky; consider
@@ -194,7 +194,7 @@ set_default_alignment_methods(void) {
     lut_time = lut16_time;
   }
 
-  _chemfp_alignments[CHEMFP_ALIGN4].method_p = &compile_time_methods[lut_method];
+  chemfp_alignments[CHEMFP_ALIGN4].method_p = &compile_time_methods[lut_method];
 
   /* Let's see if the Gillies method is faster */
   first_time = timeit(compile_time_methods[CHEMFP_GILLIES].popcount, 128, 200);
@@ -205,9 +205,9 @@ set_default_alignment_methods(void) {
 
   /* For 8-byte aligned code we always want to use the POPCNT instruction if it exists */
   if (has_popcnt_instruction()) {
-    _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = 
-      _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = 
-      _chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p = 
+    chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = 
+      chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = 
+      chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p = 
       &compile_time_methods[CHEMFP_POPCNT];
   } else {
 
@@ -221,7 +221,7 @@ set_default_alignment_methods(void) {
       best64_method = CHEMFP_GILLIES;
     }
 
-    _chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = &compile_time_methods[best64_method];
+    chemfp_alignments[CHEMFP_ALIGN8_SMALL].method_p = &compile_time_methods[best64_method];
 
     first_time = timeit(compile_time_methods[CHEMFP_LAURADOUX].popcount, 128, 200);
     lauradoux_time = timeit(compile_time_methods[CHEMFP_LAURADOUX].popcount, 128, 200);
@@ -235,11 +235,11 @@ set_default_alignment_methods(void) {
     } else {
       large_method = best64_method;
     }
-    _chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[large_method];
+    chemfp_alignments[CHEMFP_ALIGN8_LARGE].method_p = &compile_time_methods[large_method];
 
   ssse3_method = CHEMFP_LUT16_4;
 
-  if (_chemfp_has_ssse3()) {
+  if (chemfp_has_ssse3()) {
     first_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
     ssse3_time = timeit(compile_time_methods[CHEMFP_SSSE3].popcount, 128, 200);
     if (first_time < ssse3_time) {
@@ -249,7 +249,7 @@ set_default_alignment_methods(void) {
       ssse3_method = CHEMFP_SSSE3;
     }
   }
-  _chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p = &compile_time_methods[ssse3_method];
+  chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p = &compile_time_methods[ssse3_method];
   }
 }
 
@@ -257,7 +257,7 @@ set_default_alignment_methods(void) {
 int
 chemfp_get_num_alignments(void) {
   set_default_alignment_methods();
-  return sizeof(_chemfp_alignments) / sizeof(chemfp_alignment_type);
+  return sizeof(chemfp_alignments) / sizeof(chemfp_alignment_type);
 }
 
 const char *
@@ -265,7 +265,7 @@ chemfp_get_alignment_name(int alignment) {
   if (alignment < 0 || alignment >= chemfp_get_num_alignments()) {
     return NULL;
   }
-  return _chemfp_alignments[alignment].name;
+  return chemfp_alignments[alignment].name;
 }
 
 int 
@@ -273,7 +273,7 @@ chemfp_get_alignment_method(int alignment) {
   if (alignment < 0 || alignment >= chemfp_get_num_alignments()) {
     return CHEMFP_BAD_ARG;
   }
-  return _chemfp_alignments[alignment].method_p->detected_index;
+  return chemfp_alignments[alignment].method_p->detected_index;
 }
 
 int
@@ -286,13 +286,13 @@ chemfp_set_alignment_method(int alignment, int method) {
     return CHEMFP_BAD_ARG;
   }
   /* Make sure the alignment and sizes are good enough */
-  if (detected_methods[method]->alignment > _chemfp_alignments[alignment].alignment) {
+  if (detected_methods[method]->alignment > chemfp_alignments[alignment].alignment) {
     return CHEMFP_METHOD_MISMATCH;
   }
-  if (detected_methods[method]->min_size > _chemfp_alignments[alignment].min_size) {
+  if (detected_methods[method]->min_size > chemfp_alignments[alignment].min_size) {
     return CHEMFP_METHOD_MISMATCH;
   }
-  _chemfp_alignments[alignment].method_p = detected_methods[method];
+  chemfp_alignments[alignment].method_p = detected_methods[method];
   return CHEMFP_OK;
 }
 
@@ -305,8 +305,8 @@ chemfp_set_alignment_method(int alignment, int method) {
 /* The Python payload is 4 byte aligned but not 8 byte aligned. */
 
 static int
-_chemfp_select_popcount(int num_bits,
-                        int storage_len, const unsigned char *arena) {
+chemfp_determine_alignment(int num_bits,
+                           int storage_len, const unsigned char *arena) {
 
   int num_bytes = (num_bits+7)/8;
 
@@ -352,15 +352,15 @@ _alignment_description(const unsigned char *arena) {
 chemfp_popcount_f
 chemfp_select_popcount(int num_bits,
                        int storage_len, const unsigned char *arena) {
-  int alignment = _chemfp_select_popcount(num_bits, storage_len, arena);
-  chemfp_method_type *method_p = _chemfp_alignments[alignment].method_p;
+  int alignment = chemfp_determine_alignment(num_bits, storage_len, arena);
+  chemfp_method_type *method_p = chemfp_alignments[alignment].method_p;
 
-  if (_chemfp_report_select_popcount && _chemfp_popcount_method_p != method_p) {
-    _chemfp_popcount_method_p = method_p;
+  if (chemfp_report_select_popcount && chemfp_popcount_method_p != method_p) {
+    chemfp_popcount_method_p = method_p;
     fprintf(stderr,
             "Popcount method: %s (%s) num_bits: %d "
             "arena: %p (%s byte aligned) storage_len: %d\n",
-            method_p->name, _chemfp_alignments[alignment].name, num_bits,
+            method_p->name, chemfp_alignments[alignment].name, num_bits,
             arena, _alignment_description(arena), storage_len);
   }
   return method_p->popcount;
@@ -369,9 +369,9 @@ chemfp_select_popcount(int num_bits,
 /**** Find the best intersection popcount function *****/
 
 static int
-_chemfp_select_intersect_popcount(int num_bits,
-                                 int storage_len1, const unsigned char *arena1,
-                                 int storage_len2, const unsigned char *arena2) {
+chemfp_select_intersect_alignment(int num_bits,
+                                  int storage_len1, const unsigned char *arena1,
+                                  int storage_len2, const unsigned char *arena2) {
 
   int storage_len = (storage_len1 < storage_len2) ? storage_len1 : storage_len2;
   int num_bytes = (num_bits+7)/8;
@@ -395,7 +395,7 @@ _chemfp_select_intersect_popcount(int num_bits,
       storage_len2 % 8 == 0) {
 
     /* We only use SSSE3 if this alignment is identical to "CHEMFP_SSSE3" */
-    if (_chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p->id == CHEMFP_SSSE3) {
+    if (chemfp_alignments[CHEMFP_ALIGN_SSSE3].method_p->id == CHEMFP_SSSE3) {
 
       /* I'll try, but only if I have 64 byte alignment */
       if (ALIGNMENT(arena1, 64) == 0 &&
@@ -431,19 +431,19 @@ chemfp_intersect_popcount_f
 chemfp_select_intersect_popcount(int num_bits,
                                  int storage_len1, const unsigned char *arena1,
                                  int storage_len2, const unsigned char *arena2) {
-  int alignment = _chemfp_select_intersect_popcount(num_bits, storage_len1, arena1,
+  int alignment = chemfp_select_intersect_alignment(num_bits, storage_len1, arena1,
                                                     storage_len2, arena2);
 
-  chemfp_method_type *method_p = _chemfp_alignments[alignment].method_p;
+  chemfp_method_type *method_p = chemfp_alignments[alignment].method_p;
 
-  if (_chemfp_report_select_intersect_popcount &&
-      _chemfp_intersect_popcount_method_p != method_p) {
-    _chemfp_intersect_popcount_method_p = method_p;
+  if (chemfp_report_select_intersect_popcount &&
+      chemfp_intersect_popcount_method_p != method_p) {
+    chemfp_intersect_popcount_method_p = method_p;
     fprintf(stderr,
             "Intersect popcount method: %s (%s) num_bits: %d "
             "arena1: %p (%s byte aligned) storage_len1: %d "
             "arena2: %p (%s byte aligned) storage_len2: %d\n",
-            method_p->name, _chemfp_alignments[alignment].name, num_bits,
+            method_p->name, chemfp_alignments[alignment].name, num_bits,
             arena1, _alignment_description(arena1), storage_len1,
             arena2, _alignment_description(arena2), storage_len2);
   }
@@ -798,7 +798,7 @@ chemfp_select_fastest_method(int alignment, int repeat) {
     if (chemfp_set_alignment_method(alignment, method) < 0) {
       continue;
     }
-    method_p = _chemfp_alignments[alignment].method_p;
+    method_p = chemfp_alignments[alignment].method_p;
 
     /* Time the performance; do it twice in case a context switch happens in the middle  */
     first_time = timeit(method_p->popcount, probe_size, repeat);
