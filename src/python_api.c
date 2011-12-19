@@ -2,6 +2,7 @@
 
 #include "chemfp.h"
 #include "chemfp_internal.h"
+#include "pysearch_results.h"
 
 static PyObject *
 version(PyObject *self, PyObject *args) {
@@ -330,7 +331,7 @@ bad_fps_cells(int *num_cells, int cells_size, int num_queries) {
 }
 
 static int
-bad_results(long results_long, int results_offset, chemfp_threshold_result **results) {
+bad_results(long results_long, int results_offset, chemfp_search_result **results) {
   if (results_long == (long)((uintptr_t) NULL)) {
     PyErr_SetString(PyExc_ValueError, "results is NULL??");
     return 1;
@@ -339,7 +340,7 @@ bad_results(long results_long, int results_offset, chemfp_threshold_result **res
     PyErr_SetString(PyExc_ValueError, "results_offsets must be non-negative");
     return 1;
   }
-  *results = (chemfp_threshold_result *)((uintptr_t) results_long);  
+  *results = (chemfp_search_result *)((uintptr_t) results_long);  
   return 0;
 }
 
@@ -1172,12 +1173,12 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
 
 /* threshold_tanimoto_arena */
 static PyObject *
-alloc_threshold_results(PyObject *self, PyObject *args) {
+alloc_search_results(PyObject *self, PyObject *args) {
   int num_results;
-  chemfp_threshold_result *results;
+  chemfp_search_result *results;
   UNUSED(self);
 
-  if (!PyArg_ParseTuple(args, "i:alloc_threshold_results",
+  if (!PyArg_ParseTuple(args, "i:alloc_search_results",
                         &num_results)) {
     return NULL;
   }
@@ -1185,18 +1186,18 @@ alloc_threshold_results(PyObject *self, PyObject *args) {
     PyErr_SetString(PyExc_ValueError, "num_results must be positive");
     return NULL;
   }
-  results = chemfp_alloc_threshold_results(num_results);
+  results = chemfp_alloc_search_results(num_results);
   return PyInt_FromLong( (long)((uintptr_t) results) );
 }
 
 static PyObject *
-free_threshold_results(PyObject *self, PyObject *args) {
+free_search_results(PyObject *self, PyObject *args) {
   int num_results;
   long results_long;
-  chemfp_threshold_result *results;
+  chemfp_search_result *results;
   UNUSED(self);
 
-  if (!PyArg_ParseTuple(args, "li:free_threshold_results",
+  if (!PyArg_ParseTuple(args, "li:free_search_results",
                         &results_long, &num_results)) {
     return NULL;
   }
@@ -1209,13 +1210,13 @@ free_threshold_results(PyObject *self, PyObject *args) {
 }
 
 static PyObject *
-get_num_threshold_hits(PyObject *self, PyObject *args) {
+get_num_hits(PyObject *self, PyObject *args) {
   int index;
   long results_long;
-  chemfp_threshold_result *results;
+  chemfp_search_result *results;
   UNUSED(self);
 
-  if (!PyArg_ParseTuple(args, "li:get_num_threshold_hits",
+  if (!PyArg_ParseTuple(args, "li:get_num_hits",
                         &results_long, &index)) {
     return NULL;
   }
@@ -1241,7 +1242,7 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
 
   int result, result_offset;
   long results_long;
-  chemfp_threshold_result *results;
+  chemfp_search_result *results;
   UNUSED(self);
 
   if (!PyArg_ParseTuple(args, "diiiit#iiiiit#iit#li:threshold_tanimoto_arena",
@@ -1289,7 +1290,8 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
   return PyInt_FromLong(result);
 }
 
-int assign_threshold_hits(void *data, int i, int target_index, double score) {
+
+static int assign_threshold_hits(void *data, int i, int target_index, double score) {
   PyObject *list = (PyObject *)data;
   PyObject *tuple;
   
@@ -1301,11 +1303,12 @@ int assign_threshold_hits(void *data, int i, int target_index, double score) {
   return 0;
 }
 
+
 static PyObject *
 threshold_result_get_hits(PyObject *self, PyObject *args) {
   long threshold_results_long;
   int index, n;
-  chemfp_threshold_result *threshold_results;
+  chemfp_search_result *threshold_results;
   PyObject *result_list, *obj;
   int i, errval;
   UNUSED(self);
@@ -1314,12 +1317,12 @@ threshold_result_get_hits(PyObject *self, PyObject *args) {
                         &threshold_results_long, &index)) {
     return NULL;
   }
-  threshold_results = (chemfp_threshold_result *)((uintptr_t) threshold_results_long);
+  threshold_results = (chemfp_search_result *)((uintptr_t) threshold_results_long);
   n = chemfp_get_num_hits(threshold_results+index);
   // assert n >= 0
   result_list = PyList_New(n);
 
-  errval = chemfp_threshold_result_get_hits(threshold_results+index,
+  errval = chemfp_search_result_get_hits(threshold_results+index,
                                             assign_threshold_hits, result_list);
   if (errval) {
     for (i=0; i<n; i++) {
@@ -1353,7 +1356,7 @@ knearest_tanimoto_arena(PyObject *self, PyObject *args) {
 
   int result, result_offset;
   long results_long;
-  chemfp_threshold_result *results;
+  chemfp_search_result *results;
 
   UNUSED(self);
     
@@ -1405,7 +1408,7 @@ static PyObject *
 knearest_results_finalize(PyObject *self, PyObject *args) {
   long results_long;
   int result_offset, num_results;
-  chemfp_threshold_result *results;
+  chemfp_search_result *results;
   UNUSED(self);
     
   if (!PyArg_ParseTuple(args, "lii",
@@ -1484,7 +1487,7 @@ threshold_tanimoto_arena_symmetric(PyObject *self, PyObject *args) {
   int *popcount_indices;
   int popcount_indices_size;
   long results_long;
-  chemfp_threshold_result *results;
+  chemfp_search_result *results;
   UNUSED(self);
 
   if (!PyArg_ParseTuple(args, "diiiis#iiiis#l:threshold_tanimoto_arena_symmetric",
@@ -1531,7 +1534,7 @@ knearest_tanimoto_arena_symmetric(PyObject *self, PyObject *args) {
   int *popcount_indices;
   int popcount_indices_size;
   long results_long;
-  chemfp_threshold_result *results;
+  chemfp_search_result *results;
   UNUSED(self);
 
   if (!PyArg_ParseTuple(args, "idiiiis#iiiis#l:knearest_tanimoto_arena_symmetric",
@@ -1573,7 +1576,7 @@ static PyObject *
 fill_lower_triangle(PyObject *self, PyObject *args) {
   int num_results, errval;
   long results_long;
-  chemfp_threshold_result *results;
+  chemfp_search_result *results;
   UNUSED(self);
 
   if (!PyArg_ParseTuple(args, "li:fill_lower_triangle",
@@ -1590,6 +1593,7 @@ fill_lower_triangle(PyObject *self, PyObject *args) {
 
   if (errval) {
     PyErr_SetString(PyExc_ValueError, chemfp_strerror(errval));
+    return NULL;
   }
   Py_RETURN_NONE;
 }
@@ -1851,12 +1855,12 @@ static PyMethodDef chemfp_methods[] = {
   {"count_tanimoto_arena", count_tanimoto_arena, METH_VARARGS,
    "count_tanimoto_arena (TODO: document)"},
 
-  {"alloc_threshold_results", alloc_threshold_results, METH_VARARGS,
-   "alloc_threshold_results (TODO: document)"},
-  {"free_threshold_results", free_threshold_results, METH_VARARGS,
-   "free_threshold_results (TODO: document)"},
-  {"get_num_threshold_hits", get_num_threshold_hits, METH_VARARGS,
-   "get_num_threshold_hits (TODO: document)"},
+  {"alloc_search_results", alloc_search_results, METH_VARARGS,
+   "alloc_search_results (TODO: document)"},
+  {"free_search_results", free_search_results, METH_VARARGS,
+   "free_search_results (TODO: document)"},
+  {"get_num_hits", get_num_hits, METH_VARARGS,
+   "get_num_hits (TODO: document)"},
   {"threshold_tanimoto_arena", threshold_tanimoto_arena, METH_VARARGS,
    "threshold_tanimoto_arena (TODO: document)"},
   {"threshold_result_get_hits", threshold_result_get_hits, METH_VARARGS,
@@ -1937,5 +1941,11 @@ static PyMethodDef chemfp_methods[] = {
 PyMODINIT_FUNC
 init_chemfp(void)
 {
-    (void) Py_InitModule("_chemfp", chemfp_methods);
+  PyObject *m;
+  if (PyType_Ready(&chemfp_py_SearchResultsType) < 0) {
+    return ;
+  }
+  m = Py_InitModule3("_chemfp", chemfp_methods, "Documentation goes here");
+  Py_INCREF(&chemfp_py_SearchResultsType);
+  PyModule_AddObject(m, "SearchResults", (PyObject *)&chemfp_py_SearchResultsType);
 }

@@ -79,20 +79,25 @@ typedef struct chemfp_hit_block {
 } chemfp_hit_block;
 
 
-typedef struct chemfp_threshold_result {
+typedef struct chemfp_search_result {
   int num_hits;
   int num_allocated;
   int *indices;
   double *scores;
-} chemfp_threshold_result;
+} chemfp_search_result;
 
-chemfp_threshold_result *chemfp_alloc_threshold_results(int num_results);
-void chemfp_free_results(int num_results, chemfp_threshold_result *);
-int chemfp_get_num_hits(chemfp_threshold_result *results);
+chemfp_search_result *chemfp_alloc_search_results(int num_results);
+void chemfp_free_results(int num_results, chemfp_search_result *);
+int chemfp_get_num_hits(chemfp_search_result *results);
+
+int chemfp_search_result_sort(chemfp_search_result *result, const char *order);
+int chemfp_search_results_sort(int num_results, chemfp_search_result *results,
+                               const char *order);
 
 typedef int (*chemfp_assign_hits_p)(void *data, int i, int target_index, double score);
-int chemfp_threshold_result_get_hits(chemfp_threshold_result *results,
+int chemfp_search_result_get_hits(chemfp_search_result *results,
                                      chemfp_assign_hits_p add_callback, void *payload);
+void chemfp_search_result_clear(chemfp_search_result *result);
 
 /*** Low-level operations directly on hex fingerprints ***/
 
@@ -296,7 +301,7 @@ int chemfp_threshold_tanimoto_arena(
         int *target_popcount_indices,
 
         /* Results go into this data structure  */
-        chemfp_threshold_result *results
+        chemfp_search_result *results
                                     );
 
 
@@ -322,7 +327,7 @@ int chemfp_knearest_tanimoto_arena(
         int *target_popcount_indices,
 
         /* Results go into this data structure  */
-        chemfp_threshold_result *results
+        chemfp_search_result *results
                                    );
 
 
@@ -369,7 +374,7 @@ int chemfp_threshold_tanimoto_arena_symmetric(
 
         /* Results go here */
         /* NOTE: This must have enough space for all of the fingerprints! */
-        chemfp_threshold_result *results);
+        chemfp_search_result *results);
 
 int chemfp_knearest_tanimoto_arena_symmetric(
         /* Find the 'k' nearest items */
@@ -393,12 +398,12 @@ int chemfp_knearest_tanimoto_arena_symmetric(
 
         /* Results go here */
         /* NOTE: This must have enough space for all of the fingerprints! */
-        chemfp_threshold_result *results);
+        chemfp_search_result *results);
 
-void chemfp_knearest_results_finalize(chemfp_threshold_result *results_start,
-                                      chemfp_threshold_result *results_end);
+void chemfp_knearest_results_finalize(chemfp_search_result *results_start,
+                                      chemfp_search_result *results_end);
 
-int chemfp_fill_lower_triangle(int n, chemfp_threshold_result *results);
+int chemfp_fill_lower_triangle(int n, chemfp_search_result *results);
 
 
 typedef int (*chemfp_popcount_f)(int len, const unsigned char *p1);
