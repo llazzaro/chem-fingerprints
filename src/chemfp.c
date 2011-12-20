@@ -23,6 +23,8 @@ const char *chemfp_strerror(int err) {
 
   case CHEMFP_METHOD_MISMATCH: return "Mismatch between popcount method and alignment type";
 
+  case CHEMFP_UNKNOWN_SORT_ORDER: return "Unknown sort order";
+
   default: return "Unknown error";
   }
 }
