@@ -6,10 +6,10 @@
 /************ Search Result type ***************/
 
 
-/* Help with cyclical garbage collection, in case someone does result.ids = result */
+/* Help with cyclical garbage collection, in case someone does result.target_ids = result */
 static int
 SearchResults_traverse(SearchResults *self, visitproc visit, void *arg) {
-  Py_VISIT(self->ids);
+  Py_VISIT(self->target_ids);
   return 0;
 }
 
@@ -21,7 +21,7 @@ SearchResults_clear_memory(SearchResults *self) {
   }
   self->num_results = 0;
 
-  Py_CLEAR(self->ids);
+  Py_CLEAR(self->target_ids);
   return 0;
 }
 
@@ -42,7 +42,7 @@ SearchResults_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     self->num_results = 0;
     self->results = NULL;
     Py_INCREF(Py_None);
-    self->ids = Py_None;
+    self->target_ids = Py_None;
     return (PyObject *)self;
 }
 
@@ -50,12 +50,12 @@ static int
 SearchResults_init(SearchResults *self, PyObject *args, PyObject *kwds)
 {
   int num_results=0;
-  PyObject *ids=Py_None;
+  PyObject *target_ids=Py_None;
   chemfp_search_result *results;
 
-  static char *kwlist[] = {"num_results", "ids", NULL};
+  static char *kwlist[] = {"num_results", "target_ids", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|O", kwlist, &num_results, &ids)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|O", kwlist, &num_results, &target_ids)) {
     return -1;
   }
   if (num_results < 0) {
@@ -75,9 +75,9 @@ SearchResults_init(SearchResults *self, PyObject *args, PyObject *kwds)
   self->num_results = num_results;
   self->results = results;
 
-  Py_XINCREF(ids);
-  Py_XDECREF(self->ids);
-  self->ids = ids;
+  Py_XINCREF(target_ids);
+  Py_XDECREF(self->target_ids);
+  self->target_ids = target_ids;
 
   return 0;
 }
@@ -315,7 +315,8 @@ static PyMethodDef SearchResults_methods[] = {
 };
 
 static PyMemberDef SearchResults_members[] = {
-  {"ids", T_OBJECT_EX, offsetof(SearchResults, ids), 0, "list of fingerprint identifiers"},
+  {"target_ids", T_OBJECT_EX, offsetof(SearchResults, target_ids), 0,
+   "list of fingerprint identifiers"},
   {NULL}
 };
 

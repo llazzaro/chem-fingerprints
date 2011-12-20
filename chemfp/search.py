@@ -5,32 +5,16 @@ import ctypes
 import array
 
 
-class SearchResultsHandle(object):
-    def __init__(self, size):
-        self.size = size
-        self.handle = 0
-        self.handle = _chemfp.alloc_threshold_results(size)
+class SearchResults(_chemfp.SearchResults):
+#    def __init__(self, num_results, target_ids):
+#        self.num_results = num_results
+#        if num_results:
+#            self._handle = SearchResultsHandle(num_results)
+#        else:
+#            self._handle = None
+#        self.target_ids = target_ids
 
-    def __del__(self, free=_chemfp.free_threshold_results):
-        if self.handle:
-            free(self.handle, self.size)
-
-    def __int__(self):
-        return self.handle
-    def __long__(self):
-        return self.handle
-
-
-
-class SearchResults(object):
-    def __init__(self, num_results, target_ids):
-        self.num_results = num_results
-        if num_results:
-            self._handle = SearchResultsHandle(num_results)
-        else:
-            self._handle = None
-        self.target_ids = target_ids
-
+    '''
     def __len__(self):
         return self.num_results
 
@@ -43,28 +27,28 @@ class SearchResults(object):
         ids = self.target_ids
         return [(ids[idx], score) for (idx, score) in
                     _chemfp.threshold_result_get_hits(self._handle, i)]
-    
+    '''
     def __iter__(self): # XXXX fixme
         ids = self.target_ids
-        for i in range(0, self.num_results):
-            yield [(ids[idx], score) for (idx, score) in
-                         _chemfp.threshold_result_get_hits(self._handle, i)]
+        for i in range(len(self)):
+            yield [(ids[idx], score) for (idx, score) in self[i]]
 
     def iter_hits(self):
-        for i in range(0, self.num_results):
-            yield _chemfp.threshold_result_get_hits(self._handle, i)
+        for i in range(len(self)):
+            yield self[i]
 
     def iter_indices(self):
-        # This can be optimized with more C code
-        for i in range(0, self.num_results):
-            yield [idx for (idx, score) in
-                        _chemfp.threshold_result_get_hits(self._handle, i)]
+        for i in range(len(self)):
+            yield self.get_indices(i)
+
+    def iter_scores(self):
+        for i in range(len(self)):
+            yield self.get_scores(i)
 
     def iter_ids_and_scores(self):
         ids = self.target_ids
-        for i in range(0, self.num_results):
-            yield [(ids[idx], score) for (idx, score) in
-                         _chemfp.threshold_result_get_hits(self._handle, i)]
+        for i in range(len(self)):
+            yield [(ids[idx], score) for (idx, score) in self[i]]
 
         
 def require_matching_fp_size(query_fp, target_arena):
@@ -170,19 +154,16 @@ def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
         query_fp, target_arena.alignment, target_arena.storage_size)
 
 
-    results = _chemfp.alloc_threshold_results(1)
-    try:
-        _chemfp.threshold_tanimoto_arena(
-            threshold, target_arena.num_bits,
-            query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena,
-            target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-        return _chemfp.threshold_result_get_hits(results, 0)
-    finally:
-        _chemfp.free_threshold_results(results, 1)
+    results = SearchResults(1)
+    _chemfp.threshold_tanimoto_arena(
+        threshold, target_arena.num_bits,
+        query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
+        target_arena.start_padding, target_arena.end_padding,
+        target_arena.storage_size, target_arena.arena,
+        target_arena.start, target_arena.end,
+        target_arena.popcount_indices,
+        results, 0)
+    return results[0]
 
 
 def threshold_tanimoto_search(query_arena, target_arena, threshold):
@@ -199,7 +180,7 @@ def threshold_tanimoto_search(query_arena, target_arena, threshold):
             target_arena.start_padding, target_arena.end_padding,
             target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
             target_arena.popcount_indices,
-            results._handle, 0)
+            results, 0)
     
     return results
 
@@ -214,10 +195,10 @@ def threshold_tanimoto_search_symmetric(arena, threshold, include_lower_triangle
             arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
             0, N, 0, N,
             arena.popcount_indices,
-            results._handle)
+            results)
 
         if include_lower_triangle:
-            _chemfp.fill_lower_triangle(results._handle, N)
+            _chemfp.fill_lower_triangle(results, N)
         
     return results
 
@@ -254,11 +235,11 @@ def partial_threshold_tanimoto_search_symmetric(results, arena, threshold,
             arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
             query_start, query_end, target_start, target_end,
             arena.popcount_indices,
-            results._handle)
+            results)
 
 
 def fill_lower_triangle(results):
-    _chemfp.fill_lower_triangle(results._handle, len(results))
+    _chemfp.fill_lower_triangle(results, len(results))
 
 
 
@@ -273,21 +254,17 @@ def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
     if k < 0:
         raise ValueError("k must be non-negative")
 
-    results = _chemfp.alloc_threshold_results(1)
-    try:
-        _chemfp.knearest_tanimoto_arena(
-            k, threshold, target_arena.num_bits,
-            query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-        _chemfp.knearest_results_finalize(results, 0, 1)
-        return _chemfp.threshold_result_get_hits(results, 0)
-    finally:
-        _chemfp.free_threshold_results(results, 1)
-        pass
+    results = SearchResults(1)
+    _chemfp.knearest_tanimoto_arena(
+        k, threshold, target_arena.num_bits,
+        query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
+        target_arena.start_padding, target_arena.end_padding,
+        target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
+        target_arena.popcount_indices,
+        results, 0)
+    _chemfp.knearest_results_finalize(results, 0, 1)
 
+    return results[0]
 
 def knearest_tanimoto_search(query_arena, target_arena, k, threshold):
     require_matching_sizes(query_arena, target_arena)
@@ -303,9 +280,9 @@ def knearest_tanimoto_search(query_arena, target_arena, k, threshold):
         target_arena.start_padding, target_arena.end_padding,
         target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
         target_arena.popcount_indices,
-        results._handle, 0)
+        results, 0)
     
-    _chemfp.knearest_results_finalize(results._handle, 0, num_queries)
+    _chemfp.knearest_results_finalize(results, 0, num_queries)
     
     return results
 
@@ -320,8 +297,8 @@ def knearest_tanimoto_search_symmetric(arena, k, threshold):
         arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
         0, N, 0, N,
         arena.popcount_indices,
-        results._handle)
-    _chemfp.knearest_results_finalize(results._handle, 0, N)
+        results)
+    _chemfp.knearest_results_finalize(results, 0, N)
     
     return results
 
