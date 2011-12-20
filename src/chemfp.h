@@ -18,7 +18,10 @@ enum chemfp_errors {
   CHEMFP_MISSING_NEWLINE = -36,
 
   /* Popcount errors */
-  CHEMFP_METHOD_MISMATCH = -50
+  CHEMFP_METHOD_MISMATCH = -50,
+
+  /* Various other error messages */
+  CHEMFP_UNKNOWN_SORT_ORDER = -60
   
 };
 
@@ -96,7 +99,7 @@ int chemfp_search_results_sort(int num_results, chemfp_search_result *results,
 
 typedef int (*chemfp_assign_hits_p)(void *data, int i, int target_index, double score);
 int chemfp_search_result_get_hits(chemfp_search_result *results,
-                                     chemfp_assign_hits_p add_callback, void *payload);
+                                  chemfp_assign_hits_p add_callback, void *payload);
 void chemfp_search_result_clear(chemfp_search_result *result);
 
 /*** Low-level operations directly on hex fingerprints ***/
