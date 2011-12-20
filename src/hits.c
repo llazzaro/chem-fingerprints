@@ -50,11 +50,11 @@ to work with two parallel arrays.
 #include <stdint.h>
 
 
-#define SORT_TYPE1 double
-#define SORT_TYPE2 int
+#define SORT_TYPE1 int
+#define SORT_TYPE2 double
 
-typedef int (*hit_compare_func)(SORT_TYPE1 left_score, SORT_TYPE1 right_score,
-                                SORT_TYPE2 left_index, SORT_TYPE2 right_index);
+typedef int (*hit_compare_func)(SORT_TYPE1 left_index, SORT_TYPE1 right_index,
+                                SORT_TYPE2 left_score, SORT_TYPE2 right_score);
 #define SORT_CMP(x1, y1, x2, y2) hit_compare(x1, y1, x2, y2)
 
 #ifndef CLZ
@@ -212,7 +212,7 @@ static inline int64_t count_run(SORT_TYPE1 *dst1, SORT_TYPE2 *dst2, const int64_
   {
     if (SORT_CMP(dst1[size - 2], dst1[size - 1], dst2[size - 2], dst2[size - 1]) > 0)
     {
-      SORT_SWAP1(dst1[size - 2], dst2[size - 1]);
+      SORT_SWAP1(dst1[size - 2], dst1[size - 1]);
       SORT_SWAP2(dst2[size - 2], dst2[size - 1]);
     }
     return 2;
@@ -398,7 +398,7 @@ static inline void tim_sort_merge(SORT_TYPE1 *dst1, SORT_TYPE2 *dst2, const hits
           }
           else
           {
-            dst1[k] = storage2[i];
+            dst1[k] = storage1[i];
             dst2[k] = storage2[i--];
           }
       }
@@ -660,8 +660,7 @@ typedef struct {
 } sort_method_t;
 
 
-static int compare_decreasing(double score1, double score2, int index1, int index2) {
-  printf("Decreasing %f %f %d %d\n", score1, score2, index1, index2);
+static int compare_decreasing_score(int index1, int index2, double score1, double score2) {
   if (score1 < score2) {
     return 1;
   }
@@ -677,8 +676,7 @@ static int compare_decreasing(double score1, double score2, int index1, int inde
   return 0;
 }
 
-static int compare_increasing(double score1, double score2, int index1, int index2) {
-  printf("Increasing %f %f %d %d\n", score1, score2, index1, index2);
+static int compare_increasing_score(int index1, int index2, double score1, double score2) {
   if (score1 < score2) {
     return -1;
   }
@@ -692,11 +690,32 @@ static int compare_increasing(double score1, double score2, int index1, int inde
     return 1;
   }
   return 0;
+}
+
+static int compare_increasing_index(int index1, int index2, double score1, double score2) {
+  if (index1 < index2) {
+    return -1;
+  }
+  if (index1 == index2) {
+    return 0;
+  }
+  return 1;
+}
+static int compare_decreasing_index(int index1, int index2, double score1, double score2) {
+  if (index1 < index2) {
+    return 1;
+  }
+  if (index1 == index2) {
+    return 0;
+  }
+  return -1;
 }
 
 sort_method_t sort_methods[] = {
-  {"increasing", compare_increasing},
-  {"decreasing", compare_decreasing},
+  {"increasing-score", compare_increasing_score},
+  {"decreasing-score", compare_decreasing_score},
+  {"increasing-index", compare_increasing_index},
+  {"decreasing-index", compare_decreasing_index},
   //  {"closest-first", closest_first},
   {NULL}
 };
@@ -717,12 +736,12 @@ int chemfp_search_results_sort(int num_results, chemfp_search_result *results,
   int i, num_hits;
   sort_method_t *sort_method = chemfp_get_sort_method(order);
   if (sort_method == NULL) {
-    return CHEMFP_BAD_ARG;
+    return CHEMFP_UNKNOWN_SORT_ORDER;
   }
   for (i=0; i<num_results; i++) {
     num_hits = results[i].num_hits;
     if (num_hits > 1) {
-      hits_tim_sort(results[i].scores, results[i].indices, num_hits,
+      hits_tim_sort(results[i].indices, results[i].scores, num_hits,
                     sort_method->hit_compare);
     }
   }
@@ -733,12 +752,12 @@ int chemfp_search_result_sort(chemfp_search_result *result, const char *order) {
   int num_hits;
   sort_method_t *sort_method = chemfp_get_sort_method(order);
   if (sort_method == NULL) {
-    return CHEMFP_BAD_ARG;
+    return CHEMFP_UNKNOWN_SORT_ORDER;
   }
   num_hits = result->num_hits;
   if (num_hits > 1) {
-      hits_tim_sort(result->scores, result->indices, num_hits,
-                    sort_method->hit_compare);
+    hits_tim_sort(result->indices, result->scores, num_hits,
+                  sort_method->hit_compare);
   }
   return CHEMFP_OK;
 }
