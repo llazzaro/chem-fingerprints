@@ -87,8 +87,8 @@ SearchResults_length(SearchResults *result) {
   return (Py_ssize_t) result->num_results;
 }
 
-int assign_threshold_hits(void *data, int i, int target_index, double score) {
-  PyObject *list = (PyObject *)data;
+static int assign_threshold_hits(void *data, int i, int target_index, double score) {
+  PyObject *list = (PyObject *) data;
   PyObject *tuple;
   
   tuple = Py_BuildValue("(id)", target_index, score);
@@ -99,24 +99,41 @@ int assign_threshold_hits(void *data, int i, int target_index, double score) {
   return 0;
 }
 
+static int assign_threshold_indices(void *data, int i, int target_index, double score) {
+  PyObject *list = (PyObject *) data;
+  PyObject *index;
+  
+  index = PyInt_FromLong(target_index);
+  if (!index) {
+    return 1;
+  }
+  PyList_SET_ITEM(list, i, index);
+  return 0;
+}
+
+static int assign_threshold_scores(void *data, int i, int target_index, double score) {
+  PyObject *list = (PyObject *) data;
+  PyObject *pyscore;
+  
+  pyscore = PyFloat_FromDouble(score);
+  if (!pyscore) {
+    return 1;
+  }
+  PyList_SET_ITEM(list, i, pyscore);
+  return 0;
+}
 
 static PyObject *
-SearchResults_item(SearchResults *self, Py_ssize_t index) {
+_fill_row(chemfp_search_result *result, chemfp_assign_hits_p extract_func) {
+  int errval, n, i;
   PyObject *hits, *obj;
-  int n, i;
-  int errval;
 
-  if (index < 0 || index >= self->num_results) {
-    PyErr_SetString(PyExc_IndexError, "result index out of range");
-    return NULL;
-  }
-  n = chemfp_get_num_hits(self->results+index);
+  n = chemfp_get_num_hits(result);
   hits = PyList_New(n);
   if (!hits) {
     return NULL;
   }
-  errval = chemfp_search_result_get_hits(self->results+index,
-                                            assign_threshold_hits, hits);
+  errval = chemfp_search_result_get_hits(result, extract_func, hits);
   if (errval) {
     for (i=0; i<n; i++) {
       obj = PyList_GetItem(hits, i);
@@ -132,11 +149,28 @@ SearchResults_item(SearchResults *self, Py_ssize_t index) {
   return hits;
 }
 
+static PyObject *
+SearchResults_item(SearchResults *self, Py_ssize_t index) {
+  if (index < 0 || index >= self->num_results) {
+    PyErr_SetString(PyExc_IndexError, "row index is out of range");
+    return NULL;
+  }
+  return _fill_row(self->results+index, assign_threshold_hits);
+}
+
 
 static int
-check_row(int num_results, int row) {
-  if (row < 0 || row >= num_results) {
-    PyErr_SetString(PyExc_ValueError, "row index is out of range");
+check_row(int num_results, int *row) {
+  int row_ = *row;
+  if (row_ < 0) {
+    row_ = num_results + row_;
+    if (row_ < 0) {
+      PyErr_SetString(PyExc_IndexError, "row index is out of range");
+      return 0;
+    }
+    *row = row_;
+  } else if (row_ >= num_results) {
+    PyErr_SetString(PyExc_IndexError, "row index is out of range");
     return 0;
   }
   return 1;
@@ -167,7 +201,7 @@ SearchResults_sort_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|s:sort", kwlist, &row, &sort_order)) {
     return NULL;
   }
-  if (!check_row(self->num_results, row)) {
+  if (!check_row(self->num_results, &row)) {
     return NULL;
   }
   errval = chemfp_search_result_sort(self->results+row, sort_order);
@@ -195,12 +229,53 @@ SearchResults_clear_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   if (!PyArg_ParseTupleAndKeywords(args, kwds, "i:clear", kwlist, &row)) {
     return NULL;
   }
-  if (!check_row(self->num_results, row)) {
+  if (!check_row(self->num_results, &row)) {
     return NULL;
   }
   chemfp_search_result_clear(self->results+row);
   Py_RETURN_NONE;
 }
+
+
+static PyObject *
+SearchResults_get_indices(SearchResults *self, PyObject *args, PyObject *kwds) {
+  static char *kwlist[] = {"row", NULL};
+  int row;
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i:get_indices", kwlist, &row)) {
+    return NULL;
+  }
+  if (!check_row(self->num_results, &row)) {
+    return NULL;
+  }
+  return _fill_row(self->results+row, assign_threshold_indices);
+}
+
+static PyObject *
+SearchResults_get_scores(SearchResults *self, PyObject *args, PyObject *kwds) {
+  static char *kwlist[] = {"row", NULL};
+  int row;
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i:get_scores", kwlist, &row)) {
+    return NULL;
+  }
+  if (!check_row(self->num_results, &row)) {
+    return NULL;
+  }
+  return _fill_row(self->results+row, assign_threshold_scores);
+}
+
+static PyObject *
+SearchResults_size(SearchResults *self, PyObject *args, PyObject *kwds) {
+  static char *kwlist[] = {"row", NULL};
+  int row;
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i:size", kwlist, &row)) {
+    return NULL;
+  }
+  if (!check_row(self->num_results, &row)) {
+    return NULL;
+  }
+  return PyInt_FromLong(chemfp_get_num_hits(self->results+row));
+}
+
 
 static PyObject *
 SearchResults_add_hit(SearchResults *self, PyObject *args, PyObject *kwds) {
@@ -211,22 +286,28 @@ SearchResults_add_hit(SearchResults *self, PyObject *args, PyObject *kwds) {
                                    &row, &column, &score)) {
     return NULL;
   }
-  if (!check_row(self->num_results, row)) {
+  if (!check_row(self->num_results, &row)) {
     return NULL;
   }
-  chemfp_add_hit(self->results+row, column, score);
+  return PyInt_FromLong(chemfp_add_hit(self->results+row, column, score));
   Py_RETURN_NONE;
 }
 
 static PyMethodDef SearchResults_methods[] = {
-  {"sort", (PyCFunction) SearchResults_sort, METH_VARARGS | METH_KEYWORDS,
-   "Sort search results rows in-place"},
-  {"sort_row", (PyCFunction) SearchResults_sort_row, METH_VARARGS | METH_KEYWORDS,
-   "Sort search results rows in-place"},
   {"clear", (PyCFunction) SearchResults_clear, METH_VARARGS | METH_KEYWORDS,
    "clear the hits in-place"},
   {"clear_row", (PyCFunction) SearchResults_clear_row, METH_VARARGS | METH_KEYWORDS,
    "clear the hits in-place"},
+  {"get_indices", (PyCFunction) SearchResults_get_indices, METH_VARARGS | METH_KEYWORDS,
+   "get the hit indices for a given row"},
+  {"get_scores", (PyCFunction) SearchResults_get_scores, METH_VARARGS | METH_KEYWORDS,
+   "get the hit scores for a given row"},
+  {"size", (PyCFunction) SearchResults_size, METH_VARARGS | METH_KEYWORDS,
+   "the number of hits in a given row"},
+  {"sort", (PyCFunction) SearchResults_sort, METH_VARARGS | METH_KEYWORDS,
+   "Sort search results rows in-place"},
+  {"sort_row", (PyCFunction) SearchResults_sort_row, METH_VARARGS | METH_KEYWORDS,
+   "Sort search results rows in-place"},
   {"_add_hit", (PyCFunction) SearchResults_add_hit, METH_VARARGS | METH_KEYWORDS,
    "(private method) add a hit"},
   
