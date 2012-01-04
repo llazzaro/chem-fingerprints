@@ -308,6 +308,57 @@ class TestSortOrder(unittest2.TestCase):
         self.assertEquals(results[1], [(6, 0.1), (8, 0.6), (7, 0.8)])
         
 
+class TestMoveClosestFirst(unittest2.TestCase):
+    def test_empty(self):
+        results = SearchResults(2)
+        results.sort("move-closest-first")
+        self.assertEquals(len(results), 2)
+        self.assertEquals(len(results[0]), 0)
+        self.assertEquals(len(results[1]), 0)
+
+    def test_one(self):
+        results = SearchResults(2)
+        results._add_hit(0, 9, 0.1)
+        results._add_hit(1, 8, 0.8)
+        results.sort("move-closest-first")
+
+        results.sort("move-closest-first")
+
+        self.assertEquals(results[0], [(9, 0.1)])
+        self.assertEquals(results[1], [(8, 0.8)])
+
+    def test_two(self):
+        results = SearchResults(2)
+        results._add_hit(0, 1, 0.1)
+        results._add_hit(0, 2, 0.8)
+        results._add_hit(1, 2, 0.8)
+        results._add_hit(1, 3, 0.6)
+
+        results.sort("move-closest-first")
+
+        self.assertEquals(results[0], [(2, 0.8), (1, 0.1)])
+        self.assertEquals(results[1], [(2, 0.8), (3, 0.6)])
+
+    def test_three(self):
+        results = SearchResults(3)
+        results._add_hit(0, 1, 0.1)
+        results._add_hit(0, 2, 0.8)
+        results._add_hit(0, 3, 0.6)
+
+        results._add_hit(1, 12, 0.8)
+        results._add_hit(1, 22, 0.1)
+        results._add_hit(1, 32, 0.6)
+
+        results._add_hit(2, 12, 0.6)
+        results._add_hit(2, 22, 0.1)
+        results._add_hit(2, 32, 0.8)
+        
+        results.sort("move-closest-first")
+        
+        self.assertEquals(results[0], [(2, 0.8), (1, 0.1), (3, 0.6)])
+        self.assertEquals(results[1], [(12, 0.8), (22, 0.1), (32, 0.6)])
+        self.assertEquals(results[2], [(32, 0.8), (22, 0.1), (12, 0.6)])
+        
 
 if __name__ == "__main__":
     unittest2.main()
