@@ -16,7 +16,7 @@ import rdkit.rdBase
 from rdkit.Chem.MACCSkeys import GenMACCSKeys
 
 from . import sdf_reader
-from . import decoders
+from .decoders import from_binary_lsb as _from_binary_lsb
 from . import io
 from . import types
 
@@ -27,6 +27,21 @@ __all__ = ["read_structures", "iter_smiles_molecules", "iter_sdf_molecules"]
 # If the attribute doesn't exist then this is an unsupported pre-2010 RDKit distribution
 SOFTWARE = "RDKit/" + getattr(rdkit.rdBase, "rdkitVersion", "unknown")
 
+#########
+
+# Helper function to convert a fingerprint to a sequence of bytes.
+
+from rdkit import DataStructs
+BitVectToFPSText = getattr(DataStructs, "BitVectToFPSText", None)
+if BitVectToFPSText is None:
+    # Pre-2012 releases of RDKit
+    def _fp_to_bytes(fp):
+        return _from_binary_lsb(fp.ToBitString())[1]
+else:
+    # This is about 3x faster
+    from binascii import unhexlify as _unhexlify
+    def _fp_to_bytes(fp):
+        return _unhexlify(BitVectToFPSText(fp))
 
 #########
 _allowed_formats = ["sdf", "smi"]
@@ -274,7 +289,7 @@ def make_rdk_fingerprinter(minPath=MIN_PATH, maxPath=MAX_PATH, fpSize=NUM_BITS,
         fp = Chem.RDKFingerprint(
             mol, minPath=minPath, maxPath=maxPath, fpSize=fpSize,
             nBitsPerHash=nBitsPerHash, useHs=useHs)
-        return decoders.from_binary_lsb(fp.ToBitString())[1]
+        return _fp_to_bytes(fp)
     return rdk_fingerprinter
 
 ########### The MACCS fingerprinter
@@ -284,7 +299,8 @@ def maccs166_fingerprinter(mol):
     fp = GenMACCSKeys(mol)
     # In RDKit the first bit is always bit 1 .. bit 0 is empty (?!?!)
     bitstring_with_167_bits = fp.ToBitString()
-    return decoders.from_binary_lsb(bitstring_with_167_bits[1:])[1]
+    # I want the bits to start at 0, so I do a manual left shift
+    return _from_binary_lsb(bitstring_with_167_bits[1:])[1]
 
 def make_maccs166_fingerprinter():
     return maccs166_fingerprinter
@@ -313,7 +329,7 @@ def make_morgan_fingerprinter(fpSize=NUM_BITS,
         fp = rdMolDescriptors.GetMorganFingerprintAsBitVect(
             mol, radius, nBits=fpSize, useChirality=useChirality,
             useBondTypes=useBondTypes,useFeatures=useFeatures)
-        return decoders.from_binary_lsb(fp.ToBitString())[1]
+        return _fp_to_bytes(fp)
     return morgan_fingerprinter
 
 
@@ -331,7 +347,7 @@ def make_torsion_fingerprinter(fpSize=NUM_BITS,
     def torsion_fingerprinter(mol):
         fp = rdMolDescriptors.GetHashedTopologicalTorsionFingerprintAsBitVect(
             mol, nBits=fpSize, targetSize=targetSize)
-        return decoders.from_binary_lsb(fp.ToBitString())[1]
+        return _fp_to_bytes(fp)
     return torsion_fingerprinter
 
 ########### Pair fingerprinter
@@ -352,7 +368,7 @@ def make_pair_fingerprinter(fpSize=NUM_BITS,
     def pair_fingerprinter(mol):
         fp = rdMolDescriptors.GetHashedAtomPairFingerprintAsBitVect(
             mol, nBits=fpSize, minLength=minLength, maxLength=maxLength)
-        return decoders.from_binary_lsb(fp.ToBitString())[1]
+        return _fp_to_bytes(fp)
     return pair_fingerprinter
 
 
