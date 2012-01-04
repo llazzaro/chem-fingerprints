@@ -78,6 +78,11 @@ def check_rd201012():
     from rdkit.rdBase import rdkitVersion
     assert rdkitVersion[:7] == "2010.12", rdkitVersion
 
+def check_rd201112_svn():
+    import rdkit.rdBase
+    from rdkit.rdBase import rdkitVersion
+    assert rdkitVersion[:7] == "2011.12", rdkitVersion
+
 def _check(required):
     req = required.split()
     for name in versions:
@@ -89,7 +94,7 @@ class TestToxVersion(unittest2.TestCase):
     def test_enough_specifications(self):
         _check("x32 x64")
         _check("py25 py26 py27 py32")
-        _check("oe174 ob223 ob230 ob23svn1 rd201106 rd201103 rd201012")
+        _check("oe174 ob223 ob230 ob23svn1 rd201106 rd201103 rd201012 rd201112_svn")
         
     def test_version(self):
         for name in versions:
