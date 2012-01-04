@@ -102,14 +102,13 @@ def from_binary_lsb(text):
     (29, '\\x00\\x80\\x00\\x00')
     >>>
     """
+    table = _lsb_bit_table
+    N = len(text)
     try:
-        N = len(text)
-        bytes = []
-        for i in range(0, N, 8):
-            bytes.append(_lsb_bit_table[text[i:i+8]])
-        return (N, "".join(bytes))
+        bytes = "".join(table[text[i:i+8]] for i in xrange(0, N, 8))
     except KeyError:
         raise TypeError("Not a binary string")
+    return (N, bytes)
 
 def from_binary_msb(text):
     """Convert a string like '10101000' (bit 0 here is off) into '\\xa8'
