@@ -654,9 +654,12 @@ int chemfp_fill_lower_triangle(int n, chemfp_search_result *results) {
   return retval;
 }
 
+typedef void (*sort_func)(int *indices, double *scores, int num_results);
+
 typedef struct {
   const char *name;
   hit_compare_func hit_compare;
+  sort_func sort;
 } sort_method_t;
 
 
@@ -711,12 +714,39 @@ static int compare_decreasing_index(int index1, int index2, double score1, doubl
   return -1;
 }
 
+static void move_closest_first(int *indices, double *scores, int num_hits) {
+  int i, max_i;
+  double max_score;
+  int index;
+  /* Don't need to check. The caller only calls if there is more than one element */
+  /* if (num_hits <= 1) { 
+    return;
+    }*/
+  max_i = 0;
+  max_score = scores[0];
+  for (i=1; i<num_hits; i++) {
+    if (scores[i] > max_score) {
+      max_score = scores[i];
+      max_i = i;
+    }
+  }
+  /* Found the best score. Swap it with position 0 */
+  if (max_i != 0) {
+    index = indices[max_i];
+    indices[max_i] = indices[0];
+    indices[0] = index;
+
+    scores[max_i] = scores[0];
+    scores[0] = max_score;
+  }
+}
+
 sort_method_t sort_methods[] = {
-  {"increasing-score", compare_increasing_score},
-  {"decreasing-score", compare_decreasing_score},
-  {"increasing-index", compare_increasing_index},
-  {"decreasing-index", compare_decreasing_index},
-  //  {"closest-first", closest_first},
+  {"increasing-score", compare_increasing_score, NULL},
+  {"decreasing-score", compare_decreasing_score, NULL},
+  {"increasing-index", compare_increasing_index, NULL},
+  {"decreasing-index", compare_decreasing_index, NULL},
+  {"move-closest-first", NULL, move_closest_first},
   {NULL}
 };
 
@@ -729,7 +759,7 @@ static sort_method_t *chemfp_get_sort_method(const char *name) {
     i++;
   }
   return NULL;
-};
+}
 
 int chemfp_search_results_sort(int num_results, chemfp_search_result *results,
                                const char *order) {
@@ -738,11 +768,20 @@ int chemfp_search_results_sort(int num_results, chemfp_search_result *results,
   if (sort_method == NULL) {
     return CHEMFP_UNKNOWN_SORT_ORDER;
   }
-  for (i=0; i<num_results; i++) {
-    num_hits = results[i].num_hits;
-    if (num_hits > 1) {
-      hits_tim_sort(results[i].indices, results[i].scores, num_hits,
-                    sort_method->hit_compare);
+  if (sort_method->sort) {
+    for (i=0; i<num_results; i++) {
+      num_hits = results[i].num_hits;
+      if (num_hits > 1) {
+        sort_method->sort(results[i].indices, results[i].scores, num_hits);
+      }
+    }
+  } else {
+    for (i=0; i<num_results; i++) {
+      num_hits = results[i].num_hits;
+      if (num_hits > 1) {
+        hits_tim_sort(results[i].indices, results[i].scores, num_hits,
+                      sort_method->hit_compare);
+      }
     }
   }
   return CHEMFP_OK;
