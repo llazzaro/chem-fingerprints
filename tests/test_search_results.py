@@ -127,15 +127,22 @@ class TestBasicAPI(unittest2.TestCase):
 
 
 class TestErrors(unittest2.TestCase):
-    def test_bad_sort_order(self):
+    def test_bad_order(self):
         results = SearchResults(5)
         with self.assertRaisesRegexp(ValueError, "Unknown ordering"):
-            results.reorder("increasing")
+            results.reorder("xyzzy")
+
+    def test_bad_row_order(self):
+        results = SearchResults(5)
+        with self.assertRaisesRegexp(ValueError, "Unknown ordering"):
+            results.reorder_row(0, "xyzzy")
 
     def test_index_out_of_range(self):
         results = SearchResults(5)
         with self.assertRaisesRegexp(IndexError, "row index is out of range"):
             results[5]
+        with self.assertRaisesRegexp(IndexError, "row index is out of range"):
+            results[98]
 
     def test_illegal_negative_index(self):
         results = SearchResults(3)
@@ -219,6 +226,13 @@ class TestSortOrder(unittest2.TestCase):
         results.reorder("decreasing-score")
         self.assertEquals(results[1], [(6, 0.4), (5, 0.2)])
 
+    def test_default_ordering_2(self):
+        results = SearchResults(5)
+        results._add_hit(1, 5, 0.2)
+        results._add_hit(1, 6, 0.4)
+        results.reorder()
+        self.assertEquals(results[1], [(6, 0.4), (5, 0.2)])
+
     def test_size_3(self):
         results = SearchResults(5)
         results._add_hit(1, 5, 0.2)
@@ -233,7 +247,7 @@ class TestSortOrder(unittest2.TestCase):
     def test_random_values(self):
         # The underlying timsort does merge sorts of 64 element
         # blocks.  Hence some of the code is not exercised unless the
-        # input is at 128 elements long.
+        # input is at least 128 elements long.
         for size in (3, 5, 10, 20, 70, 100, 400):
             results = SearchResults(1)
             expected = []
@@ -286,6 +300,12 @@ class TestSortOrder(unittest2.TestCase):
         self.assertEquals(results[0], [(2, 0.8), (3, 0.6), (1, 0.1)])
         self.assertEquals(results[1], [(6, 0.1), (8, 0.6), (7, 0.8)])
 
+        # Check that the default works
+        results.reorder_row(0, "increasing-score")  # ensure the default only affects one row
+        results.reorder_row(1)
+        self.assertEquals(results[0], [(1, 0.1), (3, 0.6), (2, 0.8)])
+        self.assertEquals(results[1], [(7, 0.8), (8, 0.6), (6, 0.1)])
+
     def test_sort_negative_row(self):
         results = SearchResults(2)
         results._add_hit(0, 1, 0.1)
@@ -306,6 +326,10 @@ class TestSortOrder(unittest2.TestCase):
         results.reorder_row(-2, "decreasing-score")
         self.assertEquals(results[0], [(2, 0.8), (3, 0.6), (1, 0.1)])
         self.assertEquals(results[1], [(6, 0.1), (8, 0.6), (7, 0.8)])
+
+        results.reorder_row(-1)  # default is decreasing score
+        self.assertEquals(results[0], [(2, 0.8), (3, 0.6), (1, 0.1)])
+        self.assertEquals(results[1], [(7, 0.8), (8, 0.6), (6, 0.1)])
         
 
 class TestMoveClosestFirst(unittest2.TestCase):
@@ -358,7 +382,102 @@ class TestMoveClosestFirst(unittest2.TestCase):
         self.assertEquals(results[0], [(2, 0.8), (1, 0.1), (3, 0.6)])
         self.assertEquals(results[1], [(12, 0.8), (22, 0.1), (32, 0.6)])
         self.assertEquals(results[2], [(32, 0.8), (22, 0.1), (12, 0.6)])
+
+    def test_row(self):
+        results = SearchResults(3)
+        results._add_hit(0, 1, 0.1)
+        results._add_hit(0, 2, 0.8)
+        results._add_hit(0, 3, 0.6)
+
+        results._add_hit(1, 12, 0.8)
+        results._add_hit(1, 22, 0.1)
+        results._add_hit(1, 32, 0.6)
         
+        results._add_hit(2, 12, 0.6)
+        results._add_hit(2, 22, 0.1)
+        results._add_hit(2, 32, 0.8)
+        
+        results.reorder_row(0, "move-closest-first")
+        self.assertEquals(results[0], [(2, 0.8), (1, 0.1), (3, 0.6)])
+        self.assertEquals(results[1], [(12, 0.8), (22, 0.1), (32, 0.6)])
+        self.assertEquals(results[2], [(12, 0.6), (22, 0.1), (32, 0.8)])
+
+        results.reorder_row(-1, "move-closest-first")
+        self.assertEquals(results[0], [(2, 0.8), (1, 0.1), (3, 0.6)])
+        self.assertEquals(results[1], [(12, 0.8), (22, 0.1), (32, 0.6)])
+        self.assertEquals(results[2], [(32, 0.8), (22, 0.1), (12, 0.6)])
+        
+
+class TestReverse(unittest2.TestCase):
+    def test_empty(self):
+        results = SearchResults(2)
+        results.reorder("reverse")
+        self.assertEquals(len(results), 2)
+        self.assertEquals(len(results[0]), 0)
+        self.assertEquals(len(results[1]), 0)
+        
+    def test_one(self):
+        results = SearchResults(2)
+        results._add_hit(0, 9, 0.1)
+        results._add_hit(1, 8, 0.8)
+        results.reorder("reverse")
+        self.assertEquals(results[0], [(9, 0.1)])
+        self.assertEquals(results[1], [(8, 0.8)])
+
+    def test_two(self):
+        results = SearchResults(2)
+        results._add_hit(0, 1, 0.1)
+        results._add_hit(0, 2, 0.8)
+        results._add_hit(1, 2, 0.8)
+        results._add_hit(1, 3, 0.6)
+
+        results.reorder("reverse")
+        self.assertEquals(results[0], [(2, 0.8), (1, 0.1)])
+        self.assertEquals(results[1], [(3, 0.6), (2, 0.8)])
+
+    def test_three(self):
+        results = SearchResults(3)
+        results._add_hit(0, 1, 0.1)
+        results._add_hit(0, 2, 0.8)
+        results._add_hit(0, 3, 0.6)
+
+        results._add_hit(1, 12, 0.8)
+        results._add_hit(1, 22, 0.1)
+        results._add_hit(1, 32, 0.6)
+
+        results._add_hit(2, 12, 0.6)
+        results._add_hit(2, 32, 0.1)
+        results._add_hit(2, 22, 0.8)
+        
+        results.reorder("reverse")
+        
+        self.assertEquals(results[0], [(3, 0.6), (2, 0.8), (1, 0.1)])
+        self.assertEquals(results[1], [(32, 0.6), (22, 0.1), (12, 0.8)])
+        self.assertEquals(results[2], [(22, 0.8), (32, 0.1), (12, 0.6)])
+
+    def test_row(self):
+        results = SearchResults(3)
+        results._add_hit(0, 1, 0.1)
+        results._add_hit(0, 2, 0.8)
+        results._add_hit(0, 3, 0.6)
+
+        results._add_hit(1, 12, 0.8)
+        results._add_hit(1, 22, 0.1)
+        results._add_hit(1, 32, 0.6)
+        
+        results._add_hit(2, 12, 0.6)
+        results._add_hit(2, 32, 0.1)
+        results._add_hit(2, 22, 0.8)
+        
+        results.reorder_row(0, "reverse")
+        self.assertEquals(results[0], [(3, 0.6), (2, 0.8), (1, 0.1)])
+        self.assertEquals(results[1], [(12, 0.8), (22, 0.1), (32, 0.6)])
+        self.assertEquals(results[2], [(12, 0.6), (32, 0.1), (22, 0.8)])
+
+        results.reorder_row(-1, "reverse")
+        self.assertEquals(results[0], [(3, 0.6), (2, 0.8), (1, 0.1)])
+        self.assertEquals(results[1], [(12, 0.8), (22, 0.1), (32, 0.6)])
+        self.assertEquals(results[2], [(22, 0.8), (32, 0.1), (12, 0.6)])
 
 if __name__ == "__main__":
     unittest2.main()
