@@ -692,13 +692,13 @@ int chemfp_fill_lower_triangle(int n, chemfp_search_result *results) {
   return retval;
 }
 
-typedef void (*sort_func)(int *indices, double *scores, int num_results);
+typedef void (*reorder_func)(int num_hits, int *indices, double *scores);
 
 typedef struct {
   const char *name;
   hit_compare_func hit_compare;
-  sort_func sort;
-} sort_method_t;
+  reorder_func reorder;
+} reorder_method_t;
 
 
 static int compare_decreasing_score(int index1, int index2, double score1, double score2) {
@@ -752,7 +752,7 @@ static int compare_decreasing_index(int index1, int index2, double score1, doubl
   return -1;
 }
 
-static void move_closest_first(int *indices, double *scores, int num_hits) {
+static void move_closest_first(int num_hits, int *indices, double *scores) {
   int i, max_i;
   double max_score;
   int index;
@@ -779,38 +779,57 @@ static void move_closest_first(int *indices, double *scores, int num_hits) {
   }
 }
 
-sort_method_t sort_methods[] = {
+static void reverse(int num_hits, int *indices, double *scores) {
+  int i = 0;
+  int j = num_hits-1;
+  int tmp_index;
+  double tmp_score;
+  while (i < j) {
+    tmp_index = indices[i];
+    tmp_score = scores[i];
+    indices[i] = indices[j];
+    scores[i] = scores[j];
+    indices[j] = tmp_index;
+    scores[j] = tmp_score;
+    i++;
+    j--;
+  }
+}
+
+
+reorder_method_t reorder_methods[] = {
   {"increasing-score", compare_increasing_score, NULL},
   {"decreasing-score", compare_decreasing_score, NULL},
   {"increasing-index", compare_increasing_index, NULL},
   {"decreasing-index", compare_decreasing_index, NULL},
   {"move-closest-first", NULL, move_closest_first},
+  {"reverse", NULL, reverse},
   {NULL}
 };
 
-static sort_method_t *chemfp_get_sort_method(const char *name) {
+static reorder_method_t *chemfp_get_reorder_method(const char *name) {
   int i=0;
-  while (sort_methods[i].name != NULL) {
-    if (!strcmp(name, sort_methods[i].name)) {
-      return &sort_methods[i];
+  while (reorder_methods[i].name != NULL) {
+    if (!strcmp(name, reorder_methods[i].name)) {
+      return &reorder_methods[i];
     }
     i++;
   }
   return NULL;
 }
 
-int chemfp_search_results_sort(int num_results, chemfp_search_result *results,
-                               const char *order) {
+int chemfp_search_results_reorder(int num_results, chemfp_search_result *results,
+                                  const char *ordering) {
   int i, num_hits;
-  sort_method_t *sort_method = chemfp_get_sort_method(order);
-  if (sort_method == NULL) {
-    return CHEMFP_UNKNOWN_SORT_ORDER;
+  reorder_method_t *reorder_method = chemfp_get_reorder_method(ordering);
+  if (reorder_method == NULL) {
+    return CHEMFP_UNKNOWN_ORDERING;
   }
-  if (sort_method->sort) {
+  if (reorder_method->reorder) {
     for (i=0; i<num_results; i++) {
       num_hits = results[i].num_hits;
       if (num_hits > 1) {
-        sort_method->sort(results[i].indices, results[i].scores, num_hits);
+        reorder_method->reorder(num_hits, results[i].indices, results[i].scores);
       }
     }
   } else {
@@ -818,26 +837,26 @@ int chemfp_search_results_sort(int num_results, chemfp_search_result *results,
       num_hits = results[i].num_hits;
       if (num_hits > 1) {
         hits_tim_sort(results[i].indices, results[i].scores, num_hits,
-                      sort_method->hit_compare);
+                      reorder_method->hit_compare);
       }
     }
   }
   return CHEMFP_OK;
 }
 
-int chemfp_search_result_sort(chemfp_search_result *result, const char *order) {
+int chemfp_search_result_reorder(chemfp_search_result *result, const char *ordering) {
   int num_hits;
-  sort_method_t *sort_method = chemfp_get_sort_method(order);
-  if (sort_method == NULL) {
-    return CHEMFP_UNKNOWN_SORT_ORDER;
+  reorder_method_t *reorder_method = chemfp_get_reorder_method(ordering);
+  if (reorder_method == NULL) {
+    return CHEMFP_UNKNOWN_ORDERING;
   }
   num_hits = result->num_hits;
   if (num_hits > 1) {
-    if (sort_method->sort) {
-      sort_method->sort(result->indices, result->scores, num_hits);
+    if (reorder_method->reorder) {
+      reorder_method->reorder(num_hits, result->indices, result->scores);
     } else {
       hits_tim_sort(result->indices, result->scores, num_hits,
-                    sort_method->hit_compare);
+                    reorder_method->hit_compare);
     }
   }
   return CHEMFP_OK;
