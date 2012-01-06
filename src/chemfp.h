@@ -21,7 +21,7 @@ enum chemfp_errors {
   CHEMFP_METHOD_MISMATCH = -50,
 
   /* Various other error messages */
-  CHEMFP_UNKNOWN_SORT_ORDER = -60
+  CHEMFP_UNKNOWN_ORDERING = -60
   
 };
 
@@ -93,9 +93,9 @@ chemfp_search_result *chemfp_alloc_search_results(int num_results);
 void chemfp_free_results(int num_results, chemfp_search_result *);
 int chemfp_get_num_hits(chemfp_search_result *results);
 
-int chemfp_search_result_sort(chemfp_search_result *result, const char *order);
-int chemfp_search_results_sort(int num_results, chemfp_search_result *results,
-                               const char *order);
+int chemfp_search_result_reorder(chemfp_search_result *result, const char *ordering);
+int chemfp_search_results_reorder(int num_results, chemfp_search_result *results,
+                                  const char *ordering);
 
 typedef int (*chemfp_assign_hits_p)(void *data, int i, int target_index, double score);
 int chemfp_search_result_get_hits(chemfp_search_result *results,
