@@ -1,5 +1,7 @@
 # Test the fingerprint reordering implementation
 
+# Note: this is the ordering by popcount, and NOT the ordering of the results!
+
 from __future__ import absolute_import, with_statement
 import unittest2
 from cStringIO import StringIO
