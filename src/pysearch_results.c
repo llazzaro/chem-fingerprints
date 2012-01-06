@@ -177,14 +177,14 @@ check_row(int num_results, int *row) {
 }
 
 static PyObject *
-SearchResults_sort(SearchResults *self, PyObject *args, PyObject *kwds) {
+SearchResults_reorder(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"order", NULL};
-  const char *sort_order = "decreasing-score";
+  const char *ordering = "decreasing-score";
   int errval;
-  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s:sort", kwlist, &sort_order)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s:reorder", kwlist, &ordering)) {
     return NULL;
   }
-  errval = chemfp_search_results_sort(self->num_results, self->results, sort_order);
+  errval = chemfp_search_results_reorder(self->num_results, self->results, ordering);
   if (errval) {
     PyErr_SetString(PyExc_ValueError, chemfp_strerror(errval));
     return NULL;
@@ -193,18 +193,18 @@ SearchResults_sort(SearchResults *self, PyObject *args, PyObject *kwds) {
 }
 
 static PyObject *
-SearchResults_sort_row(SearchResults *self, PyObject *args, PyObject *kwds) {
+SearchResults_reorder_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"order", "row", NULL};
   int row=-1;
   int errval;
-  const char *sort_order = "decreasing-score";
-  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|s:sort", kwlist, &row, &sort_order)) {
+  const char *ordering = "decreasing-score";
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|s:reorder_row", kwlist, &row, &ordering)) {
     return NULL;
   }
   if (!check_row(self->num_results, &row)) {
     return NULL;
   }
-  errval = chemfp_search_result_sort(self->results+row, sort_order);
+  errval = chemfp_search_result_reorder(self->results+row, ordering);
   if (errval) {
     PyErr_SetString(PyExc_ValueError, chemfp_strerror(errval));
     return NULL;
@@ -362,10 +362,10 @@ static PyMethodDef SearchResults_methods[] = {
    "get the hit scores for a given row"},
   {"size", (PyCFunction) SearchResults_size, METH_VARARGS | METH_KEYWORDS,
    "the number of hits in a given row"},
-  {"sort", (PyCFunction) SearchResults_sort, METH_VARARGS | METH_KEYWORDS,
-   "Sort search results rows in-place"},
-  {"sort_row", (PyCFunction) SearchResults_sort_row, METH_VARARGS | METH_KEYWORDS,
-   "Sort search results rows in-place"},
+  {"reorder", (PyCFunction) SearchResults_reorder, METH_VARARGS | METH_KEYWORDS,
+   "Reorder search results rows, in-place"},
+  {"reorder_row", (PyCFunction) SearchResults_reorder_row, METH_VARARGS | METH_KEYWORDS,
+   "Reorder search results for a given row, in-place"},
   {"_add_hit", (PyCFunction) SearchResults_add_hit, METH_VARARGS | METH_KEYWORDS,
    "(private method) add a hit"},
   
