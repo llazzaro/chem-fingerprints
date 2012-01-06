@@ -630,6 +630,11 @@ int chemfp_fill_lower_triangle(int n, chemfp_search_result *results) {
   int i, j;
   int *sizes = (int *) malloc(n * sizeof(int));
   int retval;
+  int *counts = (int *) malloc(n * sizeof(int));
+  int num_hits, num_allocated;
+  double *scores;
+  int *old_indices, *indices;
+  chemfp_search_result *result;
 
   if (!sizes) {
     return CHEMFP_NO_MEM;
@@ -637,6 +642,39 @@ int chemfp_fill_lower_triangle(int n, chemfp_search_result *results) {
   /* Save all of the count information */
   for (i=0; i<n; i++) {
     sizes[i] = chemfp_get_num_hits(results+i);
+    counts[i] = 0;
+  }
+  for (i=0; i<n; i++) {
+    for (j=0; j<sizes[i]; j++) {
+      counts[results[i].indices[j]]++;
+    }
+  }
+
+  /* Increase the sizes */
+  for (i=0; i<n; i++) {
+    result = results+i;
+    num_allocated = result->num_hits + counts[i];
+    if (result->num_hits + counts[i] > result->num_allocated) {
+      if (result->num_allocated == 0) {
+        scores = (double *) malloc(num_allocated * (sizeof(int)+sizeof(double)));
+        if (!scores) {
+          return CHEMFP_NO_MEM;
+        }
+        indices = (int *) (scores + num_allocated);
+      } else {
+        num_hits = result->num_hits;
+        scores = (double *) realloc(result->scores, num_allocated * (sizeof(int)+sizeof(double)));
+        if (!scores) {
+          return CHEMFP_NO_MEM;
+        }
+        old_indices = (int *) (scores + result->num_allocated);
+        indices = (int *) (scores + num_allocated);
+        memmove(indices, old_indices, num_hits*sizeof(int));
+      }
+      result->num_allocated = num_allocated;
+      result->indices = indices;
+      result->scores = scores;
+    }
   }
 
   retval = CHEMFP_OK;
@@ -795,8 +833,12 @@ int chemfp_search_result_sort(chemfp_search_result *result, const char *order) {
   }
   num_hits = result->num_hits;
   if (num_hits > 1) {
-    hits_tim_sort(result->indices, result->scores, num_hits,
-                  sort_method->hit_compare);
+    if (sort_method->sort) {
+      sort_method->sort(result->indices, result->scores, num_hits);
+    } else {
+      hits_tim_sort(result->indices, result->scores, num_hits,
+                    sort_method->hit_compare);
+    }
   }
   return CHEMFP_OK;
 }
