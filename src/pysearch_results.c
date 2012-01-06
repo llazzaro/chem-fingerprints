@@ -179,7 +179,7 @@ check_row(int num_results, int *row) {
 static PyObject *
 SearchResults_sort(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"order", NULL};
-  const char *sort_order = "decreasing";
+  const char *sort_order = "decreasing-score";
   int errval;
   if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s:sort", kwlist, &sort_order)) {
     return NULL;
@@ -197,7 +197,7 @@ SearchResults_sort_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"order", "row", NULL};
   int row=-1;
   int errval;
-  const char *sort_order = "decreasing";
+  const char *sort_order = "decreasing-score";
   if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|s:sort", kwlist, &row, &sort_order)) {
     return NULL;
   }
@@ -236,18 +236,76 @@ SearchResults_clear_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   Py_RETURN_NONE;
 }
 
+static PyObject *
+new_array(char *datatype) {
+  PyObject *array_module;
+  static PyObject *array_new = NULL;
+  if (!array_new) {
+    array_module = PyImport_ImportModule("array");
+    if (!array_module) {
+      return NULL;
+    }
+    array_new = PyObject_GetAttrString(array_module, "array");
+    if (!array_new) {
+      return NULL;
+    }
+  }
+  return PyObject_CallFunction(array_new, "s", datatype);
+}
+
+static int extract_threhold_indices(void *data, int i, int target_index, double score) {
+  int *buffer = (int *) data;
+  buffer[i] = target_index;
+  return 0;
+}
 
 static PyObject *
 SearchResults_get_indices(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"row", NULL};
+  int num_hits;
   int row;
+  PyObject *array = NULL;
+  PyObject *fromstring = NULL;
+  
   if (!PyArg_ParseTupleAndKeywords(args, kwds, "i:get_indices", kwlist, &row)) {
     return NULL;
   }
   if (!check_row(self->num_results, &row)) {
     return NULL;
   }
-  return _fill_row(self->results+row, assign_threshold_indices);
+  /* Get to work */
+
+  num_hits = chemfp_get_num_hits(self->results+row);
+  if (!num_hits) {
+    return PyTuple_New(0);
+  }
+  array = new_array("i");
+  if (!array) {
+    goto error;
+    return NULL;
+  }
+  fromstring = PyObject_GetAttrString(array, "fromstring");
+  if (!fromstring) {
+    goto error;
+  }
+
+  PyObject *ignore = PyObject_CallFunction(fromstring, "s#", self->results[row].indices,
+                                           num_hits*sizeof(int));
+  if (!ignore) {
+    goto error;
+  }
+  Py_DECREF(ignore);
+  Py_DECREF(fromstring);
+  return array;
+
+ error:
+  if (fromstring) {
+    Py_DECREF(fromstring);
+  }
+  if (array) {
+    Py_DECREF(array);
+  }
+  return NULL;
 }
 
 static PyObject *
