@@ -1169,63 +1169,6 @@ count_tanimoto_arena(PyObject *self, PyObject *args) {
   Py_RETURN_NONE;
 }
     
-
-#if 0
-static PyObject *
-alloc_search_results(PyObject *self, PyObject *args) {
-  int num_results;
-  chemfp_search_result *results;
-  UNUSED(self);
-
-  if (!PyArg_ParseTuple(args, "i:alloc_search_results",
-                        &num_results)) {
-    return NULL;
-  }
-  if (num_results <= 0) {
-    PyErr_SetString(PyExc_ValueError, "num_results must be positive");
-    return NULL;
-  }
-  results = chemfp_alloc_search_results(num_results);
-  return PyInt_FromLong( (long)((uintptr_t) results) );
-}
-
-static PyObject *
-free_search_results(PyObject *self, PyObject *args) {
-  int num_results;
-  long results_long;
-  chemfp_search_result *results;
-  UNUSED(self);
-
-  if (!PyArg_ParseTuple(args, "li:free_search_results",
-                        &results_long, &num_results)) {
-    return NULL;
-  }
-  if (bad_results(results_long, 0, &results) ||
-      bad_num_results(num_results)) {
-    return NULL;
-  }
-  chemfp_free_results(num_results, results);
-  return Py_BuildValue("");
-}
-
-static PyObject *
-get_num_hits(PyObject *self, PyObject *args) {
-  int index;
-  long results_long;
-  chemfp_search_result *results;
-  UNUSED(self);
-
-  if (!PyArg_ParseTuple(args, "li:get_num_hits",
-                        &results_long, &index)) {
-    return NULL;
-  }
-  if (bad_results(results_long, 0, &results)) {
-    return NULL;
-  }
-  return PyInt_FromLong(chemfp_get_num_hits(results+index));
-}
-#endif
-
 /* threshold_tanimoto_arena */
 static PyObject *
 threshold_tanimoto_arena(PyObject *self, PyObject *args) {
@@ -1287,55 +1230,6 @@ threshold_tanimoto_arena(PyObject *self, PyObject *args) {
   Py_END_ALLOW_THREADS;
 
   return PyInt_FromLong(errval);
-}
-
-
-static int assign_threshold_hits(void *data, int i, int target_index, double score) {
-  PyObject *list = (PyObject *)data;
-  PyObject *tuple;
-  
-  tuple = Py_BuildValue("(id)", target_index, score);
-  if (!tuple) {
-    return 1;
-  }
-  PyList_SET_ITEM(list, i, tuple);
-  return 0;
-}
-
-
-static PyObject *
-threshold_result_get_hits(PyObject *self, PyObject *args) {
-  long threshold_results_long;
-  int index, n;
-  chemfp_search_result *threshold_results;
-  PyObject *result_list, *obj;
-  int i, errval;
-  UNUSED(self);
-    
-  if (!PyArg_ParseTuple(args, "li:threshold_result_get_hits",
-                        &threshold_results_long, &index)) {
-    return NULL;
-  }
-  threshold_results = (chemfp_search_result *)((uintptr_t) threshold_results_long);
-  n = chemfp_get_num_hits(threshold_results+index);
-  // assert n >= 0
-  result_list = PyList_New(n);
-
-  errval = chemfp_search_result_get_hits(threshold_results+index,
-                                            assign_threshold_hits, result_list);
-  if (errval) {
-    for (i=0; i<n; i++) {
-      obj = PyList_GetItem(result_list, i);
-      if (obj) {
-        Py_DECREF(obj);
-      } else {
-        break;
-      }
-    }
-    Py_DECREF(result_list);
-    return NULL;
-  }
-  return result_list;
 }
 
 /* knearest_tanimoto_arena */
@@ -1850,19 +1744,8 @@ static PyMethodDef chemfp_methods[] = {
   {"count_tanimoto_arena", count_tanimoto_arena, METH_VARARGS,
    "count_tanimoto_arena (TODO: document)"},
 
-#if 0
-  {"alloc_search_results", alloc_search_results, METH_VARARGS,
-   "alloc_search_results (TODO: document)"},
-  {"free_search_results", free_search_results, METH_VARARGS,
-   "free_search_results (TODO: document)"},
-  {"get_num_hits", get_num_hits, METH_VARARGS,
-   "get_num_hits (TODO: document)"},
-#endif
-
   {"threshold_tanimoto_arena", threshold_tanimoto_arena, METH_VARARGS,
    "threshold_tanimoto_arena (TODO: document)"},
-  {"threshold_result_get_hits", threshold_result_get_hits, METH_VARARGS,
-   "threshold_result_get_hits (TODO: documenet)"},
 
   {"knearest_tanimoto_arena", knearest_tanimoto_arena, METH_VARARGS,
    "knearest_tanimoto_arena (TODO: document)"},
