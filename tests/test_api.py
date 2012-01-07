@@ -563,6 +563,35 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
         self.assertTrue(has_776, "Missing CHEBI:776")
         self.assertTrue(has_17582, "Missing CHEBI:17582")
 
+    def test_reiter_open_handle_arena_search(self):
+        reader = chemfp.open(CHEBI_TARGETS)
+        # The main goal is to prevent people from searching a
+        # partially open file.  This reflects an implementation
+        # problem; the iterator should be shared across all instances.
+        it = iter(reader)
+        arena = next(it)
+        for method in (reader.id_threshold_tanimoto_search,
+                       reader.id_knearest_tanimoto_search):
+            with self.assertRaisesRegexp(TypeError, "FPS file is not at the start"):
+                for x in method(arena):
+                    break
+
+    def test_reiter_open_handle_fp_search(self):
+        reader = chemfp.open(CHEBI_TARGETS)
+        # The main goal is to prevent people from searching a
+        # partially open file.  This reflects an implementation
+        # problem; the iterator should be shared across all instances.
+        it = iter(reader)
+        arena = next(it)
+        fp = arena[0][1] # Get the fingerprint term
+        
+        for method in (reader.id_threshold_tanimoto_search_fp,
+                       reader.id_knearest_tanimoto_search_fp):
+            with self.assertRaisesRegexp(TypeError, "FPS file is not at the start"):
+                for x in method(fp):
+                    break
+        
+        
 
 
 class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
