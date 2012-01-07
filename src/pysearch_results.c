@@ -99,30 +99,6 @@ static int assign_threshold_hits(void *data, int i, int target_index, double sco
   return 0;
 }
 
-static int assign_threshold_indices(void *data, int i, int target_index, double score) {
-  PyObject *list = (PyObject *) data;
-  PyObject *index;
-  
-  index = PyInt_FromLong(target_index);
-  if (!index) {
-    return 1;
-  }
-  PyList_SET_ITEM(list, i, index);
-  return 0;
-}
-
-static int assign_threshold_scores(void *data, int i, int target_index, double score) {
-  PyObject *list = (PyObject *) data;
-  PyObject *pyscore;
-  
-  pyscore = PyFloat_FromDouble(score);
-  if (!pyscore) {
-    return 1;
-  }
-  PyList_SET_ITEM(list, i, pyscore);
-  return 0;
-}
-
 static PyObject *
 _fill_row(chemfp_search_result *result, chemfp_assign_hits_p extract_func) {
   int errval, n, i;
@@ -237,7 +213,7 @@ SearchResults_clear_row(SearchResults *self, PyObject *args, PyObject *kwds) {
 }
 
 static PyObject *
-new_array(char *datatype) {
+new_array(const char *datatype) {
   PyObject *array_module;
   static PyObject *array_new = NULL;
   if (!array_new) {
@@ -253,47 +229,30 @@ new_array(char *datatype) {
   return PyObject_CallFunction(array_new, "s", datatype);
 }
 
-static int extract_threhold_indices(void *data, int i, int target_index, double score) {
-  int *buffer = (int *) data;
-  buffer[i] = target_index;
-  return 0;
-}
-
 static PyObject *
-SearchResults_get_indices(SearchResults *self, PyObject *args, PyObject *kwds) {
-  static char *kwlist[] = {"row", NULL};
-  int num_hits;
-  int row;
-  PyObject *array = NULL;
-  PyObject *fromstring = NULL;
+data_blob_to_array(int num_hits, void *data_blob, const char *array_type, size_t num_bytes_per_item) {
+  PyObject *array=NULL, *ignore=NULL, *fromstring=NULL;
   
-  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i:get_indices", kwlist, &row)) {
-    return NULL;
-  }
-  if (!check_row(self->num_results, &row)) {
-    return NULL;
-  }
-  /* Get to work */
-
-  num_hits = chemfp_get_num_hits(self->results+row);
   if (!num_hits) {
+    /* Special case: return a tuple if there are no hits */
+    /* (I'm not sure if this is a good idea, but it's fast. I justify it */
+    /* by saying that this function returns back something which supports */
+    /* len(), [index], and forward/reverse iteration */
     return PyTuple_New(0);
   }
-  array = new_array("i");
+  array = new_array(array_type);
   if (!array) {
     goto error;
-    return NULL;
   }
   fromstring = PyObject_GetAttrString(array, "fromstring");
   if (!fromstring) {
     goto error;
   }
-
-  PyObject *ignore = PyObject_CallFunction(fromstring, "s#", self->results[row].indices,
-                                           num_hits*sizeof(int));
+  ignore = PyObject_CallFunction(fromstring, "s#", data_blob, num_hits*num_bytes_per_item);
   if (!ignore) {
     goto error;
   }
+
   Py_DECREF(ignore);
   Py_DECREF(fromstring);
   return array;
@@ -309,6 +268,21 @@ SearchResults_get_indices(SearchResults *self, PyObject *args, PyObject *kwds) {
 }
 
 static PyObject *
+SearchResults_get_indices(SearchResults *self, PyObject *args, PyObject *kwds) {
+  static char *kwlist[] = {"row", NULL};
+  int row;
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i:get_indices", kwlist, &row)) {
+    return NULL;
+  }
+  if (!check_row(self->num_results, &row)) {
+    return NULL;
+  }
+  return data_blob_to_array(chemfp_get_num_hits(self->results+row),
+                            self->results[row].indices,
+                            "i", sizeof(int));
+}
+
+static PyObject *
 SearchResults_get_scores(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"row", NULL};
   int row;
@@ -318,7 +292,9 @@ SearchResults_get_scores(SearchResults *self, PyObject *args, PyObject *kwds) {
   if (!check_row(self->num_results, &row)) {
     return NULL;
   }
-  return _fill_row(self->results+row, assign_threshold_scores);
+  return data_blob_to_array(chemfp_get_num_hits(self->results+row),
+                            self->results[row].scores,
+                            "d", sizeof(double));
 }
 
 static PyObject *
