@@ -87,51 +87,40 @@ SearchResults_length(SearchResults *result) {
   return (Py_ssize_t) result->num_results;
 }
 
-static int assign_threshold_hits(void *data, int i, int target_index, double score) {
-  PyObject *list = (PyObject *) data;
-  PyObject *tuple;
-  
-  tuple = Py_BuildValue("(id)", target_index, score);
-  if (!tuple) {
-    return 1;
-  }
-  PyList_SET_ITEM(list, i, tuple);
-  return 0;
-}
-
-static PyObject *
-_fill_row(chemfp_search_result *result, chemfp_assign_hits_p extract_func) {
-  int errval, n, i;
-  PyObject *hits, *obj;
-
-  n = chemfp_get_num_hits(result);
-  hits = PyList_New(n);
-  if (!hits) {
-    return NULL;
-  }
-  errval = chemfp_search_result_get_hits(result, extract_func, hits);
-  if (errval) {
-    for (i=0; i<n; i++) {
-      obj = PyList_GetItem(hits, i);
-      if (obj) {
-        Py_DECREF(obj);
-      } else {
-        break;
-      }
-    }
-    Py_DECREF(hits);
-    return NULL;
-  }
-  return hits;
-}
-
 static PyObject *
 SearchResults_item(SearchResults *self, Py_ssize_t index) {
+  int n, i;
+  PyObject *hits, *obj;
+  chemfp_search_result *result;
+
   if (index < 0 || index >= self->num_results) {
     PyErr_SetString(PyExc_IndexError, "row index is out of range");
     return NULL;
   }
-  return _fill_row(self->results+index, assign_threshold_hits);
+  result = self->results+index;
+  n = chemfp_get_num_hits(result);
+  
+  hits = PyList_New(n);
+  if (!hits) {
+    return NULL;
+  }
+  for (i=0; i<n; i++) {
+    obj = Py_BuildValue("(id)", result->indices[i], result->scores[i]);
+    if (!obj) {
+      goto error;
+    }
+    PyList_SET_ITEM(hits, i, obj);
+  }
+  return hits;
+
+ error:
+  /* I could be smarter and only deallocate the ones which I know are present. */
+  /* Proving that's correct is a bit trickier than I want to do. */
+  for (i=0; i<n; i++) {
+    Py_XDECREF(PyList_GET_ITEM(hits, i));
+  }
+  Py_DECREF(hits);
+  return NULL;
 }
 
 
