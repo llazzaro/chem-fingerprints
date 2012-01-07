@@ -610,22 +610,6 @@ int chemfp_add_hit(chemfp_search_result *result,
   return 1;
 }
 
-int chemfp_search_result_get_hits(chemfp_search_result *result,
-                                  chemfp_assign_hits_p add_callback, void *payload) {
-  int num_hits = result->num_hits;
-  int i, errval;
-
-  if (num_hits) {
-    for (i=0; i<num_hits; i++) {
-      errval = add_callback(payload, i, result->indices[i], result->scores[i]);
-      if (errval) {
-	return errval;
-      }
-    }
-  }
-  return 0;
-}
-
 int chemfp_fill_lower_triangle(int n, chemfp_search_result *results) {
   int i, j;
   int *sizes = (int *) malloc(n * sizeof(int));

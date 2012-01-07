@@ -96,10 +96,6 @@ int chemfp_get_num_hits(chemfp_search_result *results);
 int chemfp_search_result_reorder(chemfp_search_result *result, const char *ordering);
 int chemfp_search_results_reorder(int num_results, chemfp_search_result *results,
                                   const char *ordering);
-
-typedef int (*chemfp_assign_hits_p)(void *data, int i, int target_index, double score);
-int chemfp_search_result_get_hits(chemfp_search_result *results,
-                                  chemfp_assign_hits_p add_callback, void *payload);
 void chemfp_search_result_clear(chemfp_search_result *result);
 
 /*** Low-level operations directly on hex fingerprints ***/
