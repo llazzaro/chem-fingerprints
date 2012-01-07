@@ -3,7 +3,7 @@ from __future__ import with_statement
 import unittest2
 import random
 
-from _chemfp import SearchResults
+from chemfp.search import SearchResults
 
 
 random_scores = [
@@ -123,7 +123,41 @@ class TestBasicAPI(unittest2.TestCase):
         self.assertEquals(results[0], [])
         self.assertEquals(results[1], [])
 
+class TestIterAPI(unittest2.TestCase):
+    def setUp(self):
+        results = SearchResults(2)
+        all_scores = [random_scores[:10],
+                      random_scores[30:35]]
+        # First row has columns 0, 1, 2, ..., 9
+        # second row has columns 0, 2, 4, 6, 8
+        for row, scores in enumerate(all_scores):
+            for i, score in enumerate(scores):
+                results._add_hit(row, i*(row+1), score)
+        self.results = results
+        
+    def test_iter_indices(self):
+        results = self.results
+        it = results.iter_indices()
+        self.assertEquals(list(next(it)), range(10))
+        self.assertEquals(list(next(it)), [0, 2, 4, 6, 8])
+        with self.assertRaisesRegexp(StopIteration, ""):
+            next(it)
 
+    def test_iter_scores(self):
+        results = self.results
+        it = results.iter_scores()
+        self.assertEquals(list(next(it)), random_scores[:10])
+        self.assertEquals(list(next(it)), random_scores[30:35])
+        with self.assertRaisesRegexp(StopIteration, ""):
+            next(it)
+
+    def test_iter_hits(self):
+        results = self.results
+        it = results.iter_hits()
+        self.assertEquals(list(next(it)), zip(range(10), random_scores[:10]))
+        self.assertEquals(list(next(it)), zip([0, 2, 4, 6, 8], random_scores[30:35]))
+        with self.assertRaisesRegexp(StopIteration, ""):
+            next(it)
 
 
 class TestErrors(unittest2.TestCase):
