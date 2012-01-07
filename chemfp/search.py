@@ -6,48 +6,26 @@ import array
 
 
 class SearchResults(_chemfp.SearchResults):
-#    def __init__(self, num_results, target_ids):
-#        self.num_results = num_results
-#        if num_results:
-#            self._handle = SearchResultsHandle(num_results)
-#        else:
-#            self._handle = None
-#        self.target_ids = target_ids
-
-    '''
-    def __len__(self):
-        return self.num_results
-
-    def size(self, i):
-        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
-        return _chemfp.get_num_threshold_hits(self._handle, i)
-
-    def __getitem__(self, i):
-        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
-        ids = self.target_ids
-        return [(ids[idx], score) for (idx, score) in
-                    _chemfp.threshold_result_get_hits(self._handle, i)]
-    '''
     def __iter__(self): # XXXX fixme
         ids = self.target_ids
-        for i in range(len(self)):
+        for i in xrange(len(self)):
             yield [(ids[idx], score) for (idx, score) in self[i]]
 
     def iter_hits(self):
-        for i in range(len(self)):
+        for i in xrange(len(self)):
             yield self[i]
 
     def iter_indices(self):
-        for i in range(len(self)):
+        for i in xrange(len(self)):
             yield self.get_indices(i)
 
     def iter_scores(self):
-        for i in range(len(self)):
+        for i in xrange(len(self)):
             yield self.get_scores(i)
 
     def iter_ids_and_scores(self):
         ids = self.target_ids
-        for i in range(len(self)):
+        for i in xrange(len(self)):
             yield [(ids[idx], score) for (idx, score) in self[i]]
 
         
