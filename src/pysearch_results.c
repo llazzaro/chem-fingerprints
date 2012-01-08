@@ -107,11 +107,11 @@ check_row(int num_results, int *row) {
 }
 
 static PyObject *
-SearchResults_reorder(SearchResults *self, PyObject *args, PyObject *kwds) {
+SearchResults_reorder_all(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"order", NULL};
   const char *ordering = "decreasing-score";
   int errval;
-  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s:reorder", kwlist, &ordering)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|s:reorder_all", kwlist, &ordering)) {
     return NULL;
   }
   errval = chemfp_search_results_reorder(self->num_results, self->results, ordering);
@@ -144,7 +144,7 @@ SearchResults_reorder_row(SearchResults *self, PyObject *args, PyObject *kwds) {
 
 
 static PyObject *
-SearchResults_clear(SearchResults *self) {
+SearchResults_clear_all(SearchResults *self) {
   int i;
   for (i=0; i<self->num_results; i++) {
     chemfp_search_result_clear(self->results+i);
@@ -323,7 +323,7 @@ SearchResults_add_hit(SearchResults *self, PyObject *args, PyObject *kwds) {
 }
 
 static PyMethodDef SearchResults_methods[] = {
-  {"clear", (PyCFunction) SearchResults_clear, METH_VARARGS | METH_KEYWORDS,
+  {"clear_all", (PyCFunction) SearchResults_clear_all, METH_VARARGS | METH_KEYWORDS,
    "clear the hits in-place"},
   {"clear_row", (PyCFunction) SearchResults_clear_row, METH_VARARGS | METH_KEYWORDS,
    "clear the hits in-place"},
@@ -335,7 +335,7 @@ static PyMethodDef SearchResults_methods[] = {
    "get (index, score) tuples for each hit in a row"},
   {"size", (PyCFunction) SearchResults_size, METH_VARARGS | METH_KEYWORDS,
    "the number of hits in a given row"},
-  {"reorder", (PyCFunction) SearchResults_reorder, METH_VARARGS | METH_KEYWORDS,
+  {"reorder_all", (PyCFunction) SearchResults_reorder_all, METH_VARARGS | METH_KEYWORDS,
    "Reorder search results rows, in-place"},
   {"reorder_row", (PyCFunction) SearchResults_reorder_row, METH_VARARGS | METH_KEYWORDS,
    "Reorder search results for a given row, in-place"},
