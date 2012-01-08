@@ -15,6 +15,11 @@ class SearchResults(_chemfp.SearchResults):
         for i in xrange(len(self)):
             yield self[i]
 
+    def iter_ids(self):
+        ids = self.target_ids
+        for indicies in self.iter_indices():
+            yield [ids[idx] for idx in indicies]
+
     def iter_indices(self):
         for i in xrange(len(self)):
             yield self.get_indices(i)
