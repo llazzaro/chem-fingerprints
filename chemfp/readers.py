@@ -84,11 +84,6 @@ class FPSReader(object):
 #    def close(self):
 #        self._infile.close()
         
-    def reset(self):
-        if self._at_start:
-            return
-        raise TypeError("FPSReader instances do not support reset()")
-        
     def iter_blocks(self):
         if self._block_reader is None:
             self._block_reader = iter(self._iter_blocks())
@@ -144,26 +139,23 @@ class FPSReader(object):
                 lineno += 1
 
     def _check_at_start(self):
-        try:
-            self.reset()
-        except TypeError:
+        if not self._at_start:
             raise TypeError("FPS file is not at the start of the file; cannot search")
 
+
+    def _iter_batches(self, queries, arena_size):
+        first_time = True
+        for query_arena in queries.iter_arenas(arena_size):
+            if not self._at_start:
+                if first_time:
+                    raise TypeError("Unable to process FPS input because another function already started parsing the contents.")
+            first_time = False
+            yield query_arena
+        
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
         self._check_at_start()
         return fps_search.count_tanimoto_hits_fp(query_fp, self, threshold)
 
-
-    def _iter_batches(self, queries, arena_size):
-        for query_arena in queries.iter_arenas(arena_size):
-            try:
-                self._check_at_start()
-            except TypeError:
-                if first_time:
-                    raise TypeError("Unable to process the second query batch because the FPS file is not longer at the start of the file. Try increasing the arena_size or use a FingerprintArena")
-            first_time = False
-            yield query_arena
-        
     def id_count_tanimoto_hits(self, queries, threshold=0.7, arena_size=100):
         for query_arena in self._iter_batches(queries, arena_size):
             results = fps_search.count_tanimoto_hits_arena(query_arena, self, threshold)
@@ -175,6 +167,7 @@ class FPSReader(object):
         return fps_search.id_threshold_tanimoto_search_fp(query_fp, self, threshold)
 
     def id_threshold_tanimoto_search(self, queries, threshold=0.7, arena_size=100):
+        self._check_at_start()
         for query_arena in self._iter_batches(queries, arena_size):
             results = fps_search.id_threshold_tanimoto_search_arena(query_arena, self,
                                                                     threshold)
@@ -186,6 +179,7 @@ class FPSReader(object):
         return fps_search.id_knearest_tanimoto_search_fp(query_fp, self, k, threshold)
 
     def id_knearest_tanimoto_search(self, queries, k=3, threshold=0.7, arena_size=100):
+        self._check_at_start()
         for query_arena in self._iter_batches(queries, arena_size):
             results = fps_search.id_knearest_tanimoto_search(query_arena, self,
                                                              k, threshold)

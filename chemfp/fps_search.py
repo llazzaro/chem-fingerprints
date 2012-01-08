@@ -1,6 +1,8 @@
 # Internal module to help with FPS-based searches
 from __future__ import absolute_import
 
+# TODO: I would like to replace the search results so it returns a chemfp.search.SearchResults
+
 import ctypes
 import itertools
 import array
@@ -94,6 +96,10 @@ class TanimotoCell(ctypes.Structure):
 
 
 def id_threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
+    """Find matches in the target reader which are at least threshold similar to the query fingerprint
+
+    The results is an FPSSearchResults instance contain the result.
+    """
     hits = []
 
     fp_size = len(query_fp)
@@ -124,15 +130,29 @@ def id_threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
     return hits
 
 def id_threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
+    """Find matches in the target reader which are at least threshold similar to the query arena fingerprints
+
+    The results are a list in the form [(query_id1, search_results1),
+    (query_id2, search_results2), ...]  where search_results is an
+    FPSSearchResults instance containing the hit information for the
+    corresponding query fingerprint.
+    """
     return zip(query_arena.arena_ids,
                threshold_tanimoto_search_arena(query_arena, target_reader, threshold))
 
 def threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
-    require_matching_sizes(query_arena, target_reader)
-    all_hits = [[] for i in xrange(len(query_arena))]
-    if not all_hits:
-        return []
+    """Find matches in the target reader which are at least threshold similar to the query arena fingerprints
 
+    The results are a list in the form [search_results1, search_results2, ...]
+    where search_results are in the same order as the fingerprints in the query_arena.
+    """
+    
+    require_matching_sizes(query_arena, target_reader)
+
+    if not query_arena:
+        return FPSSearchResults([], [])
+    all_ids = [[] for i in xrange(len(query_arena))]
+    all_scores = [[] for i in xrange(len(query_arena))]
     
     # Compute at least 100 tanimotos per query, but at most 10,000 at a time
     # (That's about 200K of memory)
@@ -157,12 +177,13 @@ def threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
                 
             for cell in itertools.islice(cells, 0, num_cells):
                 id = block[cell.id_start:cell.id_end]
-                all_hits[cell.query_index].append( (id, cell.score) )
+                all_ids[cell.query_index].append(id)
+                all_scores[cell.query_index].append(cell.score)
 
             if start == end:
                 break
 
-    return all_hits
+    return FPSSearchResults(all_ids, all_scores)
             
 ######### k-nearest Tanimoto search, with threshold
 
@@ -194,10 +215,22 @@ def _make_knearest_search(num_queries, k):
 
 
 def id_knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
+    """Find k matches in the target reader which are at least threshold similar to the query fingerprint
+
+    The results is an FPSSearchResults instance contain the result.
+    """
     query_arena = _fp_to_arena(query_fp, target_reader.metadata)
     return knearest_tanimoto_search(query_arena, target_reader, k, threshold)[0]
 
 def id_knearest_tanimoto_search(query_arena, target_reader, k, threshold):
+    """Find k matches in the target reader which are at least threshold similar to the query arena fingerprints
+
+    The results are a list in the form [(query_id1, search_results1),
+    (query_id2, search_results2), ...]  where search_results is an
+    FPSSearchResults instance containing the hit information for the
+    corresponding query fingerprint.
+    
+    """
     return zip(query_arena.arena_ids,
                knearest_tanimoto_search(query_arena, target_reader, k, threshold))
 
@@ -225,16 +258,90 @@ def knearest_tanimoto_search(query_arena, target_reader, k, threshold):
 
         _chemfp.fps_knearest_search_finish(search)
 
-        all_results = []
+        all_ids = []
+        all_scores = []
         for query_index in xrange(num_queries):
             heap = search.heaps[0][query_index]
-            results = []
+            ids = []
             for i in xrange(heap.size):
                 id = ctypes.string_at(heap.ids[0][i])
-                score = heap.scores[0][i]
-                results.append( (id, score) )
-            all_results.append(results)
-        return all_results
+                ids.append(id)
+            scores = heap.scores[0][:heap.size]
+            all_ids.append(ids)
+            all_scores.append(scores)
+        return FPSSearchResults(all_ids, all_scores)
 
     finally:
         _chemfp.fps_knearest_search_free(search)
+
+def _sort_row(ids, scores, name):
+    indices = range(len(ids))
+    if name == "decreasing-scores":
+        indices.sort(key=lambda i: (-scores[i], ids[i]))
+    elif name == "increasing-scores":
+        indices.sort(key=lambda i: (scores[i], ids[i]))
+    elif name == "decreasing-ids":
+        indices.sort(key=lambda i: ids[i], reverse=True)
+    elif name == "increasing-ids":
+        indices.sort(key=lambda i: ids[i])
+    elif name == "reverse":
+        ids.reverse()
+        scores.reverse()
+        return
+    elif name == "move-closest-first":
+        x = max(scores)
+        i = scores.index(x)
+        ids[0], ids[i] = ids[i], ids[0]
+        scores[0], scores[i] = scores[i], scores[0]
+        return
+    else:
+        raise ValueError("unknown ordering")
+
+    new_ids = [ids[i] for i in indices]
+    new_scores = [scores[i] for i in indices]
+    ids[:] = new_ids
+    scores[:] = new_scores
+
+class FPSSearchResults(object):
+    def __init__(self, all_ids, all_scores):
+        n = len(all_ids)
+        assert n == len(all_scores), (n, len(all_scores))
+        self._n = n
+        self._all_ids = all_ids
+        self._all_scores = all_scores
+
+    def __len__(self):
+        return self._n
+
+    def __getitem__(self, i):
+        return zip(self._all_ids[i], self._all_scores[i])
+
+    def __iter__(self):
+        for ids, scores in zip(self._all_ids, self._all_scores):
+            yield zip(ids, scores)
+
+    def get_ids(self, i):
+        return self._all_ids[i]
+
+    def get_scores(self, i):
+        return self._all_scores[i]
+
+    def get_hits(self, i):
+        return zip(self._all_ids[i], self._all_scores[i])
+
+    def iter_ids(self):
+        for ids in self._all_ids:
+            yield ids
+            
+    def iter_scores(self):
+        for scores in self._all_scores:
+            yield scores
+
+    def sort(self, ordering="decreasing-scores"):
+        for (ids, scores) in zip(self._all_ids, self._all_scores):
+            _sort_row(ids, scores, ordering)
+
+    def sort_row(self, i, ordering="decreasing-scores"):
+        ids = self._all_ids[id]
+        scores = self._all_scores[id]
+        _sort_row(ids, scores, ordering)
