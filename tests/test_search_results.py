@@ -177,10 +177,10 @@ class TestBasicAPIRow(TestCase):
         results._add_hit(0, 1, 0.0)
         results._add_hit(1, 12, 1.0)
         self.assertListEquals(results[1], [(12, 1.0)])
-        results.clear_row(-2)
+        results[-2].clear()
         self.assertListEquals(results[0], [(1, 0.0)])
         self.assertListEquals(results[1], [])
-        results.clear_row(-3)
+        results[-3].clear()
         self.assertListEquals(results[0], [])
         self.assertListEquals(results[1], [])
 
@@ -313,7 +313,70 @@ class TestGetHitInfo(TestCase):
         self.assertListEquals(self.results.get_scores(1), [0.1])
         self.assertListEquals(self.results.get_scores(3), [0.2, 0.5, 0.6, 0.7])
         self.assertListEquals(self.results.get_scores(-2), [1.0])
-        
+
+
+    def test_get_indices_and_scores(self):
+        self.assertListEquals(self.results.get_indices_and_scores(0), [])
+        self.assertListEquals(self.results.get_indices_and_scores(1), [(1, 0.1)])
+        self.assertListEquals(self.results.get_indices_and_scores(3),
+                              [(3, 0.2), (4, 0.5), (5, 0.6), (6, 0.7)])
+        self.assertListEquals(self.results.get_indices_and_scores(-2), [(7, 1.0)])
+
+    def test_get_ids_and_scores(self):
+        self.results.target_ids = map(str, range(8))
+        self.assertListEquals(self.results.get_ids_and_scores(0), [])
+        self.assertListEquals(self.results.get_ids_and_scores(1), [("1", 0.1)])
+        self.assertListEquals(self.results.get_ids_and_scores(3),
+                              [("3", 0.2), ("4", 0.5), ("5", 0.6), ("6", 0.7)])
+        self.assertListEquals(self.results.get_ids_and_scores(-2), [("7", 1.0)])
+
+    def test_get_ids_and_scores_missing_target_ids(self):
+        with self.assertRaisesRegexp(TypeError, "target_ids are not available"):
+            self.assertListEquals(self.results.get_ids_and_scores(-2), [("7", 1.0)])            
+
+class TestGetHitInfoRow(TestCase):
+    def setUp(self):
+        results = SearchResults(4)
+        results._add_hit(1, 1, 0.1)
+        results._add_hit(2, 7, 1.0)
+        results._add_hit(3, 3, 0.2)
+        results._add_hit(3, 4, 0.5)
+        results._add_hit(3, 5, 0.6)
+        results._add_hit(3, 6, 0.7)
+        self.results = results
+
+    def test_get_indices(self):
+        self.assertListEquals(self.results[0].get_indices(), [])
+        self.assertListEquals(self.results[1].get_indices(), [1])
+        self.assertListEquals(self.results[3].get_indices(), [3, 4, 5, 6])
+        self.assertListEquals(self.results[-2].get_indices(), [7])
+
+    def test_get_scores(self):
+        self.assertListEquals(self.results[0].get_scores(), [])
+        self.assertListEquals(self.results[1].get_scores(), [0.1])
+        self.assertListEquals(self.results[3].get_scores(), [0.2, 0.5, 0.6, 0.7])
+        self.assertListEquals(self.results[-2].get_scores(), [1.0])
+
+
+    def test_get_indices_and_scores(self):
+        self.assertListEquals(self.results[0].get_indices_and_scores(), [])
+        self.assertListEquals(self.results[1].get_indices_and_scores(), [(1, 0.1)])
+        self.assertListEquals(self.results[3].get_indices_and_scores(),
+                              [(3, 0.2), (4, 0.5), (5, 0.6), (6, 0.7)])
+        self.assertListEquals(self.results[-2].get_indices_and_scores(), [(7, 1.0)])
+
+    def test_get_ids_and_scores(self):
+        self.results.target_ids = map(str, range(8))
+        self.assertListEquals(self.results[0].get_ids_and_scores(), [])
+        self.assertListEquals(self.results[1].get_ids_and_scores(), [("1", 0.1)])
+        self.assertListEquals(self.results[3].get_ids_and_scores(),
+                              [("3", 0.2), ("4", 0.5), ("5", 0.6), ("6", 0.7)])
+        self.assertListEquals(self.results[-2].get_ids_and_scores(), [("7", 1.0)])
+
+    def test_get_ids_and_scores_missing_target_ids(self):
+        with self.assertRaisesRegexp(TypeError, "target_ids are not available"):
+            self.assertListEquals(self.results[-2].get_ids_and_scores(), [("7", 1.0)])            
+
 
 _get_sort_key = {
     "increasing-score": lambda (index, score): (score, index),
@@ -324,10 +387,14 @@ _get_sort_key = {
 class TestSortOrder(TestCase):
     def test_size_0(self):
         results = SearchResults(5)
+        results.reorder_all()
         self.assertListEquals(results[0], [])
     def test_size_1(self):
         results = SearchResults(5)
         results._add_hit(1, 5, 0.2)
+        results.reorder_all()
+        self.assertListEquals(results[1], [(5, 0.2)])
+        results.reorder_row(0)
         self.assertListEquals(results[1], [(5, 0.2)])
     def test_size_2(self):
         results = SearchResults(5)
@@ -444,6 +511,94 @@ class TestSortOrder(TestCase):
         self.assertListEquals(results[0], [(2, 0.8), (3, 0.6), (1, 0.1)])
         self.assertListEquals(results[1], [(7, 0.8), (8, 0.6), (6, 0.1)])
         
+
+class TestSortOrderRow(TestCase):
+    def test_size_2(self):
+        results = SearchResults(5)
+        results._add_hit(1, 5, 0.2)
+        results._add_hit(1, 6, 0.4)
+        self.assertListEquals(results[1], [(5, 0.2), (6, 0.4)])
+        for result in results:
+            result.reorder("increasing-score")
+        self.assertListEquals(results[1], [(5, 0.2), (6, 0.4)])
+        for result in results:
+            result.reorder("decreasing-score")
+        self.assertListEquals(results[1], [(6, 0.4), (5, 0.2)])
+
+    def test_default_ordering_2(self):
+        results = SearchResults(5)
+        results._add_hit(1, 5, 0.2)
+        results._add_hit(1, 6, 0.4)
+        for result in results:
+            result.reorder()
+        self.assertListEquals(results[1], [(6, 0.4), (5, 0.2)])
+
+    def test_size_3(self):
+        results = SearchResults(5)
+        results._add_hit(1, 5, 0.2)
+        results._add_hit(1, 6, 0.4)
+        results._add_hit(1, 7, 0.2)
+        self.assertListEquals(results[1], [(5, 0.2), (6, 0.4), (7, 0.2)])
+        for result in results:
+            result.reorder("increasing-score")
+        self.assertListEquals(results[1], [(5, 0.2), (7, 0.2), (6, 0.4)])
+        for result in results:
+            result.reorder("decreasing-score")
+        self.assertListEquals(results[1], [(6, 0.4), (5, 0.2), (7, 0.2)])
+
+    def test_reorder_row(self):
+        results = SearchResults(2)
+        results._add_hit(0, 1, 0.1)
+        results._add_hit(0, 2, 0.8)
+        results._add_hit(0, 3, 0.6)
+        
+        results._add_hit(1, 6, 0.1)
+        results._add_hit(1, 7, 0.8)
+        results._add_hit(1, 8, 0.6)
+
+        self.assertListEquals(results[0], [(1, 0.1), (2, 0.8), (3, 0.6)])
+        self.assertListEquals(results[1], [(6, 0.1), (7, 0.8), (8, 0.6)])
+
+        results[1].reorder("increasing-score")
+        self.assertListEquals(results[0], [(1, 0.1), (2, 0.8), (3, 0.6)])
+        self.assertListEquals(results[1], [(6, 0.1), (8, 0.6), (7, 0.8)])
+
+        results[0].reorder("decreasing-score")
+        self.assertListEquals(results[0], [(2, 0.8), (3, 0.6), (1, 0.1)])
+        self.assertListEquals(results[1], [(6, 0.1), (8, 0.6), (7, 0.8)])
+
+        # Check that the default works
+        results[0].reorder("increasing-score")  # ensure the default only affects one row
+        results[1].reorder()
+        self.assertListEquals(results[0], [(1, 0.1), (3, 0.6), (2, 0.8)])
+        self.assertListEquals(results[1], [(7, 0.8), (8, 0.6), (6, 0.1)])
+
+    def test_sort_negative_row(self):
+        results = SearchResults(2)
+        results._add_hit(0, 1, 0.1)
+        results._add_hit(0, 2, 0.8)
+        results._add_hit(0, 3, 0.6)
+        
+        results._add_hit(1, 6, 0.1)
+        results._add_hit(1, 7, 0.8)
+        results._add_hit(1, 8, 0.6)
+
+        self.assertListEquals(results[0], [(1, 0.1), (2, 0.8), (3, 0.6)])
+        self.assertListEquals(results[1], [(6, 0.1), (7, 0.8), (8, 0.6)])
+
+        results[-1].reorder("increasing-score")
+        self.assertListEquals(results[0], [(1, 0.1), (2, 0.8), (3, 0.6)])
+        self.assertListEquals(results[1], [(6, 0.1), (8, 0.6), (7, 0.8)])
+
+        results[-2].reorder("decreasing-score")
+        self.assertListEquals(results[0], [(2, 0.8), (3, 0.6), (1, 0.1)])
+        self.assertListEquals(results[1], [(6, 0.1), (8, 0.6), (7, 0.8)])
+
+        results[1].reorder()  # default is decreasing score
+        self.assertListEquals(results[0], [(2, 0.8), (3, 0.6), (1, 0.1)])
+        self.assertListEquals(results[1], [(7, 0.8), (8, 0.6), (6, 0.1)])
+        
+
 
 class TestMoveClosestFirst(TestCase):
     def test_empty(self):
