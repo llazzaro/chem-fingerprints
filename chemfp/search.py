@@ -17,7 +17,7 @@ class SearchResult(object):
         return iter(self._search_results.get_indices_and_scores(self._row))
         
     def clear(self):
-        self._search_results.clear(self._row)
+        self._search_results.clear_row(self._row)
 
     def get_indices(self):
         return self._search_results.get_indices(self._row)
@@ -29,12 +29,12 @@ class SearchResult(object):
         return [ids[i] for i in self._search_results.get_indices(self._row)]
     
     def get_scores(self):
-        self._search_results.get_scores(self._row)
+        return self._search_results.get_scores(self._row)
         
     def get_ids_and_scores(self):
         ids = self._search_results.target_ids
         if ids is None:
-            raise TypeError("ids are not available")
+            raise TypeError("target_ids are not available")
         return zip(self.get_ids(), self.get_scores())
 
     def get_indices_and_scores(self):
@@ -83,6 +83,9 @@ class SearchResults(_chemfp.SearchResults):
         ids = self.target_ids
         for i in xrange(len(self)):
             yield [(ids[idx], score) for (idx, score) in self[i]]
+
+    def get_ids_and_scores(self, row):
+        return self[row].get_ids_and_scores()
 
 
         
