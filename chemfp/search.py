@@ -51,16 +51,18 @@ class SearchResult(object):
         return ids[self._row]
 
 class SearchResults(_chemfp.SearchResults):
+    def __init__(self, n, ids=None):
+        super(SearchResults, self).__init__(n, ids)
+        self._results = [SearchResult(self, i) for i in xrange(n)]
     def __iter__(self):
-        for i in xrange(len(self)):
-            yield SearchResult(self, i)
+        return iter(self._results)
 
     def __getitem__(self, i):
         try:
             i = xrange(len(self))[i]
         except IndexError:
             raise IndexError("row index is out of range")
-        return SearchResult(self, i)
+        return self._results[i]
 
     def iter_indices(self):
         for i in xrange(len(self)):
