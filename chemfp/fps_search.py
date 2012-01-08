@@ -1,8 +1,6 @@
 # Internal module to help with FPS-based searches
 from __future__ import absolute_import
 
-# TODO: I would like to replace the search results so it returns a chemfp.search.SearchResults
-
 import ctypes
 import itertools
 import array
@@ -150,9 +148,8 @@ def threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
     require_matching_sizes(query_arena, target_reader)
 
     if not query_arena:
-        return FPSSearchResults([], [])
-    all_ids = [[] for i in xrange(len(query_arena))]
-    all_scores = [[] for i in xrange(len(query_arena))]
+        return FPSSearchResults([])
+    results = [FPSSearchResult([], []) for i in xrange(len(query_arena))]
     
     # Compute at least 100 tanimotos per query, but at most 10,000 at a time
     # (That's about 200K of memory)
@@ -177,13 +174,14 @@ def threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
                 
             for cell in itertools.islice(cells, 0, num_cells):
                 id = block[cell.id_start:cell.id_end]
-                all_ids[cell.query_index].append(id)
-                all_scores[cell.query_index].append(cell.score)
-
+                result = results[cell.query_index]
+                result.ids.append(id)
+                result.scores.append(cell.score)
+                
             if start == end:
                 break
 
-    return FPSSearchResults(all_ids, all_scores)
+    return FPSSearchResults(results)
             
 ######### k-nearest Tanimoto search, with threshold
 
@@ -258,8 +256,7 @@ def knearest_tanimoto_search(query_arena, target_reader, k, threshold):
 
         _chemfp.fps_knearest_search_finish(search)
 
-        all_ids = []
-        all_scores = []
+        results = []
         for query_index in xrange(num_queries):
             heap = search.heaps[0][query_index]
             ids = []
@@ -267,14 +264,13 @@ def knearest_tanimoto_search(query_arena, target_reader, k, threshold):
                 id = ctypes.string_at(heap.ids[0][i])
                 ids.append(id)
             scores = heap.scores[0][:heap.size]
-            all_ids.append(ids)
-            all_scores.append(scores)
-        return FPSSearchResults(all_ids, all_scores)
+            results.append(FPSSearchResult(ids, scores))
+        return FPSSearchResults(results)
 
     finally:
         _chemfp.fps_knearest_search_free(search)
 
-def _sort_row(ids, scores, name):
+def _reorder_row(ids, scores, name):
     indices = range(len(ids))
     if name == "decreasing-scores":
         indices.sort(key=lambda i: (-scores[i], ids[i]))
@@ -302,46 +298,60 @@ def _sort_row(ids, scores, name):
     ids[:] = new_ids
     scores[:] = new_scores
 
+class FPSSearchResult(object):
+    def __init__(self, ids, scores):
+        self.ids = ids
+        self.scores = scores
+    def __len__(self):
+        return len(self.ids)
+    def __nonzero__(self):
+        return bool(self.ids)
+    def __iter__(self):
+        return itertools.izip(self.ids, self.scores)
+    def __getitem__(self, i):
+        return (self.ids[i], self.scores[i])
+    def clear(self):
+        self.ids = []
+        self.scores = []
+
+    def get_ids(self):
+        return self.ids
+    def get_scores(self):
+        return self.scores
+    def get_ids_and_scores(self):
+        return zip(self.ids, self.scores)
+    def reorder(self, order="decreasing-scores"):
+        _reorder_row(self.ids, self.scores, order)
+
 class FPSSearchResults(object):
-    def __init__(self, all_ids, all_scores):
-        n = len(all_ids)
-        assert n == len(all_scores), (n, len(all_scores))
-        self._n = n
-        self._all_ids = all_ids
-        self._all_scores = all_scores
+    def __init__(self, results):
+        self._results = results
 
     def __len__(self):
-        return self._n
+        return self._results
 
     def __getitem__(self, i):
-        return zip(self._all_ids[i], self._all_scores[i])
+        return self._results[i]
 
     def __iter__(self):
-        for ids, scores in zip(self._all_ids, self._all_scores):
-            yield zip(ids, scores)
-
-    def get_ids(self, i):
-        return self._all_ids[i]
-
-    def get_scores(self, i):
-        return self._all_scores[i]
-
-    def get_hits(self, i):
-        return zip(self._all_ids[i], self._all_scores[i])
+        return iter(self._results)
 
     def iter_ids(self):
-        for ids in self._all_ids:
-            yield ids
-            
+        for result in self._results:
+            yield result.ids
+
     def iter_scores(self):
-        for scores in self._all_scores:
-            yield scores
+        for result in self._results:
+            yield result.scores
+            
+    def iter_ids_and_scores(self):
+        for result in self._results:
+            yield zip(result.ids, result.scores)
 
-    def sort(self, ordering="decreasing-scores"):
-        for (ids, scores) in zip(self._all_ids, self._all_scores):
-            _sort_row(ids, scores, ordering)
+    def reorder_all(self, order="decreasing-scores"):
+        for result in self._results:
+            _reorder_row(result.ids, result.scores, ordering)
 
-    def sort_row(self, i, ordering="decreasing-scores"):
-        ids = self._all_ids[id]
-        scores = self._all_scores[id]
-        _sort_row(ids, scores, ordering)
+    def clear_all(self):
+        for result in self._results:
+            result.clear()

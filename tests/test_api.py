@@ -319,7 +319,7 @@ F0\tsmall
         f = StringIO(zeros)
         reader = self._open(f)
         hits = reader.id_threshold_tanimoto_search_fp("0000".decode("hex"), threshold=0.0)
-        self.assertEquals(self.hit_order(hits),
+        self.assertEquals(self.hit_order(list(hits)),
                           self.hit_order([ ("first", 0.0), ("second", 0.0), ("third", 0.0) ]))
 
     def test_id_threshold_tanimoto_search_fp_0(self):
@@ -347,8 +347,9 @@ F0\tsmall
         targets = self._open(CHEBI_TARGETS)
         hits = list(targets.id_threshold_tanimoto_search(QUERY_ARENA))
         self.assertEqual([len(x[1]) for x in hits], [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
-        self.assertEqual(hits[0][1], [('CHEBI:16148', 0.7142857142857143), ('CHEBI:17034', 0.8571428571428571),
-                                    ('CHEBI:17302', 0.8571428571428571), ('CHEBI:17539', 0.72222222222222221)])
+        self.assertEqual(list(hits[0][1]),
+                         [('CHEBI:16148', 0.7142857142857143), ('CHEBI:17034', 0.8571428571428571),
+                          ('CHEBI:17302', 0.8571428571428571), ('CHEBI:17539', 0.72222222222222221)])
 
 
     def test_threshold_tanimoto_arena_set_default(self):
@@ -357,7 +358,7 @@ F0\tsmall
         ids, hits = zip(*result)
         self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
         self.assertEqual(map(len, hits), [4, 179, 40, 32, 1, 3, 28, 11, 46, 7])
-        self.assertEqual(self.hit_order(hits[-1]),
+        self.assertEqual(self.hit_order(list(hits[-1])),
                          self.hit_order([('CHEBI:15621', 0.8571428571428571), ('CHEBI:15882', 0.83333333333333337),
                                          ('CHEBI:16008', 0.80000000000000004), ('CHEBI:16193', 0.80000000000000004),
                                          ('CHEBI:16207', 1.0), ('CHEBI:17231', 0.76923076923076927),
@@ -370,7 +371,7 @@ F0\tsmall
         ids, hits = zip(*result)
         self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
         self.assertEqual(map(len, hits), [0, 97, 7, 1, 0, 1, 1, 0, 1, 1])
-        self.assertEqual(self.hit_order(hits[2]),
+        self.assertEqual(self.hit_order(list(hits[2])),
                          self.hit_order([('CHEBI:15895', 1.0), ('CHEBI:16165', 1.0),
                                          ('CHEBI:16292', 0.93333333333333335), ('CHEBI:16392', 0.93333333333333335),
                                          ('CHEBI:17100', 0.93333333333333335), ('CHEBI:17242', 0.90000000000000002),
@@ -415,9 +416,9 @@ F0\tsmall
     def test_id_knearest_tanimoto_search_fp_default(self):
         reader = self._open(CHEBI_TARGETS)
         hits = reader.id_knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"))
-        self.assertEqual(hits, [('CHEBI:8069', 1.0),
-                                ('CHEBI:6758', 0.78723404255319152),
-                                ('CHEBI:7983', 0.73999999999999999)])
+        self.assertEqual(list(hits), [('CHEBI:8069', 1.0),
+                                      ('CHEBI:6758', 0.78723404255319152),
+                                      ('CHEBI:7983', 0.73999999999999999)])
 
     def test_id_knearest_tanimoto_search_fp_set_default(self):
         # This is set to the default values
@@ -426,11 +427,11 @@ F0\tsmall
                                                      k = 3, threshold = 0.7)
         self.assertEquals(len(hits), 3, hits)
         if hits[1][0] == "CHEBI:15483":
-            self.assertEqual(hits, [('CHEBI:15523', 1.0), ('CHEBI:15483', 0.98913043478260865),
-                                    ('CHEBI:15480', 0.98913043478260865)])
+            self.assertEqual(list(hits), [('CHEBI:15523', 1.0), ('CHEBI:15483', 0.98913043478260865),
+                                          ('CHEBI:15480', 0.98913043478260865)])
         else:
-            self.assertEqual(hits, [('CHEBI:15523', 1.0), ('CHEBI:15480', 0.98913043478260865),
-                                    ('CHEBI:15483', 0.98913043478260865)])
+            self.assertEqual(list(hits), [('CHEBI:15523', 1.0), ('CHEBI:15480', 0.98913043478260865),
+                                          ('CHEBI:15483', 0.98913043478260865)])
         
     def test_id_knearest_tanimoto_search_fp_set_knearest(self):
         reader = self._open(CHEBI_TARGETS)
@@ -441,26 +442,26 @@ F0\tsmall
                     ('CHEBI:15486', 0.97802197802197799)]
         if hits[1][0] == "CHEBI:15480" and hits[2][0] == "CHEBI:15483":
             expected[1], expected[2] = expected[2], expected[1]
-        self.assertEqual(hits, expected)
+        self.assertEqual(list(hits), expected)
 
 
     def test_id_knearest_tanimoto_search_fp_set_max_threshold(self):
         reader = self._open(CHEBI_TARGETS)
         hits = reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    threshold = 1.0)
-        self.assertEqual(hits, [('CHEBI:15523', 1.0)])
+        self.assertEqual(list(hits), [('CHEBI:15523', 1.0)])
 
     def test_id_knearest_tanimoto_search_fp_set_knearest_1(self):
         reader = self._open(CHEBI_TARGETS)
         hits = reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    k = 1)
-        self.assertEqual(hits, [('CHEBI:15523', 1.0)])
+        self.assertEqual(list(hits), [('CHEBI:15523', 1.0)])
 
     def test_id_knearest_tanimoto_search_fp_set_knearest_0(self):
         reader = self._open(CHEBI_TARGETS)
         hits = reader.id_knearest_tanimoto_search_fp("000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"),
                                                    k = 0)
-        self.assertEqual(hits, [])
+        self.assertFalse(hits)
 
     def test_id_knearest_tanimoto_search_fp_knearest_threshold_range_error(self):
         reader = self._open(CHEBI_TARGETS)
@@ -489,13 +490,13 @@ F0\tsmall
         self.assertEqual(map(len, hits), [3, 3, 3, 3, 1, 3, 3, 3, 3, 3])
         first_hits = hits[0]
         if first_hits[0][0] == 'CHEBI:17302':
-            self.assertEqual(first_hits, [('CHEBI:17302', 0.8571428571428571),
-                                          ('CHEBI:17034', 0.8571428571428571),
-                                          ('CHEBI:17539', 0.72222222222222221)])
+            self.assertEqual(list(first_hits), [('CHEBI:17302', 0.8571428571428571),
+                                                ('CHEBI:17034', 0.8571428571428571),
+                                                ('CHEBI:17539', 0.72222222222222221)])
         else:
-            self.assertEqual(first_hits, [('CHEBI:17034', 0.8571428571428571),
-                                          ('CHEBI:17302', 0.8571428571428571),
-                                          ('CHEBI:17539', 0.72222222222222221)])
+            self.assertEqual(list(first_hits), [('CHEBI:17034', 0.8571428571428571),
+                                                ('CHEBI:17302', 0.8571428571428571),
+                                                ('CHEBI:17539', 0.72222222222222221)])
 
     def test_id_knearest_tanimoto_set_default(self):
         targets = self._open(CHEBI_TARGETS)
@@ -503,8 +504,8 @@ F0\tsmall
         ids, hits = zip(*result)
         self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
         self.assertEqual(map(len, hits), [3, 3, 3, 3, 1, 3, 3, 3, 3, 3])
-        self.assertEqual(hits[-1], [('CHEBI:16207', 1.0), ('CHEBI:15621', 0.8571428571428571),
-                                     ('CHEBI:15882', 0.83333333333333337)])
+        self.assertEqual(list(hits[-1]), [('CHEBI:16207', 1.0), ('CHEBI:15621', 0.8571428571428571),
+                                          ('CHEBI:15882', 0.83333333333333337)])
 
 
     def test_id_knearest_tanimoto_set_threshold(self):
@@ -513,9 +514,9 @@ F0\tsmall
         ids, hits = zip(*result)
         self.assertSequenceEqual(ids, QUERY_ARENA.arena_ids)
         self.assertEqual(map(len, hits), [2, 3, 3, 3, 1, 1, 3, 3, 3, 3])
-        self.assertEqual(hits[6], [('CHEBI:16834', 0.90909090909090906),
-                                    ('CHEBI:17061', 0.875),
-                                    ('CHEBI:16319', 0.84848484848484851)])
+        self.assertEqual(list(hits[6]), [('CHEBI:16834', 0.90909090909090906),
+                                         ('CHEBI:17061', 0.875),
+                                         ('CHEBI:16319', 0.84848484848484851)])
 
     def test_id_knearest_tanimoto_search_knearest_range_error(self):
         reader = self._open(CHEBI_TARGETS)
