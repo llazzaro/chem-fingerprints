@@ -11,25 +11,25 @@ class SearchResult(object):
         self._row = row
 
     def __len__(self):
-        return self._search_results.size(self._row)
+        return self._search_results._size(self._row)
 
     def __iter__(self):
-        return iter(self._search_results.get_indices_and_scores(self._row))
+        return iter(self._search_results._get_indices_and_scores(self._row))
         
     def clear(self):
-        self._search_results.clear_row(self._row)
+        self._search_results._clear_row(self._row)
 
     def get_indices(self):
-        return self._search_results.get_indices(self._row)
+        return self._search_results._get_indices(self._row)
 
     def get_ids(self):
         ids = self._search_results.target_ids
         if ids is None:
             return None
-        return [ids[i] for i in self._search_results.get_indices(self._row)]
+        return [ids[i] for i in self._search_results._get_indices(self._row)]
     
     def get_scores(self):
-        return self._search_results.get_scores(self._row)
+        return self._search_results._get_scores(self._row)
         
     def get_ids_and_scores(self):
         ids = self._search_results.target_ids
@@ -38,10 +38,10 @@ class SearchResult(object):
         return zip(self.get_ids(), self.get_scores())
 
     def get_indices_and_scores(self):
-        return self._search_results.get_indices_and_scores(self._row)
+        return self._search_results._get_indices_and_scores(self._row)
             
     def reorder(self, ordering="decreasing-score"):
-        self._search_results.reorder_row(self._row, ordering)
+        self._search_results._reorder_row(self._row, ordering)
         
     @property
     def target_id(self):
@@ -64,7 +64,7 @@ class SearchResults(_chemfp.SearchResults):
 
     def iter_indices(self):
         for i in xrange(len(self)):
-            yield self.get_indices(i)
+            yield self._get_indices(i)
 
     def iter_ids(self):
         ids = self.target_ids
@@ -73,7 +73,7 @@ class SearchResults(_chemfp.SearchResults):
 
     def iter_scores(self):
         for i in xrange(len(self)):
-            yield self.get_scores(i)
+            yield self._get_scores(i)
 
     def iter_indices_and_scores(self):
         for i in xrange(len(self)):
@@ -83,9 +83,6 @@ class SearchResults(_chemfp.SearchResults):
         ids = self.target_ids
         for i in xrange(len(self)):
             yield [(ids[idx], score) for (idx, score) in self[i]]
-
-    def get_ids_and_scores(self, row):
-        return self[row].get_ids_and_scores()
 
 
         
