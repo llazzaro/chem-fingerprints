@@ -139,7 +139,7 @@ class TestCounts(unittest2.TestCase):
         self.assertSequenceEqual(normal, expected)
 
 def _compare_search_results(self, result, expected):
-    q=list(result.iter_hits())
+    q=list(result.iter_indices_and_scores())
     for i in range(len(result)):
         self.assertEquals(len(q[i]), len(expected[i]), "length of %d" % i)
         self.assertEquals(sorted(q[i]), sorted(expected[i]), "contents of %d" % i)
@@ -149,13 +149,13 @@ class TestThreshold(unittest2.TestCase):
     def test_upper_only(self):
         # query[i] always matches target[i] so x[i] will always contain i
         x = search.threshold_tanimoto_search(fps, fps, 0.9)
-        x = list(x.iter_hits())
+        x = list(x.iter_indices_and_scores())
 
         # This only processes the upper-triangle, and not the diagonal
         y = search.threshold_tanimoto_search_symmetric(fps, 0.9, include_lower_triangle=False)
 
 
-        rows = list(y.iter_hits())
+        rows = list(row.get_indices_and_scores() for row in y)
         row_sizes = map(len, rows)
         # Move elements to the lower triangle
         for rowno, (row, row_size) in enumerate(zip(rows, row_sizes)):
@@ -171,9 +171,9 @@ class TestThreshold(unittest2.TestCase):
             
             # Match with the NxM algorithm
             expected_row = x[rowno]
-            expected_row.sort()
+            expected_row.reorder("increasing-index")
 
-            self.assertEquals(row, expected_row, rowno)
+            self.assertEquals(row, list(expected_row), rowno)
 
     def test_upper_and_lower(self):
         # query[i] always matches target[i] so x[i] will always contain i
@@ -182,7 +182,9 @@ class TestThreshold(unittest2.TestCase):
         # This only processes the upper-triangle, and not the diagonal
         y = search.threshold_tanimoto_search_symmetric(fps, 0.9)
 
-        for i, (x_row, y_row) in enumerate(zip(x.iter_hits(), y.iter_hits())):
+        for i, (x_row, y_row) in enumerate(zip(x, y)):
+            x_row = x_row.get_indices_and_scores()
+            y_row = y_row.get_indices_and_scores()
             y_row.append((i, 1.0))
             x_row.sort()
             y_row.sort()
@@ -247,7 +249,7 @@ class TestThreshold(unittest2.TestCase):
                                  search.count_tanimoto_hits_symmetric(fps, threshold))
 
         normal = search.threshold_tanimoto_search_symmetric(fps, threshold)
-        _compare_search_results(self, result, list(normal.iter_hits()))
+        _compare_search_results(self, result, list(normal.iter_indices_and_scores()))
         
         
 
@@ -258,8 +260,10 @@ class TestKNearest(unittest2.TestCase):
 
         # This only processes the upper-triangle, and not the diagonal
         y = search.knearest_tanimoto_search_symmetric(fps, 30, 0.9)
-
-        for i, (x_row, y_row) in enumerate(zip(x.iter_hits(), y.iter_hits())):
+        
+        for i, (x_row, y_row) in enumerate(zip(x, y)):
+            x_row = x_row.get_indices_and_scores()
+            y_row = y_row.get_indices_and_scores()
             y_row.append((i, 1.0))
             x_row.sort()
             y_row.sort()
@@ -272,7 +276,9 @@ class TestKNearest(unittest2.TestCase):
         # This only processes the upper-triangle, and not the diagonal
         y = search.knearest_tanimoto_search_symmetric(fps, 80, 0.9)
 
-        for i, (x_row, y_row) in enumerate(zip(x.iter_hits(), y.iter_hits())):
+        for i, (x_row, y_row) in enumerate(zip(x, y)):
+            x_row = x_row.get_indices_and_scores()
+            y_row = y_row.get_indices_and_scores()
             y_row.append((i, 1.0))
             x_row.sort()
             y_row.sort()

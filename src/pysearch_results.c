@@ -82,45 +82,10 @@ SearchResults_init(SearchResults *self, PyObject *args, PyObject *kwds)
   return 0;
 }
 
+/* len(search_results) */
 static Py_ssize_t
 SearchResults_length(SearchResults *result) {
   return (Py_ssize_t) result->num_results;
-}
-
-static PyObject *
-SearchResults_item(SearchResults *self, Py_ssize_t index) {
-  int n, i;
-  PyObject *hits, *obj;
-  chemfp_search_result *result;
-
-  if (index < 0 || index >= self->num_results) {
-    PyErr_SetString(PyExc_IndexError, "row index is out of range");
-    return NULL;
-  }
-  result = self->results+index;
-  n = chemfp_get_num_hits(result);
-  
-  hits = PyList_New(n);
-  if (!hits) {
-    return NULL;
-  }
-  for (i=0; i<n; i++) {
-    obj = Py_BuildValue("(id)", result->indices[i], result->scores[i]);
-    if (!obj) {
-      goto error;
-    }
-    PyList_SET_ITEM(hits, i, obj);
-  }
-  return hits;
-
- error:
-  /* I could be smarter and only deallocate the ones which I know are present. */
-  /* Proving that's correct is a bit trickier than I want to do. */
-  for (i=0; i<n; i++) {
-    Py_XDECREF(PyList_GET_ITEM(hits, i));
-  }
-  Py_DECREF(hits);
-  return NULL;
 }
 
 
@@ -200,6 +165,47 @@ SearchResults_clear_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   chemfp_search_result_clear(self->results+row);
   Py_RETURN_NONE;
 }
+
+static PyObject *
+SearchResults_get_indices_and_scores(SearchResults *self, PyObject *args, PyObject *kwds) {
+  int n, i;
+  PyObject *hits, *obj;
+  chemfp_search_result *result;
+  static char *kwlist[] = {"row", NULL};
+  int row;
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i:get_indices", kwlist, &row)) {
+    return NULL;
+  }
+  if (!check_row(self->num_results, &row)) {
+    return NULL;
+  }
+  result = self->results+row;
+  n = chemfp_get_num_hits(result);
+  
+  hits = PyList_New(n);
+  if (!hits) {
+    return NULL;
+  }
+  for (i=0; i<n; i++) {
+    obj = Py_BuildValue("(id)", result->indices[i], result->scores[i]);
+    if (!obj) {
+      goto error;
+    }
+    PyList_SET_ITEM(hits, i, obj);
+  }
+  return hits;
+
+ error:
+  /* I could be smarter and only deallocate the ones which I know are present. */
+  /* Proving that's correct is a bit trickier than I want to do. */
+  for (i=0; i<n; i++) {
+    Py_XDECREF(PyList_GET_ITEM(hits, i));
+  }
+  Py_DECREF(hits);
+  return NULL;
+}
+
 
 static PyObject *
 new_array(const char *datatype) {
@@ -325,6 +331,8 @@ static PyMethodDef SearchResults_methods[] = {
    "get the hit indices for a given row"},
   {"get_scores", (PyCFunction) SearchResults_get_scores, METH_VARARGS | METH_KEYWORDS,
    "get the hit scores for a given row"},
+  {"get_indices_and_scores", (PyCFunction) SearchResults_get_indices_and_scores, METH_VARARGS | METH_KEYWORDS,
+   "get (index, score) tuples for each hit in a row"},
   {"size", (PyCFunction) SearchResults_size, METH_VARARGS | METH_KEYWORDS,
    "the number of hits in a given row"},
   {"reorder", (PyCFunction) SearchResults_reorder, METH_VARARGS | METH_KEYWORDS,
@@ -348,7 +356,7 @@ static PySequenceMethods SearchResults_as_sequence = {
     (lenfunc)SearchResults_length,                       /* sq_length */
     NULL,       /* sq_concat */
     NULL,       /* sq_repeat */
-    (ssizeargfunc)SearchResults_item,                    /* sq_item */
+    NULL,       /* sq_item */
     NULL,       /* sq_slice */
     NULL,       /* sq_ass_item */
     NULL,       /* sq_ass_slice */

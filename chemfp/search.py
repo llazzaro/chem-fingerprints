@@ -5,33 +5,85 @@ import ctypes
 import array
 
 
-class SearchResults(_chemfp.SearchResults):
-    def __iter__(self): # XXXX fixme
-        ids = self.target_ids
-        for i in xrange(len(self)):
-            yield [(ids[idx], score) for (idx, score) in self[i]]
+class SearchResult(object):
+    def __init__(self, search_results, row):
+        self._search_results = search_results
+        self._row = row
 
-    def iter_hits(self):
+    def __len__(self):
+        return self._search_results.size(self._row)
+
+    def __iter__(self):
+        return iter(self._search_results.get_indices_and_scores(self._row))
+        
+    def clear(self):
+        self._search_results.clear(self._row)
+
+    def get_indices(self):
+        return self._search_results.get_indices(self._row)
+
+    def get_ids(self):
+        ids = self._search_results.target_ids
+        if ids is None:
+            return None
+        return [ids[i] for i in self._search_results.get_indices(self._row)]
+    
+    def get_scores(self):
+        self._search_results.get_scores(self._row)
+        
+    def get_ids_and_scores(self):
+        ids = self._search_results.target_ids
+        if ids is None:
+            raise TypeError("ids are not available")
+        return zip(self.get_ids(), self.get_scores())
+
+    def get_indices_and_scores(self):
+        return self._search_results.get_indices_and_scores(self._row)
+            
+    def reorder(self, ordering="decreasing-score"):
+        self._search_results.reorder_row(self._row, ordering)
+        
+    @property
+    def target_id(self):
+        ids = self._search_results.target_ids
+        if ids is None:
+            return None
+        return ids[self._row]
+
+class SearchResults(_chemfp.SearchResults):
+    def __iter__(self):
         for i in xrange(len(self)):
-            yield self[i]
+            yield SearchResult(self, i)
+
+    def __getitem__(self, i):
+        try:
+            i = xrange(len(self))[i]
+        except IndexError:
+            raise IndexError("row index is out of range")
+        return SearchResult(self, i)
+
+    def iter_indices(self):
+        for i in xrange(len(self)):
+            yield self.get_indices(i)
 
     def iter_ids(self):
         ids = self.target_ids
         for indicies in self.iter_indices():
             yield [ids[idx] for idx in indicies]
 
-    def iter_indices(self):
-        for i in xrange(len(self)):
-            yield self.get_indices(i)
-
     def iter_scores(self):
         for i in xrange(len(self)):
             yield self.get_scores(i)
 
+    def iter_indices_and_scores(self):
+        for i in xrange(len(self)):
+            yield self[i]
+    
     def iter_ids_and_scores(self):
         ids = self.target_ids
         for i in xrange(len(self)):
             yield [(ids[idx], score) for (idx, score) in self[i]]
+
 
         
 def require_matching_fp_size(query_fp, target_arena):
