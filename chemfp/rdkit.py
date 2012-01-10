@@ -32,16 +32,12 @@ SOFTWARE = "RDKit/" + getattr(rdkit.rdBase, "rdkitVersion", "unknown")
 # Helper function to convert a fingerprint to a sequence of bytes.
 
 from rdkit import DataStructs
-BitVectToFPSText = getattr(DataStructs, "BitVectToFPSText", None)
-if BitVectToFPSText is None:
-    # Pre-2012 releases of RDKit
+if getattr(DataStructs, "BitVectToBinaryText", None):
+    _fp_to_bytes = DataStructs.BitVectToBinaryText
+else:
+    # Support for pre-2012 releases of RDKit
     def _fp_to_bytes(fp):
         return _from_binary_lsb(fp.ToBitString())[1]
-else:
-    # This is about 3x faster
-    from binascii import unhexlify as _unhexlify
-    def _fp_to_bytes(fp):
-        return _unhexlify(BitVectToFPSText(fp))
 
 #########
 _allowed_formats = ["sdf", "smi"]
