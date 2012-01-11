@@ -797,6 +797,12 @@ int RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
   /* This uses the limits from Swamidass and Baldi */
   /* It doesn't use the search ordering because it's supposed to find everything */
   
+#if USE_OPENMP == 1
+  #pragma omp parallel for \
+      private(query_fp, query_popcount, start_target_popcount, end_target_popcount, \
+          target_popcount, start, end, target_fp, popcount_sum, target_index, intersect_popcount, score) \
+      schedule(dynamic)
+#endif
   for (query_index = query_start; query_index < query_end; query_index++) {
     query_fp = arena + (query_index * storage_size);
     query_popcount = calc_popcount(fp_size, query_fp);
@@ -842,10 +848,10 @@ int RENAME(chemfp_threshold_tanimoto_arena_symmetric)(
         target_fp = arena + (target_index * storage_size);
         intersect_popcount = calc_intersect_popcount(fp_size, query_fp, target_fp);
 
-        score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
         if (denominator * intersect_popcount  >=
             numerator * (popcount_sum - intersect_popcount)) {
           /* Add to the upper triangle */
+          score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
           if (!chemfp_add_hit(results+query_index, target_index, score)) {
             add_hit_error = 1;
           }
