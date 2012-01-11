@@ -112,6 +112,7 @@ void chemfp_set_num_threads(int num_threads) {
     num_threads = omp_get_max_threads();
   }
   chemfp_num_threads = num_threads;
+  omp_set_num_threads(num_threads);
 #else
   UNUSED(num_threads);
 #endif
