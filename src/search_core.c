@@ -650,7 +650,7 @@ int RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
 
   if (threshold <= 0.0) {
     /* By definition, everything matches */
-    /* FIXME: this is slow. I'm finding the symmetry and boundary conditions a bit tricky */
+    /* FIXME: this is inelegant. I'm finding the symmetry and boundary conditions a bit tricky */
     for (query_index=query_start; query_index<query_end; query_index++) {
       for (target_index=MAX(query_index+1, target_start);
            target_index<target_end; target_index++) {
