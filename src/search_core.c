@@ -637,6 +637,7 @@ int RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
   int num_threads;
   int *parallel_counts;
   int *per_thread_counts;
+  int per_thread_size;
 #endif
 
   /* Check that we're not obviously in the lower triangle */
@@ -688,7 +689,8 @@ int RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
   /* This uses the limits from Swamidass and Baldi */
 #if USE_OPENMP == 1
   num_threads = omp_get_max_threads();
-  parallel_counts = (int *) calloc(num_threads * query_end, sizeof(int));
+  per_thread_size = MAX(query_end, target_end);
+  parallel_counts = (int *) calloc(num_threads * per_thread_size, sizeof(int));
   if (!parallel_counts) {
     return CHEMFP_NO_MEM;
   }
@@ -702,7 +704,7 @@ int RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
     query_fp = arena + (query_index * storage_size);
     query_popcount = calc_popcount(fp_size, query_fp);
 #if USE_OPENMP == 1
-    per_thread_counts = parallel_counts+(omp_get_thread_num() * query_end);
+    per_thread_counts = parallel_counts+(omp_get_thread_num() * per_thread_size);
 #endif
 
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
@@ -762,10 +764,12 @@ int RENAME(chemfp_count_tanimoto_hits_arena_symmetric)(
 
 #if USE_OPENMP == 1
   /* Merge the per-thread results into the counts array */
-  for (query_index = query_start; query_index < query_end; query_index++) {
+  /* TODO: start from MIN(query_start, query_end) */
+  /* TODO: parallelize? */
+  for (query_index = 0; query_index < per_thread_size; query_index++) {
     count = 0;
     for (i=0; i<num_threads; i++) {
-      count += parallel_counts[query_end * i + query_index];
+      count += parallel_counts[per_thread_size * i + query_index];
     }
     result_counts[query_index] += count;
   }
