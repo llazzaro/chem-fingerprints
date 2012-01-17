@@ -72,9 +72,9 @@ class TestCounts(unittest2.TestCase):
 
     def test_zeros(self):
         y = search.count_tanimoto_hits_symmetric(zeros, 0.9)
-        self.assertEquals(list(y), [0, 0, 0, 0, 1, 1])
+        self.assertSequenceEqual(y, [0, 0, 0, 0, 1, 1])
         y = search.count_tanimoto_hits_symmetric(zeros, 0.001)
-        self.assertEquals(list(y), [0, 0, 1, 2, 2, 3])
+        self.assertSequenceEqual(y, [0, 0, 1, 2, 2, 3])
 
 
     def test_partial_counts_with_zero_threshold(self):
