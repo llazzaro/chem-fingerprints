@@ -108,11 +108,13 @@ void chemfp_set_num_threads(int num_threads) {
   /* Can only have between 1 thread and the number of logical cores */
   if (num_threads < 1) {
     num_threads = 1;
-  } else if (num_threads > omp_get_max_threads()) {
-    num_threads = omp_get_max_threads();
   }
-  chemfp_num_threads = num_threads;
   omp_set_num_threads(num_threads);
+
+  /* Quoting from the docs: If you use omp_set_num_threads to change
+     the number of threads, subsequent calls to omp_get_max_threads
+     will return the new value. */
+  chemfp_num_threads = omp_get_max_threads();
 #else
   UNUSED(num_threads);
 #endif
