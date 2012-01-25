@@ -43,6 +43,13 @@ def check_oe174():
     assert not support.can_skip("oe")
     assert not support.can_skip("oe174")
 
+def check_oe2011Oct():
+    from openeye.oechem import OEChemGetRelease
+    version = OEChemGetRelease()
+    assert version == "1.7.6", version
+    assert not support.can_skip("oe")
+    assert not support.can_skip("oe2011Oct")
+
 def check_ob223():
     import openbabel
     from chemfp import openbabel
@@ -94,7 +101,7 @@ class TestToxVersion(unittest2.TestCase):
     def test_enough_specifications(self):
         _check("x32 x64")
         _check("py25 py26 py27 py32")
-        _check("oe174 ob223 ob230 ob23svn1 rd201106 rd201103 rd201012 rd201112_svn")
+        _check("oe174 oe2011Oct ob223 ob230 ob23svn1 rd201106 rd201103 rd201012 rd201112_svn")
         
     def test_version(self):
         for name in versions:
