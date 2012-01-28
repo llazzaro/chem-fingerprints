@@ -19,6 +19,7 @@ except ImportError:
 if has_oechem:
     from chemfp.commandline import oe2fps
     import chemfp.openeye
+    OEGRAPHSIM_API_VERSION = chemfp.openeye.OEGRAPHSIM_API_VERSION
     chemfp.openeye._USE_SELECT = False # Grrr. Needed to automate testing.
 
     real_stdout = sys.stdout
@@ -31,7 +32,37 @@ if has_oechem:
 
     oeerrs = oechem.oeosstream()
     oechem.OEThrow.SetOutputStream(oeerrs)
-    
+
+def convert_v1_atom_names_to_v2(s):
+    return (s.replace("Aromaticity", "Arom")
+            .replace("AtomicNumber", "AtmNum")
+            .replace("EqAromatic", "EqArom")
+            .replace("EqHalogen", "EqHalo")
+            .replace("FormalCharge", "FCharge")
+            .replace("HvyDegree", "HvyDeg")
+            .replace("Hybridization", "Hyb")
+            .replace("DefaultAtom", "Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb"))
+
+def convert_v1_bond_names_to_v2(s):
+    return (s.replace("DefaultBond", "Order|Chiral")
+             .replace("BondOrder", "Order"))
+
+def convert_v1_names_to_v2(s):
+    return convert_v1_atom_names_to_v2(convert_v1_bond_names_to_v2(s))
+
+def convert_type_string(s):
+    if " " not in s:
+        word = s
+        rest = None
+    else:
+        word, rest = s.split(" ", 1)
+    assert word.endswith("/1")
+    word = word[:-1] + "2"
+    if rest is None:
+        return word
+    else:
+        return word + " " + convert_v1_names_to_v2(rest)
+
 def _check_for_oe_errors():
     lines = oeerrs.str().splitlines()
     for line in lines:
@@ -173,50 +204,50 @@ class TestPath(unittest2.TestCase):
         self.assertEquals(result, hex_test_values)
 
     def test_atype_default_flags(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertEquals(result, hex_test_values)
 
 
     def test_atype_default_flags_with_duplicates(self):
-        result = run_fps("--atype Aromaticity|Chiral|AtomicNumber|AtomicNumber|EqHalogen|"
-                         "HvyDegree|FormalCharge|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|Chiral|AtomicNumber|AtomicNumber|EqHalogen|HvyDegree|FormalCharge|Hybridization"), 19)
         self.assertEquals(result, hex_test_values)
 
     # Make sure that each of the flags returns some other answer
     def test_atype_different_1(self):
-        result = run_fps("--atype AtomicNumber|Chiral|EqHalogen|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_2(self):
-        result = run_fps("--atype Aromaticity|Chiral|EqHalogen|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_3(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|EqHalogen|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|EqHalogen|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_4(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_5(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|"
-                         "HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_6(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|"
-                         "FormalCharge|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_7(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|"
-                         "FormalCharge|HvyDegree", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree"), 19)
         self.assertNotEquals(result, hex_test_values)
 
 
@@ -225,11 +256,11 @@ class TestPath(unittest2.TestCase):
         self.assertEquals(result, hex_test_values)
 
     def test_btype_default_flags(self):
-        result = run_fps("--btype BondOrder|Chiral", 19)
+        result = run_fps(bond_type_converter("--btype BondOrder|Chiral"), 19)
         self.assertEquals(result, hex_test_values)
 
     def test_btype_different_1(self):
-        result = run_fps("--btype BondOrder", 19)
+        result = run_fps(bond_type_converter("--btype BondOrder"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_btype_different_2(self):
@@ -307,28 +338,41 @@ class TestArgErrors(unittest2.TestCase):
                   "--maxbonds must not be smaller than --minbonds")
 
     def test_bad_atype(self):
-        self._run("--atype spam", "Unknown atom type 'spam'")
+        self._run("--atype spam", "Unknown path atom type 'spam'")
 
     def test_bad_atype2(self):
-        self._run("--atype DefaultAtom|spam", "Unknown atom type 'spam'")
+        self._run("--atype DefaultAtom|spam", "Unknown path atom type 'spam'")
 
     def test_bad_atype3(self):
-        self._run("--atype DefaultAtom|", "Missing atom flag")
+        self._run("--atype DefaultAtom|", "Missing path atom flag")
 
     def test_bad_btype(self):
-        self._run("--btype eggs", "Unknown bond type 'eggs'")
+        self._run("--btype eggs", "Unknown path bond type 'eggs'")
 
     def test_bad_btype2(self):
-        self._run("--btype DefaultBond|eggs", "Unknown bond type 'eggs'")
+        self._run("--btype DefaultBond|eggs", "Unknown path bond type 'eggs'")
 
     def test_bad_btype3(self):
-        self._run("--btype DefaultBond|", "Missing bond flag")
+        self._run("--btype DefaultBond|", "Missing path bond flag")
 
 TestArgErrors = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestArgErrors)
 
+if OEGRAPHSIM_API_VERSION == "1":
+    type_converter = str
+    atom_type_converter = str
+    bond_type_converter = str
+else:
+    type_converter = convert_type_string
+    atom_type_converter = convert_v1_atom_names_to_v2
+    bond_type_converter = convert_v1_bond_names_to_v2
+
 class TestHeaderOutput(unittest2.TestCase):
     def _field(self, s, field):
-        result = run(s)
+        try:
+            result = run(s)
+        except SystemExit, err:
+            raise
+            raise AssertionError("Should not die: %r" % (err,))
         filtered = [line for line in result if line.startswith(field)]
         self.assertEquals(len(filtered), 1, result)
         return filtered[0]
@@ -343,15 +387,16 @@ class TestHeaderOutput(unittest2.TestCase):
 
     def test_type(self):
         result = self._field("", "#type")
-        self.assertEquals(result,
-  "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond")
+        self.assertEquals(result, type_converter(
+  "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond"))
 
     def test_default_atom_and_bond(self):
         result = self._field(
-            "--atype=Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization "
-            "--btype=BondOrder|Chiral", "#type")
-        self.assertEquals(result,
-  "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond")
+            atom_type_converter("--atype=Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization") +
+            " " +
+            bond_type_converter("--btype=BondOrder|Chiral"), "#type")
+        self.assertEquals(result, type_converter(
+            "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond"))
 
         
     # different flags. All flags? and order
@@ -360,25 +405,26 @@ class TestHeaderOutput(unittest2.TestCase):
         self.assertEquals(result, "#num_bits=38")
         
     def test_atype_flags(self):
-        result = self._field("--atype FormalCharge|FormalCharge", "#type") + " "
-        self.assertIn(" atype=FormalCharge ", result)
+        result = self._field(atom_type_converter("--atype FormalCharge|FormalCharge"), "#type") + " "
+        self.assertIn(atom_type_converter(" atype=FormalCharge "), result)
     
     def test_btype_flags(self):
-        result = self._field("--btype Chiral|BondOrder", "#type") + " "
-        self.assertIn(" btype=DefaultBond ", result)
-        result = self._field("--btype BondOrder|Chiral", "#type") + " "
-        self.assertIn(" btype=DefaultBond ", result)
+        result = self._field(bond_type_converter("--btype Chiral|BondOrder"), "#type") + " "
+        self.assertIn(bond_type_converter(" btype=DefaultBond "), result)
+        result = self._field(bond_type_converter("--btype BondOrder|Chiral"), "#type") + " "
+        self.assertIn(bond_type_converter(" btype=DefaultBond "), result)
     
     def test_pipe_or_comma(self):
-        result = self._field("--atype HvyDegree,FormalCharge --btype Chiral,BondOrder",
+        result = self._field(atom_type_converter("--atype HvyDegree,FormalCharge") + " " +
+                             bond_type_converter("--btype Chiral,BondOrder"),
                              "#type") + " "
-        self.assertIn(" atype=FormalCharge|HvyDegree ", result)
-        self.assertIn(" btype=DefaultBond ", result)
+        self.assertIn(atom_type_converter(" atype=FormalCharge|HvyDegree "), result)
+        self.assertIn(bond_type_converter(" btype=DefaultBond "), result)
         
     
     def test_maccs_header(self):
         result = self._field("--maccs166", "#type")
-        self.assertEquals(result, "#type=OpenEye-MACCS166/1")
+        self.assertEquals(result, type_converter("#type=OpenEye-MACCS166/1"))
     
 TestHeaderOutput = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHeaderOutput)
         
