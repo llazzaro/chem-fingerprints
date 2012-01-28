@@ -38,7 +38,9 @@ SOFTWARE = "OEGraphSim/%(release)s (%(version)s)" % dict(
     release = OEGraphSimGetRelease(),
     version = OEGraphSimGetVersion())
 
-
+OEGRAPHSIM_API_VERSION = "1"
+if "OEMakeCircularFP" in globals():
+    OEGRAPHSIM_API_VERSION = "2"
 
 ##### Handle the atom and bond type flags for path fingerprints
 
@@ -58,35 +60,75 @@ SOFTWARE = "OEGraphSim/%(release)s (%(version)s)" % dict(
 # (and not ",") and omits the DefaultAtom and DefaultBond name.
 # The result is easier to parse with the OpenEye API functions.
 
-_atype_flags = [(OEGetFPAtomType(atype), atype) for atype in
-                (OEFPAtomType_Aromaticity,
-                OEFPAtomType_AtomicNumber,
-                OEFPAtomType_Chiral,
-                OEFPAtomType_EqAromatic,
-                OEFPAtomType_EqHalogen,
-                OEFPAtomType_FormalCharge,
-                OEFPAtomType_HvyDegree,
-                OEFPAtomType_Hybridization,
-                OEFPAtomType_InRing)]
+
+# Note: Version 1.0 of OEGraphSim uses different names than 2.0 (Grr!)
+# OpenEye says these names will not change again. We'll see.
+
+_atype_flags = [(OEGetFPAtomType(atype), atype) for atype in ( 
+                    OEFPAtomType_Aromaticity,   # Arom
+                    OEFPAtomType_AtomicNumber,  # AtmNum
+                    OEFPAtomType_Chiral,        # Chiral
+                    OEFPAtomType_EqHalogen,     # EqHalo
+                    OEFPAtomType_FormalCharge,  # FCharge
+                    OEFPAtomType_HvyDegree,     # HvyDeg
+                    OEFPAtomType_Hybridization, # Hyb
+                    OEFPAtomType_InRing,        # InRing
+                    OEFPAtomType_HCount,        # HCount # 2.0.0
+                    OEFPAtomType_EqAromatic,    # EqArom
+                    OEFPAtomType_EqHBondAcceptor,  # EqHBAcc
+                    OEFPAtomType_EqHBondDonor,     # EqHBDon
+                    )]
+    
 _btype_flags = [(OEGetFPBondType(btype), btype) for btype in
                 (OEFPBondType_BondOrder,
                 OEFPBondType_Chiral,
-                OEFPBondType_InRing)]
+                 OEFPBondType_InRing)]
 
-_atypes = dict(_atype_flags)
-_btypes = dict(_btype_flags)
+# I support the DefaultAtom and DefaultBond special values.
+# (Note: complex bitflags go first; it simplifies the flag->description code)
 
-# I support the DefaultAtom and DefaultBond values but I'm worried
-# that OpenEye will change the composition of those in the future. I
-# talked with Krisztina Boda and she says that that won't change, but
-# I don't necessarily trust future maintainers. To minimize problems,
-# I'll hard-code them the current Default* values.
 
-_atype_flags.insert(0, ("DefaultAtom", 191))
-_atypes["DefaultAtom"] = 191 # OEFPAtomType_DefaultAtom
+if OEGRAPHSIM_API_VERSION == "1":
+    _path_atype_flags = ([("DefaultAtom", OEFPAtomType_DefaultAtom)] + _atype_flags +
+                         [("Default", OEFPAtomType_DefaultAtom)])
+    _path_btype_flags = ([("DefaultBond", OEFPBondType_DefaultBond)] + _btype_flags +
+                         [("Default", OEFPAtomType_DefaultAtom)])
 
-_btype_flags.insert(0, ("DefaultBond", 3))
-_btypes["DefaultBond"] = 3 # OEFPBondType_DefaultBond
+    _path_atypes = dict(_path_atype_flags)
+    _path_btypes = dict(_path_btype_flags)
+
+else:
+    # Version 2 of the API; this adds circular and tree fingerprints
+    # and changes the default atom flags. The chemfp support also
+    # changed. It still accepts the "Default" names as input, but
+    # normalizes them to the full "|" names. (This matches what
+    # OEGraphSim does.)
+    _atype_default_flags = [("DefaultPathAtom", OEFPAtomType_DefaultPathAtom),
+                            ("DefaultCircularAtom", OEFPAtomType_DefaultCircularAtom),
+                            ("DefaultTreeAtom", OEFPAtomType_DefaultTreeAtom),
+                            ("DefaultAtom", OEFPAtomType_DefaultAtom)]
+    _btype_default_flags = [("DefaultPathBond", OEFPBondType_DefaultPathBond),
+                            ("DefaultCircularBond", OEFPBondType_DefaultCircularBond),
+                            ("DefaultTreeBond", OEFPBondType_DefaultTreeBond),
+                            ("DefaultBond", OEFPBondType_DefaultBond)]
+    
+    _path_atype_flags = _atype_flags + _atype_default_flags + [("Default", OEFPAtomType_DefaultPathAtom)]
+    _path_btype_flags = _btype_flags + _btype_default_flags + [("Default", OEFPBondType_DefaultPathBond)]
+
+    _circular_atype_flags = _atype_flags + _atype_default_flags + [
+        ("Default", OEFPAtomType_DefaultCircularAtom)]
+    _circular_btype_flags = _btype_flags + _btype_default_flags + [
+        ("Default", OEFPBondType_DefaultCircularBond)]
+
+    _tree_atype_flags = _atype_flags + _atype_default_flags + [("Default", OEFPAtomType_DefaultTreeAtom)]
+    _tree_btype_flags = _btype_flags + _btype_default_flags + [("Default", OEFPBondType_DefaultTreeBond)]
+
+    _path_atypes = dict(_path_atype_flags)
+    _path_btypes = dict(_path_btype_flags)
+    _circular_atypes = dict(_circular_atype_flags)
+    _circular_btypes = dict(_circular_btype_flags)
+    _tree_atypes = dict(_tree_atype_flags)
+    _tree_btypes = dict(_tree_btype_flags)
 
 
 ## Go from a "," or "|" separated text field to an integer value
@@ -95,7 +137,7 @@ _btypes["DefaultBond"] = 3 # OEFPBondType_DefaultBond
 def _get_type_value(a_or_b, table, description):
     value = 0
     # Allow both "|" and "," as separators
-    # (Consistent with OEChem)
+    # (XXX OEGraphSim 2.0.0 only allows "|")
     description = description.replace("|", ",")
     for word in description.split(","):
         word = word.strip()
@@ -107,8 +149,8 @@ def _get_type_value(a_or_b, table, description):
             raise ValueError("Unknown %s type %r" % (a_or_b, word))
     return value
 
-def atom_description_to_value(description):
-    """atom_description_to_value(description) -> integer
+def path_atom_description_to_value(description):
+    """path_atom_description_to_value(description) -> integer
 
     Convert an atom description like FormalCharge,EqHalogen
     or FormalCharge|EqHalogen into its atom type value.
@@ -116,9 +158,9 @@ def atom_description_to_value(description):
     This is similar to OEGetFPAtomType except both "|" and "," are
     allowed seperators and "AtomDefault" is an allowed term.
     """
-    return _get_type_value("atom", _atypes, description)
+    return _get_type_value("path atom", _path_atypes, description)
 
-def bond_description_to_value(description):
+def path_bond_description_to_value(description):
     """bond_description_to_value(description) -> integer
 
     Convert an bond description like BondOrder,Chiral
@@ -127,7 +169,17 @@ def bond_description_to_value(description):
     This is similar to OEGetFPBondType except both "|" and "," are
     allowed seperators and "BondDefault" is an allowed term.
     """
-    return _get_type_value("bond", _btypes, description)
+    return _get_type_value("path bond", _path_btypes, description)
+
+if OEGRAPHSIM_API_VERSION == "2":
+    def circular_atom_description_to_value(description):
+        return _get_type_value("circular atom", _circular_atypes, description)
+    def circular_bond_description_to_value(description):
+        return _get_type_value("circular bond", _circular_btypes, description)
+    def tree_atom_description_to_value(description):
+        return _get_type_value("tree atom", _tree_atypes, description)
+    def tree_bond_description_to_value(description):
+        return _get_type_value("tree bond", _tree_btypes, description)
 
 ## Go from an integer value into a canonical description
 
@@ -148,47 +200,85 @@ def _get_type_description(a_or_b, flags, value):
     return "|".join(words)
 
 
-def atom_value_to_description(value):
+def path_atom_value_to_description(value):
     """atom_value_to_description(value) -> string
 
     Convert from an atom type string into its text description,
     separated by "|"s. The result are compatible with
     OEGetFPAtomType and are in canonical order.
     """
-    return _get_type_description("atom", _atype_flags, value)
+    return _get_type_description("path atom", _path_atype_flags, value)
 
-def bond_value_to_description(value):
+def path_bond_value_to_description(value):
     """bond_value_to_description(value) -> string
 
     Convert from a bond type string into its text description,
     separated by "|"s. The result are compatible with
     OEGetFPBontType and are in canonical order.
     """
-    return _get_type_description("bond", _btype_flags, value)
+    return _get_type_description("path bond", _path_btype_flags, value)
 
+if OEGRAPHSIM_API_VERSION == "2":
+    def circular_atom_value_to_description(value):
+        return _get_type_description("circular atom", _circular_atype_flags, value)
+    def circular_bond_value_to_description(value):
+        return _get_type_description("circular bond", _circular_btype_flags, value)
+    def tree_atom_value_to_description(value):
+        return _get_type_description("tree atom", _tree_atype_flags, value)
+    def tree_bond_value_to_description(value):
+        return _get_type_description("tree bond", _tree_btype_flags, value)
+    
+## def decode_path_parameters(parameters):
+##     fingerprinter_kwargs = _maccs_defaults.copy()
+##     for name, value in parameters:
+##         if name not in _maccs_decoders:
+##             raise ValueError("Unknown OpenEye-Path parameter %r" % (name,))
+##         decoder = _maccs_decoders[name]
+##         fingerprinter_kwargs[name] = decoder(value)
+##     return fingerprinter_kwargs
 
-def decode_path_parameters(parameters):
-    fingerprinter_kwargs = _maccs_defaults.copy()
-    for name, value in parameters:
-        if name not in _maccs_decoders:
-            raise ValueError("Unknown OpenEye-Path parameter %r" % (name,))
-        decoder = _maccs_decoders[name]
-        fingerprinter_kwargs[name] = decoder(value)
-    return fingerprinter_kwargs
-
-_maccs_encoders = {"numbits": str,
-                   "minbonds": str,
-                   "maxbonds": str,
-                   "atype": atom_value_to_description,
-                   "btype": bond_value_to_description}
+_path_encoders = {"numbits": str,
+                  "minbonds": str,
+                  "maxbonds": str,
+                  "atype": path_atom_value_to_description,
+                  "btype": path_bond_value_to_description}
 
 def encode_path_parameters(fingerprinter_kwargs):
-    assert len(fingerprinter_kwargs) == len(_maccs_encoders)
+    assert len(fingerprinter_kwargs) == len(_path_encoders)
     parameters = {}
-    for name, encoder in _maccs_encoders.items():
+    for name, encoder in _path_encoders.items():
         value = fingerprinter_kwargs[name]
         parameters[name] = encoder(value)
     return parameters
+
+if OEGRAPHSIM_API_VERSION == "2":
+    _circular_encoders = {"numbits": str,
+                          "minradius": str,
+                          "maxradius": str,
+                          "atype": circular_atom_value_to_description,
+                          "btype": circular_bond_value_to_description}
+
+    def encode_circular_parameters(fingerprinter_kwargs):
+        assert len(fingerprinter_kwargs) == len(_circular_encoders)
+        parameters = {}
+        for name, encoder in _circular_encoders.items():
+            value = fingerprinter_kwargs[name]
+            parameters[name] = encoder(value)
+        return parameters
+
+    _tree_encoders = {"numbits": str,
+                      "minbonds": str,
+                      "maxbonds": str,
+                      "atype": tree_atom_value_to_description,
+                      "btype": tree_bond_value_to_description}
+
+    def encode_tree_parameters(fingerprinter_kwargs):
+        assert len(fingerprinter_kwargs) == len(_tree_encoders)
+        parameters = {}
+        for name, encoder in _tree_encoders.items():
+            value = fingerprinter_kwargs[name]
+            parameters[name] = encoder(value)
+        return parameters
 
 
 ##### Create a function which generate fingerprints
@@ -244,6 +334,52 @@ def get_maccs_fingerprinter():
         return ctypes.string_at(data_location, num_bytes)
 
     return maccs_fingerprinter
+
+if OEGRAPHSIM_API_VERSION == "2":
+    def get_circular_fingerprinter(numbits, minradius, maxradius, atype, btype):
+        # Extra level of error checking since I expect people will think
+        # of this as part of the public API.
+        if not (16 <= numbits <= 65536):
+            raise ValueError("numbits must be between 16 and 65536 (inclusive)")
+        if not (0 <= minradius):
+            raise ValueError("minradius must be 0 or greater")
+        if not (minradius <= maxradius):
+            raise ValueError("maxradius must not be smaller than minradius")
+
+        fp = OEFingerPrint()
+        fp.SetSize(numbits)
+        data_location = int(fp.GetData())
+        num_bytes = (numbits+7)//8
+
+        def circular_fingerprinter(mol):
+            OEMakeTreeFP(fp, mol, numbits, minradius, maxradius, atype, btype)
+            return ctypes.string_at(data_location, num_bytes)
+
+        return circular_fingerprinter
+
+
+    def get_tree_fingerprinter(numbits, minbonds, maxbonds, atype, btype):
+        # Extra level of error checking since I expect people will think
+        # of this as part of the public API.
+        if not (16 <= numbits <= 65536):
+            raise ValueError("numbits must be between 16 and 65536 (inclusive)")
+        if not (0 <= minbonds):
+            raise ValueError("minbonds must be 0 or greater")
+        if not (minbonds <= maxbonds):
+            raise ValueError("maxbonds must not be smaller than minbonds")
+
+        fp = OEFingerPrint()
+        fp.SetSize(numbits)
+        data_location = int(fp.GetData())
+        num_bytes = (numbits+7)//8
+
+        def tree_fingerprinter(mol):
+            OEMakeTreeFP(fp, mol, numbits, minbonds, maxbonds, atype, btype)
+            return ctypes.string_at(data_location, num_bytes)
+
+        return tree_fingerprinter
+
+        
 
 ### A note on fingerprints and ctypes.string_at
 
@@ -477,12 +613,21 @@ _base = FingerprintFamilyConfig(
     software = SOFTWARE,
     read_structures = _read_structures)
 
+######### These are appropriate for OEGraphSim 1.0  #############
+
+def _check_v1(func):
+    def make_fingerprinter(*args, **kwargs):
+        if OEGRAPHSIM_API_VERSION != "1":
+            raise TypeError("This version of OEChem does not support the OEGraphSim 1.0.0 fingerprints")
+        return func(*args, **kwargs)
+    return make_fingerprinter
+
 OpenEyePathFingerprintFamily_v1 = _base.clone(
     name = "OpenEye-Path/1",
     format_string = ("numbits=%(numbits)s minbonds=%(minbonds)s "
                      "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s"),
     num_bits = lambda d: d["numbits"],
-    make_fingerprinter = get_path_fingerprinter)
+    make_fingerprinter = _check_v1(get_path_fingerprinter))
 
 _path = OpenEyePathFingerprintFamily_v1
 _path.add_argument("numbits", decoder=_correct_numbits, metavar="INT", default=4096,
@@ -494,16 +639,70 @@ _path.add_argument("minbonds", decoder=nonnegative_int, metavar="INT", default=0
 _path.add_argument("maxbonds", decoder=nonnegative_int, metavar="INT", default=5,
                    help="maximum number of bonds in the path")
 
-_path.add_argument("atype", decoder=atom_description_to_value,
-                   encoder=atom_value_to_description,
+_path.add_argument("atype", decoder=path_atom_description_to_value,
+                   encoder=path_atom_value_to_description,
                    help="atom type", default="DefaultAtom")
 
-_path.add_argument("btype", decoder=bond_description_to_value,
-                   encoder=bond_value_to_description,
+_path.add_argument("btype", decoder=path_bond_description_to_value,
+                   encoder=path_bond_value_to_description,
                    help="bond type", default="DefaultBond")
 
     
 OpenEyeMACCSFingerprintFamily_v1 = _base.clone(
     name = "OpenEye-MACCS166/1",
     num_bits = 166,
-    make_fingerprinter = get_maccs_fingerprinter)
+    make_fingerprinter = _check_v1(get_maccs_fingerprinter))
+
+######### These are appropriate for OEGraphSim 2.0  #############
+
+def _check_v2(func):
+    def make_fingerprinter(*args, **kwargs):
+        if OEGRAPHSIM_API_VERSION == "1":
+            raise TypeError("This version of OEChem does not support the OEGraphSim 2.0.0 fingerprints")
+        return func(*args, **kwargs)
+    return make_fingerprinter
+
+_ff = OpenEyePathFingerprintFamily_v2 = OpenEyePathFingerprintFamily_v1.clone(
+    name = "OpenEye-Path/2",
+    make_fingerprinter = _check_v2(get_path_fingerprinter))
+_ff.add_argument("atype", decoder=path_atom_description_to_value,
+                 encoder=path_atom_value_to_description,
+                 help="atom type", default="DefaultPathAtom")
+_ff.add_argument("btype", decoder=path_bond_description_to_value,
+                 encoder=path_bond_value_to_description,
+                 help="bond type", default="DefaultPathBond")
+
+
+OpenEyeMACCSFingerprintFamily_v2 = OpenEyeMACCSFingerprintFamily_v1.clone(
+    name = "OpenEye-MACCS166/2",
+    make_fingerprinter = _check_v2(get_maccs_fingerprinter))
+
+_circular_ff = OpenEyeCircularFingerprintFamily_v2 = _base.clone(
+    name = "OpenEye-Circular/2",
+    format_string = ("numbits=%(numbits)s minradius=%(minradius)s "
+                     "maxradius=%(maxradius)s atype=%(atype)s btype=%(btype)s"),
+    num_bits = lambda d: d["numbits"],
+    make_fingerprinter = _check_v2(get_circular_fingerprinter))
+_circular_ff.add_argument("numbits", decoder=_correct_numbits, metavar="INT", default=4096,
+                          help="number of bits in the path fingerprint")
+_circular_ff.add_argument("minradius", decoder=nonnegative_int, metavar="INT", default=0,
+                          help="minimum radius")
+_circular_ff.add_argument("maxradius", decoder=nonnegative_int, metavar="INT", default=5,
+                          help="maximum radius")
+_circular_ff.add_argument("atype", decoder=circular_atom_description_to_value,
+                          encoder=circular_atom_value_to_description,
+                          help="atom type", default="DefaultCircularAtom")
+_circular_ff.add_argument("btype", decoder=circular_bond_description_to_value,
+                 encoder=circular_bond_value_to_description,
+                 help="bond type", default="DefaultCircularBond")
+
+_tree_ff = OpenEyeTreeFingerprintFamily_v2 = OpenEyePathFingerprintFamily_v1.clone(
+    name = "OpenEye-Tree/2",
+    make_fingerprinter = _check_v2(get_tree_fingerprinter))
+_tree_ff.add_argument("atype", decoder=tree_atom_description_to_value,
+                      encoder=tree_atom_value_to_description,
+                      help="atom type", default="DefaultTreeAtom")
+_tree_ff.add_argument("btype", decoder=tree_bond_description_to_value,
+                      encoder=tree_bond_value_to_description,
+                      help="bond type", default="DefaultTreeBond")
+

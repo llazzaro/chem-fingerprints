@@ -82,13 +82,15 @@ def _check_for_oe_errors():
 # would have the nagging feeling that I got the ordering
 # backwards. Instead, I do it from scratch using the bit offset.
 
-def _construct_test_values():
+def _construct_test_values(fp_func = None, num_bits=4096):
     from openeye.oechem import oemolistream
     from openeye.oegraphsim import OEFingerPrint, OEMakePathFP
     fp = OEFingerPrint()
     ifs = oemolistream()
     assert ifs.open(PUBCHEM_SDF)
     hex_data = []
+    if fp_func is None:
+        fp_func = OEMakePathFP
 
     def _convert_to_chemfp_order(s):
         # The FPS format allows either case but I prefer lowercase
@@ -97,15 +99,15 @@ def _construct_test_values():
         return "".join( (s[i+1]+s[i]) for i in range(0, len(s), 2))
 
     for mol in ifs.GetOEGraphMols():
-        OEMakePathFP(fp, mol)
+        fp_func(fp, mol)
         # Set the byte values given the bit offsets
-        bytes = [0] * (4096//8)
+        bytes = [0] * (num_bits//8)
         i = fp.FirstBit()
         while i >= 0:
             bytes[i//8] |= 1<<(i%8)
             i = fp.NextBit(i)
         as_hex = "".join("%02x" % i for i in bytes)
-        assert len(as_hex) == 2*(4096//8), len(as_hex)
+        assert len(as_hex) == 2*(num_bits//8), len(as_hex)
         # Double-check that it matches the (reordered) ToHexString()
         oe_hex = fp.ToHexString()[:-1]
         assert as_hex == _convert_to_chemfp_order(oe_hex), (
@@ -427,6 +429,68 @@ class TestHeaderOutput(unittest2.TestCase):
         self.assertEquals(result, type_converter("#type=OpenEye-MACCS166/1"))
     
 TestHeaderOutput = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHeaderOutput)
+
+
+
+class TestOEGraphSimVersion2(unittest2.TestCase):
+    # I checked the path option earlier, so this just checks that the new conventions are understood
+    def test_path_default(self):
+        result = run_fps("--atype DefaultPathAtom", 19) # (DefaultPathAtom is the same as DefaultAtom)
+        self.assertEquals(result, hex_test_values)
+
+    def test_path_default_type(self):
+        result = run("--atype DefaultPathAtom") # (DefaultPathAtom is the same as DefaultAtom)
+        typename = [line for line in result if line.startswith("#type=")][0]
+        self.assertEquals(typename, "#type=OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+        
+    def test_circular(self):
+        result = run_fps("--circular", 19)
+        self.assertEquals(result, _construct_test_values())
+
+    def test_circular_defaults(self):
+        from openeye.oegraphsim import OEMakeCircularFP, OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond
+        result = run_fps("--circular --numbits 4096 --minradius 0 --maxradius 5 "
+                         "--atype AtmNum|Arom|Chiral|FCharge|HCount|EqHalo --btype Order|Chiral", 19)
+        def compute_circular_fingerprints(fp, mol):
+            OEMakeCircularFP(fp, mol, 4096, 0, 5,
+                             OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond)
+        self.assertEquals(result, _construct_test_values(compute_circular_fingerprints))
+
+    def test_circular_all_args(self):
+        from openeye.oegraphsim import OEMakeCircularFP, OEFPAtomType_Aromaticity, OEFPBondType_Chiral
+        result = run_fps("--circular --numbits 1024 --minradius 2 --maxradius 4 --atype Arom --btype Chiral", 19)
+        def compute_circular_fingerprints(fp, mol):
+            OEMakeCircularFP(fp, mol, 1024, 2, 4,
+                             OEFPAtomType_Aromaticity, OEFPBondType_Chiral)
+        self.assertEquals(result, _construct_test_values(compute_circular_fingerprints, 1024))
+
+    def test_circular_type_all_fields(self):
+        result = run("--circular --numbits 1024 --minradius 2 --maxradius 4 --atype AtmNum|Arom|Chiral|FCharge|HvyDeg|Hyb|InRing|HCount|EqArom|EqHalo|EqHBAcc|EqHBDon --btype Order|Chiral|InRing")
+        typestr = [line for line in result if line.startswith("#type=")][0]
+        self.assertEquals(typestr,
+              "#type=OpenEye-Path/2 numbits=1024 minbonds=0 maxbonds=5 "
+              "atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb|InRing|HCount|EqArom|EqHBAcc|EqHBDon "
+              "btype=Order|Chiral|InRing")
+
+
+
+    def test_circular_default_type(self):
+        pass
+
+    def test_tree(self):
+        pass
+    
+    def test_tree_default(self):
+        pass
+    
+    def test_tree_default_type(self):
+        pass
+    
+if skip_oechem:
+    TestOEGraphSim2 = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHeaderOutput)
+else:
+    TestOEGraphSim2 = unittest2.skipIf(OEGRAPHSIM_API_VERSION == "1",
+                                       "OEGraphSim library is too old")(TestHeaderOutput)
         
 if __name__ == "__main__":
     unittest2.main()

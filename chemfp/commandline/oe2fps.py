@@ -11,22 +11,26 @@ from . import cmdsupport
 ##### Handle command-line argument parsing
 
 # Build up some help text based on the atype and btype fields
-atype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(oe._atypes))))
-btype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(oe._btypes))))
+atype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(dict(oe._atype_flags)))))
+btype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(dict(oe._btype_flags)))))
 
 # Extra help text after the parameter descriptions
 epilog = """\
 
 ATYPE is one or more of the following, separated by commas
   %(atype_options)s
+The terms DefaultPathAtom, DefaultCircularAtom, and DefaultTreeAtom are
+also supported for those respective fingerprint types.
 Examples:
-  --atype DefaultAtom
+  --atype DefaultPathAtom
   --atype AtomicNumber,HvyDegree
 
 BTYPE is one or more of the following, separated by commas
   %(btype_options)s
+The terms DefaultPathBond, DefaultCircularBond, and DefaultTreeBond are
+also supported for those respective fingerprint types.
 Examples:
-  --btype DefaultBond,Chiral
+  --btype DefaultPathBond,Chiral
   --btype BondOrder
 
 OEChem guesses the input structure format based on the filename
@@ -52,14 +56,21 @@ parser = argparse.ArgumentParser(
     epilog=epilog,
     formatter_class=argparse.RawDescriptionHelpFormatter,    
     )
-path_group = parser.add_argument_group("path fingerprints")
+path_group = parser.add_argument_group("path, circular, and tree fingerprints")
 path_group.add_argument(
     "--path", action="store_true", help="generate path fingerprints (default)")
+path_group.add_argument(
+    "--circular", action="store_true", help="generate circular fingerprints")
+path_group.add_argument(
+    "--tree", action="store_true", help="generate tree fingerprints (default)")
 
 PathFamily = oe.OpenEyePathFingerprintFamily_v1
+CircularFamily = oe.OpenEyeCircularFingerprintFamily_v2
 PathFamily.add_argument_to_argparse("numbits", path_group)
 PathFamily.add_argument_to_argparse("minbonds", path_group)
 PathFamily.add_argument_to_argparse("maxbonds", path_group)
+CircularFamily.add_argument_to_argparse("minradius", path_group)
+CircularFamily.add_argument_to_argparse("maxradius", path_group)
 PathFamily.add_argument_to_argparse("atype", path_group)
 PathFamily.add_argument_to_argparse("btype", path_group)
 
@@ -105,7 +116,7 @@ def main(args=None):
     args = parser.parse_args(args)
 
     cmdsupport.mutual_exclusion(parser, args, "path",
-                                ("maccs166", "path", "substruct", "rdmaccs"))
+                                ("maccs166", "path", "circular", "tree", "substruct", "rdmaccs"))
 
     if args.maccs166:
         # Create the MACCS keys fingerprinter
@@ -125,6 +136,37 @@ def main(args=None):
             maxbonds = args.maxbonds,
             atype = args.atype,
             btype = args.btype)
+    elif args.circular:
+        if not (16 <= args.numbits <= 65536):
+            parser.error("--numbits must be between 16 and 65536 bits")
+
+        if not (0 <= args.minradius):
+            parser.error("--minradius must be 0 or greater")
+        if not (args.minradius <= args.maxradius):
+            parser.error("--maxradius must not be smaller than --minradius")
+
+        opener = types.get_fingerprint_family("OpenEye-Circular")(
+            numbits = args.numbits,
+            minradius = args.minradius,
+            maxradius = args.maxradius,
+            atype = args.atype,
+            btype = args.btype)
+    elif args.tree:
+        if not (16 <= args.numbits <= 65536):
+            parser.error("--numbits must be between 16 and 65536 bits")
+
+        if not (0 <= args.minbonds):
+            parser.error("--minbonds must be 0 or greater")
+        if not (args.minbonds <= args.maxbonds):
+            parser.error("--maxbonds must not be smaller than --minbonds")
+
+        opener = types.get_fingerprint_family("OpenEye-Tree")(
+            numbits = args.numbits,
+            minbonds = args.minbonds,
+            maxbonds = args.maxbonds,
+            atype = args.atype,
+            btype = args.btype)
+        
     elif args.substruct:
         opener = types.get_fingerprint_family("ChemFP-Substruct-OpenEye")()
     elif args.rdmaccs:

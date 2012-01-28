@@ -8,7 +8,7 @@ from .decoders import import_decoder  # XXX too specific to the decoder module
 
 
 def check_openbabel_maccs166():
-    from chemfp.openbabel import HAS_MACCS, MACCS_VERSION
+    from .openbabel import HAS_MACCS, MACCS_VERSION
     assert HAS_MACCS
     if MACCS_VERSION == 1:
         return "OpenBabel-MACCS/1"
@@ -31,9 +31,22 @@ class FamilyProxy(object):
         assert family.name == self.family_name
         return family.make_fingerprinter(kwargs)
 
+### The chemfp fingerprint type API isn't powerful enough
+
+# I have to list all of the possible fingerprint types, even if the
+# platform doesn't support that specific type. There's also no support
+# for toolkit vendors which do carefully tracks the fingerprint
+# version (like OEChem); I should be using their version information
+# rather than doing it myself.
+
 _family_config_paths = (
     ("OpenEye-MACCS166/1", "chemfp.openeye.OpenEyeMACCSFingerprintFamily_v1"),
     ("OpenEye-Path/1", "chemfp.openeye.OpenEyePathFingerprintFamily_v1"),
+
+    ("OpenEye-MACCS166/2", "chemfp.openeye.OpenEyeMACCSFingerprintFamily_v2"),
+    ("OpenEye-Path/2", "chemfp.openeye.OpenEyePathFingerprintFamily_v2"),
+    ("OpenEye-Circular/2", "chemfp.openeye.OpenEyeCircularFingerprintFamily_v2"),
+    ("OpenEye-Tree/2", "chemfp.openeye.OpenEyeTreeFingerprintFamily_v2"),
     
     ("RDKit-MACCS166/1", "chemfp.rdkit.RDKitMACCSFingerprintFamily_v1"),
     ("RDKit-Fingerprint/1", "chemfp.rdkit.RDKitFingerprintFamily_v1"),
@@ -375,6 +388,9 @@ class FingerprintFamilyConfig(object):
                                                 metavar=metavar,
                                                 help=help))
         self.args[name] = arg
+
+    def remove_argument(self, name):
+        del self.args[name]
 
     def add_argument_to_argparse(self, name, parser):
         info = self.args[name]
