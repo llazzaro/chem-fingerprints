@@ -352,7 +352,9 @@ if OEGRAPHSIM_API_VERSION == "2":
         num_bytes = (numbits+7)//8
 
         def circular_fingerprinter(mol):
-            OEMakeTreeFP(fp, mol, numbits, minradius, maxradius, atype, btype)
+            import sys
+            print >>sys.stderr, numbits, minradius, maxradius, atype, btype
+            OEMakeCircularFP(fp, mol, numbits, minradius, maxradius, atype, btype)
             return ctypes.string_at(data_location, num_bytes)
 
         return circular_fingerprinter

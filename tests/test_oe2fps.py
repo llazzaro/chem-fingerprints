@@ -431,6 +431,11 @@ class TestHeaderOutput(unittest2.TestCase):
 TestHeaderOutput = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHeaderOutput)
 
 
+if OEGRAPHSIM_API_VERSION == "2":
+    from openeye.oegraphsim import (
+        OEMakeCircularFP, OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond,
+        OEMakeTreeFP, OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond)
+
 
 class TestOEGraphSimVersion2(unittest2.TestCase):
     # I checked the path option earlier, so this just checks that the new conventions are understood
@@ -445,19 +450,22 @@ class TestOEGraphSimVersion2(unittest2.TestCase):
         
     def test_circular(self):
         result = run_fps("--circular", 19)
-        self.assertEquals(result, _construct_test_values())
+        def compute_circular_fingerprints(fp, mol):
+            OEMakeCircularFP(fp, mol, 4096, 0, 5,
+                             OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond)
+        self.assertEquals(result, _construct_test_values(compute_circular_fingerprints))
 
     def test_circular_defaults(self):
-        from openeye.oegraphsim import OEMakeCircularFP, OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond
+        # The documentation says that OEFPBondType_DefaultCircularBond is Order|Chiral
+        # but the code says it's only Order.
         result = run_fps("--circular --numbits 4096 --minradius 0 --maxradius 5 "
-                         "--atype AtmNum|Arom|Chiral|FCharge|HCount|EqHalo --btype Order|Chiral", 19)
+                         "--atype AtmNum|Arom|Chiral|FCharge|HCount|EqHalo --btype Order", 19)
         def compute_circular_fingerprints(fp, mol):
             OEMakeCircularFP(fp, mol, 4096, 0, 5,
                              OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond)
         self.assertEquals(result, _construct_test_values(compute_circular_fingerprints))
 
     def test_circular_all_args(self):
-        from openeye.oegraphsim import OEMakeCircularFP, OEFPAtomType_Aromaticity, OEFPBondType_Chiral
         result = run_fps("--circular --numbits 1024 --minradius 2 --maxradius 4 --atype Arom --btype Chiral", 19)
         def compute_circular_fingerprints(fp, mol):
             OEMakeCircularFP(fp, mol, 1024, 2, 4,
@@ -468,11 +476,9 @@ class TestOEGraphSimVersion2(unittest2.TestCase):
         result = run("--circular --numbits 1024 --minradius 2 --maxradius 4 --atype AtmNum|Arom|Chiral|FCharge|HvyDeg|Hyb|InRing|HCount|EqArom|EqHalo|EqHBAcc|EqHBDon --btype Order|Chiral|InRing")
         typestr = [line for line in result if line.startswith("#type=")][0]
         self.assertEquals(typestr,
-              "#type=OpenEye-Path/2 numbits=1024 minbonds=0 maxbonds=5 "
+              "#type=OpenEye-Circular/2 numbits=1024 minradius=2 maxradius=4 "
               "atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb|InRing|HCount|EqArom|EqHBAcc|EqHBDon "
               "btype=Order|Chiral|InRing")
-
-
 
     def test_circular_default_type(self):
         pass
