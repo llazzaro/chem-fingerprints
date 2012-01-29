@@ -434,7 +434,9 @@ TestHeaderOutput = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHea
 if OEGRAPHSIM_API_VERSION == "2":
     from openeye.oegraphsim import (
         OEMakeCircularFP, OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond,
-        OEMakeTreeFP, OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond)
+        OEMakeTreeFP, OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond,
+        OEFPAtomType_Aromaticity, OEFPBondType_Chiral
+        )
 
 
 class TestOEGraphSimVersion2(unittest2.TestCase):

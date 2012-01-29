@@ -71,8 +71,12 @@ PathFamily.add_argument_to_argparse("minbonds", path_group)
 PathFamily.add_argument_to_argparse("maxbonds", path_group)
 CircularFamily.add_argument_to_argparse("minradius", path_group)
 CircularFamily.add_argument_to_argparse("maxradius", path_group)
-PathFamily.add_argument_to_argparse("atype", path_group)
-PathFamily.add_argument_to_argparse("btype", path_group)
+# The "Default" value has different meaning for different fingerprint types.
+# I can't let argparse do the expansion for me; I have to do it myself.
+path_group.add_argument("--atype", action="store", default="Default",
+                        help="atom type as a set of '|' separated values")
+path_group.add_argument("--btype", action="store", default="Default",
+                        help="bond type as a set of '|' separated values")
 
 maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
@@ -109,6 +113,16 @@ parser.add_argument(
 parser.add_argument(
     "filenames", nargs="*", help="input structure files (default is stdin)")
 
+def _get_atype_and_btype(args, atom_description_to_value, bond_description_to_value):
+    try:
+        atype = atom_description_to_value(args.atype)
+    except ValueError, err:
+        parser.error("--atype must contain '|' separated atom terms: %s" % (err,))
+    try:
+        btype = bond_description_to_value(args.btype)
+    except ValueError, err:
+        parser.error("--btype must contain '|' separated atom terms: %s" % (err,))
+    return atype, btype
 
 #######
 
@@ -129,13 +143,14 @@ def main(args=None):
             parser.error("--minbonds must be 0 or greater")
         if not (args.minbonds <= args.maxbonds):
             parser.error("--maxbonds must not be smaller than --minbonds")
-
+        atype, btype = _get_atype_and_btype(args, oe.path_atom_description_to_value,
+                                            oe.path_bond_description_to_value)
         opener = types.get_fingerprint_family("OpenEye-Path")(
             numbits = args.numbits,
             minbonds = args.minbonds,
             maxbonds = args.maxbonds,
-            atype = args.atype,
-            btype = args.btype)
+            atype = atype,
+            btype = btype)
     elif args.circular:
         if not (16 <= args.numbits <= 65536):
             parser.error("--numbits must be between 16 and 65536 bits")
@@ -144,13 +159,15 @@ def main(args=None):
             parser.error("--minradius must be 0 or greater")
         if not (args.minradius <= args.maxradius):
             parser.error("--maxradius must not be smaller than --minradius")
+        atype, btype = _get_atype_and_btype(args, oe.circular_atom_description_to_value,
+                                            oe.circular_bond_description_to_value)
 
         opener = types.get_fingerprint_family("OpenEye-Circular")(
             numbits = args.numbits,
             minradius = args.minradius,
             maxradius = args.maxradius,
-            atype = args.atype,
-            btype = args.btype)
+            atype = atype,
+            btype = btype)
     elif args.tree:
         if not (16 <= args.numbits <= 65536):
             parser.error("--numbits must be between 16 and 65536 bits")
@@ -159,13 +176,15 @@ def main(args=None):
             parser.error("--minbonds must be 0 or greater")
         if not (args.minbonds <= args.maxbonds):
             parser.error("--maxbonds must not be smaller than --minbonds")
+        atype, btype = _get_atype_and_btype(args, oe.tree_atom_description_to_value,
+                                            oe.tree_bond_description_to_value)
 
         opener = types.get_fingerprint_family("OpenEye-Tree")(
             numbits = args.numbits,
             minbonds = args.minbonds,
             maxbonds = args.maxbonds,
-            atype = args.atype,
-            btype = args.btype)
+            atype = atype,
+            btype = btype)
         
     elif args.substruct:
         opener = types.get_fingerprint_family("ChemFP-Substruct-OpenEye")()

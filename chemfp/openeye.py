@@ -352,8 +352,6 @@ if OEGRAPHSIM_API_VERSION == "2":
         num_bytes = (numbits+7)//8
 
         def circular_fingerprinter(mol):
-            import sys
-            print >>sys.stderr, numbits, minradius, maxradius, atype, btype
             OEMakeCircularFP(fp, mol, numbits, minradius, maxradius, atype, btype)
             return ctypes.string_at(data_location, num_bytes)
 
@@ -643,11 +641,11 @@ _path.add_argument("maxbonds", decoder=nonnegative_int, metavar="INT", default=5
 
 _path.add_argument("atype", decoder=path_atom_description_to_value,
                    encoder=path_atom_value_to_description,
-                   help="atom type", default="DefaultAtom")
+                   help="atom type", default="Default")
 
 _path.add_argument("btype", decoder=path_bond_description_to_value,
                    encoder=path_bond_value_to_description,
-                   help="bond type", default="DefaultBond")
+                   help="bond type", default="Default")
 
     
 OpenEyeMACCSFingerprintFamily_v1 = _base.clone(
