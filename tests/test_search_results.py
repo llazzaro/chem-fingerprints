@@ -5,6 +5,13 @@ import random
 
 from chemfp.search import SearchResults
 
+try:
+  next
+except NameError:
+  # Compatibility with Python 2.5
+  def next(it):
+    return it.next()
+  
 
 random_scores = [
   0.676, 0.384, 0.740, 0.970, 0.148, 0.361, 0.621, 0.715, 0.698,
