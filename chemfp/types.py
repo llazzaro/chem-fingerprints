@@ -16,6 +16,14 @@ def check_openbabel_maccs166():
         return "OpenBabel-MACCS/2"
     raise AssertionError
 
+def check_openeye_maccs166():
+    from .openeye import OEGRAPHSIM_API_VERSION
+    return "OpenEye-MACCS166/"+OEGRAPHSIM_API_VERSION
+
+def check_openeye_path():
+    from .openeye import OEGRAPHSIM_API_VERSION
+    return "OpenEye-Path/"+OEGRAPHSIM_API_VERSION
+
 class FamilyProxy(object):
     def __init__(self, family_name, path):
         self.family_name = family_name
@@ -94,7 +102,9 @@ _family_config_paths = (
 )
 
 _alternates = {
-    "OpenBabel-MACCS": check_openbabel_maccs166
+    "OpenBabel-MACCS": check_openbabel_maccs166,
+    "OpenEye-MACCS166": check_openeye_maccs166,
+    "OpenEye-Path": check_openeye_path,
     }
 
 
