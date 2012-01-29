@@ -433,57 +433,99 @@ TestHeaderOutput = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHea
 
 if OEGRAPHSIM_API_VERSION == "2":
     from openeye.oegraphsim import (
+        OEMakePathFP, OEFPAtomType_DefaultPathAtom, OEFPBondType_DefaultPathBond,
         OEMakeCircularFP, OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond,
         OEMakeTreeFP, OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond,
-        OEFPAtomType_Aromaticity, OEFPBondType_Chiral
+        OEFPAtomType_Aromaticity, OEFPAtomType_AtomicNumber, OEFPAtomType_EqHalogen, 
+        OEFPBondType_Chiral, OEFPBondType_InRing, OEFPBondType_BondOrder,
         )
 
 
 class TestOEGraphSimVersion2(unittest2.TestCase):
-    # I checked the path option earlier, so this just checks that the new conventions are understood
-    def test_path_default(self):
-        result = run_fps("--atype DefaultPathAtom", 19) # (DefaultPathAtom is the same as DefaultAtom)
-        self.assertEquals(result, hex_test_values)
+    def test_hash(self):
+        header, result = runner.run_split("--path", 19)
+        self.assertEquals(header["#type"], "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+        self.assertEquals(result, _construct_test_values())
+        
+    def test_path_defaults(self):
+        header, result = runner.run_split("--path --numbits 4096 --minbonds 0 --maxbonds 5 "
+                                          "--atype AtmNum|Arom|Chiral|FCharge|HvyDeg|Hyb|EqHalo --btype Order|Chiral", 19)
+        self.assertEquals(header["#type"], "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+        self.assertEquals(result, _construct_test_values())
 
+    def test_change_all_path_fields(self):
+        header, result = runner.run_split("--path --numbits 1024 --minbonds 2 --maxbonds 4 "
+                                          "--atype AtmNum|EqHalo --btype InRing|Order", 19)
+        self.assertEquals(header["#type"], "OpenEye-Path/2 numbits=1024 minbonds=2 maxbonds=4 atype=AtmNum|EqHalo btype=Order|InRing")
+        def compute_path_fingerprints(fp, mol):
+            OEMakePathFP(fp, mol, 1024, 2, 4,
+                         OEFPAtomType_AtomicNumber|OEFPAtomType_EqHalogen,
+                         OEFPBondType_InRing|OEFPBondType_BondOrder)
+        self.assertEquals(result, _construct_test_values(compute_path_fingerprints, 1024))
+        
     def test_path_default_type(self):
         result = run("--atype DefaultPathAtom") # (DefaultPathAtom is the same as DefaultAtom)
         typename = [line for line in result if line.startswith("#type=")][0]
         self.assertEquals(typename, "#type=OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+
+    def test_check_path_default_types(self):
+        header, result = runner.run_split("--path --atype Default --btype Default")
+        self.assertEquals(header["#type"],
+              "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+        header, result = runner.run_split("--path --atype DefaultCircularAtom --btype DefaultCircularBond")
+        self.assertEquals(header["#type"],
+              "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
+        header, result = runner.run_split("--path --atype DefaultPathAtom --btype DefaultPathBond")
+        self.assertEquals(header["#type"],
+              "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+
+
+    ########################
+    # Note: The documentation says that OEFPBondType_DefaultCircularBond is Order|Chiral
+    # but the code says it's only Order.
         
     def test_circular(self):
-        result = run_fps("--circular", 19)
+        header, result = runner.run_split("--circular", 19)
         def compute_circular_fingerprints(fp, mol):
             OEMakeCircularFP(fp, mol, 4096, 0, 5,
                              OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond)
+        self.assertEquals(header["#type"], "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
         self.assertEquals(result, _construct_test_values(compute_circular_fingerprints))
 
     def test_circular_defaults(self):
-        # The documentation says that OEFPBondType_DefaultCircularBond is Order|Chiral
-        # but the code says it's only Order.
-        result = run_fps("--circular --numbits 4096 --minradius 0 --maxradius 5 "
-                         "--atype AtmNum|Arom|Chiral|FCharge|HCount|EqHalo --btype Order", 19)
+        # Make sure that when I specify the defaults then I get the same results
+        header, result = runner.run_split("--circular --numbits 4096 --minradius 0 --maxradius 5 "
+                                          "--atype AtmNum|Arom|Chiral|FCharge|HCount|EqHalo --btype Order")
+        self.assertEquals(header["#type"], "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
+                
         def compute_circular_fingerprints(fp, mol):
             OEMakeCircularFP(fp, mol, 4096, 0, 5,
                              OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond)
         self.assertEquals(result, _construct_test_values(compute_circular_fingerprints))
 
-    def test_circular_all_args(self):
-        result = run_fps("--circular --numbits 1024 --minradius 2 --maxradius 4 --atype Arom --btype Chiral", 19)
+    def test_change_all_circular_fields(self):
+        header, result = runner.run_split("--circular --numbits 1024 --minradius 2 --maxradius 4 --atype Arom --btype Chiral", 19)
         def compute_circular_fingerprints(fp, mol):
             OEMakeCircularFP(fp, mol, 1024, 2, 4,
                              OEFPAtomType_Aromaticity, OEFPBondType_Chiral)
+        self.assertEquals(header["#type"],
+              "OpenEye-Circular/2 numbits=1024 minradius=2 maxradius=4 atype=Arom btype=Chiral")
         self.assertEquals(result, _construct_test_values(compute_circular_fingerprints, 1024))
 
-    def test_circular_type_all_fields(self):
-        result = run("--circular --numbits 1024 --minradius 2 --maxradius 4 --atype AtmNum|Arom|Chiral|FCharge|HvyDeg|Hyb|InRing|HCount|EqArom|EqHalo|EqHBAcc|EqHBDon --btype Order|Chiral|InRing")
-        typestr = [line for line in result if line.startswith("#type=")][0]
-        self.assertEquals(typestr,
-              "#type=OpenEye-Circular/2 numbits=1024 minradius=2 maxradius=4 "
-              "atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb|InRing|HCount|EqArom|EqHBAcc|EqHBDon "
-              "btype=Order|Chiral|InRing")
+    def test_check_circular_default_types(self):
+        header, result = runner.run_split("--circular --atype Default --btype Default")
+        self.assertEquals(header["#type"],
+              "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
+        header, result = runner.run_split("--circular --atype DefaultCircularAtom --btype DefaultCircularBond")
+        self.assertEquals(header["#type"],
+              "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
+        header, result = runner.run_split("--circular --atype DefaultPathAtom --btype DefaultPathBond")
+        self.assertEquals(header["#type"],
+              "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
 
-    def test_circular_default_type(self):
-        pass
+
+    ########################
+
 
     def test_tree(self):
         pass
