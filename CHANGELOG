@@ -23,6 +23,9 @@ larger than 224 bits, in which case it's 64 bytes.)
 
 Support for RDKit's Morgan fingerprints.
 
+Support for Daylight's Circular and Tree fingerprints (if you have
+OEGraphSim 2.0.0 installed.)
+
 New decoder for Daylight's "binary2ascii" encoding.
 
 Fixed a memory overflow bug which caused crashes on some Windows and
