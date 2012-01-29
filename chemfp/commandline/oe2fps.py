@@ -13,25 +13,65 @@ from . import cmdsupport
 # Build up some help text based on the atype and btype fields
 atype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(dict(oe._atype_flags)))))
 btype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(dict(oe._btype_flags)))))
+if oe.OEGRAPHSIM_API_VERSION == "1":
+    type_help = """\
+ATYPE is one or more of the following, separated by the '|' character.
+  %(atype_options)s
+The terms 'Default' and 'DefaultAtom' are expanded to OpenEye's
+suggested default of Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb.
+Examples:
+  --atype Default
+  --atype AtomicNumber|HvyDegree
+(Note that most atom type names change in OEGraphSim 2.0.0.)
+
+BTYPE is one or more of the following, separated by the '|' character
+  %(btype_options)s
+The terms 'Default' and 'DefaultBond' are expanded to OpenEye's
+suggested default of BondOrder|Chiral.
+Examples:
+  --btype Default
+  --btype BondOrder
+(Note that "BondOrder" changed to "Order" in OEGraphSim 2.0.0.)
+
+For simpler Unix command-line compatibility, a comma may be used
+instead of a '|' to separate different fields. Example:
+  --atype AtomicNumber,HvyDegree
+"""
+else:
+    type_help = """\
+ATYPE is one or more of the following, separated by the '|' character
+  %(atype_options)s
+The following shorthand terms and expansions are also available:
+ DefaultPathAtom = Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb
+ DefaultCircularAtom = Arom|AtmNum|Chiral|EqHalo|FCharge|HCount
+ DefaultTreeAtom = Arom|AtmNum|Chiral|EqHalo|FCharge|HCount
+and 'Default' selects the correct value for the specified fingerprint.
+Examples:
+  --atype Default
+  --atype Arom|AtmNum|FCharge|HCount
+
+BTYPE is one or more of the following, separated by the '|' character
+  %(btype_options)s
+The following shorthand terms and expansions are also available:
+ DefaultPathBond = Order|Chiral
+ DefaultCircularBond = Order
+ DefaultTreeBond = Order
+ and 'Default' selects the correct value for the specified fingerprint.
+ Examples:
+   --btype Default
+   --btype Order|InRing
+
+For simpler Unix command-line compatibility, a comma may be used
+instead of a '|' to separate different fields. Example:
+  --atype AtmNum,HvyDegree
+"""
+
+type_help = type_help % dict(atype_options=atype_options,
+                             btype_options=btype_options)
+
 
 # Extra help text after the parameter descriptions
-epilog = """\
-
-ATYPE is one or more of the following, separated by commas
-  %(atype_options)s
-The terms DefaultPathAtom, DefaultCircularAtom, and DefaultTreeAtom are
-also supported for those respective fingerprint types.
-Examples:
-  --atype DefaultPathAtom
-  --atype AtomicNumber,HvyDegree
-
-BTYPE is one or more of the following, separated by commas
-  %(btype_options)s
-The terms DefaultPathBond, DefaultCircularBond, and DefaultTreeBond are
-also supported for those respective fingerprint types.
-Examples:
-  --btype DefaultPathBond,Chiral
-  --btype BondOrder
+epilog = type_help + """\
 
 OEChem guesses the input structure format based on the filename
 extension and assumes SMILES for structures read from stdin.
@@ -48,35 +88,48 @@ Use "--in FORMAT" to select an alternative, where FORMAT is one of:
    MacroModel    mmod, mmod.gz
    OEBinary v2   oeb, oeb.gz
    old OEBinary  bin
-""" % dict(atype_options=atype_options,
-           btype_options=btype_options)
+"""
 
 parser = argparse.ArgumentParser(
     description="Generate FPS fingerprints from a structure file using OEChem",
     epilog=epilog,
     formatter_class=argparse.RawDescriptionHelpFormatter,    
     )
-path_group = parser.add_argument_group("path, circular, and tree fingerprints")
-path_group.add_argument(
-    "--path", action="store_true", help="generate path fingerprints (default)")
-path_group.add_argument(
-    "--circular", action="store_true", help="generate circular fingerprints")
-path_group.add_argument(
-    "--tree", action="store_true", help="generate tree fingerprints (default)")
+if oe.OEGRAPHSIM_API_VERSION == "1":
+    PathFamily = oe.OpenEyePathFingerprintFamily_v1
+    path_group = parser.add_argument_group("path fingerprints")
+    PathFamily.add_argument_to_argparse("numbits", path_group)
+    PathFamily.add_argument_to_argparse("minbonds", path_group)
+    PathFamily.add_argument_to_argparse("maxbonds", path_group)
+    PathFamily.add_argument_to_argparse("atype", path_group)
+    PathFamily.add_argument_to_argparse("btype", path_group)
+else:
+    CircularFamily = oe.OpenEyeCircularFingerprintFamily_v2
+    path_group = parser.add_argument_group("path, circular, and tree fingerprints")
+    path_group.add_argument(
+        "--path", action="store_true", help="generate path fingerprints (default)")
+    path_group.add_argument(
+        "--circular", action="store_true", help="generate circular fingerprints")
+    path_group.add_argument(
+        "--tree", action="store_true", help="generate tree fingerprints (default)")
 
-PathFamily = oe.OpenEyePathFingerprintFamily_v1
-CircularFamily = oe.OpenEyeCircularFingerprintFamily_v2
-PathFamily.add_argument_to_argparse("numbits", path_group)
-PathFamily.add_argument_to_argparse("minbonds", path_group)
-PathFamily.add_argument_to_argparse("maxbonds", path_group)
-CircularFamily.add_argument_to_argparse("minradius", path_group)
-CircularFamily.add_argument_to_argparse("maxradius", path_group)
-# The "Default" value has different meaning for different fingerprint types.
-# I can't let argparse do the expansion for me; I have to do it myself.
-path_group.add_argument("--atype", action="store", default="Default",
-                        help="atom type as a set of '|' separated values")
-path_group.add_argument("--btype", action="store", default="Default",
-                        help="bond type as a set of '|' separated values")
+    path_group.add_argument(
+        "--numbits", action="store", type=int, metavar="INT", default=4096,
+        help="number of bits in the fingerprint (default=4096)")
+    path_group.add_argument(
+        "--minbonds", action="store", type=int, metavar="INT", default=0,
+        help="minimum number of bonds in the path or tree fingerprint (default=0)")
+    path_group.add_argument(
+        "--maxbonds", action="store", type=int, metavar="INT", default=None,
+        help="maximum number of bonds in the path or tree fingerprint (path default=5, tree default=4)")
+    CircularFamily.add_argument_to_argparse("minradius", path_group)
+    CircularFamily.add_argument_to_argparse("maxradius", path_group)
+    path_group.add_argument(
+        "--atype", metavar="ATYPE", default="Default",
+        help="atom type flags, described below (default=Default)")
+    path_group.add_argument(
+        "--btype", metavar="BTYPE", default="Default",
+        help="bond type flags, described below (default=Default)")
 
 maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
@@ -141,6 +194,8 @@ def main(args=None):
 
         if not (0 <= args.minbonds):
             parser.error("--minbonds must be 0 or greater")
+        if args.maxbonds is None:
+            args.maxbonds = 5
         if not (args.minbonds <= args.maxbonds):
             parser.error("--maxbonds must not be smaller than --minbonds")
         atype, btype = _get_atype_and_btype(args, oe.path_atom_description_to_value,
@@ -174,6 +229,8 @@ def main(args=None):
 
         if not (0 <= args.minbonds):
             parser.error("--minbonds must be 0 or greater")
+        if args.maxbonds is None:
+            args.maxbonds = 4
         if not (args.minbonds <= args.maxbonds):
             parser.error("--maxbonds must not be smaller than --minbonds")
         atype, btype = _get_atype_and_btype(args, oe.tree_atom_description_to_value,
