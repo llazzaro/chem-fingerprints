@@ -359,14 +359,15 @@ class TestArgErrors(unittest2.TestCase):
 
 TestArgErrors = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestArgErrors)
 
-if OEGRAPHSIM_API_VERSION == "1":
-    type_converter = str
-    atom_type_converter = str
-    bond_type_converter = str
-else:
-    type_converter = convert_type_string
-    atom_type_converter = convert_v1_atom_names_to_v2
-    bond_type_converter = convert_v1_bond_names_to_v2
+if has_oechem:
+    if OEGRAPHSIM_API_VERSION == "1":
+        type_converter = str
+        atom_type_converter = str
+        bond_type_converter = str
+    else:
+        type_converter = convert_type_string
+        atom_type_converter = convert_v1_atom_names_to_v2
+        bond_type_converter = convert_v1_bond_names_to_v2
 
 class TestHeaderOutput(unittest2.TestCase):
     def _field(self, s, field):
@@ -431,7 +432,7 @@ class TestHeaderOutput(unittest2.TestCase):
 TestHeaderOutput = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHeaderOutput)
 
 
-if OEGRAPHSIM_API_VERSION == "2":
+if has_oechem and OEGRAPHSIM_API_VERSION == "2":
     from openeye.oegraphsim import (
         OEMakePathFP, OEFPAtomType_DefaultPathAtom, OEFPBondType_DefaultPathBond,
         OEMakeCircularFP, OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond,
