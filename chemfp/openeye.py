@@ -73,11 +73,15 @@ _atype_flags = [(OEGetFPAtomType(atype), atype) for atype in (
                     OEFPAtomType_HvyDegree,     # HvyDeg
                     OEFPAtomType_Hybridization, # Hyb
                     OEFPAtomType_InRing,        # InRing
-                    OEFPAtomType_HCount,        # HCount # 2.0.0
                     OEFPAtomType_EqAromatic,    # EqArom
-                    OEFPAtomType_EqHBondAcceptor,  # EqHBAcc
-                    OEFPAtomType_EqHBondDonor,     # EqHBDon
                     )]
+if OEGRAPHSIM_API_VERSION != "1":
+    # HCount added in 2.0.0
+    _atype_flags.extend([ (OEGetFPAtomType(atype), atype) for atype in (
+                               OEFPAtomType_HCount,           # HCount
+                               OEFPAtomType_EqHBondAcceptor,  # EqHBAcc
+                               OEFPAtomType_EqHBondDonor,     # EqHBDon
+                               )])
     
 _btype_flags = [(OEGetFPBondType(btype), btype) for btype in
                 (OEFPBondType_BondOrder,
@@ -92,7 +96,7 @@ if OEGRAPHSIM_API_VERSION == "1":
     _path_atype_flags = ([("DefaultAtom", OEFPAtomType_DefaultAtom)] + _atype_flags +
                          [("Default", OEFPAtomType_DefaultAtom)])
     _path_btype_flags = ([("DefaultBond", OEFPBondType_DefaultBond)] + _btype_flags +
-                         [("Default", OEFPAtomType_DefaultAtom)])
+                         [("Default", OEFPBondType_DefaultBond)])
 
     _path_atypes = dict(_path_atype_flags)
     _path_btypes = dict(_path_btype_flags)
@@ -171,7 +175,7 @@ def path_bond_description_to_value(description):
     """
     return _get_type_value("path bond", _path_btypes, description)
 
-if OEGRAPHSIM_API_VERSION == "2":
+if OEGRAPHSIM_API_VERSION != "1":
     def circular_atom_description_to_value(description):
         return _get_type_value("circular atom", _circular_atypes, description)
     def circular_bond_description_to_value(description):
@@ -180,6 +184,11 @@ if OEGRAPHSIM_API_VERSION == "2":
         return _get_type_value("tree atom", _tree_atypes, description)
     def tree_bond_description_to_value(description):
         return _get_type_value("tree bond", _tree_btypes, description)
+else:
+    def not_available(*args, **kwargs):
+        raise NotImplementedError("Unsupported in this version of OEGraphSim")
+    circular_atom_description_to_value = circular_bond_description_to_value = \
+        tree_atom_description_to_value = tree_bond_description_to_value = not_available
 
 ## Go from an integer value into a canonical description
 
@@ -196,7 +205,7 @@ def _get_type_description(a_or_b, flags, value):
             value = value ^ flag
             words.append(word)
     if value != 0:
-        raise AssertionError("Unsupported %s value" % (a_or_b,))
+        raise AssertionError("Unsupported %s value %d" % (a_or_b, value))
     return "|".join(words)
 
 
@@ -218,7 +227,7 @@ def path_bond_value_to_description(value):
     """
     return _get_type_description("path bond", _path_btype_flags, value)
 
-if OEGRAPHSIM_API_VERSION == "2":
+if OEGRAPHSIM_API_VERSION != "1":
     def circular_atom_value_to_description(value):
         return _get_type_description("circular atom", _circular_atype_flags, value)
     def circular_bond_value_to_description(value):
@@ -227,6 +236,9 @@ if OEGRAPHSIM_API_VERSION == "2":
         return _get_type_description("tree atom", _tree_atype_flags, value)
     def tree_bond_value_to_description(value):
         return _get_type_description("tree bond", _tree_btype_flags, value)
+else:
+    circular_atom_value_to_description = circular_bond_value_to_description = \
+        tree_atom_value_to_description = tree_bond_value_to_description = not_available
     
 ## def decode_path_parameters(parameters):
 ##     fingerprinter_kwargs = _maccs_defaults.copy()
@@ -378,7 +390,9 @@ if OEGRAPHSIM_API_VERSION == "2":
             return ctypes.string_at(data_location, num_bytes)
 
         return tree_fingerprinter
-
+else:
+    get_circular_fingerprinter = not_available
+    get_tree_fingerprinter = not_available
         
 
 ### A note on fingerprints and ctypes.string_at
