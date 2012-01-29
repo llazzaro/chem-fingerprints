@@ -98,11 +98,11 @@ parser = argparse.ArgumentParser(
 if oe.OEGRAPHSIM_API_VERSION == "1":
     PathFamily = oe.OpenEyePathFingerprintFamily_v1
     path_group = parser.add_argument_group("path fingerprints")
+    path_group.add_argument(
+        "--path", action="store_true", help="generate path fingerprints (default)")
     PathFamily.add_argument_to_argparse("numbits", path_group)
     PathFamily.add_argument_to_argparse("minbonds", path_group)
     PathFamily.add_argument_to_argparse("maxbonds", path_group)
-    PathFamily.add_argument_to_argparse("atype", path_group)
-    PathFamily.add_argument_to_argparse("btype", path_group)
 else:
     CircularFamily = oe.OpenEyeCircularFingerprintFamily_v2
     path_group = parser.add_argument_group("path, circular, and tree fingerprints")
@@ -124,12 +124,13 @@ else:
         help="maximum number of bonds in the path or tree fingerprint (path default=5, tree default=4)")
     CircularFamily.add_argument_to_argparse("minradius", path_group)
     CircularFamily.add_argument_to_argparse("maxradius", path_group)
-    path_group.add_argument(
-        "--atype", metavar="ATYPE", default="Default",
-        help="atom type flags, described below (default=Default)")
-    path_group.add_argument(
-        "--btype", metavar="BTYPE", default="Default",
-        help="bond type flags, described below (default=Default)")
+
+path_group.add_argument(
+    "--atype", metavar="ATYPE", default="Default",
+    help="atom type flags, described below (default=Default)")
+path_group.add_argument(
+    "--btype", metavar="BTYPE", default="Default",
+    help="bond type flags, described below (default=Default)")
 
 maccs_group = parser.add_argument_group("166 bit MACCS substructure keys")
 maccs_group.add_argument(
@@ -182,8 +183,10 @@ def _get_atype_and_btype(args, atom_description_to_value, bond_description_to_va
 def main(args=None):
     args = parser.parse_args(args)
 
-    cmdsupport.mutual_exclusion(parser, args, "path",
-                                ("maccs166", "path", "circular", "tree", "substruct", "rdmaccs"))
+    supported_fingerprints = ("maccs166", "path", "substruct", "rdmaccs")
+    if oe.OEGRAPHSIM_API_VERSION != "1":
+        supported_fingerprints += ("circular", "tree")
+    cmdsupport.mutual_exclusion(parser, args, "path", supported_fingerprints)
 
     if args.maccs166:
         # Create the MACCS keys fingerprinter
