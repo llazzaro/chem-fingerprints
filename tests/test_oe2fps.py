@@ -556,10 +556,10 @@ class TestOEGraphSimVersion2(unittest2.TestCase):
         self.assertEquals(result, _construct_test_values(compute_circular_fingerprints, 1024))
     
 if skip_oechem:
-    TestOEGraphSim2 = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHeaderOutput)
+    TestOEGraphSimVersion2 = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestOEGraphSimVersion2)
 else:
-    TestOEGraphSim2 = unittest2.skipIf(OEGRAPHSIM_API_VERSION == "1",
-                                       "OEGraphSim library is too old")(TestHeaderOutput)
+    TestOEGraphSimVersion2 = unittest2.skipIf(OEGRAPHSIM_API_VERSION == "1",
+                                       "OEGraphSim library is too old")(TestOEGraphSimVersion2)
         
 if __name__ == "__main__":
     unittest2.main()
