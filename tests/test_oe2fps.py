@@ -436,7 +436,8 @@ if OEGRAPHSIM_API_VERSION == "2":
         OEMakePathFP, OEFPAtomType_DefaultPathAtom, OEFPBondType_DefaultPathBond,
         OEMakeCircularFP, OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond,
         OEMakeTreeFP, OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond,
-        OEFPAtomType_Aromaticity, OEFPAtomType_AtomicNumber, OEFPAtomType_EqHalogen, 
+        OEFPAtomType_Aromaticity, OEFPAtomType_AtomicNumber, OEFPAtomType_EqHalogen,
+        OEFPAtomType_HvyDegree, OEFPAtomType_FormalCharge,
         OEFPBondType_Chiral, OEFPBondType_InRing, OEFPBondType_BondOrder,
         )
 
@@ -526,15 +527,33 @@ class TestOEGraphSimVersion2(unittest2.TestCase):
 
     ########################
 
-
     def test_tree(self):
-        pass
+        header, result = runner.run_split("--tree", 19)
+        self.assertEquals(header["#type"], "OpenEye-Tree/2 numbits=4096 minbonds=0 maxbonds=4 atype=Arom|AtmNum|Chiral|FCharge|HvyDeg|Hyb btype=Order")
+        def compute_tree_fingerprints(fp, mol):
+            OEMakeTreeFP(fp, mol, 4096, 0, 4,
+                         OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond)
+        self.assertEquals(result, _construct_test_values(compute_tree_fingerprints))
     
-    def test_tree_default(self):
-        pass
+    def test_tree_defaults(self):
+        # Make sure that when I specify the defaults then I get the same results
+        header, result = runner.run_split("--tree --numbits 4096 --minradius 0 --maxradius 5 "
+                                          "--atype FCharge|HvyDeg|AtmNum|Arom|Chiral|Hyb --btype Order")
+        self.assertEquals(header["#type"], "OpenEye-Tree/2 numbits=4096 minbonds=0 maxbonds=4 atype=Arom|AtmNum|Chiral|FCharge|HvyDeg|Hyb btype=Order")
+        def compute_tree_fingerprints(fp, mol):
+            OEMakeTreeFP(fp, mol, 4096, 0, 4,
+                         OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond)
+        self.assertEquals(result, _construct_test_values(compute_tree_fingerprints))
+
     
-    def test_tree_default_type(self):
-        pass
+    def test_change_all_tree_fields(self):
+        header, result = runner.run_split("--tree --numbits 1024 --minbonds 1 --maxbonds 2 --atype HvyDeg|FCharge --btype InRing", 19)
+        def compute_circular_fingerprints(fp, mol):
+            OEMakeTreeFP(fp, mol, 1024, 1, 2,
+                         OEFPAtomType_HvyDegree | OEFPAtomType_FormalCharge, OEFPBondType_InRing)
+        self.assertEquals(header["#type"],
+              "OpenEye-Tree/2 numbits=1024 minbonds=1 maxbonds=2 atype=FCharge|HvyDeg btype=InRing")
+        self.assertEquals(result, _construct_test_values(compute_circular_fingerprints, 1024))
     
 if skip_oechem:
     TestOEGraphSim2 = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHeaderOutput)

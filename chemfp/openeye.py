@@ -634,18 +634,18 @@ _path.add_argument("numbits", decoder=_correct_numbits, metavar="INT", default=4
                    help="number of bits in the path fingerprint")
 
 _path.add_argument("minbonds", decoder=nonnegative_int, metavar="INT", default=0,
-                   help="minimum number of bonds in the path")
+                   help="minimum number of bonds in the path fingerprint")
 
 _path.add_argument("maxbonds", decoder=nonnegative_int, metavar="INT", default=5,
-                   help="maximum number of bonds in the path")
+                   help="maximum number of bonds in the path fingerprint")
 
 _path.add_argument("atype", decoder=path_atom_description_to_value,
                    encoder=path_atom_value_to_description,
-                   help="atom type", default="Default")
+                   help="atom type as a '|' separated list of terms", default="Default")
 
 _path.add_argument("btype", decoder=path_bond_description_to_value,
                    encoder=path_bond_value_to_description,
-                   help="bond type", default="Default")
+                   help="bond type as a '|' separated list of terms", default="Default")
 
     
 OpenEyeMACCSFingerprintFamily_v1 = _base.clone(
@@ -684,11 +684,11 @@ _circular_ff = OpenEyeCircularFingerprintFamily_v2 = _base.clone(
     num_bits = lambda d: d["numbits"],
     make_fingerprinter = _check_v2(get_circular_fingerprinter))
 _circular_ff.add_argument("numbits", decoder=_correct_numbits, metavar="INT", default=4096,
-                          help="number of bits in the path fingerprint")
+                          help="number of bits in the circular fingerprint")
 _circular_ff.add_argument("minradius", decoder=nonnegative_int, metavar="INT", default=0,
-                          help="minimum radius")
+                          help="minimum radius for the circular fingerprint")
 _circular_ff.add_argument("maxradius", decoder=nonnegative_int, metavar="INT", default=5,
-                          help="maximum radius")
+                          help="maximum radius for the circular fingerprint")
 _circular_ff.add_argument("atype", decoder=circular_atom_description_to_value,
                           encoder=circular_atom_value_to_description,
                           help="atom type", default="DefaultCircularAtom")
@@ -696,9 +696,18 @@ _circular_ff.add_argument("btype", decoder=circular_bond_description_to_value,
                  encoder=circular_bond_value_to_description,
                  help="bond type", default="DefaultCircularBond")
 
-_tree_ff = OpenEyeTreeFingerprintFamily_v2 = OpenEyePathFingerprintFamily_v1.clone(
+_tree_ff = OpenEyeTreeFingerprintFamily_v2 = _base.clone(
     name = "OpenEye-Tree/2",
+    format_string = ("numbits=%(numbits)s minbonds=%(minbonds)s "
+                     "maxbonds=%(maxbonds)s atype=%(atype)s btype=%(btype)s"),
+    num_bits = lambda d: d["numbits"],
     make_fingerprinter = _check_v2(get_tree_fingerprinter))
+_tree_ff.add_argument("numbits", decoder=_correct_numbits, metavar="INT", default=4096,
+                      help="number of bits in the tree fingerprint")
+_tree_ff.add_argument("minbonds", decoder=nonnegative_int, metavar="INT", default=0,
+                      help="minimum number of bonds in the tree fingerprint")
+_tree_ff.add_argument("maxbonds", decoder=nonnegative_int, metavar="INT", default=4,
+                      help="maximum number of bonds in the tree fingerprint")
 _tree_ff.add_argument("atype", decoder=tree_atom_description_to_value,
                       encoder=tree_atom_value_to_description,
                       help="atom type", default="DefaultTreeAtom")
