@@ -14,11 +14,13 @@ from . import cmdsupport
 atype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(dict(oe._atype_flags)))))
 btype_options = "\n  ".join(textwrap.wrap(" ".join(sorted(dict(oe._btype_flags)))))
 if oe.OEGRAPHSIM_API_VERSION == "1":
+    from openeye.oegraphsim import (OEGetFPAtomType, OEFPAtomType_DefaultAtom, OEFPAtomType_DefaultAtom,
+                                    OEGetFPBondType, OEFPBondType_DefaultBond, OEFPBondType_DefaultBond)
     type_help = """\
 ATYPE is one or more of the following, separated by the '|' character.
   %(atype_options)s
 The terms 'Default' and 'DefaultAtom' are expanded to OpenEye's
-suggested default of Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb.
+suggested default of %(defaultatom)s.
 Examples:
   --atype Default
   --atype AtomicNumber|HvyDegree
@@ -27,20 +29,26 @@ Examples:
 BTYPE is one or more of the following, separated by the '|' character
   %(btype_options)s
 The terms 'Default' and 'DefaultBond' are expanded to OpenEye's
-suggested default of BondOrder|Chiral.
+suggested default of %(defaultbond)s.
 Examples:
   --btype Default
   --btype BondOrder
-(Note that "BondOrder" changed to "Order" in OEGraphSim 2.0.0.)
+(Note that "BondOrder" changes to "Order" in OEGraphSim 2.0.0.)
 
 For simpler Unix command-line compatibility, a comma may be used
 instead of a '|' to separate different fields. Example:
   --atype AtomicNumber,HvyDegree
 """ % dict(atype_options=atype_options,
-           btype_options=btype_options)
+           btype_options=btype_options,
+           defaultatom = OEGetFPAtomType(OEFPAtomType_DefaultAtom),
+           defaultbond = OEGetFPBondType(OEFPBondType_DefaultBond))
 else:
-    from openeye.oegraphsim import (OEGetFPAtomType, OEFPAtomType_DefaultPathAtom,
-                                    OEFPAtomType_DefaultCircularAtom, OEFPAtomType_DefaultTreeAtom)
+    from openeye.oegraphsim import (
+        OEGetFPAtomType, OEFPAtomType_DefaultPathAtom,
+        OEFPAtomType_DefaultCircularAtom, OEFPAtomType_DefaultTreeAtom,
+        OEGetFPBondType, OEFPBondType_DefaultPathBond,
+        OEFPBondType_DefaultCircularBond, OEFPBondType_DefaultTreeBond,
+        )
     type_help = """\
 ATYPE is one or more of the following, separated by the '|' character
   %(atype_options)s
@@ -69,12 +77,12 @@ separate different fields. Example:
   --atype AtmNum,HvyDegree
 """ % dict(atype_options=atype_options,
            btype_options=btype_options,
-           defaultpathatom=oe.OEGetFPAtomType(oe.OEFPAtomType_DefaultPathAtom),
-           defaultcircularatom=oe.OEGetFPAtomType(oe.OEFPAtomType_DefaultCircularAtom),
-           defaulttreeatom=oe.OEGetFPAtomType(oe.OEFPAtomType_DefaultTreeAtom),
-           defaultpathbond=oe.OEGetFPBondType(oe.OEFPBondType_DefaultPathBond),
-           defaultcircularbond=oe.OEGetFPBondType(oe.OEFPBondType_DefaultCircularBond),
-           defaulttreebond=oe.OEGetFPBondType(oe.OEFPBondType_DefaultTreeBond),
+           defaultpathatom=OEGetFPAtomType(OEFPAtomType_DefaultPathAtom),
+           defaultcircularatom=OEGetFPAtomType(OEFPAtomType_DefaultCircularAtom),
+           defaulttreeatom=OEGetFPAtomType(OEFPAtomType_DefaultTreeAtom),
+           defaultpathbond=OEGetFPBondType(OEFPBondType_DefaultPathBond),
+           defaultcircularbond=OEGetFPBondType(OEFPBondType_DefaultCircularBond),
+           defaulttreebond=OEGetFPBondType(OEFPBondType_DefaultTreeBond),
 
 )
 
