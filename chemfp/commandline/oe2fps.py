@@ -36,15 +36,18 @@ Examples:
 For simpler Unix command-line compatibility, a comma may be used
 instead of a '|' to separate different fields. Example:
   --atype AtomicNumber,HvyDegree
-"""
+""" % dict(atype_options=atype_options,
+           btype_options=btype_options)
 else:
+    from openeye.oegraphsim import (OEGetFPAtomType, OEFPAtomType_DefaultPathAtom,
+                                    OEFPAtomType_DefaultCircularAtom, OEFPAtomType_DefaultTreeAtom)
     type_help = """\
 ATYPE is one or more of the following, separated by the '|' character
   %(atype_options)s
 The following shorthand terms and expansions are also available:
- DefaultPathAtom = Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb
- DefaultCircularAtom = Arom|AtmNum|Chiral|EqHalo|FCharge|HCount
- DefaultTreeAtom = Arom|AtmNum|Chiral|EqHalo|FCharge|HCount
+ DefaultPathAtom = %(defaultpathatom)s
+ DefaultCircularAtom = %(defaultcircularatom)s
+ DefaultTreeAtom = %(defaulttreeatom)s
 and 'Default' selects the correct value for the specified fingerprint.
 Examples:
   --atype Default
@@ -53,21 +56,27 @@ Examples:
 BTYPE is one or more of the following, separated by the '|' character
   %(btype_options)s
 The following shorthand terms and expansions are also available:
- DefaultPathBond = Order|Chiral
- DefaultCircularBond = Order
- DefaultTreeBond = Order
- and 'Default' selects the correct value for the specified fingerprint.
- Examples:
+ DefaultPathBond = %(defaultpathbond)s
+ DefaultCircularBond = %(defaultcircularbond)s
+ DefaultTreeBond = %(defaulttreebond)s
+and 'Default' selects the correct value for the specified fingerprint.
+Examples:
    --btype Default
    --btype Order|InRing
 
-For simpler Unix command-line compatibility, a comma may be used
-instead of a '|' to separate different fields. Example:
+To simplify command-line use, a comma may be used instead of a '|' to
+separate different fields. Example:
   --atype AtmNum,HvyDegree
-"""
+""" % dict(atype_options=atype_options,
+           btype_options=btype_options,
+           defaultpathatom=oe.OEGetFPAtomType(oe.OEFPAtomType_DefaultPathAtom),
+           defaultcircularatom=oe.OEGetFPAtomType(oe.OEFPAtomType_DefaultCircularAtom),
+           defaulttreeatom=oe.OEGetFPAtomType(oe.OEFPAtomType_DefaultTreeAtom),
+           defaultpathbond=oe.OEGetFPBondType(oe.OEFPBondType_DefaultPathBond),
+           defaultcircularbond=oe.OEGetFPBondType(oe.OEFPBondType_DefaultCircularBond),
+           defaulttreebond=oe.OEGetFPBondType(oe.OEFPBondType_DefaultTreeBond),
 
-type_help = type_help % dict(atype_options=atype_options,
-                             btype_options=btype_options)
+)
 
 
 # Extra help text after the parameter descriptions
@@ -111,7 +120,7 @@ else:
     path_group.add_argument(
         "--circular", action="store_true", help="generate circular fingerprints")
     path_group.add_argument(
-        "--tree", action="store_true", help="generate tree fingerprints (default)")
+        "--tree", action="store_true", help="generate tree fingerprints")
 
     path_group.add_argument(
         "--numbits", action="store", type=int, metavar="INT", default=4096,
