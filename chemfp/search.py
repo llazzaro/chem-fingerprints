@@ -139,16 +139,35 @@ def count_tanimoto_hits(query_arena, target_arena, threshold):
                                  counts)
     return counts    
 
-def count_tanimoto_hits_symmetric(arena, threshold):
+def count_tanimoto_hits_symmetric(arena, threshold, batch_size=100):
     N = len(arena)
     counts = (ctypes.c_int * N)()
 
-    _chemfp.count_tanimoto_hits_arena_symmetric(
-        threshold, arena.num_bits,
-        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-        0, N, 0, N,
-        arena.popcount_indices,
-        counts)
+    # This spends the entire time in C, which means ^C won't work until it finishes.
+    # While it's theoretically slightly higher performance, I can't measure the
+    # difference, and it's much better to let people be able to interrupt the program.
+    #    _chemfp.count_tanimoto_hits_arena_symmetric(
+    #        threshold, arena.num_bits,
+    #        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
+    #        0, N, 0, N,
+    #        arena.popcount_indices,
+    #        counts)
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+
+    # Process N rows at a time, which lets Python handle ^C at times.
+    # Since the code processes a triangle, this means that early
+    # on there will be more time between ^C checks than later.
+    # I'm not able to detect the Python overhead, so I'm not going
+    # to make it more "efficient".
+    for query_start in xrange(0, N, batch_size):
+        query_end = min(query_start + batch_size, N)
+        _chemfp.count_tanimoto_hits_arena_symmetric(
+            threshold, arena.num_bits,
+            arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
+            query_start, query_end, 0, N,
+            arena.popcount_indices,
+            counts)
 
     return counts
 
@@ -221,18 +240,25 @@ def threshold_tanimoto_search(query_arena, target_arena, threshold):
     
     return results
 
-def threshold_tanimoto_search_symmetric(arena, threshold, include_lower_triangle=True):
-    assert arena.popcount_indices
+def threshold_tanimoto_search_symmetric(arena, threshold, include_lower_triangle=True, batch_size=100):
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
     N = len(arena)
     results = SearchResults(N, arena.ids)
 
+
     if N:
-        _chemfp.threshold_tanimoto_arena_symmetric(
-            threshold, arena.num_bits,
-            arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-            0, N, 0, N,
-            arena.popcount_indices,
-            results)
+        # Break it up into batch_size groups in order to let Python's
+        # interrupt handler check for a ^C, which is otherwise
+        # suppressed until the function finishes.
+        for query_start in xrange(0, N, batch_size):
+            query_end = min(query_start + batch_size, N)
+            _chemfp.threshold_tanimoto_arena_symmetric(
+                threshold, arena.num_bits,
+                arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
+                query_start, query_end, 0, N,
+                arena.popcount_indices,
+                results)
 
         if include_lower_triangle:
             _chemfp.fill_lower_triangle(results, N)
@@ -324,18 +350,26 @@ def knearest_tanimoto_search(query_arena, target_arena, k, threshold):
     return results
 
 
-def knearest_tanimoto_search_symmetric(arena, k, threshold):
+def knearest_tanimoto_search_symmetric(arena, k, threshold, batch_size=100):
     N = len(arena)
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
 
     results = SearchResults(N, arena.ids)
 
-    _chemfp.knearest_tanimoto_arena_symmetric(
-        k, threshold, arena.num_bits,
-        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-        0, N, 0, N,
-        arena.popcount_indices,
-        results)
-    _chemfp.knearest_results_finalize(results, 0, N)
+    if N:
+        # Break it up into batch_size groups in order to let Python's
+        # interrupt handler check for a ^C, which is otherwise
+        # suppressed until the function finishes.
+        for query_start in xrange(0, N, batch_size):
+            query_end = min(query_start + batch_size, N)            
+            _chemfp.knearest_tanimoto_arena_symmetric(
+                k, threshold, arena.num_bits,
+                arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
+                query_start, query_end, 0, N,
+                arena.popcount_indices,
+                results)
+        _chemfp.knearest_results_finalize(results, 0, N)
     
     return results
 
