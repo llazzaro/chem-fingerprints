@@ -40,7 +40,7 @@ Next, convert the files into fingerprint files. On the command line
 do the following two commands::
 
     sdf2fps --pubchem Compound_027575001_027600000.sdf.gz -o pubchem_queries.fps
-    sdf2fps --pubchem Compound_014550001_014575000.sdf.gz  -o pubchem_targets.fps
+    sdf2fps --pubchem Compound_014550001_014575000.sdf.gz -o pubchem_targets.fps
 
 Congratulations, that was it!
 
