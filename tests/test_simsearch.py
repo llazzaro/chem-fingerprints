@@ -202,7 +202,111 @@ class TestAgainstSelfFileScan(unittest2.TestCase, _AgainstSelf):
     extra_arg = ["--scan"]
 
 
-                          
+class TestNxN(unittest2.TestCase):
+    def test_default(self):
+        header, lines = run_split("--NxN", 7, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                          "#software": SOFTWARE,
+                          "#type": "Tanimoto k=3 threshold=0.7 NxN=full"})
+        self.assertEquals(len(lines), 7, lines)
+        self.assertEquals(lines, ['0\tzeros',
+                                  '0\tbit1',
+                                  '0\ttwo_bits',
+                                  '0\tseveral',
+                                  '2\tdeadbeef\tDeaf Beef\t0.960\tDEADdead\t0.840',
+                                  '2\tDEADdead\tdeadbeef\t0.840\tDeaf Beef\t0.808',
+                                  '2\tDeaf Beef\tdeadbeef\t0.960\tDEADdead\t0.808'])
+    def test_specify_default_values(self):
+        header, lines = run_split("--NxN -k 3 --threshold 0.7", 7, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                          "#software": SOFTWARE,
+                          "#type": "Tanimoto k=3 threshold=0.7 NxN=full"})
+        self.assertEquals(len(lines), 7, lines)
+        self.assertEquals(lines, ['0\tzeros',
+                                  '0\tbit1',
+                                  '0\ttwo_bits',
+                                  '0\tseveral',
+                                  '2\tdeadbeef\tDeaf Beef\t0.960\tDEADdead\t0.840',
+                                  '2\tDEADdead\tdeadbeef\t0.840\tDeaf Beef\t0.808',
+                                  '2\tDeaf Beef\tdeadbeef\t0.960\tDEADdead\t0.808'])
+
+    def test_k_2(self):
+        # This sets the theshold to 0.0
+        header, lines = run_split("--NxN -k 2 ", 7, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                          "#software": SOFTWARE,
+                          "#type": "Tanimoto k=2 threshold=0.0 NxN=full"})
+        self.assertEquals(len(lines), 7, lines)
+        self.assertEquals(lines, ['0\tzeros',
+                                  '2\tbit1\ttwo_bits\t0.500\tseveral\t0.143',
+                                  '2\ttwo_bits\tbit1\t0.500\tseveral\t0.286',
+                                  '2\tseveral\ttwo_bits\t0.286\tDEADdead\t0.261',
+                                  '2\tdeadbeef\tDeaf Beef\t0.960\tDEADdead\t0.840',
+                                  '2\tDEADdead\tdeadbeef\t0.840\tDeaf Beef\t0.808',
+                                  '2\tDeaf Beef\tdeadbeef\t0.960\tDEADdead\t0.808'])
+
+    def test_threshold(self):
+        header, lines = run_split("--NxN --threshold 0.5 ", 7, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                          "#software": SOFTWARE,
+                          "#type": "Tanimoto k=all threshold=0.5 NxN=full"})
+        self.assertEquals(len(lines), 7, lines)
+        self.assertEquals(lines, ['0\tzeros',
+                                  '1\tbit1\ttwo_bits\t0.500',
+                                  '1\ttwo_bits\tbit1\t0.500',
+                                  '0\tseveral',
+                                  # The order here is implementation dependent...
+                                  '2\tdeadbeef\tDeaf Beef\t0.960\tDEADdead\t0.840',
+                                  '2\tDEADdead\tdeadbeef\t0.840\tDeaf Beef\t0.808',
+                                  #'2\tDeaf Beef\tdeadbeef\t0.960\tDEADdead\t0.808',
+                                  '2\tDeaf Beef\tDEADdead\t0.808\tdeadbeef\t0.960',
+            ])
+
+    def test_count_with_threshold(self):
+        header, lines = count_run_split("--NxN --count --threshold 0.5 ", 7, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                          "#software": SOFTWARE,
+                          "#type": "Count threshold=0.5 NxN=full"})
+        self.assertEquals(len(lines), 7, lines)
+        self.assertEquals(lines, ['0\tzeros',
+                                  '1\tbit1',
+                                  '1\ttwo_bits',
+                                  '0\tseveral',
+                                  '2\tdeadbeef',
+                                  '2\tDEADdead',
+                                  '2\tDeaf Beef',
+            ])
+
+    def test_count_with_default_threshold(self):
+        header, lines = count_run_split("--NxN --count", 7, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                          "#software": SOFTWARE,
+                          "#type": "Count threshold=0.7 NxN=full"})
+        self.assertEquals(len(lines), 7, lines)
+        self.assertEquals(lines, ['0\tzeros',
+                                  '0\tbit1',
+                                  '0\ttwo_bits',
+                                  '0\tseveral',
+                                  '2\tdeadbeef',
+                                  '2\tDEADdead',
+                                  '2\tDeaf Beef',
+            ])
+        
+        
+        
+        
         
 if __name__ == "__main__":
     unittest2.main()
