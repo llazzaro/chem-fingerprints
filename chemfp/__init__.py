@@ -357,6 +357,34 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
         result = knearest_search(query_arena, targets, k=k, threshold=threshold)
         for query_id, row in zip(query_arena.ids, result):
             yield (query_id, row)
+
+
+def count_tanimoto_hits_symmetric(fingerprints, threshold):
+    from . import readers, search
+    if (isinstance(fingerprints, readers.FPSReader) or
+        not getattr(fingerprints, "popcount_indices", None)):
+        raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
+
+    for id, count in zip(fingerprints.ids, search.count_tanimoto_hits_symmetric(fingerprint, threshold)):
+        yield id, count
+
+def threshold_tanimoto_search_symmetric(fingerprints, threshold):
+    from . import readers, search
+    if (isinstance(fingerprints, readers.FPSReader) or
+        not getattr(fingerprints, "popcount_indices", None)):
+        raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
+
+    for id, hits in zip(fingerprints.ids, search.threshold_tanimoto_search_symmetric(fingerprint, threshold)):
+        yield id, hits
+
+def knearest_tanimoto_search_symmetric(fingerprints, k, threshold):
+    from . import readers, search
+    if (isinstance(fingerprints, readers.FPSReader) or
+        not getattr(fingerprints, "popcount_indices", None)):
+        raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
+
+    for id, hits in zip(fingerprints.ids, search.knearest_tanimoto_search_symmetric(fingerprint, threshold)):
+        yield id, hits
         
 
 def check_fp_problems(fp, metadata):
