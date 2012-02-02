@@ -142,6 +142,7 @@ else:
     CircularFamily.add_argument_to_argparse("minradius", path_group)
     CircularFamily.add_argument_to_argparse("maxradius", path_group)
 
+# The expansion of 'Default' differs based on the fingerprint type
 path_group.add_argument(
     "--atype", metavar="ATYPE", default="Default",
     help="atom type flags, described below (default=Default)")
