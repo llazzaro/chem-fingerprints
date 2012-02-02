@@ -121,7 +121,7 @@ class TestAlign8SmallMethods(unittest2.TestCase):
             set_alignment_method(alignment, method)
             self.assertEquals(get_alignment_method(alignment), method)
         
-        hits = targets.id_knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2)
+        hits = targets.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2).get_ids_and_scores()
         self.assertEqual(hits, [('CHEBI:8069', 1.0),
                                 ('CHEBI:6758', 0.78723404255319152),
                                 ('CHEBI:7983', 0.73999999999999999),
@@ -170,7 +170,7 @@ class TestAlign8LargeMethods(unittest2.TestCase):
             set_alignment_method("align-ssse3", "LUT8-1")
             self.assertEquals(get_alignment_method("align-ssse3"), "LUT8-1")
         
-        hits = targets_64.id_knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2)
+        hits = targets_64.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2).get_ids_and_scores()
         self.assertEqual(hits, [('CHEBI:8069', 1.0),
                                 ('CHEBI:6758', 0.78723404255319152),
                                 ('CHEBI:7983', 0.73999999999999999),

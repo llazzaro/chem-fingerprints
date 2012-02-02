@@ -93,13 +93,13 @@ class TanimotoCell(ctypes.Structure):
                 ("id_end", ctypes.c_int)]
 
 
-def id_threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
+def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
     """Find matches in the target reader which are at least threshold similar to the query fingerprint
 
     The results is an FPSSearchResults instance contain the result.
     """
-    hits = []
-
+    ids = []
+    scores = []
     fp_size = len(query_fp)
     num_bits = fp_size * 8
         
@@ -121,22 +121,11 @@ def id_threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
                 raise _chemfp_error(err, lineno, target_reader._filename)
                 
             for cell in itertools.islice(cells, 0, num_cells):
-                    id = block[cell.id_start:cell.id_end]
-                    hits.append( (id, cell.score) )
+                    ids.append(block[cell.id_start:cell.id_end])
+                    scores.append(cell.score)
             if start == end:
                 break
-    return hits
-
-def id_threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
-    """Find matches in the target reader which are at least threshold similar to the query arena fingerprints
-
-    The results are a list in the form [(query_id1, search_results1),
-    (query_id2, search_results2), ...]  where search_results is an
-    FPSSearchResults instance containing the hit information for the
-    corresponding query fingerprint.
-    """
-    return zip(query_arena.arena_ids,
-               threshold_tanimoto_search_arena(query_arena, target_reader, threshold))
+    return FPSSearchResult(ids, scores)
 
 def threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
     """Find matches in the target reader which are at least threshold similar to the query arena fingerprints
@@ -212,27 +201,15 @@ def _make_knearest_search(num_queries, k):
     return KNearestSearch()
 
 
-def id_knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
+def knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
     """Find k matches in the target reader which are at least threshold similar to the query fingerprint
 
     The results is an FPSSearchResults instance contain the result.
     """
     query_arena = _fp_to_arena(query_fp, target_reader.metadata)
-    return knearest_tanimoto_search(query_arena, target_reader, k, threshold)[0]
+    return knearest_tanimoto_search_arena(query_arena, target_reader, k, threshold)[0]
 
-def id_knearest_tanimoto_search(query_arena, target_reader, k, threshold):
-    """Find k matches in the target reader which are at least threshold similar to the query arena fingerprints
-
-    The results are a list in the form [(query_id1, search_results1),
-    (query_id2, search_results2), ...]  where search_results is an
-    FPSSearchResults instance containing the hit information for the
-    corresponding query fingerprint.
-    
-    """
-    return zip(query_arena.arena_ids,
-               knearest_tanimoto_search(query_arena, target_reader, k, threshold))
-
-def knearest_tanimoto_search(query_arena, target_reader, k, threshold):
+def knearest_tanimoto_search_arena(query_arena, target_reader, k, threshold):
     require_matching_sizes(query_arena, target_reader)
     if k < 0:
         raise ValueError("k must be non-negative")

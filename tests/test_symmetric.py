@@ -60,7 +60,7 @@ class TestCounts(unittest2.TestCase):
     #maxDiff = 0
     def test_symmetric(self):
         # query[i] always matches target[i] so x[i] will be at least one
-        x = search.count_tanimoto_hits(fps, fps, 0.6)
+        x = search.count_tanimoto_hits_arena(fps, fps, 0.6)
 
         # This only processes the upper-triangle, and not the diagonal
         y = search.count_tanimoto_hits_symmetric(fps, 0.6)
@@ -148,7 +148,7 @@ def _compare_search_results(self, result, expected):
 class TestThreshold(unittest2.TestCase):
     def test_upper_only(self):
         # query[i] always matches target[i] so x[i] will always contain i
-        x = search.threshold_tanimoto_search(fps, fps, 0.9)
+        x = search.threshold_tanimoto_search_arena(fps, fps, 0.9)
         x = list(x.iter_indices_and_scores())
 
         # This only processes the upper-triangle, and not the diagonal
@@ -177,7 +177,7 @@ class TestThreshold(unittest2.TestCase):
 
     def test_upper_and_lower(self):
         # query[i] always matches target[i] so x[i] will always contain i
-        x = search.threshold_tanimoto_search(fps, fps, 0.9)
+        x = search.threshold_tanimoto_search_arena(fps, fps, 0.9)
 
         # This only processes the upper-triangle, and not the diagonal
         y = search.threshold_tanimoto_search_symmetric(fps, 0.9)
@@ -256,7 +256,7 @@ class TestThreshold(unittest2.TestCase):
 class TestKNearest(unittest2.TestCase):
     def test_symmetric(self):
         # query[i] always matches target[i] so x[i] will always contain element[i]
-        x = search.knearest_tanimoto_search(fps, fps, 31, 0.9)
+        x = search.knearest_tanimoto_search_arena(fps, fps, 31, 0.9)
 
         # This only processes the upper-triangle, and not the diagonal
         y = search.knearest_tanimoto_search_symmetric(fps, 30, 0.9)
@@ -271,7 +271,7 @@ class TestKNearest(unittest2.TestCase):
 
     def test_symmetric2(self):
         # query[i] always matches target[i] so x[i] will always contain element[i]
-        x = search.knearest_tanimoto_search(fps, fps, 81, 0.9)
+        x = fps.knearest_tanimoto_search_arena(fps, 81, 0.9)
 
         # This only processes the upper-triangle, and not the diagonal
         y = search.knearest_tanimoto_search_symmetric(fps, 80, 0.9)

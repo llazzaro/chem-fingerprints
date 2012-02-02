@@ -199,7 +199,7 @@ def load_fingerprints(reader, metadata=None, reorder=True, alignment=None):
 
 ##### High-level search interfaces
 
-def Xcount_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
+def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     """Count the number of targets within 'threshold' of each query term
 
     For each query in 'queries', count the number of targets in 'targets'
@@ -210,7 +210,7 @@ def Xcount_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
 
       queries = chemfp.open("queries.fps")
       targets = chemfp.load_fingerprints("targets.fps.gz")
-      for (query_id, count) in chemfp.id_count_tanimoto_hits(queries, targets, threshold=0.9):
+      for (query_id, count) in chemfp.Xcount_tanimoto_hits(queries, targets, threshold=0.9):
           print query_id, "has", count, "neighbors with at least 0.9 similarity"
 
     Internally, queries are processed in batches of size 'arena_size'.
@@ -233,23 +233,20 @@ def Xcount_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     :returns:
        An iterator containing (query_id, score) pairs, one for each query
     """
-    return targets.id_count_tanimoto_hits(queries, threshold, arena_size)
-'''
-    search = targets._search
-    if arena_size == 1:
-        for (query_id, query_fp) in queries:
-            targets.reset()
-            yield (query_id, search.count_tanimoto_hits_fp(query_fp, targets, threshold))
-        return
-
+    from . import readers
+    if isinstance(targets, readers.FPSReader):
+        from . import fps_search
+        count_hits = fps_search.count_tanimoto_hits
+    else:
+        from . import search
+        count_hits = search.count_tanimoto_hits
+    
     for query_arena in queries.iter_arenas(arena_size):
-        targets.reset()
-        results = search.count_tanimoto_hits(query_arena, targets, threshold)
-        for item in zip(query_arena.ids, results):
-            yield item
-''' 
+        for query_id, count in zip(query_arena.ids, count_hits(query_arena, targets, threshold=threshold)):
+            yield query_id, count
 
-def Xthreshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
+
+def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
     """Find all targets within 'threshold' of each query term
 
     For each query in 'queries', find all the targets in 'targets' which
@@ -287,25 +284,20 @@ def Xthreshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
       An iterator containing (query_id, hits) pairs, one for each query.
       'hits' contains a list of (target_id, score) pairs.
     """
-    return targets.id_threshold_tanimoto_search(queries, threshold, arena_size)
-'''
-    if arena_size == 1:
-        fp_search = targets._search.threshold_tanimoto_search_fp_return_ids
-        for (query_id, query_fp) in queries:
-            targets.reset()
-            yield query_id, fp_search(query_fp, targets, threshold)
-        return
-
-    search = targets._search.threshold_tanimoto_search_return_ids
+    from . import readers
+    if isinstance(targets, readers.FPSReader):
+        from . import fps_search
+        threshold_search = fps_search.threshold_tanimoto_search
+    else:
+        from . import search
+        threshold_search = search.threshold_tanimoto_search
     
     for query_arena in queries.iter_arenas(arena_size):
-        targets.reset()
-        results = search(query_arena, targets, threshold)
-        for item in zip(query_arena.ids, results):
-            yield item
-'''
+        result = threshold_search(query_arena, targets, k=k, threshold=threshold)
+        for query_id, row in zip(query_arena.ids, result):
+            yield (query_id, row)
 
-def Xknearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
+def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
     """Find the 'k'-nearest targets within 'threshold' of each query term
 
     For each query in 'queries', find the 'k'-nearest of all the targets
@@ -353,22 +345,19 @@ def Xknearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=1
       An iterator containing (query_id, hits) pairs, one for each query.
       'hits' contains a list of (target_id, score) pairs, sorted by score.
     """
-    return targets.id_knearest_tanimoto_search(queries, k, threshold, arena_size)
-'''
-    if arena_size == 1:
-        fp_search = target._search.knearest_tanimoto_search_fp_return_ids
-        for (query_id, query_fp) in queries:
-            targets.reset()
-            yield query_id, fp_search(query_fp, targets, k, threshold)
-        return
-
-    search = target._search.knearest_tanimoto_search_return_ids
+    from . import readers
+    if isinstance(targets, readers.FPSReader):
+        from . import fps_search
+        knearest_search = fps_search.knearest_tanimoto_search
+    else:
+        from . import search
+        knearest_search = search.knearest_tanimoto_search
+        
     for query_arena in queries.iter_arenas(arena_size):
-        targets.reset()
-        results = search(query_arena, targets, k, threshold)
-        for item in zip(query_arena.ids, results):
-            yield item
-'''
+        result = knearest_search(query_arena, targets, k=k, threshold=threshold)
+        for query_id, row in zip(query_arena.ids, result):
+            yield (query_id, row)
+        
 
 def check_fp_problems(fp, metadata):
     "This interface is not documented and may change in the future"

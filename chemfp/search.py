@@ -124,7 +124,7 @@ def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
     return counts[0]
 
 
-def count_tanimoto_hits(query_arena, target_arena, threshold):
+def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
     require_matching_sizes(query_arena, target_arena)
 
     counts = (ctypes.c_int*len(query_arena))()
@@ -210,7 +210,7 @@ def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
         query_fp, target_arena.alignment, target_arena.storage_size)
 
 
-    results = SearchResults(1)
+    results = SearchResults(1, target_arena.ids)
     _chemfp.threshold_tanimoto_arena(
         threshold, target_arena.num_bits,
         query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
@@ -222,7 +222,7 @@ def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
     return results[0]
 
 
-def threshold_tanimoto_search(query_arena, target_arena, threshold):
+def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     require_matching_sizes(query_arena, target_arena)
 
     num_queries = len(query_arena)
@@ -317,7 +317,7 @@ def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
     if k < 0:
         raise ValueError("k must be non-negative")
 
-    results = SearchResults(1)
+    results = SearchResults(1, target_arena.ids)
     _chemfp.knearest_tanimoto_arena(
         k, threshold, target_arena.num_bits,
         query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
@@ -329,7 +329,7 @@ def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
 
     return results[0]
 
-def knearest_tanimoto_search(query_arena, target_arena, k, threshold):
+def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
     require_matching_sizes(query_arena, target_arena)
 
     num_queries = len(query_arena)

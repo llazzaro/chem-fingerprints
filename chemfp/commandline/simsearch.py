@@ -46,22 +46,21 @@ def write_simsearch_header(outfile, d):
 def report_threshold(outfile, query_arenas, targets, threshold):
     float_formatter = get_float_formatter(targets.metadata.num_bytes)
     def search_function(query_arena):
-        return targets.id_threshold_tanimoto_search(query_arena, threshold=threshold)
+        return targets.threshold_tanimoto_search_arena(query_arena, threshold=threshold)
     _report_search(outfile, float_formatter, query_arenas, search_function)
 
 def report_knearest(outfile, query_arenas, targets, k, threshold):
     float_formatter = get_float_formatter(targets.metadata.num_bytes)
     def search_function(query_arena):
-        return targets.id_knearest_tanimoto_search(query_arena, k=k, threshold=threshold)
-                                               
+        return targets.knearest_tanimoto_search_arena(query_arena, k=k, threshold=threshold)
     _report_search(outfile, float_formatter, query_arenas, search_function)
 
 def _report_search(outfile, float_formatter, query_arenas, search_function):
     hit_formatter = "\t%s\t" + float_formatter
     for query_arena in query_arenas:
-        for query_id, hits in search_function(query_arena):
-            outfile.write("%d\t%s" % (len(hits), query_id))
-            for hit in hits:
+        for query_id, row in zip(query_arena.ids, search_function(query_arena)):
+            outfile.write("%d\t%s" % (len(row), query_id))
+            for hit in row.get_ids_and_scores():
                 outfile.write(hit_formatter % hit)
             outfile.write("\n") # XXX flush?
     
@@ -69,8 +68,8 @@ def _report_search(outfile, float_formatter, query_arenas, search_function):
 
 def report_counts(outfile, query_arenas, targets, threshold):
     for query_arena in query_arenas:
-        results = targets.id_count_tanimoto_hits(query_arena, threshold)
-        for query_id, hit_count in results:
+        counts = targets.count_tanimoto_hits_arena(query_arena, threshold)
+        for query_id, hit_count in zip(query_arena.ids, counts):
             outfile.write("%d\t%s\n" % (hit_count, query_id))
 
 #### The NxN cases
@@ -124,7 +123,8 @@ def do_NxN_searches(args, k, threshold, target_filename):
             "target_sources": targets.metadata.sources})
 
         if args.count:
-            counts = search.count_tanimoto_hits_symmetric(targets, threshold)
+            counts = search.count_tanimoto_hits_symmetric(targets, threshold,
+                                                          batch_size=args.batch_size)
             for original_index, original_id in enumerate(original_ids):
                 current_index = original_index_to_current_index[original_index]
                 count = counts[current_index]
@@ -132,9 +132,11 @@ def do_NxN_searches(args, k, threshold, target_filename):
         else:
             hit_formatter = "\t%s\t" + get_float_formatter(targets.metadata.num_bytes)
             if k == "all":
-                results = search.threshold_tanimoto_search_symmetric(targets, threshold)
+                results = search.threshold_tanimoto_search_symmetric(targets, threshold,
+                                                                     batch_size=args.batch_size)
             else:
-                results = search.knearest_tanimoto_search_symmetric(targets, k, threshold)
+                results = search.knearest_tanimoto_search_symmetric(targets, k, threshold,
+                                                                    batch_size=args.batch_size)
 
             for original_index, original_id in enumerate(original_ids):
                 current_index = original_index_to_current_index[original_index]
@@ -232,6 +234,11 @@ def main(args=None):
     if not (0.0 <= threshold <= 1.0):
         parser.error("--threshold must be between 0.0 and 1.0, inclusive")
 
+    if args.batch_size < 1:
+        parser.error("--batch-size must be positive")
+
+    bitops.use_environment_variables()
+
     if args.NxN:
         if args.scan:
             parser.error("Cannot specify --scan with an --NxN search")
@@ -257,12 +264,6 @@ def main(args=None):
                 parser.error("--query-id must not contain the %s character" %
                              (name,))
     
-    if args.batch_size < 1:
-        parser.error("--batch-size must be positive")
-
-    batch_size = args.batch_size
-
-    bitops.use_environment_variables()
 
     # Open the target file. This reads just enough to get the header.
 
@@ -285,13 +286,11 @@ def main(args=None):
         queries = chemfp.Fingerprints(query_metadata,
                                       [(query_id, query_fp)])
         query_filename = None
-    elif args.NxN:
-        query_filename = target_filename
-        targets = queries
     else:
         query_filename = args.queries
         queries = chemfp.open(query_filename, format=args.query_format)
 
+    batch_size = args.batch_size
     query_arena_iter = queries.iter_arenas(batch_size)
     
     t1 = time.time()
