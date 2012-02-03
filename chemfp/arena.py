@@ -339,6 +339,8 @@ def fps_to_arena(fps_reader, metadata=None, reorder=True, alignment=None):
         metadata = fps_reader.metadata
     num_bits = metadata.num_bits
     if not num_bits:
+        if metadata.num_bytes is None:
+            raise ValueError("metadata must contain at least one of num_bits or num_bytes")
         num_bits = metadata.num_bytes * 8
     #assert num_bits
 
