@@ -151,8 +151,10 @@ def open(source, format=None):
 
     if format_name == "fpb":
         raise NotImplementedError("fpb format support not implemented")
-
-    raise TypeError("Unable to determine fingerprint format type from %r" % (source,))
+    if format is None:
+        raise ValueError("Unable to determine fingerprint format type from %r" % (source,))
+    else:
+        raise ValueError("Unknown fingerprint format %r" % (format,))
 
 
 def load_fingerprints(reader, metadata=None, reorder=True, alignment=None):
@@ -210,7 +212,7 @@ def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
 
       queries = chemfp.open("queries.fps")
       targets = chemfp.load_fingerprints("targets.fps.gz")
-      for (query_id, count) in chemfp.Xcount_tanimoto_hits(queries, targets, threshold=0.9):
+      for (query_id, count) in chemfp.count_tanimoto_hits(queries, targets, threshold=0.9):
           print query_id, "has", count, "neighbors with at least 0.9 similarity"
 
     Internally, queries are processed in batches of size 'arena_size'.
@@ -236,14 +238,34 @@ def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     from . import readers
     if isinstance(targets, readers.FPSReader):
         from . import fps_search
-        count_hits = fps_search.count_tanimoto_hits
+        count_hits = fps_search.count_tanimoto_hits_arena
     else:
         from . import search
-        count_hits = search.count_tanimoto_hits
+        count_hits = search.count_tanimoto_hits_arena
+
+    ### Start the search now so compatibility errors are raised eagerly
+
+    # Start iterating through the subarenas, and get the first of those
+    subarenas = queries.iter_arenas(arena_size)
+    try:
+        first_query_arena = subarenas.next()
+    except StopIteration:
+        # There are no subarenas; return an empty iterator
+        return iter([])
+
+    # Get the first result, and hold on to it for the generator
+    first_counts = count_hits(first_query_arena, targets, threshold=threshold)
     
-    for query_arena in queries.iter_arenas(arena_size):
-        for query_id, count in zip(query_arena.ids, count_hits(query_arena, targets, threshold=threshold)):
+    def count_tanimoto_hits():
+        # Return results for the first arena
+        for query_id, count in zip(first_query_arena.ids, first_counts):
             yield query_id, count
+        # Return results for the rest of the arenas
+        for query_arena in subarenas:
+            counts = count_hits(query_arena, targets, threshold=threshold)
+            for query_id, count in zip(query_arena.ids, counts):
+                yield query_id, count
+    return count_tanimoto_hits()
 
 
 def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
@@ -291,11 +313,30 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
     else:
         from . import search
         threshold_search = search.threshold_tanimoto_search
-    
-    for query_arena in queries.iter_arenas(arena_size):
-        result = threshold_search(query_arena, targets, k=k, threshold=threshold)
-        for query_id, row in zip(query_arena.ids, result):
-            yield (query_id, row)
+
+    ### Start the search now so compatibility errors are raised eagerly
+
+    # Start iterating through the subarenas, and get the first of those
+    arenas = queries.iter_arenas(arena_size)
+    try:
+        query_arena = arenas.next()
+    except StopIteration:
+        # There are no subarenas; return an empty iterator
+        return iter([])
+
+    # Get the first result, and hold on to it for the generator
+    results = threshold_search(query_arena, targets, threshold=threshold)
+
+    def threshold_tanimoto_search():
+        # Return results for the first arena
+        for query_id, row in zip(query_arena.ids, results):
+            yield query_id, row
+        
+        for query_arena in subarenas:
+            results = threshold_search(query_arena, targets, k=k, threshold=threshold)
+            for query_id, row in zip(query_arena.ids, results):
+                yield (query_id, row)
+    return threshold_tanimoto_search()
 
 def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
     """Find the 'k'-nearest targets within 'threshold' of each query term
@@ -353,11 +394,31 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
         from . import search
         knearest_search = search.knearest_tanimoto_search
         
-    for query_arena in queries.iter_arenas(arena_size):
-        result = knearest_search(query_arena, targets, k=k, threshold=threshold)
-        for query_id, row in zip(query_arena.ids, result):
-            yield (query_id, row)
+    ### Start the search now so compatibility errors are raised eagerly
 
+    # Start iterating through the subarenas, and get the first of those
+    arenas = queries.iter_arenas(arena_size)
+    try:
+        query_arena = arenas.next()
+    except StopIteration:
+        # There are no subarenas; return an empty iterator
+        return iter([])
+
+    # Get the first result, and hold on to it for the generator
+    results = knearest_search(query_arena, targets, threshold=threshold)
+
+    def knearest_tanimoto_search():
+        # Return results for the first arena
+        for query_id, row in zip(query_arena.ids, results):
+            yield query_id, row
+
+        # and for the subarenas
+        for query_arena in subarenas:
+            results = knearest_search(query_arena, targets, k=k, threshold=threshold)
+            for query_id, row in zip(query_arena.ids, results):
+                yield (query_id, row)
+        
+    return knearest_tanimoto_search()
 
 def count_tanimoto_hits_symmetric(fingerprints, threshold):
     from . import readers, search
