@@ -10,7 +10,7 @@ import heapq
 import itertools
 import ctypes
 
-from . import load_fingerprints, Metadata
+from . import load_fingerprints, Metadata, ParseError
 from . import fps_search
 from . import io
 
@@ -20,7 +20,7 @@ from . import io
 BLOCKSIZE=11400
 # (BTW, the compressed time took 1.3x the uncompressed time)
 
-class FPSParseError(Exception):
+class FPSParseError(ParseError):
     def __init__(self, errcode, lineno, filename):
         self.errcode = errcode
         self.lineno = lineno
@@ -31,14 +31,14 @@ class FPSParseError(Exception):
         msg = _chemfp.strerror(self.errcode)
         msg += " at line %d" % (self.lineno,)
         if self.filename is not None:
-            msg += " of file %r" % (self.filename,)
+            msg += " of %r" % (self.filename,)
         return msg
 
 
 def open_fps(source, format=None):
     format_name, compression = io.normalize_format(source, format)
     if format_name != "fps":
-        raise TypeError("Unknown format %r" % (format_name,))
+        raise ValueError("Unknown format %r" % (format_name,))
 
     infile = io.open_compressed_input_universal(source, compression)
     filename = io.get_filename(source)
