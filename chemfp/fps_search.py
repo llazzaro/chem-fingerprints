@@ -18,11 +18,11 @@ class FPSFormatError(ChemFPError):
     def __repr__(self):
         return "FPSFormatError(%r, %r, %r)" % (self.code, self.filename, self.lineno)
     def __str__(self):
-        return "%s at line %s of %r" % (_chemfp.strerror(code), lineno, filename)
+        return "%s at line %s of %r" % (_chemfp.strerror(self.code), self.lineno, self.filename)
 
 def _chemfp_error(err, lineno, filename):
     if -40 <= err <= -30:
-        return FPSFormatError(err, lineno, filename)
+        return FPSFormatError(err, filename, lineno)
     elif err == -2:
         raise MemoryError(_chemfp.strerror(err))
     else:
