@@ -42,6 +42,16 @@ OEGRAPHSIM_API_VERSION = "1"
 if "OEMakeCircularFP" in globals():
     OEGRAPHSIM_API_VERSION = "2"
 
+if OEGRAPHSIM_API_VERSION == "1":
+    # Set some v2 values beause it simplifies code later on.
+    # (Beware: v2 actually uses different values than these!)
+    OEFPAtomType_DefaultPathAtom = OEFPAtomType_DefaultAtom
+    OEFPBondType_DefaultPathBond = OEFPBondType_DefaultBond
+    OEFPAtomType_DefaultCircularAtom = OEFPAtomType_DefaultAtom
+    OEFPBondType_DefaultCircularBond = OEFPBondType_DefaultBond
+    OEFPAtomType_DefaultTreeAtom = OEFPAtomType_DefaultAtom
+    OEFPBondType_DefaultTreeBond = OEFPBondType_DefaultBond
+
 ##### Handle the atom and bond type flags for path fingerprints
 
 # The atom and bond type flags can be specified on the command-line
@@ -606,7 +616,7 @@ def _read_fingerprints(structure_reader, fingerprinter):
     for (id, mol) in structure_reader:
         yield id, fingerprinter(mol)
 
-from .types import FingerprintFamilyConfig, positive_int, nonnegative_int, zero_or_one
+from .types import FingerprintFamilyConfig, nonnegative_int
 
 def _read_structures(metadata, source, format, id_tag, errors):
     return read_structures(source, format, id_tag=id_tag,
@@ -655,11 +665,11 @@ _path.add_argument("maxbonds", decoder=nonnegative_int, metavar="INT", default=5
 
 _path.add_argument("atype", decoder=path_atom_description_to_value,
                    encoder=path_atom_value_to_description,
-                   help="atom type as a '|' separated list of terms", default="Default")
+                   help="atom type as a '|' separated list of terms", default=OEFPAtomType_DefaultAtom)
 
 _path.add_argument("btype", decoder=path_bond_description_to_value,
                    encoder=path_bond_value_to_description,
-                   help="bond type as a '|' separated list of terms", default="Default")
+                   help="bond type as a '|' separated list of terms", default=OEFPBondType_DefaultBond)
 
     
 OpenEyeMACCSFingerprintFamily_v1 = _base.clone(
@@ -681,10 +691,10 @@ _ff = OpenEyePathFingerprintFamily_v2 = OpenEyePathFingerprintFamily_v1.clone(
     make_fingerprinter = _check_v2(get_path_fingerprinter))
 _ff.add_argument("atype", decoder=path_atom_description_to_value,
                  encoder=path_atom_value_to_description,
-                 help="atom type", default="DefaultPathAtom")
+                 help="atom type", default=OEFPAtomType_DefaultPathAtom)
 _ff.add_argument("btype", decoder=path_bond_description_to_value,
                  encoder=path_bond_value_to_description,
-                 help="bond type", default="DefaultPathBond")
+                 help="bond type", default=OEFPBondType_DefaultPathBond)
 
 
 OpenEyeMACCSFingerprintFamily_v2 = OpenEyeMACCSFingerprintFamily_v1.clone(
@@ -705,10 +715,10 @@ _circular_ff.add_argument("maxradius", decoder=nonnegative_int, metavar="INT", d
                           help="maximum radius for the circular fingerprint")
 _circular_ff.add_argument("atype", decoder=circular_atom_description_to_value,
                           encoder=circular_atom_value_to_description,
-                          help="atom type", default="DefaultCircularAtom")
+                          help="atom type", default=OEFPAtomType_DefaultCircularAtom)
 _circular_ff.add_argument("btype", decoder=circular_bond_description_to_value,
                  encoder=circular_bond_value_to_description,
-                 help="bond type", default="DefaultCircularBond")
+                 help="bond type", default=OEFPBondType_DefaultCircularBond)
 
 _tree_ff = OpenEyeTreeFingerprintFamily_v2 = _base.clone(
     name = "OpenEye-Tree/2",
@@ -724,8 +734,8 @@ _tree_ff.add_argument("maxbonds", decoder=nonnegative_int, metavar="INT", defaul
                       help="maximum number of bonds in the tree fingerprint")
 _tree_ff.add_argument("atype", decoder=tree_atom_description_to_value,
                       encoder=tree_atom_value_to_description,
-                      help="atom type", default="DefaultTreeAtom")
+                      help="atom type", default=OEFPAtomType_DefaultTreeAtom)
 _tree_ff.add_argument("btype", decoder=tree_bond_description_to_value,
                       encoder=tree_bond_value_to_description,
-                      help="bond type", default="DefaultTreeBond")
+                      help="bond type", default=OEFPBondType_DefaultTreeBond)
 
