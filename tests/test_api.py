@@ -14,7 +14,6 @@ try:
     has_openbabel = True
 except ImportError:
     has_openbabel = False
-has_openbabel = False
 
 try:
     # I need to import 'oechem' to make sure I load the shared libries
