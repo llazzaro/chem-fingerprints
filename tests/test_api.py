@@ -1,6 +1,11 @@
 from __future__ import absolute_import, with_statement
+
+import os
 import unittest2
 from cStringIO import StringIO
+import tempfile
+import gzip
+import shutil
 
 import chemfp
 from chemfp import bitops
@@ -9,6 +14,7 @@ try:
     has_openbabel = True
 except ImportError:
     has_openbabel = False
+has_openbabel = False
 
 try:
     # I need to import 'oechem' to make sure I load the shared libries
@@ -585,14 +591,22 @@ class TestFPSReader(unittest2.TestCase, CommonReaderAPI):
                 for x in method(fp):
                     break
         
-        
+    def test_open_not_valid_object(self):
+        with self.assertRaisesRegexp(ValueError, r"Unknown source type \(1\+4j\)"):
+            reader = self._open(1+4j)
 
 
+_cached_fingerprint_load = {}
 class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
     hit_order = staticmethod(lambda x: x)
     # Hook to handle the common API
     def _open(self, name):
-        return chemfp.load_fingerprints(name, reorder=False)
+        try:
+            return _cached_fingerprint_load[name]
+        except KeyError:
+            arena = chemfp.load_fingerprints(name, reorder=False)
+            _cached_fingerprint_load[name] = arena
+            return arena
 
     def test_slice_ids(self):
         fps = self._open(CHEBI_TARGETS)
@@ -612,6 +626,17 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
         self.assertEquals(fps.ids[-2:], fps[-2:].arena_ids)
         self.assertEquals(list(fps[-2:]), [fps[-2], fps[-1]])
         self.assertEquals(fps[-5:-2][-1], fps[-3])
+
+    def test_slice_past_end(self):
+        fps = self._open(CHEBI_TARGETS)
+        self.assertSequenceEqual(fps[1995:], [
+          ('CHEBI:17578', '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x16'),
+          ('CHEBI:17579', '\x00\x00\x00\x00\x00\x00\x02\x00\x02\n\x00\x00\x04\x88,\x80\x00\x105\x80\x14'),
+          ('CHEBI:17580', '\x00\x00\x00\x00\x02\x00\x02\x00\x02\n\x00\x02\x84\x88,\x00\x08\x14\x94\x94\x08'),
+          ('CHEBI:17581', '\x00\x00\x00\x00\x00\x000\x01\x80\x00\x02O\x030\x90d\x9c\x7f\xf3\xff\x1d'),
+          ('CHEBI:17582', '\x00\x00\x00\x00\x02\x00\x12\x00\x80\x08\x00\x01\x04\x00\x00d\x84L\xa2R\x1c'),
+            ])
+        self.assertSequenceEqual(fps[2000:], [])
 
     def test_slice_errors(self):
         arena = self._open(CHEBI_TARGETS)
@@ -650,19 +675,54 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
             self.assertEquals(list(counts), [1])
         self.assertEquals(i, len(fps)-1)
 
+    def test_missing_metatdata_size(self):
+        pairs = [("first", "1234".decode("hex")),
+                 ("second", "ABCD".decode("hex"))]
+        with self.assertRaisesRegexp(ValueError, "metadata must contain at least one of num_bits or num_bytes"):
+            chemfp.load_fingerprints(pairs, chemfp.Metadata(type="Blah!"))
+    
+    def test_read_from_id_fp_pairs_num_bytes(self):
+        pairs = [("first", "1234".decode("hex")),
+                 ("second", "ABCD".decode("hex"))]
+        arena = chemfp.load_fingerprints(pairs, chemfp.Metadata(type="Blah!", num_bytes=2))
+        self.assertEquals(len(arena), 2)
+        self.assertEquals(arena[0], ("first", "1234".decode("hex")))
+        self.assertEquals(arena[1], ("second", "ABCD".decode("hex")))
+
+    def test_read_from_id_fp_pairs_num_bits(self):
+        pairs = [("first", "1234".decode("hex")),
+                 ("second", "ABCD".decode("hex"))]
+        arena = chemfp.load_fingerprints(pairs, chemfp.Metadata(type="Blah!", num_bits=16))
+        self.assertEquals(len(arena), 2)
+        self.assertEquals(arena[0], ("first", "1234".decode("hex")))
+        self.assertEquals(arena[1], ("second", "ABCD".decode("hex")))
+
+
 # Use this to verify the other implementations
 from chemfp.slow import SlowFingerprints
+_cached_slow_fingerprint_load = {}
 class TestSlowFingerprints(unittest2.TestCase, CommonReaderAPI):
     hit_order = staticmethod(lambda x: x)
     def _open(self, name):
-        reader = chemfp.open(name)
-        return SlowFingerprints(reader.metadata, list(reader))
+        try:
+            return _cached_slow_fingerprint_load[name]
+        except KeyError:
+            reader = chemfp.open(name)
+            slow_arena = SlowFingerprints(reader.metadata, list(reader))
+            _cached_slow_fingerprint_load[name] = slow_arena
+            return slow_arena
 
+_cached_ordered_fingerprint_load = {}
 class TestLoadFingerprintsOrdered(unittest2.TestCase, CommonReaderAPI):
     hit_order = staticmethod(sorted)
     # Hook to handle the common API
     def _open(self, name):
-        return chemfp.load_fingerprints(name, reorder=True)
+        try:
+            return _cached_ordered_fingerprint_load[name]
+        except KeyError:
+            arena = chemfp.load_fingerprints(name, reorder=True)
+            _cached_ordered_fingerprint_load[name] = arena
+            return arena
 
     def test_iteration(self):
         expected = [("CHEBI:776", "00000000000000008200008490892dc00dc4a7d21e".decode("hex")),
@@ -769,6 +829,10 @@ class ReadStructureFingerprints(object):
     def test_read_bad_compression(self):
         with self.assertRaisesRegexp(ValueError, "Unsupported compression in format 'sdf.Z'"):
             self._read_ids(self.type, source=PUBCHEM_SDF, format="sdf.Z")
+
+    def test_read_bad_format_specification(self):
+        with self.assertRaisesRegexp(ValueError, "Incorrect format syntax '@'"):
+            self._read_ids(self.type, source=PUBCHEM_SDF, format="@")
         
 
     def test_read_id_tag(self):
@@ -856,6 +920,13 @@ class TestRDKitReadStructureFingerprints(unittest2.TestCase, ReadStructureFinger
     type = "RDKit-Fingerprint/1"
     num_bits = 2048
     fp_size = 256
+
+    def test_read_from_compressed_input_using_default_type(self):
+        from StringIO import StringIO
+        f = StringIO("\x1f\x8b\x08\x00\xa9\\,O\x02\xff3042vt\xe3t\xccK)J-\xe7\x02\x00\xfe'\x16\x99\x0e\x00\x00\x00")
+        f.name = "test.gz"
+        values = list(chemfp.open(f))
+        self.assertEquals(values, [("Andrew", "0123AF".decode("hex"))])
 
 TestRDKitReadStructureFingerprints = (
   unittest2.skipUnless(has_rdkit, "RDKit not available")(TestRDKitReadStructureFingerprints)
@@ -969,8 +1040,70 @@ class TestFPSParser(unittest2.TestCase):
         with self.assertRaisesRegexp(chemfp.ChemFPError, "Unsupported whitespace at line 201 of '<unknown>'"):
             list(results)
 
-    
 
+try:
+    import bz2
+    has_bz2 = True
+except ImportError:
+    has_bz2 = False
+
+class TestSave(unittest2.TestCase):
+    def setUp(self):
+        self.dirname = tempfile.mkdtemp()
+    def tearDown(self):
+        shutil.rmtree(self.dirname)
+        
+    def test_save_to_fps(self):
+        filename = os.path.join(self.dirname, "output.fps")
+        arena = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
+        arena.save(filename)
+
+        arena2 = chemfp.load_fingerprints(filename, reorder=False)
+        self.assertEquals(arena.metadata.type, arena2.metadata.type)
+        self.assertEquals(len(arena), len(arena2))
+
+        arena_lines = open(CHEBI_TARGETS).readlines()
+        arena2_lines = open(filename).readlines()
+        self.assertSequenceEqual(arena_lines, arena2_lines)
+
+    def test_save_to_file_object(self):
+        arena = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
+        f = StringIO()
+        arena.save(f)
+        s = f.getvalue()
+        f.close()
+        arena_lines = open(CHEBI_TARGETS).readlines()
+        arena2_lines = s.splitlines(True)
+        self.assertSequenceEqual(arena_lines, arena2_lines)
+
+    def test_save_to_fps_gz(self):
+        filename = os.path.join(self.dirname, "output.fps.gz")
+        arena = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
+        arena.save(filename)
+        
+        arena2 = chemfp.load_fingerprints(filename, reorder=False)
+        self.assertEquals(arena.metadata.type, arena2.metadata.type)
+        self.assertEquals(len(arena), len(arena2))
+
+        arena_lines = open(CHEBI_TARGETS).readlines()
+        arena2_lines = gzip.GzipFile(filename).readlines()
+        self.assertSequenceEqual(arena_lines, arena2_lines)
+
+    def test_save_to_fps_bz2(self):
+        filename = os.path.join(self.dirname, "output.fps.bz2")
+        arena = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
+        arena.save(filename)
+        
+        arena2 = chemfp.load_fingerprints(filename, reorder=False)
+        self.assertEquals(arena.metadata.type, arena2.metadata.type)
+        self.assertEquals(len(arena), len(arena2))
+
+        arena_lines = open(CHEBI_TARGETS).readlines()
+        arena2_lines = bz2.BZ2File(filename).readlines()
+        self.assertSequenceEqual(arena_lines, arena2_lines)
+
+    test_save_to_fps_bz2 = unittest2.skipUnless(has_bz2, "bz2 module not available")(test_save_to_fps_bz2)
+        
 if __name__ == "__main__":
     unittest2.main()
 
