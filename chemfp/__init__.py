@@ -530,7 +530,9 @@ class Metadata(object):
                 pass
             else:
                 num_bytes = (num_bits + 7)//8
-        elif num_bits is not None:
+        elif num_bits is None:
+            num_bits = num_bytes * 8
+        else:
             if (num_bits + 7)//8 != num_bytes:
                 raise TypeError("num_bits of %d is incompatible with num_bytes of %d" %
                                 (num_bits, num_bytes))
