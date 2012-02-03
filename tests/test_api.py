@@ -716,7 +716,12 @@ class TestLoadFingerprintsOrdered(unittest2.TestCase, CommonReaderAPI):
 
         self.assertFalse(ids)
 
-        
+    def test_iter_arenas_arena_size_None(self):
+        arena = self._open(CHEBI_TARGETS)
+        # use None to read all fingerprints into a single arena
+        subarenas = list(arena.iter_arenas(None))
+        self.assertEquals(len(subarenas), 1)
+        self.assertEquals(len(subarenas[0]), 2000)
         
 
 SDF_IDS = ['9425004', '9425009', '9425012', '9425015', '9425018',
@@ -891,6 +896,79 @@ class TestBitOps(unittest2.TestCase):
                      bitops.byte_difference):
             with self.assertRaisesRegexp(ValueError, "byte fingerprints must have the same length"):
                 func("1", "12")
+    
+
+class TestFPSParser(unittest2.TestCase):
+    def test_open_with_unknown_format(self):
+        with self.assertRaisesRegexp(ValueError, "Unable to determine fingerprint format type from 'spam.pdf'"):
+            chemfp.open("spam.pdf")
+        with self.assertRaisesRegexp(ValueError, "Unknown fingerprint format 'pdf'"):
+            chemfp.open("spam.sdf", format="pdf")
+
+    def test_base_case(self):
+        values = list(chemfp.open(StringIO("ABCD\tfirst\n")))
+        self.assertSequenceEqual(values, [("first", "ABCD".decode("hex"))])
+            
+    def test_unsupported_whitespace(self):
+        with self.assertRaisesRegexp(chemfp.ChemFPError, "Unsupported whitespace at line 1"):
+            list(chemfp.open(StringIO("ABCD first\n")))
+
+    def test_missing_id(self):
+        with self.assertRaisesRegexp(chemfp.ChemFPError, "Missing id field at line 1"):
+            list(chemfp.open(StringIO("ABCD\n")))
+        with self.assertRaisesRegexp(chemfp.ChemFPError, "Missing id field at line 2"):
+            list(chemfp.open(StringIO("0000\tXYZZY\nABCD\n")))
+
+    def test_error_properties(self):
+        from StringIO import StringIO
+        f = StringIO("1234 first\n")
+        f.name = "spam"
+        try:
+            list(chemfp.open(f))
+            raise AssertionError("Should not get here")
+        except chemfp.ChemFPError, err:
+            self.assertEquals(str(err), "Unsupported whitespace at line 1 of 'spam'")
+            self.assertEquals(repr(err), "FPSParseError(-30, 1, spam)")
+            self.assertEquals(err.lineno, 1)
+            self.assertEquals(err.filename, "spam")
+            self.assertEquals(err.errcode, -30)
+
+    def test_count_size_mismatch(self):
+        query_arena = chemfp.load_fingerprints(StringIO("AB\tSmall\n"))
+        targets = chemfp.open(StringIO("1234\tSpam\nABBA\tDancingQueen\n"))
+        with self.assertRaisesRegexp(ValueError, "query_arena has 8 bits while target_reader has 16 bits"):
+            chemfp.count_tanimoto_hits(query_arena, targets, 0.1)
+
+    def test_count_size_changes(self):
+        query_arena = chemfp.load_fingerprints(StringIO("ABCD\tSmall\n"))
+        targets = chemfp.open(StringIO("1234\tSpam\nABBA\tDancingQueen\n" * 200 + "12\tNo-no!\n"))
+        with self.assertRaisesRegexp(chemfp.ChemFPError, "Fingerprint is not the expected length at line 401 of '<unknown>'"):
+            list(chemfp.count_tanimoto_hits(query_arena, targets, 0.1))
+    
+    def test_count_size_bad_target_fps(self):
+        query_arena = chemfp.load_fingerprints(StringIO("ABCD\tSmall\n"))
+        targets = chemfp.open(StringIO("1234\tSpam\nABBA DancingQueen\n"))
+        with self.assertRaisesRegexp(chemfp.ChemFPError, "Unsupported whitespace at line 2 of '<unknown>'"):
+            list(chemfp.count_tanimoto_hits(query_arena, targets, 0.1))
+
+    def test_count_size_bad_query_fps(self):
+        from StringIO import StringIO
+        f = StringIO("DBAC\tLarge\nABCD Small\n")
+        f.name = "query.fps"
+        queries = chemfp.open(f)
+        targets = chemfp.open(StringIO("1234\tSpam\nABBA\tDancingQueen\n"))
+        with self.assertRaisesRegexp(chemfp.ChemFPError, "Unsupported whitespace at line 2 of 'query.fps'"):
+            list(chemfp.count_tanimoto_hits(queries, targets, 0.1))
+
+    def test_count_size_bad_fps_later_on(self):
+        queries = chemfp.open(StringIO("ABCD\tSmall\n" * 200 + "AACE Oops.\n"))
+        targets = chemfp.load_fingerprints(StringIO("1234\tSpam\nABBA\tDancingQueen\n"))
+        results = chemfp.count_tanimoto_hits(queries, targets, 0.1)
+        for i in range(10):
+            results.next()
+        with self.assertRaisesRegexp(chemfp.ChemFPError, "Unsupported whitespace at line 201 of '<unknown>'"):
+            list(results)
+
     
 
 if __name__ == "__main__":
