@@ -54,6 +54,8 @@ def set_alignment_method(alignment, method):
 def select_fastest_method(repeat=10000):
     if repeat > 100000:
         raise ValueError("repeat size is meaninglessly large")
+    if repeat < 1:
+        raise ValueError("repeat size must be 1 or larger (values under 1000 are likely useless)")
     
     for alignment_i, name in enumerate(get_alignments()):
         _chemfp.select_fastest_method(alignment_i, repeat)
