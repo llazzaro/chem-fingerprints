@@ -83,7 +83,7 @@ class TestRDKitFingerprintTypes(unittest2.TestCase):
         with self.assertRaisesRegexp(ValueError, r"Unable to parse useHs value '2' in type 'RDKit-Fingerprint useHs=2'"):
             types.parse_type("RDKit-Fingerprint useHs=2")
 
-TestRDKitFingerprintTypes = unittest2.skipIf(skip_openeye, "OEChem not installed")(TestRDKitFingerprintTypes)
+TestRDKitFingerprintTypes = unittest2.skipIf(skip_rdkit, "OEChem not installed")(TestRDKitFingerprintTypes)
 
 if __name__ == "__main__":
     unittest2.main()
