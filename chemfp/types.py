@@ -24,21 +24,6 @@ def check_openeye_path():
     from .openeye import OEGRAPHSIM_API_VERSION
     return "OpenEye-Path/"+OEGRAPHSIM_API_VERSION
 
-class FamilyProxy(object):
-    def __init__(self, family_name, path):
-        self.family_name = family_name
-        self.path = path
-
-    def __call__(self, **kwargs):
-        cls = import_decoder(self.path)
-        assert cls.name == self.family_name
-        return cls(kwargs)
-
-    def make_fingerprinter(self, kwargs):
-        family = import_decoder(self.path)
-        assert family.name == self.family_name
-        return family.make_fingerprinter(kwargs)
-
 ### The chemfp fingerprint type API isn't powerful enough
 
 # I have to list all of the possible fingerprint types, even if the
@@ -166,7 +151,7 @@ class FingerprintFamily(object):
     def make_fingerprinter_from_type(self, type):
         terms = type.split()
         if not terms:
-            raise ValueError("missing name in fingerprint type %r" % (type,))
+            raise ValueError("Empty fingerprint type (%r)" % (type,))
 
         required_args = self.config.get_args()
 
@@ -205,18 +190,6 @@ class FingerprintFamily(object):
 
         return Fingerprinter(self.config, kwargs)
 
-
-    def __repr__(self):
-        1/0
-
-    def __eq__(self):
-        2/0
-
-    def __ne__(self):
-        3/0
-
-    
-    
 
 class Fingerprinter(object):
     def __init__(self, config, fingerprinter_kwargs):
@@ -283,15 +256,18 @@ class Fingerprinter(object):
                                             date = io.utcnow(),
                                             aromaticity = metadata.aromaticity),
                                    reader)
-    
-    def describe(self, bitno):
-        if not (0 <= bitno < self.num_bits):
-            raise KeyError("Bit number %d is out of range" % (bitno,))
 
-        bit_description = self.config.bit_description
-        if bit_description is None:
-            return "(unknown)"
-        return bit_description[bitno]
+#    def describe(self, bitno):
+#        if not (0 <= bitno < self.num_bits):
+#            raise KeyError("Bit number %d is out of range" % (bitno,))
+#
+#        bit_description = self.config.bit_description
+#        if bit_description is None:
+#            return "(unknown)"
+#        return bit_description[bitno]
+
+
+## Some code to figure out what the format strings are inside of a string
 
 class Dummy(object):
     def __str__(self):
@@ -300,19 +276,20 @@ class Dummy(object):
         return 0
 
 class GetArgs(object):
-    def __init__(self):
+    def __init__(self, format_string):
+        self.format_string = format_string
         self.args = []
     def __getitem__(self, name):
         # O(n**2) but n is small.
         if name in self.args:
-            raise TypeError
+            raise TypeError("Duplicate name %r in format string %r" % (name, self.format_string))
         self.args.append(name)
         return Dummy()
 
 def _get_arg_names(s):
     if not s:
         return []
-    args = GetArgs()
+    args = GetArgs(s)
     s % args
     return args.args
     
@@ -434,7 +411,7 @@ def zero_or_one(s):
 def parse_type(type):
     terms = type.split()
     if not terms:
-        raise ValueError("missing name in fingerprint type %r" % (type,))
+        raise ValueError("Empty fingerprint type (%r)" % (type,))
 
     name = terms[0]
     family = get_fingerprint_family(name)
