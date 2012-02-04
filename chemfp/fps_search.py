@@ -305,7 +305,7 @@ class FPSSearchResults(object):
         self._results = results
 
     def __len__(self):
-        return self._results
+        return len(self._results)
 
     def __getitem__(self, i):
         return self._results[i]
@@ -327,7 +327,7 @@ class FPSSearchResults(object):
 
     def reorder_all(self, order="decreasing-scores"):
         for result in self._results:
-            _reorder_row(result.ids, result.scores, ordering)
+            _reorder_row(result.ids, result.scores, order)
 
     def clear_all(self):
         for result in self._results:
