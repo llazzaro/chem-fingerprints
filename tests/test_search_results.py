@@ -422,7 +422,22 @@ class TestArenaTestSortOrder(TestCase, CreateSearchResults, TestSortOrder):
                 self.assertListEquals(results[0], expected, "error in %s:%d" % (name, size))
     
 class TestFPSSortOrder(TestCase, CreateFPSSearchResults, TestSortOrder):
-    pass
+    def test_order_by_id(self):
+        results = self._create(2, [
+            (0, "one", 0.4),
+            (0, "two", 0.5),
+            (0, "three", 0.6),
+
+            (1, "ett", 0.3),
+            (1, "tvaa", 0.2),
+            (1, "tre", 0.1),])
+        results.reorder_all("increasing-id")
+        self.assertListEquals(results[0], [("one", 0.4), ("three", 0.6), ("two", 0.5)])
+        self.assertListEquals(results[1], [("ett", 0.3), ("tre", 0.1), ("tvaa", 0.2)])
+        
+        results.reorder_all("decreasing-id")
+        self.assertListEquals(results[0], [("one", 0.4), ("three", 0.6), ("two", 0.5)][::-1])
+        self.assertListEquals(results[1], [("ett", 0.3), ("tre", 0.1), ("tvaa", 0.2)][::-1])
 
 
 class TestSortOrderRow(object):
