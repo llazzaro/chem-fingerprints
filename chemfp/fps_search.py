@@ -249,26 +249,29 @@ def knearest_tanimoto_search_arena(query_arena, target_reader, k, threshold):
 
 def _reorder_row(ids, scores, name):
     indices = range(len(ids))
-    if name == "decreasing-scores":
+    if name == "decreasing-score":
         indices.sort(key=lambda i: (-scores[i], ids[i]))
-    elif name == "increasing-scores":
+    elif name == "increasing-score":
         indices.sort(key=lambda i: (scores[i], ids[i]))
-    elif name == "decreasing-ids":
+    elif name == "decreasing-id":
         indices.sort(key=lambda i: ids[i], reverse=True)
-    elif name == "increasing-ids":
+    elif name == "increasing-id":
         indices.sort(key=lambda i: ids[i])
     elif name == "reverse":
         ids.reverse()
         scores.reverse()
         return
     elif name == "move-closest-first":
+        if len(ids) <= 1:
+            # Short-circuit when I don't need to do anything
+            return
         x = max(scores)
         i = scores.index(x)
         ids[0], ids[i] = ids[i], ids[0]
         scores[0], scores[i] = scores[i], scores[0]
         return
     else:
-        raise ValueError("unknown ordering")
+        raise ValueError("Unknown sort order")
 
     new_ids = [ids[i] for i in indices]
     new_scores = [scores[i] for i in indices]
@@ -297,7 +300,7 @@ class FPSSearchResult(object):
         return self.scores
     def get_ids_and_scores(self):
         return zip(self.ids, self.scores)
-    def reorder(self, order="decreasing-scores"):
+    def reorder(self, order="decreasing-score"):
         _reorder_row(self.ids, self.scores, order)
 
 class FPSSearchResults(object):
@@ -325,7 +328,7 @@ class FPSSearchResults(object):
         for result in self._results:
             yield zip(result.ids, result.scores)
 
-    def reorder_all(self, order="decreasing-scores"):
+    def reorder_all(self, order="decreasing-score"):
         for result in self._results:
             _reorder_row(result.ids, result.scores, order)
 
