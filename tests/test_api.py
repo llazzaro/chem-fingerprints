@@ -14,6 +14,7 @@ try:
     has_openbabel = True
 except ImportError:
     has_openbabel = False
+has_openbabel = False
 
 try:
     # I need to import 'oechem' to make sure I load the shared libries
@@ -931,6 +932,12 @@ TestRDKitReadStructureFingerprints = (
   unittest2.skipUnless(has_rdkit, "RDKit not available")(TestRDKitReadStructureFingerprints)
 )
 
+class ReadStructureFingerprintsErrors(unittest2.TestCase):
+    def test_metadata_without_type(self):
+        with self.assertRaisesRegexp(ValueError, "Missing fingerprint type information in metadata"):
+            chemfp.read_structure_fingerprints(chemfp.Metadata(num_bits=13))
+
+
 class TestBitOps(unittest2.TestCase):
     def test_byte_union(self):
         for (fp1, fp2, expected) in (
@@ -968,12 +975,17 @@ class TestBitOps(unittest2.TestCase):
                 func("1", "12")
     
 
+# This also tests 'count_tanimoto_hits'
 class TestFPSParser(unittest2.TestCase):
     def test_open_with_unknown_format(self):
         with self.assertRaisesRegexp(ValueError, "Unable to determine fingerprint format type from 'spam.pdf'"):
             chemfp.open("spam.pdf")
         with self.assertRaisesRegexp(ValueError, "Unknown fingerprint format 'pdf'"):
             chemfp.open("spam.sdf", format="pdf")
+
+    def test_fpb_failure(self):
+        with self.assertRaisesRegexp(NotImplementedError, "fpb format support not implemented"):
+            chemfp.open("spam.fpb")
 
     def test_base_case(self):
         values = list(chemfp.open(StringIO("ABCD\tfirst\n")))
@@ -1039,6 +1051,68 @@ class TestFPSParser(unittest2.TestCase):
         with self.assertRaisesRegexp(chemfp.ChemFPError, "Unsupported whitespace at line 201 of '<unknown>'"):
             list(results)
 
+    def test_empty_input(self):
+        queries = chemfp.load_fingerprints([], chemfp.Metadata(num_bytes=16))
+        targets = chemfp.load_fingerprints(StringIO("1234\tSpam\nABBA\tDancingQueen\n"))
+        results = chemfp.count_tanimoto_hits(queries, targets, 0.34)
+        for x in results:
+            raise AssertionError("Should not get here")
+
+class ThresholdTanimotoSearch(unittest2.TestCase):
+    def test_with_fps_reader_as_targets(self):
+        queries = chemfp.open(CHEBI_QUERIES).iter_arenas(10).next()
+        targets = chemfp.open(CHEBI_TARGETS)
+        fps_results = chemfp.threshold_tanimoto_search(queries, targets)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(fps_results)
+        results = list(fps_results)
+        self.assertEquals(len(results), 10)
+        query_id, result = results[0]
+        self.assertEquals(query_id, "CHEBI:17585")
+        self.assertEquals(len(result), 4)
+        result.reorder("increasing-score")
+        self.assertEquals(result.get_scores(),
+                          [0.7142857142857143, 0.72222222222222221, 0.8571428571428571, 0.8571428571428571])
+        self.assertEquals(result.get_ids(),
+                          ['CHEBI:16148', 'CHEBI:17539', 'CHEBI:17034', 'CHEBI:17302'])
+
+        query_id, result = results[3]
+        self.assertEquals(query_id, "CHEBI:17588")
+        self.assertEquals(len(result), 32)
+        result.reorder("decreasing-score")
+        expected_scores = [1.0, 0.88, 0.88, 0.88, 0.85185185185185186, 0.85185185185185186]
+        expected_ids = ['CHEBI:17230', 'CHEBI:15356', 'CHEBI:16375', 'CHEBI:17561', 'CHEBI:15729', 'CHEBI:16176']
+        self.assertEquals(result.get_scores()[:6], expected_scores)
+        self.assertEquals(result.get_ids()[:6], expected_ids)
+        self.assertEquals(result.get_ids_and_scores()[:6], zip(expected_ids, expected_scores))
+
+    def test_with_arena_as_targets(self):
+        queries = chemfp.load_fingerprints(CHEBI_QUERIES, reorder=False)[:10]
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        arena_results = chemfp.threshold_tanimoto_search(queries, targets)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(arena_results)
+        results = list(arena_results)
+        self.assertEquals(len(results), 10)
+        query_id, result = results[0]
+        self.assertEquals(query_id, "CHEBI:17585")
+        self.assertEquals(len(result), 4)
+        result.reorder("increasing-score")
+        self.assertSequenceEqual(result.get_scores(),
+                          [0.7142857142857143, 0.72222222222222221, 0.8571428571428571, 0.8571428571428571])
+        self.assertEquals(result.get_ids(),
+                          ['CHEBI:16148', 'CHEBI:17539', 'CHEBI:17034', 'CHEBI:17302'])
+
+        query_id, result = results[3]
+        self.assertEquals(query_id, "CHEBI:17588")
+        self.assertEquals(len(result), 32)
+        result.reorder("decreasing-score")
+        expected_scores = [1.0, 0.88, 0.88, 0.88, 0.85185185185185186, 0.85185185185185186]
+        expected_ids = ['CHEBI:17230', 'CHEBI:15356', 'CHEBI:16375', 'CHEBI:17561', 'CHEBI:15729', 'CHEBI:16176']
+        self.assertSequenceEqual(result.get_scores()[:6], expected_scores)
+        self.assertEquals(result.get_ids()[:6], expected_ids)
+        self.assertEquals(result.get_ids_and_scores()[:6], zip(expected_ids, expected_scores))
+        
 
 try:
     import bz2
