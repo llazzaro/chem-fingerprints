@@ -104,10 +104,8 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, err
         if metadata.type is None:
             raise ValueError("Missing fingerprint type information in metadata")
         type = metadata.type
-    try:
-        structure_fingerprinter = types.parse_type(type)
-    except ValueError, err:
-        raise ValueError("Cannot parse fingerprint type %r: %s" % (metadata.type, err))
+
+    structure_fingerprinter = types.parse_type(type)
     return structure_fingerprinter.read_structure_fingerprints(source, format, id_tag, errors, metadata=metadata)
     
 # Low-memory, forward-iteration, or better
