@@ -10,7 +10,7 @@ import tempfile
 import support
 
 try:
-    import rdkit
+    from chemfp import rdkit
     has_rdkit = True
     skip_rdkit = False
 except ImportError:
@@ -332,7 +332,55 @@ class TestBadStructureFiles(unittest2.TestCase):
         self.assertIn("Unknown structure filename extension", result)
         self.assertIn("input.xyzzy", result)
         
+TestBadStructureFiles = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestBadStructureFiles)
         
+
+# Some code to test the internal interface
+class TestInternals(unittest2.TestCase):
+    def test_make_rdk_fingerprinter(self):
+        rdkit.make_rdk_fingerprinter(fpSize=0)
+            
+    def test_make_rdk_fingerprinter_bad_fpSize(self):
+        with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
+            rdkit.make_rdk_fingerprinter(fpSize=0)
+        with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
+            rdkit.make_rdk_fingerprinter(fpSize=-10)
+
+    def test_make_rdk_fingerprinter_min_path(self):
+        with self.assertRaisesRegexp(ValueError, "minPath must be positive"):
+            rdkit.make_rdk_fingerprinter(minPath=0)
+        with self.assertRaisesRegexp(ValueError, "minPath must be positive"):
+            rdkit.make_rdk_fingerprinter(monPath=-3)
+
+    def test_make_rdk_fingerprinter_max_path(self):
+        rdkit.make_rdk_fingerprinter(minPath=2, maxPath=2)
+        with self.assertRaisesRegexp(ValueError, "maxPath cannot be smaller than minPath"):
+            rdkit.make_rdk_fingerprinter(minPath=3, maxPath=2)
+
+    def test_make_rdk_fingerprinter_min_path(self):
+        with self.assertRaisesRegexp(ValueError, "nBitsPerHash must be positive"):
+            rdkit.make_rdk_fingerprinter(nBitsPerHash=0)
+        with self.assertRaisesRegexp(ValueError, "nBitsPerHash must be positive"):
+            rdkit.make_rdk_fingerprinter(nBitsPerHash=-1)
+
+
+    def test_make_morgan_fingerprinter(self):
+        rdkit.make_morgan_fingerprinter()
+        
+    def test_make_morgan_fingerprinter_bad_fpSize(self):
+        with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
+            rdkit.make_rdk_fingerprinter(fpSize=0)
+        with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
+            rdkit.make_rdk_fingerprinter(fpSize=-10)
+
+    def test_make_morgan_fingerprinter_bad_radius(self):
+        with self.assertRaisesRegexp(ValueError, "radius must be positive"):
+            rdkit.make_rdk_fingerprinter(radius=0)
+        with self.assertRaisesRegexp(ValueError, "radius must be positive"):
+            rdkit.make_rdk_fingerprinter(radius=-10)
+
     
+TestInternals = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestInternals)
+        
 if __name__ == "__main__":
     unittest2.main()
