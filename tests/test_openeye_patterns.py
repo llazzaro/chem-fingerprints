@@ -67,7 +67,9 @@ class TestAromaticRingMatcher(ReferenceMixin, unittest2.TestCase):
 TestAromaticRingMatcher = unittest2.skipIf(skip_oechem, "OEChem not installed")(
     TestAromaticRingMatcher)
 
-
+# XXX These are too low-level. The tests should really be done through the
+# file interface and shared with the other implementations.
+ 
 class TestAromaticRings(unittest2.TestCase):
     def _count(self, matcher, smiles):
         return sum(1 for x in matcher.Match(parse_smiles(smiles)))
