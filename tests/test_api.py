@@ -1112,6 +1112,34 @@ class ThresholdTanimotoSearch(unittest2.TestCase):
         self.assertSequenceEqual(result.get_scores()[:6], expected_scores)
         self.assertEqual(result.get_ids()[:6], expected_ids)
         self.assertEqual(result.get_ids_and_scores()[:6], zip(expected_ids, expected_scores))
+
+    def test_with_different_parameters(self):
+        queries = chemfp.load_fingerprints(CHEBI_QUERIES, reorder=False)[:10]
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        results = list(chemfp.threshold_tanimoto_search(queries, targets, threshold=0.8))
+
+        query_id, result = results[0]
+        result.reorder("increasing-score")
+        self.assertEqual(query_id, "CHEBI:17585")
+        self.assertSequenceEqual(result.get_scores(), [0.8571428571428571, 0.8571428571428571])
+        self.assertEqual(result.get_ids(), ['CHEBI:17034', 'CHEBI:17302'])
+
+    def test_with_large_input(self):
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        for (query_id, result) in chemfp.threshold_tanimoto_search(targets, targets, threshold=0.9):
+            pass
+        self.assertEqual(query_id, "CHEBI:16508")
+        result.reorder("increasing-score")
+        self.assertSequenceEqual(result.get_scores(),
+                  [0.956989247311828, 0.96739130434782605, 0.97826086956521741, 0.97826086956521741, 1.0])
+        self.assertSequenceEqual(result.get_ids(),
+                  ["CHEBI:17439", "CHEBI:15982", "CHEBI:15852", "CHEBI:16304", "CHEBI:16379"])
+
+    def test_with_empty_queries(self):
+        targets = chemfp.load_fingerprints(CHEBI_QUERIES)
+        queries = targets[len(targets):]
+        for x in chemfp.threshold_tanimoto_search(queries, targets):
+            raise AssertionError
         
 
 try:
