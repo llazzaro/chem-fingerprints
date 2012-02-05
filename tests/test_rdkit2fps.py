@@ -4,6 +4,8 @@ import unittest2
 import tempfile
 import shutil
 import os
+from cStringIO import StringIO
+import tempfile
 
 import support
 
@@ -27,6 +29,7 @@ else:
     runner = None
 
 MACCS_SMI = support.fullpath("maccs.smi")
+TRP = open(support.fullpath("tryptophan.sdf")).read()
 
 class TestMACCS(unittest2.TestCase):
     def test_bitorder(self):
@@ -267,5 +270,69 @@ class TestIO(unittest2.TestCase, support.TestIdAndErrors):
 
 TestIO = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestIO)
 
+
+class TestBadStructureFiles(unittest2.TestCase):
+    def setUp(self):
+        self.dirname = tempfile.mkdtemp()
+    def tearDown(self):
+        shutil.rmtree(self.dirname)
+
+    def _make_datafile(self, text, ext):
+        filename = os.path.join(self.dirname, "input."+ext)
+        with open(filename, "w") as f:
+            f.write(text)
+        return filename
+    
+    def test_blank_line_in_smiles(self):
+        filename = self._make_datafile("C methane\n\nO water\n", "smi")
+        msg = runner.run_exit([filename])
+        self.assertIn("Unexpected blank line at line 2 of", msg)
+
+    def test_bad_smiles(self):
+        filename = self._make_datafile("C methane\nQ Q-ane\nO water\n", "smi")
+        msg = runner.run_exit([filename])
+        self.assertIn("Cannot parse the SMILES 'Q' at line 2", msg)
+
+    def test_smiles_without_title(self):
+        filename = self._make_datafile("C methane\nO water\n[235U]\n", "smi")
+        msg = runner.run_exit([filename])
+        self.assertIn("Missing SMILES name (second column) at line 3", msg)
+
+    def test_sdf_with_bad_record(self):
+        # Three records, second one is bad
+        input = TRP + TRP.replace("32 28", "40 21") + TRP
+        filename = self._make_datafile(input, "sdf")
+        msg = runner.run_exit([filename])
+        self.assertIn("Could not parse molecule block at line 70", msg)
+        self.assertIn("input.sdf", msg)
+
+    def test_sdf_with_bad_record_checking_id(self):
+        # This tests a different code path than the previous
+        input = TRP + TRP.replace("32 28", "40 21") + TRP
+        filename = self._make_datafile(input, "sdf")
+        msg = runner.run_exit(["--id-tag", "COMPND", filename])
+        self.assertIn("Could not parse molecule block at line 70", msg)
+        self.assertIn("input.sdf", msg)
+
+    def test_sdf_with_missing_id(self):
+        filename = self._make_datafile(TRP, "sdf")
+        msg = runner.run_exit(["--id-tag", "SPAM", filename])
+        self.assertIn("Missing id tag 'SPAM' for record #1 at line 1", msg)
+        self.assertIn("input.sdf", msg)
+
+    def test_ignore_errors(self):
+        input = TRP + TRP.replace("32 28", "40 21") + TRP.replace("COMPND", "BLAH")
+        filename = self._make_datafile(input, "sdf")
+        header, output = runner.run_split(["--errors", "ignore", "--id-tag", "BLAH"], source=filename)
+        self.assertEqual(len(output), 1)
+
+    def test_unsupported_format(self):
+        filename = self._make_datafile("Unknown", "xyzzy")
+        result = runner.run_exit([filename])
+        self.assertIn("Unknown structure filename extension", result)
+        self.assertIn("input.xyzzy", result)
+        
+        
+    
 if __name__ == "__main__":
     unittest2.main()
