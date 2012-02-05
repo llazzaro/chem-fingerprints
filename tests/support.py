@@ -94,7 +94,7 @@ class Runner(object):
         for line in result_iter:
             if line.startswith("#"):
                 k, v = line.split("=", 1)
-                assert k not in headers
+                assert k not in headers, k
                 headers[k] = v
                 continue
             fps.append(line)
