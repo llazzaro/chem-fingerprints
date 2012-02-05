@@ -204,6 +204,9 @@ def main(args=None):
     supported_fingerprints = ("maccs166", "path", "substruct", "rdmaccs")
     if oe.OEGRAPHSIM_API_VERSION != "1":
         supported_fingerprints += ("circular", "tree")
+    else:
+        args.circular = False
+        args.tree = False
     cmdsupport.mutual_exclusion(parser, args, "path", supported_fingerprints)
 
     if args.maccs166:
