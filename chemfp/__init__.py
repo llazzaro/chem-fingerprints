@@ -307,31 +307,38 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
     from . import readers
     if isinstance(targets, readers.FPSReader):
         from . import fps_search
-        threshold_search = fps_search.threshold_tanimoto_search
+        threshold_search = fps_search.threshold_tanimoto_search_arena
     else:
         from . import search
-        threshold_search = search.threshold_tanimoto_search
+        threshold_search = search.threshold_tanimoto_search_arena
 
     ### Start the search now so compatibility errors are raised eagerly
 
     # Start iterating through the subarenas, and get the first of those
-    arenas = queries.iter_arenas(arena_size)
+    subarenas = queries.iter_arenas(arena_size)
     try:
-        query_arena = arenas.next()
+        first_query_arena = subarenas.next()
     except StopIteration:
         # There are no subarenas; return an empty iterator
         return iter([])
 
     # Get the first result, and hold on to it for the generator
-    results = threshold_search(query_arena, targets, threshold=threshold)
+    first_results = threshold_search(first_query_arena, targets, threshold=threshold)
+    ## Here's a thought; allow a 'result_order' parameter so I can do:
+    # if result_order is not None:
+    #    first_results.reorder(reorder)
 
     def threshold_tanimoto_search():
         # Return results for the first arena
-        for query_id, row in zip(query_arena.ids, results):
+        for query_id, row in zip(first_query_arena.ids, first_results):
             yield query_id, row
         
         for query_arena in subarenas:
-            results = threshold_search(query_arena, targets, k=k, threshold=threshold)
+            results = threshold_search(query_arena, targets, threshold=threshold)
+            ## I would also need to do
+            #if result_order is not None:
+            #    first_results.reorder(reorder)
+                
             for query_id, row in zip(query_arena.ids, results):
                 yield (query_id, row)
     return threshold_tanimoto_search()
@@ -387,10 +394,10 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
     from . import readers
     if isinstance(targets, readers.FPSReader):
         from . import fps_search
-        knearest_search = fps_search.knearest_tanimoto_search
+        knearest_search = fps_search.knearest_tanimoto_search_arena
     else:
         from . import search
-        knearest_search = search.knearest_tanimoto_search
+        knearest_search = search.knearest_tanimoto_search_arena
         
     ### Start the search now so compatibility errors are raised eagerly
 
