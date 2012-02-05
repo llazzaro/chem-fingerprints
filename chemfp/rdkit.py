@@ -90,10 +90,13 @@ def iter_smiles_molecules(fileobj, name=None, errors="strict"):
     loc = SmilesFileLocation(name)
     for lineno, line in enumerate(fileobj):
         words = line.split()
-        if not words:
+        if len(words) <= 1:
             loc.lineno = lineno+1
-            error_handler("unexpected blank line", loc)
-            continue
+            if not words:
+                error_handler("Unexpected blank line", loc)
+            else:
+                error_handler("Missing SMILES name (second column)", loc)
+                continue
 
         mol = Chem.MolFromSmiles(words[0])
         if mol is None:
@@ -101,10 +104,7 @@ def iter_smiles_molecules(fileobj, name=None, errors="strict"):
             error_handler("Cannot parse the SMILES %r" % (words[0],), loc)
             continue
         
-        if len(words) == 1:
-            yield None, mol
-        else:
-            yield words[1], mol
+        yield words[1], mol
 
 
 def iter_sdf_molecules(fileobj, name=None, id_tag=None, errors="strict"):
