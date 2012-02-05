@@ -150,7 +150,7 @@ def aromatic_rings(max_count):
 
 def hetero_aromatic_rings(max_count):
     if max_count > 2:
-        return NotImplemented
+        return pattern_fingerprinter.LimitedMatcher(2, HeteroAromaticRings(2))
     return HeteroAromaticRings(max_count)
 
 _pattern_classes = {

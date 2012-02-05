@@ -285,7 +285,9 @@ class TestPatterns(unittest2.TestCase):
         headers, fps = runner.run_split("--substruct", 19)
         self.assertEquals(headers["#type"], "ChemFP-Substruct-OpenEye/1")
         self.assertEquals(fps[0], "07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000\t9425004")
-        # Note: not the same as RDKit's answer; one nibble is different
+        # Note: not the same as OpenBabel's answer; bit 260 (>= 3 hetero-aromatic rings) is different.
+        # openeye_patterns doesn't handle this.
+        self.assertEquals(fps[1], "07de0d000000000000000000000000000080460300000c000000000000000080070000780038000000301083f920cc09695e0800d5c0e44e6e00492190844145dc1f841d261911164d039b8f29251026b9401313e0ec01007000000000000000000000000000000000000000000000\t9425009")
 
 if skip_oechem:
     TestPatterns = unittest2.skipIf(True, "OEChem not installed")(TestPatterns)
