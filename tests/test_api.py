@@ -323,7 +323,7 @@ F0\tsmall
         reader = self._open(f)
         result = reader.threshold_tanimoto_search_fp("0000".decode("hex"), threshold=0.0)
         hits = result.get_ids_and_scores()
-        self.assertEquals(self.hit_order(hits),
+        self.assertEqual(self.hit_order(hits),
                           self.hit_order([ ("first", 0.0), ("second", 0.0), ("third", 0.0) ]))
 
     def test_threshold_tanimoto_search_fp_0(self):
@@ -388,11 +388,11 @@ F0\tsmall
 
         targets = self._open(StringIO(zeros))
         results = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.0)
-        self.assertEquals(map(len, results), [3, 3, 3])
+        self.assertEqual(map(len, results), [3, 3, 3])
 
         targets = self._open(StringIO(zeros))
         results = targets.threshold_tanimoto_search_arena(query_arena, threshold=0.000001)
-        self.assertEquals(map(len, results), [0, 1, 0])
+        self.assertEqual(map(len, results), [0, 1, 0])
         
 
     def test_threshold_tanimoto_search_threshold_range_error(self):
@@ -425,7 +425,7 @@ F0\tsmall
         reader = self._open(CHEBI_TARGETS)
         result = reader.knearest_tanimoto_search_fp(
             "000000102084322193de9fcfbffbbcfbdf7ffeff1f".decode("hex"), k = 3, threshold = 0.7)
-        self.assertEquals(len(result), 3)
+        self.assertEqual(len(result), 3)
         hits = result.get_ids_and_scores()
         if hits[1][0] == "CHEBI:15483":
             self.assertEqual(hits, [('CHEBI:15523', 1.0), ('CHEBI:15483', 0.98913043478260865),
@@ -610,22 +610,22 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
 
     def test_slice_ids(self):
         fps = self._open(CHEBI_TARGETS)
-        self.assertEquals(fps.ids[4:10], fps[4:10].arena_ids)
-        self.assertEquals(fps.ids[5:20][1:5], fps[6:10].arena_ids)
+        self.assertEqual(fps.ids[4:10], fps[4:10].arena_ids)
+        self.assertEqual(fps.ids[5:20][1:5], fps[6:10].arena_ids)
 
     def test_slice_fingerprints(self):
         fps = self._open(CHEBI_TARGETS)
-        self.assertEquals(fps[5:45][0], fps[5])
-        self.assertEquals(fps[5:45][0], fps[5])
-        self.assertEquals(fps[5:45][3:6][0], fps[8])
+        self.assertEqual(fps[5:45][0], fps[5])
+        self.assertEqual(fps[5:45][0], fps[5])
+        self.assertEqual(fps[5:45][3:6][0], fps[8])
 
     def test_slice_negative(self):
         fps = self._open(CHEBI_TARGETS)
-        self.assertEquals(fps[len(fps)-1], fps[-1])
-        self.assertEquals(fps.ids[-2:], fps[-2:].arena_ids)
-        self.assertEquals(fps.ids[-2:], fps[-2:].arena_ids)
-        self.assertEquals(list(fps[-2:]), [fps[-2], fps[-1]])
-        self.assertEquals(fps[-5:-2][-1], fps[-3])
+        self.assertEqual(fps[len(fps)-1], fps[-1])
+        self.assertEqual(fps.ids[-2:], fps[-2:].arena_ids)
+        self.assertEqual(fps.ids[-2:], fps[-2:].arena_ids)
+        self.assertEqual(list(fps[-2:]), [fps[-2], fps[-1]])
+        self.assertEqual(fps[-5:-2][-1], fps[-3])
 
     def test_slice_past_end(self):
         fps = self._open(CHEBI_TARGETS)
@@ -651,29 +651,29 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
         fps = self._open(CHEBI_TARGETS)
         for i, (id, fp) in enumerate(fps):
             subarena = fps[i:i+1]
-            self.assertEquals(len(subarena), 1)
-            self.assertEquals(subarena[0][0], id)
-            self.assertEquals(subarena[0][1], fp)
-            self.assertEquals(subarena.arena_ids[0], id)
+            self.assertEqual(len(subarena), 1)
+            self.assertEqual(subarena[0][0], id)
+            self.assertEqual(subarena[0][1], fp)
+            self.assertEqual(subarena.arena_ids[0], id)
 
             results = subarena.threshold_tanimoto_search_arena(subarena)
-            self.assertEquals(len(results), 1)
-            self.assertEquals(results[0].get_ids_and_scores(), [(id, 1.0)])
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0].get_ids_and_scores(), [(id, 1.0)])
             hits = [result.get_ids_and_scores() for result in results]
-            self.assertEquals(hits, [[(id, 1.0)]])
+            self.assertEqual(hits, [[(id, 1.0)]])
 
             results = subarena.knearest_tanimoto_search_arena(subarena)
             query_ids, hits = zip(*result)
-            self.assertEquals(len(hits), 1)
-            self.assertEquals(results[0].get_ids_and_scores(), [(id, 1.0)])
+            self.assertEqual(len(hits), 1)
+            self.assertEqual(results[0].get_ids_and_scores(), [(id, 1.0)])
             hits = [result.get_ids_and_scores() for result in results]
-            self.assertEquals(hits, [[(id, 1.0)]])
+            self.assertEqual(hits, [[(id, 1.0)]])
 
             counts = subarena.count_tanimoto_hits_arena(subarena)
-            self.assertEquals(len(counts), 1)
-            self.assertEquals(counts[0], 1)
-            self.assertEquals(list(counts), [1])
-        self.assertEquals(i, len(fps)-1)
+            self.assertEqual(len(counts), 1)
+            self.assertEqual(counts[0], 1)
+            self.assertEqual(list(counts), [1])
+        self.assertEqual(i, len(fps)-1)
 
     def test_missing_metatdata_size(self):
         pairs = [("first", "1234".decode("hex")),
@@ -685,17 +685,17 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
         pairs = [("first", "1234".decode("hex")),
                  ("second", "ABCD".decode("hex"))]
         arena = chemfp.load_fingerprints(pairs, chemfp.Metadata(type="Blah!", num_bytes=2))
-        self.assertEquals(len(arena), 2)
-        self.assertEquals(arena[0], ("first", "1234".decode("hex")))
-        self.assertEquals(arena[1], ("second", "ABCD".decode("hex")))
+        self.assertEqual(len(arena), 2)
+        self.assertEqual(arena[0], ("first", "1234".decode("hex")))
+        self.assertEqual(arena[1], ("second", "ABCD".decode("hex")))
 
     def test_read_from_id_fp_pairs_num_bits(self):
         pairs = [("first", "1234".decode("hex")),
                  ("second", "ABCD".decode("hex"))]
         arena = chemfp.load_fingerprints(pairs, chemfp.Metadata(type="Blah!", num_bits=16))
-        self.assertEquals(len(arena), 2)
-        self.assertEquals(arena[0], ("first", "1234".decode("hex")))
-        self.assertEquals(arena[1], ("second", "ABCD".decode("hex")))
+        self.assertEqual(len(arena), 2)
+        self.assertEqual(arena[0], ("first", "1234".decode("hex")))
+        self.assertEqual(arena[1], ("second", "ABCD".decode("hex")))
 
 
 # Use this to verify the other implementations
@@ -736,7 +736,7 @@ class TestLoadFingerprintsOrdered(unittest2.TestCase, CommonReaderAPI):
                 found.append(expected.index(x))
             except ValueError:
                 pass
-        self.assertEquals(sorted(found), [0, 1, 2, 3, 4])
+        self.assertEqual(sorted(found), [0, 1, 2, 3, 4])
         
 
     def test_arena_is_ordered_by_popcount(self):
@@ -751,9 +751,9 @@ class TestLoadFingerprintsOrdered(unittest2.TestCase, CommonReaderAPI):
         arena = self._open(CHEBI_TARGETS)
         ids = [id for (id, fp) in arena]
         for subarena in arena.iter_arenas():
-            self.assertEquals(len(subarena), 1000)
+            self.assertEqual(len(subarena), 1000)
             subids = [id for (id, fp) in subarena]
-            self.assertEquals(ids[:1000], subids)
+            self.assertEqual(ids[:1000], subids)
             del ids[:1000]
         self.assertFalse(ids)
 
@@ -771,7 +771,7 @@ class TestLoadFingerprintsOrdered(unittest2.TestCase, CommonReaderAPI):
                 self.assertTrue(prev <= popcount, (prev, popcount))
                 prev = popcount
             
-            self.assertEquals(ids[:100], subids)
+            self.assertEqual(ids[:100], subids)
             del ids[:100]
 
         self.assertFalse(ids)
@@ -780,8 +780,8 @@ class TestLoadFingerprintsOrdered(unittest2.TestCase, CommonReaderAPI):
         arena = self._open(CHEBI_TARGETS)
         # use None to read all fingerprints into a single arena
         subarenas = list(arena.iter_arenas(None))
-        self.assertEquals(len(subarenas), 1)
-        self.assertEquals(len(subarenas[0]), 2000)
+        self.assertEqual(len(subarenas), 1)
+        self.assertEqual(len(subarenas[0]), 2000)
         
 
 SDF_IDS = ['9425004', '9425009', '9425012', '9425015', '9425018',
@@ -926,7 +926,7 @@ class TestRDKitReadStructureFingerprints(unittest2.TestCase, ReadStructureFinger
         f = StringIO("\x1f\x8b\x08\x00\xa9\\,O\x02\xff3042vt\xe3t\xccK)J-\xe7\x02\x00\xfe'\x16\x99\x0e\x00\x00\x00")
         f.name = "test.gz"
         values = list(chemfp.open(f))
-        self.assertEquals(values, [("Andrew", "0123AF".decode("hex"))])
+        self.assertEqual(values, [("Andrew", "0123AF".decode("hex"))])
 
 TestRDKitReadStructureFingerprints = (
   unittest2.skipUnless(has_rdkit, "RDKit not available")(TestRDKitReadStructureFingerprints)
@@ -944,7 +944,7 @@ class TestBitOps(unittest2.TestCase):
             ("ABC", "ABC", "ABC"),
             ("ABC", "BBC", "CBC"),
             ("BA", "12", "ss")):
-            self.assertEquals(bitops.byte_union(fp1, fp2), expected)
+            self.assertEqual(bitops.byte_union(fp1, fp2), expected)
 
     def test_byte_intersect(self):
         for (fp1, fp2, expected) in (
@@ -952,7 +952,7 @@ class TestBitOps(unittest2.TestCase):
             ("ABC", "BBC", "@BC"),
             ("AB", "12", "\1\2"),
             ("BA", "12", "\0\0")):
-            self.assertEquals(bitops.byte_intersect(fp1, fp2), expected)
+            self.assertEqual(bitops.byte_intersect(fp1, fp2), expected)
 
     def test_byte_difference(self):
         for (fp1, fp2, expected) in (
@@ -960,12 +960,12 @@ class TestBitOps(unittest2.TestCase):
             ("ABC", "ABC", "\0\0\0"),
             ("ABC", "BBC", "\3\0\0"),
             ("BA", "12", "ss")):
-            self.assertEquals(bitops.byte_difference(fp1, fp2), expected)
+            self.assertEqual(bitops.byte_difference(fp1, fp2), expected)
         
     def test_empty(self):
-        self.assertEquals(bitops.byte_union("", ""), "")
-        self.assertEquals(bitops.byte_intersect("", ""), "")
-        self.assertEquals(bitops.byte_difference("", ""), "")
+        self.assertEqual(bitops.byte_union("", ""), "")
+        self.assertEqual(bitops.byte_intersect("", ""), "")
+        self.assertEqual(bitops.byte_difference("", ""), "")
         
     def test_failures(self):
         for func in (bitops.byte_union,
@@ -1009,11 +1009,11 @@ class TestFPSParser(unittest2.TestCase):
             list(chemfp.open(f))
             raise AssertionError("Should not get here")
         except chemfp.ChemFPError, err:
-            self.assertEquals(str(err), "Unsupported whitespace at line 1 of 'spam'")
-            self.assertEquals(repr(err), "FPSParseError(-30, 1, spam)")
-            self.assertEquals(err.lineno, 1)
-            self.assertEquals(err.filename, "spam")
-            self.assertEquals(err.errcode, -30)
+            self.assertEqual(str(err), "Unsupported whitespace at line 1 of 'spam'")
+            self.assertEqual(repr(err), "FPSParseError(-30, 1, spam)")
+            self.assertEqual(err.lineno, 1)
+            self.assertEqual(err.filename, "spam")
+            self.assertEqual(err.errcode, -30)
 
     def test_count_size_mismatch(self):
         query_arena = chemfp.load_fingerprints(StringIO("AB\tSmall\n"))
@@ -1066,25 +1066,25 @@ class ThresholdTanimotoSearch(unittest2.TestCase):
         with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
             len(fps_results)
         results = list(fps_results)
-        self.assertEquals(len(results), 10)
+        self.assertEqual(len(results), 10)
         query_id, result = results[0]
-        self.assertEquals(query_id, "CHEBI:17585")
-        self.assertEquals(len(result), 4)
+        self.assertEqual(query_id, "CHEBI:17585")
+        self.assertEqual(len(result), 4)
         result.reorder("increasing-score")
-        self.assertEquals(result.get_scores(),
+        self.assertEqual(result.get_scores(),
                           [0.7142857142857143, 0.72222222222222221, 0.8571428571428571, 0.8571428571428571])
-        self.assertEquals(result.get_ids(),
+        self.assertEqual(result.get_ids(),
                           ['CHEBI:16148', 'CHEBI:17539', 'CHEBI:17034', 'CHEBI:17302'])
 
         query_id, result = results[3]
-        self.assertEquals(query_id, "CHEBI:17588")
-        self.assertEquals(len(result), 32)
+        self.assertEqual(query_id, "CHEBI:17588")
+        self.assertEqual(len(result), 32)
         result.reorder("decreasing-score")
         expected_scores = [1.0, 0.88, 0.88, 0.88, 0.85185185185185186, 0.85185185185185186]
         expected_ids = ['CHEBI:17230', 'CHEBI:15356', 'CHEBI:16375', 'CHEBI:17561', 'CHEBI:15729', 'CHEBI:16176']
-        self.assertEquals(result.get_scores()[:6], expected_scores)
-        self.assertEquals(result.get_ids()[:6], expected_ids)
-        self.assertEquals(result.get_ids_and_scores()[:6], zip(expected_ids, expected_scores))
+        self.assertEqual(result.get_scores()[:6], expected_scores)
+        self.assertEqual(result.get_ids()[:6], expected_ids)
+        self.assertEqual(result.get_ids_and_scores()[:6], zip(expected_ids, expected_scores))
 
     def test_with_arena_as_targets(self):
         queries = chemfp.load_fingerprints(CHEBI_QUERIES, reorder=False)[:10]
@@ -1093,25 +1093,25 @@ class ThresholdTanimotoSearch(unittest2.TestCase):
         with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
             len(arena_results)
         results = list(arena_results)
-        self.assertEquals(len(results), 10)
+        self.assertEqual(len(results), 10)
         query_id, result = results[0]
-        self.assertEquals(query_id, "CHEBI:17585")
-        self.assertEquals(len(result), 4)
+        self.assertEqual(query_id, "CHEBI:17585")
+        self.assertEqual(len(result), 4)
         result.reorder("increasing-score")
         self.assertSequenceEqual(result.get_scores(),
                           [0.7142857142857143, 0.72222222222222221, 0.8571428571428571, 0.8571428571428571])
-        self.assertEquals(result.get_ids(),
+        self.assertEqual(result.get_ids(),
                           ['CHEBI:16148', 'CHEBI:17539', 'CHEBI:17034', 'CHEBI:17302'])
 
         query_id, result = results[3]
-        self.assertEquals(query_id, "CHEBI:17588")
-        self.assertEquals(len(result), 32)
+        self.assertEqual(query_id, "CHEBI:17588")
+        self.assertEqual(len(result), 32)
         result.reorder("decreasing-score")
         expected_scores = [1.0, 0.88, 0.88, 0.88, 0.85185185185185186, 0.85185185185185186]
         expected_ids = ['CHEBI:17230', 'CHEBI:15356', 'CHEBI:16375', 'CHEBI:17561', 'CHEBI:15729', 'CHEBI:16176']
         self.assertSequenceEqual(result.get_scores()[:6], expected_scores)
-        self.assertEquals(result.get_ids()[:6], expected_ids)
-        self.assertEquals(result.get_ids_and_scores()[:6], zip(expected_ids, expected_scores))
+        self.assertEqual(result.get_ids()[:6], expected_ids)
+        self.assertEqual(result.get_ids_and_scores()[:6], zip(expected_ids, expected_scores))
         
 
 try:
@@ -1132,8 +1132,8 @@ class TestSave(unittest2.TestCase):
         arena.save(filename)
 
         arena2 = chemfp.load_fingerprints(filename, reorder=False)
-        self.assertEquals(arena.metadata.type, arena2.metadata.type)
-        self.assertEquals(len(arena), len(arena2))
+        self.assertEqual(arena.metadata.type, arena2.metadata.type)
+        self.assertEqual(len(arena), len(arena2))
 
         arena_lines = open(CHEBI_TARGETS).readlines()
         arena2_lines = open(filename).readlines()
@@ -1155,8 +1155,8 @@ class TestSave(unittest2.TestCase):
         arena.save(filename)
         
         arena2 = chemfp.load_fingerprints(filename, reorder=False)
-        self.assertEquals(arena.metadata.type, arena2.metadata.type)
-        self.assertEquals(len(arena), len(arena2))
+        self.assertEqual(arena.metadata.type, arena2.metadata.type)
+        self.assertEqual(len(arena), len(arena2))
 
         arena_lines = open(CHEBI_TARGETS).readlines()
         arena2_lines = gzip.GzipFile(filename).readlines()
@@ -1168,8 +1168,8 @@ class TestSave(unittest2.TestCase):
         arena.save(filename)
         
         arena2 = chemfp.load_fingerprints(filename, reorder=False)
-        self.assertEquals(arena.metadata.type, arena2.metadata.type)
-        self.assertEquals(len(arena), len(arena2))
+        self.assertEqual(arena.metadata.type, arena2.metadata.type)
+        self.assertEqual(len(arena), len(arena2))
 
         arena_lines = open(CHEBI_TARGETS).readlines()
         arena2_lines = bz2.BZ2File(filename).readlines()
