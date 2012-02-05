@@ -338,7 +338,8 @@ TestBadStructureFiles = unittest2.skipIf(skip_rdkit, "RDKit not installed")(Test
 # Some code to test the internal interface
 class TestInternals(unittest2.TestCase):
     def test_make_rdk_fingerprinter(self):
-        rdkit.make_rdk_fingerprinter(fpSize=0)
+        # Make sure that I can call with the defaults
+        rdkit.make_rdk_fingerprinter()
             
     def test_make_rdk_fingerprinter_bad_fpSize(self):
         with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
@@ -369,15 +370,15 @@ class TestInternals(unittest2.TestCase):
         
     def test_make_morgan_fingerprinter_bad_fpSize(self):
         with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
-            rdkit.make_rdk_fingerprinter(fpSize=0)
+            rdkit.make_morgan_fingerprinter(fpSize=0)
         with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
-            rdkit.make_rdk_fingerprinter(fpSize=-10)
+            rdkit.make_morgan_fingerprinter(fpSize=-10)
 
     def test_make_morgan_fingerprinter_bad_radius(self):
-        with self.assertRaisesRegexp(ValueError, "radius must be positive"):
-            rdkit.make_rdk_fingerprinter(radius=0)
-        with self.assertRaisesRegexp(ValueError, "radius must be positive"):
-            rdkit.make_rdk_fingerprinter(radius=-10)
+        with self.assertRaisesRegexp(ValueError, "radius must be positive or zero"):
+            rdkit.make_morgan_fingerprinter(radius=-1)
+        with self.assertRaisesRegexp(ValueError, "radius must be positive or zero"):
+            rdkit.make_morgan_fingerprinter(radius=-10)
 
     
 TestInternals = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestInternals)
