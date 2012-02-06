@@ -250,6 +250,14 @@ class TestAtomPairFingerprinter(unittest2.TestCase):
         self.assertIn("fpSize must be 1 or greater", errmsg)
         errmsg = runner.run_exit("--pair --fpSize 2.3")
         self.assertIn("fpSize must be 1 or greater", errmsg)
+    def test_min_length(self):
+        header, output = runner.run_split("--pair --fpSize 128 --minLength 4", 19)
+        self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=128 minLength=4 maxLength=30")
+        self.assertEqual(output[0], "71777f777317003377ffff37733fff77\t9425004")
+    def test_max_length(self):
+        header, output = runner.run_split("--pair --fpSize 128 --maxLength 3", 19)
+        self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=128 minLength=1 maxLength=3")
+        self.assertEqual(output[0], "073033737f0001370100337f7f101077\t9425004")
     def test_min_length_error(self):
         errmsg = runner.run_exit("--pair --minLength spam")
         self.assertIn("minLength must be 0 or greater", errmsg)
@@ -276,6 +284,38 @@ class TestAtomPairFingerprinter(unittest2.TestCase):
 
 TestAtomPairFingerprinter = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestAtomPairFingerprinter)
 
+_torsion_2048 = "00000000000003000000000001000000010000000000000000000000000000000000000000000000000000000000000700000010000000000010000000000000000000100000000000000000100000000000000000000100000000000001003000000000000000000000000000000000000000000000000000000000000000001000000100000000000000010000001000000000000000000000000000001000001100000000000000000000100000000000000000000000000000000000000000000001000000000000000000000000010000000000330000100100000010000000100000000000000000101000000000000001000000000030000000000000"
+class TestTorsionFingerprinter(unittest2.TestCase):
+    def test_torsion_defaults(self):
+        header, output = runner.run_split("--torsion", 19)
+        self.assertEqual(header["#type"], "RDKit-Torsion/1 fpSize=2048 targetSize=4")
+        self.assertEqual(output[0], _torsion_2048 + "\t9425004")
+    def test_torsion_explicit_defaults(self):
+        header, output = runner.run_split("--torsion --fpSize 2048 --targetSize 4", 19)
+        self.assertEqual(header["#type"], "RDKit-Torsion/1 fpSize=2048 targetSize=4")
+        self.assertEqual(output[0], _torsion_2048 + "\t9425004")
+    def test_num_bits_128(self):        
+        header, output = runner.run_split("--torsion --fpSize 128 --targetSize 4", 19)
+        self.assertEqual(header["#type"], "RDKit-Torsion/1 fpSize=128 targetSize=4")
+        self.assertEqual(output[0], "13111033000037000070011131013037\t9425004")
+    def test_num_bits_error(self):
+        errmsg = runner.run_exit("--torsion --fpSize 0")
+        self.assertIn("fpSize must be 1 or greater", errmsg)
+        errmsg = runner.run_exit("--torsion --fpSize 2.3")
+        self.assertIn("fpSize must be 1 or greater", errmsg)
+    def test_target_size(self):
+        header, output = runner.run_split("--torsion --fpSize 128 --targetSize 5", 19)
+        self.assertEqual(header["#type"], "RDKit-Torsion/1 fpSize=128 targetSize=5")
+        self.assertEqual(output[0], "33037307030103730303131100331100\t9425004")
+    def test_target_size_error(self):
+        errmsg = runner.run_exit("--torsion --fpSize 128 --targetSize -1")
+        self.assertIn("targetSize must be 1 or greater", errmsg)
+        errmsg = runner.run_exit("--torsion --fpSize 128 --targetSize spam")
+        self.assertIn("targetSize must be 1 or greater", errmsg)
+        errmsg = runner.run_exit("--torsion --fpSize 128 --targetSize 0")
+        self.assertIn("targetSize must be 1 or greater", errmsg)
+
+TestTorsionFingerprinter = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestTorsionFingerprinter)
 
 class TestIO(unittest2.TestCase, support.TestIdAndErrors):
     _runner = runner
