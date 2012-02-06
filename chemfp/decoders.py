@@ -317,32 +317,34 @@ def from_daylight(text):
 
   if text == "3":
     # This is the encoding of an empty string (perverse, I know)
-    return ""
+    return None, ""
   
   count = text[-1]
   if count not in ("1", "2", "3"):
-    raise ValueError("Last character of encoding must be 1, 2, or 3, not %s" %
+    raise ValueError("Last character of encoding must be 1, 2, or 3, not %r" %
                      (count,))
   
   count = int(count)
-  
-  # Take four digits at a time
-  fields = []
-  reverse_table = _daylight_reverse_table
-  for i in range(0, len(text)-1, 4):
-    t = text[i:i+4]
-    d = (reverse_table[t[0]] * 262144 +  # (2**6) ** 3
-         reverse_table[t[1]] * 4096 +    # (2**6) ** 2
-         reverse_table[t[2]] * 64 +      # (2**6) ** 1
-         reverse_table[t[3]])            # (2**6) ** 0
-    
-    # This is a 24 bit field
-    # Convert back into 8 bits at a time
-    c1 = d >> 16
-    c2 = (d >> 8) & 0xFF
-    c3 = d & 0xFF
-    
-    fields.append( chr(c1) + chr(c2) + chr(c3) )
+  try:
+      # Take four digits at a time
+      fields = []
+      reverse_table = _daylight_reverse_table
+      for i in range(0, len(text)-1, 4):
+        t = text[i:i+4]
+        d = (reverse_table[t[0]] * 262144 +  # (2**6) ** 3
+             reverse_table[t[1]] * 4096 +    # (2**6) ** 2
+             reverse_table[t[2]] * 64 +      # (2**6) ** 1
+             reverse_table[t[3]])            # (2**6) ** 0
+
+        # This is a 24 bit field
+        # Convert back into 8 bits at a time
+        c1 = d >> 16
+        c2 = (d >> 8) & 0xFF
+        c3 = d & 0xFF
+
+        fields.append( chr(c1) + chr(c2) + chr(c3) )
+  except KeyError:
+      raise ValueError("Unknown encoding symbol")
   
   # Only 'count' of the last field is legal
   # Because of the special case for empty string earlier,
