@@ -99,6 +99,15 @@ I5Z2MLZgOKRcR...1
 > <daylight2>
 HqhdNG+YPqhdNG+kPqhdNG2.2
 
+> <daylight3>
+3
+
+> <daylight-illegal>
+1P!_3
+
+> <daylight-end-illegal>
+1P!_P
+
 > <comment>
 40 bits, non-symmetric, with a few bits set to check for decoding problems
 0000 0000 1010 0000 0000 0000 0000 0011 0000 0000
@@ -260,6 +269,9 @@ MqVZPKNkR4JnR...1
 
 > <daylight2>
 J4JnR4ZiNm.U612g616g61A.2
+
+> <daylight3>
+3
 
 > <comment>
 0000 0000 0101 1111 1110 1101 1100 1010 0000 0000

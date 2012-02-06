@@ -58,6 +58,9 @@ def run_fps(s, expect_length=None):
         assert len(result) == expect_length
     return result
 
+import support
+_runner = support.Runner(sdf2fps.main)
+run_exit = _runner.run_exit
 
 class TestDecoderFlags(unittest2.TestCase):
     def test_cactvs(self):
@@ -105,6 +108,20 @@ class TestDecoderFlags(unittest2.TestCase):
         result = run_fps("--binary-msb --fp-tag binary17", 2)
         self.assertEquals(result[0], "db3900\t9425004")
         self.assertEquals(result[1], "732500\t9425009")
+
+
+    def test_binary_failure(self):
+        errmsg = run_exit("--binary --fp-tag PUBCHEM_CACTVS_SUBSKEYS", DECODER_SDF)
+        self.assertIn("Could not binary decode 'PUBCHEM_CACTVS_SUBSKEYS' value 'AAADceB7sQ", errmsg)
+        self.assertIn("Not a binary string at line 1 of", errmsg)
+        self.assertIn("decoder.sdf", errmsg)
+
+    def test_binary_msb_failure(self):
+        errmsg = run_exit("--binary-msb --fp-tag PUBCHEM_CACTVS_SUBSKEYS", DECODER_SDF)
+        self.assertIn("Could not binary_msb decode 'PUBCHEM_CACTVS_SUBSKEYS' value 'AAADceB7sQ", errmsg)
+        self.assertIn("Not a binary string at line 1 of", errmsg)
+        self.assertIn("decoder.sdf", errmsg)
+
 
     def test_hex2(self):
         result = run_fps("--hex --fp-tag hex2", 2)
@@ -162,6 +179,30 @@ class TestDecoderFlags(unittest2.TestCase):
         self.assertEquals(result[0], "Okie dokie pokie!".encode("hex") + "\t9425004")
         self.assertEquals(result[1], "Testing   1, 2, 3".encode("hex") + "\t9425009")
 
+    def test_daylight3(self):
+        result = run_fps("--daylight --fp-tag daylight3", 2)
+        self.assertEquals(result[0], "\t9425004")
+        self.assertEquals(result[1], "\t9425009")
+
+    def test_daylight_end_error(self):
+        errmsg = run_exit("--daylight --fp-tag daylight-end-illegal", DECODER_SDF)
+        self.assertIn("Could not daylight decode 'daylight-end-illegal' value '1P!_P'", errmsg)
+        self.assertIn("Last character of encoding must be 1, 2, or 3, not 'P' at line 1", errmsg)
+        self.assertIn("decoder.sdf", errmsg)
+
+    def test_daylight_symbol_error(self):
+        errmsg = run_exit("--daylight --fp-tag daylight-illegal", DECODER_SDF)
+        self.assertIn("Could not daylight decode 'daylight-illegal' value '1P!_3'", errmsg)
+        self.assertIn("Unknown encoding symbol at line 1", errmsg)
+        self.assertIn("decoder.sdf", errmsg)
+
+    def test_daylight_length_error(self):
+        errmsg = run_exit("--daylight --fp-tag PUBCHEM_CACTVS_SUBSKEYS", DECODER_SDF)
+        self.assertIn("Could not daylight decode 'PUBCHEM_CACTVS_SUBSKEYS' value 'AAADceB7sQ", errmsg)
+        self.assertIn("Daylight binary encoding is of the wrong length at line 1 of", errmsg)
+        self.assertIn("decoder.sdf", errmsg)
+
+
     def test_bad_decoding(self):
         msg = run_warning("--base64 --fp-tag binary17 --errors report")
         self.assertIn("Could not base64 decode 'binary17' value", msg)
@@ -210,7 +251,7 @@ class TestTitleProcessing(unittest2.TestCase):
 
     def test_missing_title_from_title_line(self):
         warning = run_warning("--hex --fp-tag hex2 --id-tag FAKE_TITLE --errors report")
-        self.assertIn("Missing id tag 'FAKE_TITLE' in the record starting at line 151 of ", warning)
+        self.assertIn("Missing id tag 'FAKE_TITLE' in the record starting at line 160 of ", warning)
         self.assertIn("decoder.sdf", warning)
         self.assertIn("title='9425009'", warning)
         self.assertIn("Skipping.", warning)
@@ -219,7 +260,7 @@ class TestTitleProcessing(unittest2.TestCase):
         warning = run_warning("--hex --fp-tag hex2 --id-tag DOES_NOT_EXIST --errors report")
         self.assertIn("Missing id tag 'DOES_NOT_EXIST'", warning)
         self.assertIn("line 1 of", warning)
-        self.assertIn("line 151 of", warning)
+        self.assertIn("line 160 of", warning)
 
 class TestShortcuts(unittest2.TestCase):
     def test_pubchem(self):
