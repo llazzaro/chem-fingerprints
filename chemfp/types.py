@@ -24,6 +24,16 @@ def check_openeye_path():
     from .openeye import OEGRAPHSIM_API_VERSION
     return "OpenEye-Path/"+OEGRAPHSIM_API_VERSION
 
+def check_rdkit_atom_pair():
+    from .rdkit import ATOM_PAIR_VERSION
+    if ATOM_PAIR_VERSION is None:
+        ATOM_PAIR_VERSION = "2"  # Nothing is supported; pretend to want v2
+    return "RDKit-AtomPair/"+ATOM_PAIR_VERSION
+
+def check_rdkit_torsion():
+    from .rdkit import TORSION_VERSION
+    return "RDKit-Torsion/"+TORSION_VERSION
+
 ### The chemfp fingerprint type API isn't powerful enough
 
 # I have to list all of the possible fingerprint types, even if the
@@ -45,7 +55,9 @@ _family_config_paths = (
     ("RDKit-Fingerprint/1", "chemfp.rdkit.RDKitFingerprintFamily_v1"),
     ("RDKit-Morgan/1", "chemfp.rdkit.RDKitMorganFingerprintFamily_v1"),
     ("RDKit-Torsion/1", "chemfp.rdkit.RDKitTorsionFingerprintFamily_v1"),
-    ("RDKit-Pair/1", "chemfp.rdkit.RDKitPairFingerprintFamily_v1"),
+    ("RDKit-Torsion/2", "chemfp.rdkit.RDKitTorsionFingerprintFamily_v2"),
+    ("RDKit-AtomPair/1", "chemfp.rdkit.RDKitAtomPairFingerprintFamily_v1"),
+    ("RDKit-AtomPair/2", "chemfp.rdkit.RDKitAtomPairFingerprintFamily_v2"),
     
     ("OpenBabel-FP2/1", "chemfp.openbabel.OpenBabelFP2FingerprintFamily_v1"),
     ("OpenBabel-FP3/1", "chemfp.openbabel.OpenBabelFP3FingerprintFamily_v1"),
@@ -90,6 +102,8 @@ _alternates = {
     "OpenBabel-MACCS": check_openbabel_maccs166,
     "OpenEye-MACCS166": check_openeye_maccs166,
     "OpenEye-Path": check_openeye_path,
+    "RDKit-AtomPair": check_rdkit_atom_pair,
+    "RDKit-Torsion": check_rdkit_torsion,
     }
 
 

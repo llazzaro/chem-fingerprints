@@ -148,7 +148,7 @@ def main(args=None):
         maxLength = args.maxLength
         if maxLength < minLength:
             parser.error("--minLength must not be greater than --maxLength")
-        opener = types.get_fingerprint_family("RDKit-Pair")(
+        opener = types.get_fingerprint_family("RDKit-AtomPair")(
             fpSize=args.fpSize,
             minLength=minLength,
             maxLength=maxLength)

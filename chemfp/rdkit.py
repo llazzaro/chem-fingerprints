@@ -27,6 +27,9 @@ __all__ = ["read_structures", "iter_smiles_molecules", "iter_sdf_molecules"]
 # If the attribute doesn't exist then this is an unsupported pre-2010 RDKit distribution
 SOFTWARE = "RDKit/" + getattr(rdkit.rdBase, "rdkitVersion", "unknown")
 
+# Used to check for version-dependent fingerprints
+_VERSION_PROBE_MOL = Chem.MolFromSmiles(r"CC1=CC(=NN1CC(=O)NNC(=O)\C=C\C2=C(C=CC=C2Cl)F)C")
+
 #########
 
 # Helper function to convert a fingerprint to a sequence of bytes.
@@ -346,14 +349,19 @@ def make_torsion_fingerprinter(fpSize=NUM_BITS,
         return _fp_to_bytes(fp)
     return torsion_fingerprinter
 
-########### Pair fingerprinter
+TORSION_VERSION = {
+    "\xc2\x10@\x83\x010\x18\xa4,\x00\x80B\xc0\x00\x08\x00": "1",
+    "\x13\x11\x103\x00\x007\x00\x00p\x01\x111\x0107": "2",
+    }[make_torsion_fingerprinter(128)(_VERSION_PROBE_MOL)]
+
+########### Atom Pair fingerprinter
 
 MIN_LENGTH = 1
 MAX_LENGTH = 30
 
-def make_pair_fingerprinter(fpSize=NUM_BITS,
-                            minLength=MIN_LENGTH,
-                            maxLength=MAX_LENGTH):
+def make_atom_pair_fingerprinter(fpSize=NUM_BITS,
+                                 minLength=MIN_LENGTH,
+                                 maxLength=MAX_LENGTH):
     if not (fpSize > 0):
         raise ValueError("fpSize must be positive")
     if not (minLength >= 0):
@@ -366,6 +374,18 @@ def make_pair_fingerprinter(fpSize=NUM_BITS,
             mol, nBits=fpSize, minLength=minLength, maxLength=maxLength)
         return _fp_to_bytes(fp)
     return pair_fingerprinter
+
+try:
+    ATOM_PAIR_VERSION = {
+        "\xfdB\xfe\xbd\xfa\xdd\xff\xf5\xff\x05\xdf?\xe3\xc3\xff\xfb": "1",
+        "w\xf7\xff\xf7\xff\x17\x01\x7f\x7f\xff\xff\x7f\xff?\xff\xff": "2",
+        }[make_atom_pair_fingerprinter(128)(_VERSION_PROBE_MOL)]
+except Exception, err:
+    # RDKit 2011.06 contained a bug
+    if "Boost.Python.ArgumentError" in str(type(err)):
+        ATOM_PAIR_VERSION = None
+    else:
+        raise
 
 
 ####################
@@ -457,18 +477,46 @@ RDKitMorganFingerprintFamily_v1 = _base.clone(
 
 ###
 
+def _check_torsion_version(version):
+    def make_fingerprinter(*args, **kwargs):
+        if TORSION_VERSION != version:
+            raise TypeError("This version of RDKit does not support the RDKit-Torsion/%s fingerprint" % (version,))
+        return make_torsion_fingerprinter(*args, **kwargs)
+    return make_fingerprinter
+
 RDKitTorsionFingerprintFamily_v1 = _base.clone(
     name = "RDKit-Torsion/1",
     format_string = "fpSize=%(fpSize)s targetSize=%(targetSize)d",
     num_bits = _get_num_bits,
-    make_fingerprinter = make_torsion_fingerprinter,
+    make_fingerprinter = _check_torsion_version("1"),
+    )
+
+RDKitTorsionFingerprintFamily_v2 = _base.clone(
+    name = "RDKit-Torsion/1",
+    format_string = "fpSize=%(fpSize)s targetSize=%(targetSize)d",
+    num_bits = _get_num_bits,
+    make_fingerprinter = _check_torsion_version("2"),
     )
 
 ###
 
-RDKitPairFingerprintFamily_v1 = _base.clone(
-    name = "RDKit-Pair/1",
+def _check_atom_pair_version(version):
+    def make_fingerprinter(*args, **kwargs):
+        if ATOM_PAIR_VERSION != version:
+            raise TypeError("This version of RDKit does not support the RDKit-AtomPair/%s fingerprint" % (version,))
+        return make_atom_pair_fingerprinter(*args, **kwargs)
+    return make_fingerprinter
+
+RDKitAtomPairFingerprintFamily_v1 = _base.clone(
+    name = "RDKit-AtomPair/1",
     format_string = "fpSize=%(fpSize)s minLength=%(minLength)d maxLength=%(maxLength)d",
     num_bits = _get_num_bits,
-    make_fingerprinter = make_pair_fingerprinter,
+    make_fingerprinter = _check_atom_pair_version("1"),
+    )
+
+RDKitAtomPairFingerprintFamily_v2 = _base.clone(
+    name = "RDKit-AtomPair/2",
+    format_string = "fpSize=%(fpSize)s minLength=%(minLength)d maxLength=%(maxLength)d",
+    num_bits = _get_num_bits,
+    make_fingerprinter = _check_atom_pair_version("2"),
     )
