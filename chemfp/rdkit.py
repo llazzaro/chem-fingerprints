@@ -277,7 +277,7 @@ def make_rdk_fingerprinter(minPath=MIN_PATH, maxPath=MAX_PATH, fpSize=NUM_BITS,
     if not (minPath > 0):
         raise ValueError("minPath must be positive")
     if not (maxPath >= minPath):
-        raise ValueError("maxPath cannot be smaller than minPath")
+        raise ValueError("maxPath must not be smaller than minPath")
     if not (nBitsPerHash > 0):
         raise ValueError("nBitsPerHash must be positive")
 
@@ -319,7 +319,7 @@ def make_morgan_fingerprinter(fpSize=NUM_BITS,
     if not (fpSize > 0):
         raise ValueError("fpSize must be positive")
     if not (radius >= 0):
-        raise ValueError("radius cannot be negative")
+        raise ValueError("radius must be positive or zero")
 
     def morgan_fingerprinter(mol):
         fp = rdMolDescriptors.GetMorganFingerprintAsBitVect(
@@ -338,7 +338,7 @@ def make_torsion_fingerprinter(fpSize=NUM_BITS,
     if not (fpSize > 0):
         raise ValueError("fpSize must be positive")
     if not (targetSize >= 0):
-        raise ValueError("targetSize cannot be negative")
+        raise ValueError("targetSize must be positive or zero")
 
     def torsion_fingerprinter(mol):
         fp = rdMolDescriptors.GetHashedTopologicalTorsionFingerprintAsBitVect(
@@ -357,9 +357,9 @@ def make_pair_fingerprinter(fpSize=NUM_BITS,
     if not (fpSize > 0):
         raise ValueError("fpSize must be positive")
     if not (minLength >= 0):
-        raise ValueError("minLength cannot be negative")
+        raise ValueError("minLength must be positive or zero")
     if not (maxLength >= minLength):
-        raise ValueError("maxLength cannot be less than minLength")
+        raise ValueError("maxLength must not be less than minLength")
 
     def pair_fingerprinter(mol):
         fp = rdMolDescriptors.GetHashedAtomPairFingerprintAsBitVect(
@@ -417,10 +417,10 @@ _base.add_argument("targetSize", decoder=positive_int, metavar="INT",
                    default=TARGET_SIZE, help = "number of bits in the fingerprint")
 
 # pair
-_base.add_argument("minLength", decoder=positive_int, metavar="INT",
+_base.add_argument("minLength", decoder=nonnegative_int, metavar="INT",
                    default=MIN_LENGTH, help = "minimum bond count for a pair")
 
-_base.add_argument("maxLength", decoder=positive_int, metavar="INT",
+_base.add_argument("maxLength", decoder=nonnegative_int, metavar="INT",
                    default=MAX_LENGTH, help = "maximum bond count for a pair")
 
 #########
