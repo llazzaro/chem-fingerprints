@@ -232,7 +232,7 @@ TestRDKMorgan = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestRDKMorga
 
 _pair_2048 = "0100070010000000101100000013010000000000001100000010000001001703100000000007000011000301000310001000000010000000003000110100731000310001300000000000101000033110100000010000001000037311000000370313033003010000000101070000130030000010330000000000170031001077000013301000000300003133030000300030133003000131011100100f000010000013010300000000030310310000000300101030000011033010077100100000300003000000000011000000000110000010000301000037300000000101000001303000000000003000000010000010000001100000073001100100101010"
 
-class TestPairFingerprinter(unittest2.TestCase):
+class TestAtomPairFingerprinter(unittest2.TestCase):
     def test_pair_defaults(self):
         header, output = runner.run_split("--pair", 19)
         self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=2048 minLength=1 maxLength=30")
@@ -274,7 +274,7 @@ class TestPairFingerprinter(unittest2.TestCase):
         self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=2048 minLength=6 maxLength=8")
 
 
-TestPairFingerprinter = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestPairFingerprinter)
+TestAtomPairFingerprinter = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestAtomPairFingerprinter)
 
 
 class TestIO(unittest2.TestCase, support.TestIdAndErrors):
