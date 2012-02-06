@@ -230,6 +230,53 @@ class TestRDKMorgan(unittest2.TestCase):
         
 TestRDKMorgan = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestRDKMorgan)
 
+_pair_2048 = "0100070010000000101100000013010000000000001100000010000001001703100000000007000011000301000310001000000010000000003000110100731000310001300000000000101000033110100000010000001000037311000000370313033003010000000101070000130030000010330000000000170031001077000013301000000300003133030000300030133003000131011100100f000010000013010300000000030310310000000300101030000011033010077100100000300003000000000011000000000110000010000301000037300000000101000001303000000000003000000010000010000001100000073001100100101010"
+
+class TestPairFingerprinter(unittest2.TestCase):
+    def test_pair_defaults(self):
+        header, output = runner.run_split("--pair", 19)
+        self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=2048 minLength=1 maxLength=30")
+        self.assertEqual(output[0], _pair_2048 + "\t9425004")
+    def test_pair_explicit_defaults(self):
+        header, output = runner.run_split("--pair --fpSize 2048 --minLength 1 --maxLength 30", 19)
+        self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=2048 minLength=1 maxLength=30")
+        self.assertEqual(output[0], _pair_2048 + "\t9425004")
+    def test_num_bits_128(self):
+        header, output = runner.run_split("--pair --fpSize 128", 19)
+        self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=128 minLength=1 maxLength=30")
+        self.assertEqual(output[0], "77f7fff7ff17017f7fffff7fff3fffff\t9425004")
+    def test_num_bits_error(self):
+        errmsg = runner.run_exit("--pair --fpSize 0")
+        self.assertIn("fpSize must be 1 or greater", errmsg)
+        errmsg = runner.run_exit("--pair --fpSize 2.3")
+        self.assertIn("fpSize must be 1 or greater", errmsg)
+    def test_min_length_error(self):
+        errmsg = runner.run_exit("--pair --minLength spam")
+        self.assertIn("minLength must be 0 or greater", errmsg)
+    def test_max_length_error(self):
+        errmsg = runner.run_exit("--pair --maxLength -3")
+        self.assertIn("maxLength must be 0 or greater", errmsg)
+        errmsg = runner.run_exit("--pair --maxLength spam")
+        self.assertIn("maxLength must be 0 or greater", errmsg)
+    def test_invalid_min_max_lengths(self):
+        errmsg = runner.run_exit("--pair --maxLength 0") # default minLength is 1
+        self.assertIn("--minLength must not be greater than --maxLength", errmsg)
+        errmsg = runner.run_exit("--pair --minLength 4 --maxLength 3")
+        self.assertIn("--minLength must not be greater than --maxLength", errmsg)
+    def test_valid_min_max_lengths(self):
+        header, output = runner.run_split("--pair --minLength 0")
+        self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=2048 minLength=0 maxLength=30")
+        header, output = runner.run_split("--pair --minLength 0 --maxLength 0")
+        self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=2048 minLength=0 maxLength=0")
+        header, output = runner.run_split("--pair --minLength 5 --maxLength 5")
+        self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=2048 minLength=5 maxLength=5")
+        header, output = runner.run_split("--pair --minLength 6 --maxLength 8")
+        self.assertEqual(header["#type"], "RDKit-Pair/1 fpSize=2048 minLength=6 maxLength=8")
+
+
+TestPairFingerprinter = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestPairFingerprinter)
+
+
 class TestIO(unittest2.TestCase, support.TestIdAndErrors):
     _runner = runner
     def test_input_format(self):
@@ -355,7 +402,7 @@ class TestInternals(unittest2.TestCase):
 
     def test_make_rdk_fingerprinter_max_path(self):
         rdkit.make_rdk_fingerprinter(minPath=2, maxPath=2)
-        with self.assertRaisesRegexp(ValueError, "maxPath cannot be smaller than minPath"):
+        with self.assertRaisesRegexp(ValueError, "maxPath must not be smaller than minPath"):
             rdkit.make_rdk_fingerprinter(minPath=3, maxPath=2)
 
     def test_make_rdk_fingerprinter_min_path(self):
