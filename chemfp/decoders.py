@@ -107,7 +107,7 @@ def from_binary_lsb(text):
     try:
         bytes = "".join(table[text[i:i+8]] for i in xrange(0, N, 8))
     except KeyError:
-        raise TypeError("Not a binary string")
+        raise ValueError("Not a binary string")
     return (N, bytes)
 
 def from_binary_msb(text):
@@ -141,7 +141,7 @@ def from_binary_msb(text):
         bytes.append(_msb_bit_table[text[0:end]])
         return (N, "".join(bytes))
     except KeyError:
-        raise TypeError("Not a binary string")
+        raise ValueError("Not a binary string")
 
 
 def from_base64(text):
@@ -162,7 +162,7 @@ def from_base64(text):
         # underlying implementation code.
         return (None, binascii.a2b_base64(text))
     except binascii.Error, err:
-        raise TypeError(str(err))
+        raise ValueError(str(err))
 
 #def from_base64_msb(text):
 #    return (None, text.decode("base64")[::-1], None)
@@ -180,7 +180,7 @@ def from_hex(text):
     (None, '\\x10\\xf2')
     >>>
 
-    Raises a TypeError if the hex string is not a multiple of 2 bytes long
+    Raises a ValueError if the hex string is not a multiple of 2 bytes long
     or if it contains a non-hex character.
     """
     return (None, text.decode("hex"))
@@ -192,7 +192,7 @@ def from_hex_msb(text):
     (None, '\\xf2\\x10')
     >>>
 
-    Raises a TypeError if the hex string is not a multiple of 2 bytes long
+    Raises a ValueError if the hex string is not a multiple of 2 bytes long
     or if it contains a non-hex character.
     """
     return (None, text.decode("hex")[::-1])
@@ -204,7 +204,7 @@ def from_hex_lsb(text):
     (None, '\\x08\\xf4')
     >>> 
 
-    Raises a TypeError if the hex string is not a multiple of 2 bytes long
+    Raises a ValueError if the hex string is not a multiple of 2 bytes long
     or if it contains a non-hex character.
     """
     return (None, text.decode("hex").translate(_reverse_bits_in_a_byte_transtable))
@@ -240,7 +240,7 @@ def from_cactvs(text):
     fp = text.decode("base64")
     # first 4 bytes are the length (struct.unpack(">I"))
     if fp[:4] != '\x00\x00\x03q':
-        raise TypeError("This implementation is hard-coded for 881 bit CACTVS fingerprints")
+        raise ValueError("This implementation is hard-coded for 881 bit CACTVS fingerprints")
     return 881, fp[4:].translate(_reverse_bits_in_a_byte_transtable)
 
 
@@ -393,9 +393,9 @@ def import_decoder(path):
     """
     terms = path.split(".")
     if not terms:
-        raise TypeError("missing import name")
+        raise ValueError("missing import name")
     if "" in terms:
-        raise TypeError("Empty module name in %r" % (path,))
+        raise ValueError("Empty module name in %r" % (path,))
 
     # It's impossible to tell if the dotted terms corresponds to
     # module or class/instance attribute lookups, so I don't know
@@ -417,9 +417,9 @@ def import_decoder(path):
        obj = getattr(obj, subattr, None)
        if obj is None:
            failure_path = ".".join(terms[:i+2])
-           raise TypeError(("Unable to import a decoder: "
-                            "Could not find %(attr)r from %(path)r") %
-                           dict(attr=failure_path, path=path))
+           raise ValueError(("Unable to import a decoder: "
+                             "Could not find %(attr)r from %(path)r") %
+                             dict(attr=failure_path, path=path))
 
     return obj
 
