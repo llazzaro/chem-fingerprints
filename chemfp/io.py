@@ -192,7 +192,7 @@ def open_compressed_input_universal(source, compression):
             return bz2.BZ2File(source, "rU")
         else:
             # Well, I could emulate it, but I'm not going to
-            raise NotImplementedError("bzip decompression file-like objects is not supported")
+            raise NotImplementedError("bzip decompression from file-like objects is not supported")
 
     if compression == ".xz":
         raise NotImplementedError("xz decompression is not supported")
