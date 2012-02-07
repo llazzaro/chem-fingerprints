@@ -6,6 +6,7 @@ from cStringIO import StringIO
 import tempfile
 import gzip
 import shutil
+import itertools
 
 import chemfp
 from chemfp import bitops
@@ -1139,7 +1140,267 @@ class ThresholdTanimotoSearch(unittest2.TestCase):
         queries = targets[len(targets):]
         for x in chemfp.threshold_tanimoto_search(queries, targets):
             raise AssertionError
+
+class KNearestTanimotoSearch(unittest2.TestCase):
+    def test_with_fps_reader_as_targets(self):
+        queries = chemfp.open(CHEBI_QUERIES).iter_arenas(10).next()
+        targets = chemfp.open(CHEBI_TARGETS)
+        fps_results = chemfp.knearest_tanimoto_search(queries, targets)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(fps_results)
+        results = list(fps_results)
+        self.assertEqual(len(results), 10)
+        query_id, result = results[0]
+        self.assertEqual(query_id, "CHEBI:17585")
+        self.assertEqual(len(result), 3)
+        # The default is in decreasing score
+        self.assertEqual(result.get_scores(),
+                          [0.8571428571428571, 0.8571428571428571, 0.72222222222222221])
+        self.assertEqual(result.get_ids(),
+                          ['CHEBI:17302', 'CHEBI:17034', 'CHEBI:17539'])
+        result.reorder("increasing-score")
+        self.assertEqual(result.get_scores(),
+                          [0.72222222222222221, 0.8571428571428571, 0.8571428571428571])
+        self.assertEqual(result.get_ids(),
+                          ['CHEBI:17539', 'CHEBI:17034', 'CHEBI:17302'])
         
+        query_id, result = results[3]
+        self.assertEqual(query_id, "CHEBI:17588")
+        self.assertEqual(len(result), 3)
+        expected_scores = [1.0, 0.88, 0.88]
+        expected_ids = ['CHEBI:17230', 'CHEBI:15356', 'CHEBI:16375']
+        self.assertEqual(result.get_scores(), expected_scores)
+        self.assertEqual(result.get_ids(), expected_ids)
+        self.assertEqual(result.get_ids_and_scores(), zip(expected_ids, expected_scores))
+
+    def test_with_arena_as_targets(self):
+        queries = chemfp.load_fingerprints(CHEBI_QUERIES, reorder=False)[:10]
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        arena_results = chemfp.knearest_tanimoto_search(queries, targets)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(arena_results)
+        results = list(arena_results)
+        self.assertEqual(len(results), 10)
+        query_id, result = results[0]
+        self.assertEqual(query_id, "CHEBI:17585")
+        self.assertEqual(len(result), 3)
+
+        # The default is in decreasing score
+        self.assertSequenceEqual(result.get_scores(),
+                                 [0.8571428571428571, 0.8571428571428571, 0.72222222222222221])
+        self.assertEqual(result.get_ids()[2], 'CHEBI:17539')
+        self.assertEqual(sorted(result.get_ids()),
+                          sorted(['CHEBI:17302', 'CHEBI:17034', 'CHEBI:17539']))
+        result.reorder("increasing-score")
+        self.assertSequenceEqual(result.get_scores(),
+                                 [0.72222222222222221, 0.8571428571428571, 0.8571428571428571])
+        self.assertEqual(result.get_ids(),
+                          ['CHEBI:17539', 'CHEBI:17034', 'CHEBI:17302'])
+
+        query_id, result = results[3]
+        self.assertEqual(query_id, "CHEBI:17588")
+        self.assertEqual(len(result), 3)
+        expected_scores = [1.0, 0.88, 0.88]
+        expected_ids = ['CHEBI:17230', 'CHEBI:15356', 'CHEBI:16375']
+        self.assertSequenceEqual(result.get_scores(), expected_scores)
+        self.assertEqual(result.get_ids(), expected_ids)
+        self.assertEqual(result.get_ids_and_scores(), zip(expected_ids, expected_scores))
+
+    def test_with_different_parameters(self):
+        queries = chemfp.load_fingerprints(CHEBI_QUERIES, reorder=False)[:10]
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        results = list(chemfp.knearest_tanimoto_search(queries, targets, k=8, threshold=0.3))
+
+        query_id, result = results[0]
+        result.reorder("increasing-score")
+        self.assertEqual(query_id, "CHEBI:17585")
+        self.assertSequenceEqual(result.get_scores(),
+                   [0.61904761904761907, 0.66666666666666663, 0.66666666666666663, 0.66666666666666663,
+                    0.7142857142857143, 0.72222222222222221, 0.8571428571428571, 0.8571428571428571])
+                                                       
+        self.assertEqual(result.get_ids(), ['CHEBI:15843', 'CHEBI:7896', 'CHEBI:15894', 'CHEBI:16759',
+                                            'CHEBI:16148', 'CHEBI:17539', 'CHEBI:17034', 'CHEBI:17302'])
+
+    def test_with_large_input(self):
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        for (query_id, result) in chemfp.knearest_tanimoto_search(targets, targets, threshold=0.9):
+            pass
+        self.assertEqual(query_id, "CHEBI:16508")
+        result.reorder("increasing-score")
+        self.assertSequenceEqual(result.get_scores(),
+                  [0.97826086956521741, 0.97826086956521741, 1.0])
+        self.assertSequenceEqual(result.get_ids(), ["CHEBI:15852", "CHEBI:16304", "CHEBI:16379"])
+
+    def test_with_empty_queries(self):
+        targets = chemfp.load_fingerprints(CHEBI_QUERIES)
+        queries = targets[len(targets):]
+        for x in chemfp.knearest_tanimoto_search(queries, targets):
+            raise AssertionError
+    
+
+class TestCountSymmetric(unittest2.TestCase):
+    def test_count_with_fps_reader(self):
+        targets = chemfp.open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "`fingerprints` must be a FingerprintArena "
+                                     "with pre-computed popcount indices"):
+            chemfp.count_tanimoto_hits_symmetric(targets)
+
+    def test_count(self):
+        # Work around a bug: cannot do the symmetric search on a subarena
+        fps = chemfp.open(CHEBI_TARGETS)
+        targets = chemfp.load_fingerprints(itertools.islice(fps, 200, 220), fps.metadata)
+        results = chemfp.count_tanimoto_hits_symmetric(targets)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(results)
+        results = list(results)
+        self.assertEqual(len(results), 20)
+        self.assertSequenceEqual(results, [
+            ('CHEBI:15399', 4), ('CHEBI:15400', 4), ('CHEBI:15404', 0), ('CHEBI:15385', 0),
+            ('CHEBI:15386', 0), ('CHEBI:15388', 4), ('CHEBI:15389', 4), ('CHEBI:15392', 3),
+            ('CHEBI:15396', 5), ('CHEBI:15397', 5), ('CHEBI:15402', 3), ('CHEBI:15403', 3),
+            ('CHEBI:15387', 3), ('CHEBI:15398', 6), ('CHEBI:15393', 5), ('CHEBI:15394', 5),
+            ('CHEBI:15401', 0), ('CHEBI:15390', 1), ('CHEBI:15391', 1), ('CHEBI:15395', 0)])
+        
+    def test_count_with_explicit_default_threshold(self):
+        # Work around a bug: cannot do the symmetric search on a subarena
+        fps = chemfp.open(CHEBI_TARGETS)
+        targets = chemfp.load_fingerprints(itertools.islice(fps, 200, 220), fps.metadata)
+        results = chemfp.count_tanimoto_hits_symmetric(targets, threshold=0.7)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(results)
+        results = list(results)
+        self.assertEqual(len(results), 20)
+        self.assertSequenceEqual(results, [
+            ('CHEBI:15399', 4), ('CHEBI:15400', 4), ('CHEBI:15404', 0), ('CHEBI:15385', 0),
+            ('CHEBI:15386', 0), ('CHEBI:15388', 4), ('CHEBI:15389', 4), ('CHEBI:15392', 3),
+            ('CHEBI:15396', 5), ('CHEBI:15397', 5), ('CHEBI:15402', 3), ('CHEBI:15403', 3),
+            ('CHEBI:15387', 3), ('CHEBI:15398', 6), ('CHEBI:15393', 5), ('CHEBI:15394', 5),
+            ('CHEBI:15401', 0), ('CHEBI:15390', 1), ('CHEBI:15391', 1), ('CHEBI:15395', 0)])
+            
+    def test_count_with_different_threshold(self):
+        # Work around a bug: cannot do the symmetric search on a subarena
+        fps = chemfp.open(CHEBI_TARGETS)
+        targets = chemfp.load_fingerprints(itertools.islice(fps, 300, 350), fps.metadata)
+        results = chemfp.count_tanimoto_hits_symmetric(targets, threshold=0.95)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(results)
+        results = list(results)
+        self.assertEqual(len(results), 50)
+        self.assertSequenceEqual(results[:15], [
+            ('CHEBI:15522', 28), ('CHEBI:15496', 40), ('CHEBI:15501', 40), ('CHEBI:15507', 40),
+            ('CHEBI:15490', 29), ('CHEBI:15492', 29), ('CHEBI:15504', 29), ('CHEBI:15512', 41),
+            ('CHEBI:15515', 35), ('CHEBI:15524', 29), ('CHEBI:15531', 29), ('CHEBI:15535', 29),
+            ('CHEBI:15537', 35), ('CHEBI:15497', 27), ('CHEBI:15500', 31)])
+
+class TestThresholdSymmetric(unittest2.TestCase):
+    def test_search_with_fps_reader(self):
+        targets = chemfp.open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "`fingerprints` must be a FingerprintArena "
+                                     "with pre-computed popcount indices"):
+            chemfp.threshold_tanimoto_search_symmetric(targets)
+
+    def test_search(self):
+        # Work around a bug: cannot do the symmetric search on a subarena
+        fps = chemfp.open(CHEBI_TARGETS)
+        targets = chemfp.load_fingerprints(itertools.islice(fps, 200, 220), fps.metadata)
+        results = chemfp.threshold_tanimoto_search_symmetric(targets)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(results)
+        results = list(results)
+        self.assertEqual(len(results), 20)
+        self.assertSequenceEqual([(id, len(result)) for (id, result) in results], [
+            ('CHEBI:15399', 4), ('CHEBI:15400', 4), ('CHEBI:15404', 0), ('CHEBI:15385', 0),
+            ('CHEBI:15386', 0), ('CHEBI:15388', 4), ('CHEBI:15389', 4), ('CHEBI:15392', 3),
+            ('CHEBI:15396', 5), ('CHEBI:15397', 5), ('CHEBI:15402', 3), ('CHEBI:15403', 3),
+            ('CHEBI:15387', 3), ('CHEBI:15398', 6), ('CHEBI:15393', 5), ('CHEBI:15394', 5),
+            ('CHEBI:15401', 0), ('CHEBI:15390', 1), ('CHEBI:15391', 1), ('CHEBI:15395', 0)])
+        
+    def test_search_with_explicit_defaults(self):
+        # Work around a bug: cannot do the symmetric search on a subarena
+        fps = chemfp.open(CHEBI_TARGETS)
+        targets = chemfp.load_fingerprints(itertools.islice(fps, 200, 220), fps.metadata)
+        results = chemfp.threshold_tanimoto_search_symmetric(targets, threshold=0.7)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(results)
+        results = list(results)
+        self.assertEqual(len(results), 20)
+        self.assertSequenceEqual([(id, len(result)) for (id, result) in results], [
+            ('CHEBI:15399', 4), ('CHEBI:15400', 4), ('CHEBI:15404', 0), ('CHEBI:15385', 0),
+            ('CHEBI:15386', 0), ('CHEBI:15388', 4), ('CHEBI:15389', 4), ('CHEBI:15392', 3),
+            ('CHEBI:15396', 5), ('CHEBI:15397', 5), ('CHEBI:15402', 3), ('CHEBI:15403', 3),
+            ('CHEBI:15387', 3), ('CHEBI:15398', 6), ('CHEBI:15393', 5), ('CHEBI:15394', 5),
+            ('CHEBI:15401', 0), ('CHEBI:15390', 1), ('CHEBI:15391', 1), ('CHEBI:15395', 0)])
+            
+    def test_search_with_different_threshold(self):
+        # Work around a bug: cannot do the symmetric search on a subarena
+        fps = chemfp.open(CHEBI_TARGETS)
+        targets = chemfp.load_fingerprints(itertools.islice(fps, 300, 350), fps.metadata)
+        results = chemfp.threshold_tanimoto_search_symmetric(targets, threshold=0.95)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(results)
+        results = list(results)
+        self.assertEqual(len(results), 50)
+        self.assertSequenceEqual([(id, len(result)) for (id, result) in results[:15]], [
+            ('CHEBI:15522', 28), ('CHEBI:15496', 40), ('CHEBI:15501', 40), ('CHEBI:15507', 40),
+            ('CHEBI:15490', 29), ('CHEBI:15492', 29), ('CHEBI:15504', 29), ('CHEBI:15512', 41),
+            ('CHEBI:15515', 35), ('CHEBI:15524', 29), ('CHEBI:15531', 29), ('CHEBI:15535', 29),
+            ('CHEBI:15537', 35), ('CHEBI:15497', 27), ('CHEBI:15500', 31)])
+
+class TestKNearestSymmetric(unittest2.TestCase):
+    def test_search_with_fps_reader(self):
+        targets = chemfp.open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "`fingerprints` must be a FingerprintArena "
+                                     "with pre-computed popcount indices"):
+            chemfp.knearest_tanimoto_search_symmetric(targets)
+
+    def test_search(self):
+        # Work around a bug: cannot do the symmetric search on a subarena
+        fps = chemfp.open(CHEBI_TARGETS)
+        targets = chemfp.load_fingerprints(itertools.islice(fps, 200, 220), fps.metadata)
+        results = chemfp.knearest_tanimoto_search_symmetric(targets)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(results)
+        results = list(results)
+        self.assertEqual(len(results), 20)
+        self.assertSequenceEqual([(id, len(result)) for (id, result) in results], [
+            ('CHEBI:15399', 3), ('CHEBI:15400', 3), ('CHEBI:15404', 0), ('CHEBI:15385', 0),
+            ('CHEBI:15386', 0), ('CHEBI:15388', 3), ('CHEBI:15389', 3), ('CHEBI:15392', 3),
+            ('CHEBI:15396', 3), ('CHEBI:15397', 3), ('CHEBI:15402', 3), ('CHEBI:15403', 3),
+            ('CHEBI:15387', 3), ('CHEBI:15398', 3), ('CHEBI:15393', 3), ('CHEBI:15394', 3),
+            ('CHEBI:15401', 0), ('CHEBI:15390', 1), ('CHEBI:15391', 1), ('CHEBI:15395', 0)])
+        
+    def test_search_with_explicit_defaults(self):
+        # Work around a bug: cannot do the symmetric search on a subarena
+        fps = chemfp.open(CHEBI_TARGETS)
+        targets = chemfp.load_fingerprints(itertools.islice(fps, 200, 220), fps.metadata)
+        results = chemfp.knearest_tanimoto_search_symmetric(targets, k=3, threshold=0.7)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(results)
+        results = list(results)
+        self.assertEqual(len(results), 20)
+        self.assertSequenceEqual([(id, len(result)) for (id, result) in results], [
+            ('CHEBI:15399', 3), ('CHEBI:15400', 3), ('CHEBI:15404', 0), ('CHEBI:15385', 0),
+            ('CHEBI:15386', 0), ('CHEBI:15388', 3), ('CHEBI:15389', 3), ('CHEBI:15392', 3),
+            ('CHEBI:15396', 3), ('CHEBI:15397', 3), ('CHEBI:15402', 3), ('CHEBI:15403', 3),
+            ('CHEBI:15387', 3), ('CHEBI:15398', 3), ('CHEBI:15393', 3), ('CHEBI:15394', 3),
+            ('CHEBI:15401', 0), ('CHEBI:15390', 1), ('CHEBI:15391', 1), ('CHEBI:15395', 0)])
+            
+    def test_search_with_different_settings(self):
+        # Work around a bug: cannot do the symmetric search on a subarena
+        fps = chemfp.open(CHEBI_TARGETS)
+        targets = chemfp.load_fingerprints(itertools.islice(fps, 300, 350), fps.metadata)
+        results = chemfp.knearest_tanimoto_search_symmetric(targets, threshold=0.95, k=28)
+        with self.assertRaisesRegexp(TypeError, ".*has no len.*"):
+            len(results)
+        results = list(results)
+        self.assertEqual(len(results), 50)
+        self.assertSequenceEqual([(id, len(result)) for (id, result) in results[:15]], [
+            ('CHEBI:15522', 28), ('CHEBI:15496', 28), ('CHEBI:15501', 28), ('CHEBI:15507', 28),
+            ('CHEBI:15490', 28), ('CHEBI:15492', 28), ('CHEBI:15504', 28), ('CHEBI:15512', 28),
+            ('CHEBI:15515', 28), ('CHEBI:15524', 28), ('CHEBI:15531', 28), ('CHEBI:15535', 28),
+            ('CHEBI:15537', 28), ('CHEBI:15497', 27), ('CHEBI:15500', 28)])
+
+
 
 try:
     import bz2
