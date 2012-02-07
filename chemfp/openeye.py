@@ -475,7 +475,7 @@ def _get_format_setter(format=None):
 
     format_flag = _formats.get(fmt, None)
     if format_flag is None:
-        raise ValueError("Unsupported format %r" % (format,))
+        raise ValueError("Unknown structure format %r" % (format,))
 
     def set_format(ifs):
         ifs.SetFormat(format_flag)
@@ -558,7 +558,7 @@ def read_structures(filename=None, format=None, id_tag=None, aromaticity=None, e
     try:
         aromaticity_flavor = _aromaticity_flavors[aromaticity]
     except KeyError:
-        raise ValueError("Unsupported aromaticity name %r" % (aromaticity,))
+        raise ValueError("Unsupported aromaticity model %r" % (aromaticity,))
     error_handler = error_handlers.get_parse_error_handler(errors)
 
     # Check that that the format is known
