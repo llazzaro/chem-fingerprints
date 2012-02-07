@@ -1,6 +1,7 @@
 from __future__ import absolute_import, with_statement
 
 import os
+import sys
 import unittest2
 from cStringIO import StringIO
 import tempfile
@@ -896,7 +897,7 @@ class ReadStructureFingerprints(object):
         with self.assertRaisesRegexp(ValueError, "'errors' must be one of ignore, report, strict"):
             self._read_ids(self.type, PUBCHEM_SDF, errors="this-is-not.a.valid! setting")
 
-        
+    
 # Test classes for the different toolkits
 
 class TestOpenBabelReadStructureFingerprints(unittest2.TestCase, ReadStructureFingerprints):
@@ -1526,7 +1527,145 @@ class TestSave(unittest2.TestCase):
                                      "Fingerprint ids must not be the empty string"):
             arena.save(f)
 
-    
+
+# These help improve code coverage. They aren't yet part of the main public API.
+class TestIO(unittest2.TestCase):
+    def test_save_with_reader_metadata(self):
+        fps = chemfp.FingerprintIterator(chemfp.Metadata(type="Spam/1", num_bytes=4), [("AB", "1234")])
+        f = StringIO()
+        io.write_fps1_output(fps, f, chemfp.Metadata(num_bytes=4))
+        self.assertEqual(f.getvalue(), "#FPS1\n#num-bits=32\n#type=Spam/1\n3132334\tAB\n")
+        
+    def test_save_id_with_tab(self):
+        fps = [("A\tB", "1234")]
+        with self.assertRaisesRegexp(ValueError,
+                                     "Fingerprint ids must not contain a tab: 'A\\\\tB' in record 1"):
+            io.write_fps1_output(fps, StringIO(), chemfp.Metadata(num_bytes=4))
+
+    def test_save_id_with_newline(self):
+        fps = [("AB", "1234"), ("C\nD", "1324")]
+        with self.assertRaisesRegexp(ValueError,
+                                     "Fingerprint ids must not contain a newline: 'C\\\\nD' in record 2"):
+            io.write_fps1_output(fps, StringIO(), chemfp.Metadata(num_bytes=4))
+
+    def test_save_empty_id(self):
+        fps = [("AB", "1234"), ("", "1324")]
+        with self.assertRaisesRegexp(ValueError,
+                                     "Fingerprint ids must not be the empty string"):
+            io.write_fps1_output(fps, StringIO(), chemfp.Metadata(num_bytes=4))
+
+# This is hard to test through the main() API since the main() API
+# changes stdout / uses an alternate output.
+
+class TestOpenCompression(unittest2.TestCase):
+    def _makedir(self):
+        dirname = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, dirname)
+        return dirname
+        
+    def test_open_output(self):
+        self.assertIs(io.open_output(None), sys.stdout)
+        f = StringIO()
+        self.assertIs(io.open_output(f), f)
+        
+    def test_open_compressed_output_uncompressed(self):
+        self.assertIs(io.open_compressed_output(None, None), sys.stdout)
+        filename = os.path.join(self._makedir(), "spam.out")
+        f = io.open_compressed_output(filename, None)
+        try:
+            self.assertEqual(f.name, filename)
+            f.write("Check that it's writeable.\n");
+        finally:
+            f.close()
+        f = StringIO()
+        self.assertIs(f, io.open_compressed_output(f, None))
+
+    def test_open_compressed_output_gzip_stdout(self):
+        old_stdout = sys.stdout
+        sys.stdout = f = StringIO()
+        try:
+            g = io.open_compressed_output(None, ".gz")
+            g.write("Spam and eggs.")
+            g.close()
+        finally:
+            sys.stdout = old_stdout
+        t = gzip.GzipFile(fileobj=StringIO(f.getvalue())).read()
+        self.assertEqual(t, "Spam and eggs.")
+        
+    def test_open_compressed_output_gzip_filename(self):
+        filename = os.path.join(self._makedir(), "spam_gz")
+        f = io.open_compressed_output(filename, ".gz")
+        try:
+            self.assertEqual(f.name, filename)
+            f.write("Check that it's writeable.\n");
+            f.close()
+            f = gzip.GzipFile(filename)
+            s = f.read()
+            self.assertEqual(s, "Check that it's writeable.\n")
+        finally:
+            f.close()
+
+    def test_open_compressed_output_gzip_filelike(self):
+        f = StringIO()
+        g = io.open_compressed_output(f, ".gz")
+        g.write("This is a test.\n")
+        g.close()
+        s = f.getvalue()
+        t = gzip.GzipFile(fileobj=StringIO(s)).read()
+        self.assertEqual(t, "This is a test.\n")
+
+
+    ## def test_open_compressed_output_bzip_stdout(self):
+    ##     # This cannot be tested from Python since the bz2 library only
+    ##     # takes a filename.  The chemfp interface uses "/dev/stdout"
+    ##     # as a hack, but that is not interceptable.
+    ##     # I can't even check that I can connect to stdout since
+    ##     # this emits a header
+    ##     #g = io.open_compressed_output(None, ".bz2")
+        
+    def test_open_compressed_output_bzip_filename(self):
+        filename = os.path.join(self._makedir(), "spam_bz")
+        f = io.open_compressed_output(filename, ".bz2")
+        try:
+            self.assertEqual(f.name, filename)
+            f.write("Check that it's writeable.\n");
+            f.close()
+            f = bz2.BZ2File(filename)
+            s = f.read()
+            self.assertEqual(s, "Check that it's writeable.\n")
+        finally:
+            f.close()
+
+    def test_open_compressed_output_bzip_filelike(self):
+        with self.assertRaisesRegexp(NotImplementedError,
+                                     "bzip2 compression to file-like objects is not supported"):
+            io.open_compressed_output(StringIO(), ".bz2")
+
+    def test_open_compressed_output_xz(self):
+        with self.assertRaisesRegexp(NotImplementedError,
+                                     "xz compression is not supported"):
+            io.open_compressed_output(StringIO(), ".xz")
+
+    def test_unsupported_compression(self):
+        with self.assertRaisesRegexp(ValueError, "Unknown compression type '.Z'"):
+            io.open_compressed_output(StringIO(), ".Z")
+
+            ######
+
+    def test_cannot_read_bzip_input_file(self):
+        with self.assertRaisesRegexp(NotImplementedError,
+                                     "bzip decompression from file-like objects is not supported"):
+            io.open_compressed_input_universal(StringIO(), ".bz2")
+            
+    def test_cannot_read_bzip_input_file(self):
+        with self.assertRaisesRegexp(NotImplementedError, "xz decompression is not supported"):
+            io.open_compressed_input_universal(StringIO(), ".xz")
+
+    def test_unsupported_decompression(self):
+        with self.assertRaisesRegexp(ValueError, "Unknown compression type '.Z'"):
+            io.open_compressed_input_universal(StringIO(), ".Z")
+        
+            
         
 if __name__ == "__main__":
     unittest2.main()
