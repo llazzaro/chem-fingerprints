@@ -9,7 +9,7 @@ import shutil
 import itertools
 
 import chemfp
-from chemfp import bitops
+from chemfp import bitops, io
 try:
     import openbabel
     has_openbabel = True
@@ -1505,6 +1505,28 @@ class TestSave(unittest2.TestCase):
         self.assertSequenceEqual(arena_lines, arena2_lines)
 
     test_save_to_fps_bz2 = unittest2.skipUnless(has_bz2, "bz2 module not available")(test_save_to_fps_bz2)
+
+    def test_save_id_with_tab(self):
+        arena = chemfp.load_fingerprints([("A\tB", "1234")], chemfp.Metadata(num_bytes=4))
+        f = StringIO()
+        with self.assertRaisesRegexp(ValueError, "Fingerprint ids must not contain a tab: 'A\\\\tB' in record 1"):
+            arena.save(f)
+
+    def test_save_id_with_newline(self):
+        arena = chemfp.load_fingerprints([("AB", "1234"), ("C\nD", "1324")], chemfp.Metadata(num_bytes=4))
+        f = StringIO()
+        with self.assertRaisesRegexp(ValueError,
+                                     "Fingerprint ids must not contain a newline: 'C\\\\nD' in record 2"):
+            arena.save(f)
+
+    def test_save_empty_id(self):
+        arena = chemfp.load_fingerprints([("AB", "1234"), ("", "1324")], chemfp.Metadata(num_bytes=4))
+        f = StringIO()
+        with self.assertRaisesRegexp(ValueError,
+                                     "Fingerprint ids must not be the empty string"):
+            arena.save(f)
+
+    
         
 if __name__ == "__main__":
     unittest2.main()
