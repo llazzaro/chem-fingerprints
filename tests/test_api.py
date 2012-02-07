@@ -1555,6 +1555,15 @@ class TestIO(unittest2.TestCase):
                                      "Fingerprint ids must not be the empty string"):
             io.write_fps1_output(fps, StringIO(), chemfp.Metadata(num_bytes=4))
 
+    def test_write_fps1_output_to_file(self):
+        fps = [("AB", "1234")]
+        dirname = _tmpdir(self)
+        filename = os.path.join(dirname, "output.fps")
+        io.write_fps1_output(fps, filename, chemfp.Metadata(num_bytes=4, type="Blah/21"))
+        s = open(filename).read()
+        self.assertEqual(s, "#FPS1\n#num_bits=32\n#type=Blah/21\n31323334\tAB\n")
+
+
 # This is hard to test through the main() API since the main() API
 # changes stdout / uses an alternate output.
 
