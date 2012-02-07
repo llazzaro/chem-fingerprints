@@ -112,8 +112,11 @@ class FingerprintArena(FingerprintReader):
         try:
             io.write_fps1_magic(output)
             io.write_fps1_header(output, self.metadata)
-            for id, fp in self:
-                io.write_fps1_fingerprint(output, fp, id)
+            try:
+                for i, (id, fp) in enumerate(self):
+                    io.write_fps1_fingerprint(output, fp, id)
+            except ValueError, err:
+                raise ValueError("%s in record %i" % (err, i+1))
         finally:
             if need_close:
                 output.close()

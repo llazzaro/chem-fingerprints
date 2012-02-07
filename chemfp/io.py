@@ -249,11 +249,11 @@ ignore_pipe_errors = _IgnorePipeErrors()
 
 def write_fps1_fingerprint(outfile, fp, id):
     if "\t" in id:
-        raise ValueError("fingerprint ids must not contain a tab: %r" % (id,))
+        raise ValueError("Fingerprint ids must not contain a tab: %r" % (id,))
     if "\n" in id:
-        raise ValueError("fingerprint ids must not contain a newline: %r" % (id,))
+        raise ValueError("Fingerprint ids must not contain a newline: %r" % (id,))
     if not id:
-        raise ValueError("fingerprint ids must contain characters: %r" % (id,))
+        raise ValueError("Fingerprint ids must not be the empty string")
     
     outfile.write("%s\t%s\n" % (binascii.hexlify(fp), id))
 
