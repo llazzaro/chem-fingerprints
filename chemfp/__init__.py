@@ -402,19 +402,19 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
     ### Start the search now so compatibility errors are raised eagerly
 
     # Start iterating through the subarenas, and get the first of those
-    arenas = queries.iter_arenas(arena_size)
+    subarenas = queries.iter_arenas(arena_size)
     try:
-        query_arena = arenas.next()
+        first_query_arena = subarenas.next()
     except StopIteration:
         # There are no subarenas; return an empty iterator
         return iter([])
 
     # Get the first result, and hold on to it for the generator
-    results = knearest_search(query_arena, targets, threshold=threshold)
+    first_results = knearest_search(first_query_arena, targets, k=k, threshold=threshold)
 
     def knearest_tanimoto_search():
         # Return results for the first arena
-        for query_id, row in zip(query_arena.ids, results):
+        for query_id, row in zip(first_query_arena.ids, first_results):
             yield query_id, row
 
         # and for the subarenas
@@ -425,32 +425,44 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
         
     return knearest_tanimoto_search()
 
-def count_tanimoto_hits_symmetric(fingerprints, threshold):
+def count_tanimoto_hits_symmetric(fingerprints, threshold=0.7):
     from . import readers, search
     if (isinstance(fingerprints, readers.FPSReader) or
         not getattr(fingerprints, "popcount_indices", None)):
         raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
 
-    for id, count in zip(fingerprints.ids, search.count_tanimoto_hits_symmetric(fingerprint, threshold)):
-        yield id, count
+    # Start the search now so the errors are caught early
+    results = search.count_tanimoto_hits_symmetric(fingerprints, threshold)
+    def count_tanimoto_hits_symmetric_internal():
+        for id, count in zip(fingerprints.ids, results):
+            yield id, count
+    return count_tanimoto_hits_symmetric_internal()
 
-def threshold_tanimoto_search_symmetric(fingerprints, threshold):
+def threshold_tanimoto_search_symmetric(fingerprints, threshold=0.7):
     from . import readers, search
     if (isinstance(fingerprints, readers.FPSReader) or
         not getattr(fingerprints, "popcount_indices", None)):
         raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
 
-    for id, hits in zip(fingerprints.ids, search.threshold_tanimoto_search_symmetric(fingerprint, threshold)):
-        yield id, hits
+    # Start the search now so the errors are caught early
+    results = search.threshold_tanimoto_search_symmetric(fingerprints, threshold)
+    def threshold_tanimoto_search_symmetric_internal():
+        for id, hits in zip(fingerprints.ids, results):
+            yield id, hits
+    return threshold_tanimoto_search_symmetric_internal()
 
-def knearest_tanimoto_search_symmetric(fingerprints, k, threshold):
+def knearest_tanimoto_search_symmetric(fingerprints, k=3, threshold=0.7):
     from . import readers, search
     if (isinstance(fingerprints, readers.FPSReader) or
         not getattr(fingerprints, "popcount_indices", None)):
         raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
 
-    for id, hits in zip(fingerprints.ids, search.knearest_tanimoto_search_symmetric(fingerprint, threshold)):
-        yield id, hits
+    # Start the search now so the errors are caught early
+    results = search.knearest_tanimoto_search_symmetric(fingerprints, k, threshold)
+    def knearest_tanimoto_search_symmetric_internal():
+        for id, hits in zip(fingerprints.ids, results):
+            yield id, hits
+    return knearest_tanimoto_search_symmetric_internal()
         
 
 def check_fp_problems(fp, metadata):
