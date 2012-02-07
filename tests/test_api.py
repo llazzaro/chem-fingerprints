@@ -1533,8 +1533,8 @@ class TestIO(unittest2.TestCase):
     def test_save_with_reader_metadata(self):
         fps = chemfp.FingerprintIterator(chemfp.Metadata(type="Spam/1", num_bytes=4), [("AB", "1234")])
         f = StringIO()
-        io.write_fps1_output(fps, f, chemfp.Metadata(num_bytes=4))
-        self.assertEqual(f.getvalue(), "#FPS1\n#num-bits=32\n#type=Spam/1\n3132334\tAB\n")
+        io.write_fps1_output(fps, f)
+        self.assertEqual(f.getvalue(), "#FPS1\n#num_bits=32\n#type=Spam/1\n31323334\tAB\n")
         
     def test_save_id_with_tab(self):
         fps = [("A\tB", "1234")]
