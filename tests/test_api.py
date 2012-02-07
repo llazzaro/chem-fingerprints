@@ -1631,11 +1631,15 @@ class TestOpenCompression(unittest2.TestCase):
             self.assertEqual(s, "Check that it's writeable.\n")
         finally:
             f.close()
+    test_open_compressed_output_bzip_filename = unittest2.skipUnless(has_bz2, "bz2 module not available")(
+        test_open_compressed_output_bzip_filename)
 
     def test_open_compressed_output_bzip_filelike(self):
         with self.assertRaisesRegexp(NotImplementedError,
                                      "bzip2 compression to file-like objects is not supported"):
             io.open_compressed_output(StringIO(), ".bz2")
+    test_open_compressed_output_bzip_filelike = unittest2.skipUnless(has_bz2, "bz2 module not available")(
+        test_open_compressed_output_bzip_filelike)
 
     def test_open_compressed_output_xz(self):
         with self.assertRaisesRegexp(NotImplementedError,
@@ -1652,6 +1656,10 @@ class TestOpenCompression(unittest2.TestCase):
         with self.assertRaisesRegexp(NotImplementedError,
                                      "bzip decompression from file-like objects is not supported"):
             io.open_compressed_input_universal(StringIO(), ".bz2")
+    test_cannot_read_bzip_input_file = unittest2.skipUnless(has_bz2, "bz2 module not available")(
+        test_cannot_read_bzip_input_file)
+                    
+            
             
     def test_cannot_read_xz_input_file(self):
         with self.assertRaisesRegexp(NotImplementedError, "xz decompression is not supported"):
@@ -1661,7 +1669,6 @@ class TestOpenCompression(unittest2.TestCase):
         with self.assertRaisesRegexp(ValueError, "Unknown compression type '.Z'"):
             io.open_compressed_input_universal(StringIO(), ".Z")
         
-            
         
 if __name__ == "__main__":
     unittest2.main()
