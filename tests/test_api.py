@@ -1245,6 +1245,12 @@ class TestCountSymmetric(unittest2.TestCase):
                                      "with pre-computed popcount indices"):
             chemfp.count_tanimoto_hits_symmetric(targets)
 
+    def test_count_without_indices(self):
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
+        with self.assertRaisesRegexp(ValueError, "`fingerprints` must be a FingerprintArena "
+                                     "with pre-computed popcount indices"):
+            chemfp.count_tanimoto_hits_symmetric(targets)
+
     def test_count(self):
         # Work around a bug: cannot do the symmetric search on a subarena
         fps = chemfp.open(CHEBI_TARGETS)
@@ -1299,6 +1305,12 @@ class TestThresholdSymmetric(unittest2.TestCase):
                                      "with pre-computed popcount indices"):
             chemfp.threshold_tanimoto_search_symmetric(targets)
 
+    def test_search_without_indices(self):
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
+        with self.assertRaisesRegexp(ValueError, "`fingerprints` must be a FingerprintArena "
+                                     "with pre-computed popcount indices"):
+            chemfp.threshold_tanimoto_search_symmetric(targets)
+
     def test_search(self):
         # Work around a bug: cannot do the symmetric search on a subarena
         fps = chemfp.open(CHEBI_TARGETS)
@@ -1349,6 +1361,12 @@ class TestThresholdSymmetric(unittest2.TestCase):
 class TestKNearestSymmetric(unittest2.TestCase):
     def test_search_with_fps_reader(self):
         targets = chemfp.open(CHEBI_TARGETS)
+        with self.assertRaisesRegexp(ValueError, "`fingerprints` must be a FingerprintArena "
+                                     "with pre-computed popcount indices"):
+            chemfp.knearest_tanimoto_search_symmetric(targets)
+
+    def test_search_without_indices(self):
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
         with self.assertRaisesRegexp(ValueError, "`fingerprints` must be a FingerprintArena "
                                      "with pre-computed popcount indices"):
             chemfp.knearest_tanimoto_search_symmetric(targets)
