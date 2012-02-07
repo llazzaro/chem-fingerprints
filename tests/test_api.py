@@ -20,9 +20,11 @@ try:
     # I need to import 'oechem' to make sure I load the shared libries
     # XXX Check for license?
     from openeye import oechem
-    has_openeye = False
+    from chemfp import openeye
+    has_openeye = True
 except ImportError:
     has_openeye = False
+    openeye = None
 
 try:
     from rdkit import Chem
@@ -833,7 +835,6 @@ class ReadStructureFingerprints(object):
     def test_read_bad_format_specification(self):
         with self.assertRaisesRegexp(ValueError, "Incorrect format syntax '@'"):
             self._read_ids(self.type, source=PUBCHEM_SDF, format="@")
-        
 
     def test_read_id_tag(self):
         ids = self._read_ids(self.type, source=PUBCHEM_SDF, id_tag = "PUBCHEM_MOLECULAR_FORMULA")
@@ -908,10 +909,32 @@ TestOpenBabelReadStructureFingerprints = (
 )
 
 class TestOpenEyeReadStructureFingerprints(unittest2.TestCase, ReadStructureFingerprints):
-    type = "OpenEye-Path/1"
-    num_bits = 1024
-    fp_size = 128
+    type = "OpenEye-Path/" + getattr(openeye, "OEGRAPHSIM_API_VERSION", "1")
+    num_bits = 4096
+    fp_size = 512
 
+    # I haven't yet figured out how 'aromaticity' is exposed in the high-level interface
+    # For now, test the toolkit-specific API
+    def test_read_unknown_aromaticity(self):
+        with self.assertRaisesRegexp(ValueError, "Unsupported aromaticity model 'smelly'"):
+            openeye.read_structures(PUBCHEM_SDF, aromaticity="smelly")
+
+    def test_default_aromaticity(self):
+        mol_reader = openeye.read_structures(PUBCHEM_SDF)
+        default_smiles = [oechem.OECreateIsoSmiString(mol) for (id, mol) in mol_reader]
+
+        mol_reader = openeye.read_structures(PUBCHEM_SDF, aromaticity="openeye")
+        openeye_smiles = [oechem.OECreateIsoSmiString(mol) for (id, mol) in mol_reader]
+        self.assertSequenceEqual(default_smiles, openeye_smiles)
+
+        mol_reader = openeye.read_structures(PUBCHEM_SDF, aromaticity="mdl")
+        mdl_smiles = [oechem.OECreateIsoSmiString(mol) for (id, mol) in mol_reader]
+        for (smi1, smi2) in zip(default_smiles, mdl_smiles):
+            if (smi1 == smi2):
+                break
+        else:
+            raise AssertionError("MDL aromaticity model should not be the same as OpenEye's")
+        
 TestOpenEyeReadStructureFingerprints = (
   unittest2.skipUnless(has_openeye, "OpenEye not available")(TestOpenEyeReadStructureFingerprints)
 )
