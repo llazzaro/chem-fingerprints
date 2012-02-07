@@ -250,59 +250,6 @@ else:
     circular_atom_value_to_description = circular_bond_value_to_description = \
         tree_atom_value_to_description = tree_bond_value_to_description = not_available
     
-## def decode_path_parameters(parameters):
-##     fingerprinter_kwargs = _maccs_defaults.copy()
-##     for name, value in parameters:
-##         if name not in _maccs_decoders:
-##             raise ValueError("Unknown OpenEye-Path parameter %r" % (name,))
-##         decoder = _maccs_decoders[name]
-##         fingerprinter_kwargs[name] = decoder(value)
-##     return fingerprinter_kwargs
-
-_path_encoders = {"numbits": str,
-                  "minbonds": str,
-                  "maxbonds": str,
-                  "atype": path_atom_value_to_description,
-                  "btype": path_bond_value_to_description}
-
-def encode_path_parameters(fingerprinter_kwargs):
-    assert len(fingerprinter_kwargs) == len(_path_encoders)
-    parameters = {}
-    for name, encoder in _path_encoders.items():
-        value = fingerprinter_kwargs[name]
-        parameters[name] = encoder(value)
-    return parameters
-
-if OEGRAPHSIM_API_VERSION == "2":
-    _circular_encoders = {"numbits": str,
-                          "minradius": str,
-                          "maxradius": str,
-                          "atype": circular_atom_value_to_description,
-                          "btype": circular_bond_value_to_description}
-
-    def encode_circular_parameters(fingerprinter_kwargs):
-        assert len(fingerprinter_kwargs) == len(_circular_encoders)
-        parameters = {}
-        for name, encoder in _circular_encoders.items():
-            value = fingerprinter_kwargs[name]
-            parameters[name] = encoder(value)
-        return parameters
-
-    _tree_encoders = {"numbits": str,
-                      "minbonds": str,
-                      "maxbonds": str,
-                      "atype": tree_atom_value_to_description,
-                      "btype": tree_bond_value_to_description}
-
-    def encode_tree_parameters(fingerprinter_kwargs):
-        assert len(fingerprinter_kwargs) == len(_tree_encoders)
-        parameters = {}
-        for name, encoder in _tree_encoders.items():
-            value = fingerprinter_kwargs[name]
-            parameters[name] = encoder(value)
-        return parameters
-
-
 ##### Create a function which generate fingerprints
 
 # I use functions which return functions because it was a nice way to
