@@ -50,6 +50,12 @@ except NameError:
     def next(it):
         return it.next()
 
+def _tmpdir(testcase):
+    dirname = tempfile.mkdtemp()
+    testcase.addCleanup(shutil.rmtree, dirname)
+    return dirname
+
+
 QUERY_ARENA = next(chemfp.open(CHEBI_QUERIES).iter_arenas(10))
         
 class CommonReaderAPI(object):
@@ -1450,14 +1456,9 @@ try:
 except ImportError:
     has_bz2 = False
 
-class TestSave(unittest2.TestCase):
-    def setUp(self):
-        self.dirname = tempfile.mkdtemp()
-    def tearDown(self):
-        shutil.rmtree(self.dirname)
-        
+class TestSave(unittest2.TestCase):        
     def test_save_to_fps(self):
-        filename = os.path.join(self.dirname, "output.fps")
+        filename = os.path.join(_tmpdir(self), "output.fps")
         arena = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
         arena.save(filename)
 
@@ -1480,7 +1481,7 @@ class TestSave(unittest2.TestCase):
         self.assertSequenceEqual(arena_lines, arena2_lines)
 
     def test_save_to_fps_gz(self):
-        filename = os.path.join(self.dirname, "output.fps.gz")
+        filename = os.path.join(_tmpdir(self), "output.fps.gz")
         arena = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
         arena.save(filename)
         
@@ -1493,7 +1494,7 @@ class TestSave(unittest2.TestCase):
         self.assertSequenceEqual(arena_lines, arena2_lines)
 
     def test_save_to_fps_bz2(self):
-        filename = os.path.join(self.dirname, "output.fps.bz2")
+        filename = os.path.join(_tmpdir(self), "output.fps.bz2")
         arena = chemfp.load_fingerprints(CHEBI_TARGETS, reorder=False)
         arena.save(filename)
         
@@ -1558,11 +1559,6 @@ class TestIO(unittest2.TestCase):
 # changes stdout / uses an alternate output.
 
 class TestOpenCompression(unittest2.TestCase):
-    def _makedir(self):
-        dirname = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, dirname)
-        return dirname
-        
     def test_open_output(self):
         self.assertIs(io.open_output(None), sys.stdout)
         f = StringIO()
@@ -1570,7 +1566,7 @@ class TestOpenCompression(unittest2.TestCase):
         
     def test_open_compressed_output_uncompressed(self):
         self.assertIs(io.open_compressed_output(None, None), sys.stdout)
-        filename = os.path.join(self._makedir(), "spam.out")
+        filename = os.path.join(_tmpdir(self), "spam.out")
         f = io.open_compressed_output(filename, None)
         try:
             self.assertEqual(f.name, filename)
@@ -1593,7 +1589,7 @@ class TestOpenCompression(unittest2.TestCase):
         self.assertEqual(t, "Spam and eggs.")
         
     def test_open_compressed_output_gzip_filename(self):
-        filename = os.path.join(self._makedir(), "spam_gz")
+        filename = os.path.join(_tmpdir(self), "spam_gz")
         f = io.open_compressed_output(filename, ".gz")
         try:
             self.assertEqual(f.name, filename)
@@ -1624,7 +1620,7 @@ class TestOpenCompression(unittest2.TestCase):
     ##     #g = io.open_compressed_output(None, ".bz2")
         
     def test_open_compressed_output_bzip_filename(self):
-        filename = os.path.join(self._makedir(), "spam_bz")
+        filename = os.path.join(_tmpdir(self), "spam_bz")
         f = io.open_compressed_output(filename, ".bz2")
         try:
             self.assertEqual(f.name, filename)
@@ -1657,7 +1653,7 @@ class TestOpenCompression(unittest2.TestCase):
                                      "bzip decompression from file-like objects is not supported"):
             io.open_compressed_input_universal(StringIO(), ".bz2")
             
-    def test_cannot_read_bzip_input_file(self):
+    def test_cannot_read_xz_input_file(self):
         with self.assertRaisesRegexp(NotImplementedError, "xz decompression is not supported"):
             io.open_compressed_input_universal(StringIO(), ".xz")
 
