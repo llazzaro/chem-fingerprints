@@ -229,7 +229,7 @@ def main(args=None):
     if k == "all":
         pass
     elif k < 0:
-        parser.error("--k-nearest must non-negative or 'all'")
+        parser.error("--k-nearest must be non-negative or 'all'")
 
     if not (0.0 <= threshold <= 1.0):
         parser.error("--threshold must be between 0.0 and 1.0, inclusive")
@@ -243,9 +243,9 @@ def main(args=None):
         if args.scan:
             parser.error("Cannot specify --scan with an --NxN search")
         if args.hex_query:
-            parser.error("Cannot specify both --NxN and --hex_query")
+            parser.error("Cannot specify --hex-query with an --NxN search")
         if args.queries:
-            parser.error("Cannot specify both --NxN and --queries")
+            parser.error("Cannot specify --queries with an --NxN search")
         do_NxN_searches(args, k, threshold, target_filename)
         return
             
@@ -276,7 +276,7 @@ def main(args=None):
     if args.hex_query is not None:
         try:
             query_fp = args.hex_query.decode("hex")
-        except ValueError, err:
+        except TypeError, err:
             parser.error("--hex-query is not a hex string: %s" % (err,))
 
         for (severity, error, msg_template) in chemfp.check_fp_problems(query_fp, targets.metadata):
