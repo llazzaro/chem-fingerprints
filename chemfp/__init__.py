@@ -551,7 +551,7 @@ class Metadata(object):
             num_bits = num_bytes * 8
         else:
             if (num_bits + 7)//8 != num_bytes:
-                raise TypeError("num_bits of %d is incompatible with num_bytes of %d" %
+                raise ValueError("num_bits of %d is incompatible with num_bytes of %d" %
                                 (num_bits, num_bytes))
             
         self.num_bits = num_bits
@@ -569,7 +569,7 @@ class Metadata(object):
         self.date = date
 
     def __repr__(self):
-        return "Metadata(num_bits=%(num_bits)s, num_bytes=%(num_bytes)d, type=%(type)r, aromaticity=%(aromaticity)r, sources=%(sources)r, software=%(software)r, date=%(date)r)" % self.__dict__
+        return "Metadata(num_bits=%(num_bits)r, num_bytes=%(num_bytes)r, type=%(type)r, aromaticity=%(aromaticity)r, sources=%(sources)r, software=%(software)r, date=%(date)r)" % self.__dict__
 
     def __str__(self):
         from cStringIO import StringIO
