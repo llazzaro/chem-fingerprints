@@ -1678,7 +1678,45 @@ class TestOpenCompression(unittest2.TestCase):
     def test_unsupported_decompression(self):
         with self.assertRaisesRegexp(ValueError, "Unknown compression type '.Z'"):
             io.open_compressed_input_universal(StringIO(), ".Z")
-        
+
+
+# Improve code coverage by testing the parts not tested elsewhere
+class TestMetadata(unittest2.TestCase):
+    def test_bit_byte_incompatibility(self):
+        with self.assertRaisesRegexp(ValueError, "num_bits of 9 is incompatible with num_bytes of 1"):
+            chemfp.Metadata(num_bits=9, num_bytes=1)
+
+    def test_sources_as_string_is_allowed(self):
+        metadata = chemfp.Metadata(sources="Spam")
+        metadata.sources = ["Spam"]
+
+    def test_basic_repr(self):
+        s = repr(chemfp.Metadata())
+        self.assertEqual(s, "Metadata(num_bits=None, num_bytes=None, type=None, aromaticity=None, sources=[], software=None, date=None)")
+    
+    def test_full_repr(self):
+        s = repr(chemfp.Metadata(num_bits=14, num_bytes=2, type="1-Adam/12", aromaticity="smelly",
+                                 sources=["one", "two"], software="My head", date="1970-08-22T18:12:30"))
+        self.assertEqual(s,
+                         "Metadata(num_bits=14, num_bytes=2, type='1-Adam/12', " +
+                         "aromaticity='smelly', sources=['one', 'two'], software='My head', " +
+                         "date='1970-08-22T18:12:30')")
+    def test_basic_str(self):
+        s = str(chemfp.Metadata())
+        self.assertEqual(s, "")
+
+    def test_full_str(self):
+        s = str(chemfp.Metadata(num_bits=14, num_bytes=2, type="1-Adam/12", aromaticity="smelly",
+                                sources=["one", "two"], software="My head", date="1970-08-22T18:12:30"))
+        lines = s.splitlines()
+        self.assertSequenceEqual(lines,
+                                 ["#num_bits=14",
+                                  '#type=1-Adam/12',
+                                  '#software=My head',
+                                  '#aromaticity=smelly',
+                                  '#source=one',
+                                  '#source=two',
+                                  '#date=1970-08-22T18:12:30'])
         
 if __name__ == "__main__":
     unittest2.main()
