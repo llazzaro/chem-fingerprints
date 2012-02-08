@@ -1601,7 +1601,8 @@ class TestOpenCompression(unittest2.TestCase):
         filename = os.path.join(_tmpdir(self), "spam_gz")
         f = io.open_compressed_output(filename, ".gz")
         try:
-            self.assertEqual(f.name, filename)
+            if hasattr(f, "name"): # doesn't work before Python 2.7
+                self.assertEqual(f.name, filename)
             f.write("Check that it's writeable.\n");
             f.close()
             f = gzip.GzipFile(filename)
