@@ -19,6 +19,7 @@ class CountRunner(support.Runner):
 runner = SimsearchRunner(simsearch.main)
 run = runner.run
 run_split = runner.run_split
+run_exit = runner.run_exit
 
 count_runner = CountRunner(simsearch.main)
 count_run_split = count_runner.run_split
@@ -306,7 +307,36 @@ class TestNxN(unittest2.TestCase):
         
         
         
-        
+class TestCompatibility(unittest2.TestCase):
+    def test_incompatible_fingerprint(self):
+        errmsg = run_exit(["--hex-query", "dead"], SIMPLE_FPS)
+        self.assertIn("error: query fingerprint contains 2 bytes but", errmsg)
+        self.assertIn("simple.fps", errmsg)
+        self.assertIn("has 4 byte fingerprints", errmsg)
+
+    def test_targets_is_not_an_fps_file(self):
+        errmsg = run_exit(["--queries", SIMPLE_FPS])
+        self.assertIn("Cannot open targets file:", errmsg)
+        self.assertIn("Unable to determine fingerprint format type from", errmsg)
+        self.assertIn("pubchem.sdf", errmsg)
+
+    def test_targets_does_not_exist(self):
+        errmsg = run_exit(["--queries", SIMPLE_FPS], "/this/file/does_not_exist_t")
+        self.assertIn("Cannot open targets file:", errmsg)
+        self.assertIn("No such file or directory", errmsg) # Mac specific?
+        self.assertIn("does_not_exist_t", errmsg)
+
+    def test_queries_is_not_an_fps_file(self):
+        errmsg = run_exit(["--queries", support.PUBCHEM_SDF], SIMPLE_FPS)
+        self.assertIn("Cannot open queries file:", errmsg)
+        self.assertIn("Unable to determine fingerprint format type from ", errmsg)
+        self.assertIn("pubchem.sdf", errmsg)
+
+    def test_queries_does_not_exist(self):
+        errmsg = run_exit(["--queries", "/this/file/does_not_exist_q"], SIMPLE_FPS)
+        self.assertIn("Cannot open queries file:", errmsg)
+        self.assertIn("No such file or directory", errmsg) # Mac specific?
+        self.assertIn("does_not_exist_q", errmsg)
         
 if __name__ == "__main__":
     unittest2.main()
