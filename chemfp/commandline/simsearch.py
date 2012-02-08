@@ -267,7 +267,11 @@ def main(args=None):
 
     # Open the target file. This reads just enough to get the header.
 
-    targets = chemfp.open(target_filename)
+    try:
+        targets = chemfp.open(target_filename)
+    except (IOError, ValueError), err:
+        sys.stderr.write("Cannot open targets file: %s" % err)
+        raise SystemExit(1)
 
     if args.hex_query is not None:
         try:
@@ -288,7 +292,11 @@ def main(args=None):
         query_filename = None
     else:
         query_filename = args.queries
-        queries = chemfp.open(query_filename, format=args.query_format)
+        try:
+            queries = chemfp.open(query_filename, format=args.query_format)
+        except (ValueError, IOError), err:
+            sys.stderr.write("Cannot open queries file: %s\n" % (err,))
+            raise SystemExit(1)
 
     batch_size = args.batch_size
     query_arena_iter = queries.iter_arenas(batch_size)
