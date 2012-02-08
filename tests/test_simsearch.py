@@ -23,6 +23,7 @@ run_exit = runner.run_exit
 
 count_runner = CountRunner(simsearch.main)
 count_run_split = count_runner.run_split
+count_run_exit = count_runner.run_exit
 
 SIMPLE_FPS = support.fullpath("simple.fps")
 
@@ -112,6 +113,16 @@ class TestOptions(unittest2.TestCase):
                           ["7\tQuery1\tdeadbeef\t1.000\tDeaf Beef\t0.960\tDEADdead\t0.840\t"
                            "several\t0.240\tbit1\t0.042\ttwo_bits\t0.040\tzeros\t0.000"])
 
+    def test_knearest_all(self):
+        header, lines = run_split("--hex-query deadbeef --k-nearest all", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                           "#software": SOFTWARE,
+                           "#type": "Tanimoto k=all threshold=0.0"})
+        self.assertEquals(lines,
+                          ['7\tQuery1\tzeros\t0.000\tbit1\t0.042\ttwo_bits\t0.040\tseveral\t0.240\tdeadbeef\t1.000\tDEADdead\t0.840\tDeaf Beef\t0.960'])
+
     def test_threshold(self):
         header, lines = run_split("--hex-query deadbeef --threshold 0.9", 1, SIMPLE_FPS)
         self.assertIn("simple.fps", header.pop("#targets"))
@@ -131,6 +142,17 @@ class TestOptions(unittest2.TestCase):
                            "#type": "Tanimoto k=1 threshold=0.9"})
         self.assertEquals(lines,
                           ["1\tQuery1\tdeadbeef\t1.000"])
+
+    def test_threshold_and_k_all(self):
+        header, lines = run_split("--hex-query deadbeef --threshold 0.9 --k-nearest all", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                           "#software": SOFTWARE,
+                           "#type": "Tanimoto k=all threshold=0.9"})
+        self.assertEquals(lines,
+                          ["2\tQuery1\tdeadbeef\t1.000\tDeaf Beef\t0.960"])
+
     
     def test_stdin(self):
         header, lines = run_split_stdin("deadbeef\tspam\n", "", 1, SIMPLE_FPS)
@@ -337,6 +359,66 @@ class TestCompatibility(unittest2.TestCase):
         self.assertIn("Cannot open queries file:", errmsg)
         self.assertIn("No such file or directory", errmsg) # Mac specific?
         self.assertIn("does_not_exist_q", errmsg)
+
+class TestCommandlineErrors(unittest2.TestCase):
+    def test_mix_count_and_knearest(self):
+        errmsg = count_run_exit("--count --hex-query beefcafe --k-nearest 4", SIMPLE_FPS)
+        self.assertIn("--count search does not support --k-nearest", errmsg)
         
+    def test_negative_k(self):
+        errmsg = run_exit("--hex-query beefcafe -k -1", SIMPLE_FPS)
+        self.assertIn("--k-nearest must be non-negative or 'all'", errmsg)
+
+    def test_negative_threshold(self):
+        errmsg = run_exit("--hex-query beefcafe --threshold -0.1", SIMPLE_FPS)
+        self.assertIn("--threshold must be between 0.0 and 1.0, inclusive", errmsg)
+        errmsg = run_exit("--hex-query beefcafe --threshold -1.0", SIMPLE_FPS)
+        self.assertIn("--threshold must be between 0.0 and 1.0, inclusive", errmsg)
+
+    def test_too_large_threshold(self):
+        errmsg = run_exit("--hex-query beefcafe --threshold 1.1", SIMPLE_FPS)
+        self.assertIn("--threshold must be between 0.0 and 1.0, inclusive", errmsg)
+
+    def test_non_positive_batch_size(self):
+        errmsg = run_exit("--hex-query beefcafe --batch-size 0", SIMPLE_FPS)
+        self.assertIn("--batch-size must be positive", errmsg)
+        errmsg = run_exit("--hex-query beefcafe --batch-size -1", SIMPLE_FPS)
+        self.assertIn("--batch-size must be positive", errmsg)
+
+    def test_NxN_with_scan(self):
+        errmsg = run_exit("--NxN --scan", SIMPLE_FPS)
+        self.assertIn("Cannot specify --scan with an --NxN search", errmsg)
+
+    def test_NxN_with_hex_query(self):
+        errmsg = run_exit("--NxN --hex-query feedfeed", SIMPLE_FPS)
+        self.assertIn("Cannot specify --hex-query with an --NxN search", errmsg)
+        
+    def test_NxN_with_queries(self):
+        errmsg = run_exit("--NxN --queries ignored", SIMPLE_FPS)
+        self.assertIn("Cannot specify --queries with an --NxN search", errmsg)
+
+    def test_scan_with_memory(self):
+        errmsg = run_exit("--scan --memory", SIMPLE_FPS)
+        self.assertIn("Cannot specify both --scan and --memory", errmsg)
+        
+    def test_hex_query_with_queries(self):
+        errmsg = run_exit("--hex-query faceb00c --queries not_important", SIMPLE_FPS)
+        self.assertIn("Cannot specify both --hex-query and --queries", errmsg)
+
+    def test_hex_query_with_bad_character(self):
+        errmsg = run_exit("--hex-query faceb00k", SIMPLE_FPS)
+        self.assertIn("--hex-query is not a hex string: Non-hexadecimal digit found", errmsg)
+        
+    def test_hex_query_with_bad_length(self):
+        errmsg = run_exit("--hex-query deadbeef2", SIMPLE_FPS)
+        self.assertIn("--hex-query is not a hex string: Odd-length string", errmsg)
+
+    def test_query_id_with_bad_character(self):
+        for (bad_id, name) in (("A\tB", "tab"), ("C\nD", "newline"),
+                               ("E\rF", "control-return"), ("G\0H", "NUL")):
+            errmsg = run_exit(["--hex-query", "abcd1234", "--query-id", bad_id], SIMPLE_FPS)
+            self.assertIn("--query-id must not contain the %s character" % name, errmsg)
+        
+    
 if __name__ == "__main__":
     unittest2.main()
