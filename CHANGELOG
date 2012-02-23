@@ -1,6 +1,14 @@
 What's new in 1.1 (in development)
 ==================
 
+The command-line search tools support an --NxN option for when the
+queries and targets are the same. (The search results do not include
+the diagonal term.)  The implemention takes advantage of the symmetry
+to get almost a two-fold performance increase. This option assumes
+that everything will fit into memory.
+
+Added public APIs for the symmetric searches.
+
 New popcount algorithms:
   - Lauradoux and POPCNT versions contributed by Kim Walisch
       These are 2x and 3x faster than the original method.
