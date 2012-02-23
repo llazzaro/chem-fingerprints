@@ -1,0 +1,41 @@
+Library for working with cheminformatics fingerprints
+
+Unless otherwise noted, the chemfp software is distributed under the
+terms of "the MIT license" which follows:
+
+=====================================================================
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+=====================================================================
+
+The maintainer and primary copyright holder is
+ - Andrew Dalke, Andrew Dalke Scientific AB
+
+Other copyright holders are:
+ - Kim Walisch, <kim.walisch@gmail.com>
+ - Stanford Univeristy (written by Imran S. Haque <ihaque@cs.stanford.edu>)
+ - Python Software Foundation (the heapq code)
+
+This package also includes (nearly) unmodified copies of
+ - chemfp/progressbar/ by Nilton Volpato under the LGPL 2.1 and/or BSD license
+ - chemfp/futures/ by Brian Quinlan under the Python license
+ - chemfp/Watcher.py by Allen Downey under the Python license
+ - chemfp/argparse.py by Steven J. Bethard under the Apache License 2.0
