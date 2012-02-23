@@ -22,8 +22,14 @@ which in turn uses a C extension for the performance
 critical sections. The parts of the library API documented here are
 meant for public use, along with some examples.
 
+
 Remember: chemfp cannot generate fingerprints from a structure file
 without a third-party chemistry toolkit.
+
+Chemfp is regularly tested on a Mac using OEChem 1.7.4, OEChem 1.7.6,
+OpenBabel 2.2.3, OpenBabel 2.3.0, OpenBabel 2.3+svn, RDKit 201012,
+RDKit 201103, RDKit 201106 and RDKit 201112 as well as Python 2.5,
+2.6, and 2.7.
 
 
 .. toctree::
@@ -40,16 +46,17 @@ License and advertisement
 =========================
 
 This program was developed by Andrew Dalke of Andrew Dalke Scientific,
-AB. I make my living doing custom software development for
-cheminformatics and related fields, and giving training courses for
-computational chemists who want to get up to speed on Python
-programming for their field.
+AB. It is distributed free of charge under the "MIT" license, shown
+below.
 
-If you are interested in hiring my services, contact me at
-dalke@dalkescientific.com .
+Further chemfp development depends on fund from people like you. You
+can purchase support or consulting hours from me, and you can pay my
+to develop new features. Additionally, I make my living developing
+custom software for computational chemistry and giving training
+courses for computational chemists who want to get up to speed on
+Python programming for their field.  If you are interested in hiring
+my services, contact me at dalke@dalkescientific.com .
 
-Despite that I like having money, this software is available under
-what's often called "the MIT license."
 
 .. highlight:: none
 
@@ -80,40 +87,45 @@ what's often called "the MIT license."
 Future
 ======
 
-There's still a lot to do before this package can be called "mature."
-For one, the popcount implementation is an 8-bit lookup table. A
-16-bit table is faster on most machines, and if you have an Intel
-machine then there's a couple of assembly-based techniques which
-should almost triple the performance.
+Chemfp will progress based on a combination of my interests and your
+funding. (Funny how giving me money affects my interests.) Here are
+some of the possibilities I've thought of:
 
-The SDF reader code should be made part of the public API, which means
-validating against a larger number of real-world SD files.
+The core API documented here is unlikely to change in the near future,
+but there are many ways to improve it. Internal routines to read an SD
+file and manage fingerprint types should be made public, along with
+the API for reading SD files. There will also be a way to read
+structure input from a string rather than only from a file.
 
-There should be a way to generate structure fingerprints when the
-input is a string, rather than a file.
+If you are not a Python programmer then you might prefer that the core
+search routines be made accessible through a C API. That's possible,
+in that the software was designed with that in mind, but it's never
+been tested.
 
-There should be direct support for building the upper-triangle
-distance matrix used for clustering.
+The code makes good use of multiple processors on a shared memory
+machine. If you want to cluster a large data set with a high
+similarity threshold then you should be able to make effective use of
+a distributed compute cluster. That sounds like an excellent project
+that you can fund.
 
-I can think of a number of possibly useful command-line tools, like
-being able to merge a number of FPS files into one, sorted by popcount
-and able to handle all of PubChem.  Or selecting N fingerprints at
-random from a set of fingerprints.
+If you work on the command-line then you would probably like
+command-line tools which can merge a number of FPS files into one,
+sort the fingerprints by popcount, or select N fingerprints at random.
 
-I've discussed and proposed a first draft of a binary format, which
-would improve load time. I would like to develop it further, but right
-I don't know who is bound by load time performance.
+The dense binary fingerprints which chemfp focuses on are only a
+subset of the cheminformatics fingerprint types. I would really like
+to support sparse fingerprints and count fingerprints, along with fast
+search code and efficient memory use. I estimate that will take
+several months of development, so I really needs external funding for
+it.
 
-I want to develop multi-threaded versions of the search functions. The
-core search algorithms are thread-safe, and the Python code releases
-the global interpreter lock before going into them, so this shouldn't
-be all that hard. (Famous last words.)
+Another advanced project is to add locality-sensitive hashing, which
+would turn the O(N**2) nearest-neighbor algorithm into an O(N)
+probabilistic algorithm, for a high enough similarity threshold.
 
-What about a wsgi component which implements a web-based search API
-for your local network?
-
-Do you want the underlying C code which does the searches to be
-available as a C API so you can call it from non-Python programs?
+There are any number of higher-level tools which can be built on the
+chemfp components. For example, what about a wsgi component which
+implements a web-based search API for your local network?
 
 But fundamentally, future work will be guided by what people want, and
 by funding. `Let me know <mailto:dalke@dalkescientific.com>`_ in
