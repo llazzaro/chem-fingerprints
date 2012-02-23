@@ -1,0 +1,9 @@
+This Python/C extension is reasonably well separated between
+the core operations in C, and the interface code to the
+Python API. I have the idea that the C code can be made
+available as an independent API, so you can call it from
+something other than Python.
+
+That was last done a long time ago, and the C API has
+changed enough that the current test driver doesn't work.
+Still, there might be enough here to get you started.
