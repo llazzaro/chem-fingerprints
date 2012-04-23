@@ -44,6 +44,17 @@ New decoder for Daylight's "binary2ascii" encoding.
 Fixed a memory overflow bug which caused crashes on some Windows and
 Linux machines.
 
+Changed the API so that "arena.ids" or "subarena.ids" refers to the
+identifiers for that arena/subarena, and "arena.arena_ids" and
+"subarena.arena_ids" refers to the complete list of identifiers for
+the underlying arena. This is what my code expected, only I got the
+implementation backwards. Two of the test cases should have failed
+with swapped attributes but it looks like I assumed the computer was
+right and made the tests agree with the wrong values. Also added more
+tests to highlight other places where I could make a mistake between
+'ids' and 'arena_ids.' This fix resolves a serious error identified by
+Brian McClain of Vertex.
+
 Moved most memory management code from Python to C. The speedup is
 most noticable when there is a hit density (eg, when the threshold is
 below 0.5).

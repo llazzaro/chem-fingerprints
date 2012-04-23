@@ -112,13 +112,13 @@ class CommonReaderAPI(object):
             self._check_target_metadata(arena.metadata)
             if count == 0:
                 # Check the values of the first arena
-                self.assertEqual(arena.arena_ids[-5:],
+                self.assertEqual(arena.ids[-5:],
                                   ['CHEBI:16316', 'CHEBI:16317', 'CHEBI:16318', 'CHEBI:16319', 'CHEBI:16320'])
                 
             self.assertEqual(len(arena), 1000)  # There should be two of these
             count += 1
         self.assertEqual(count, 2)
-        self.assertEqual(arena.arena_ids[-5:],
+        self.assertEqual(arena.ids[-5:],
                           ['CHEBI:17578', 'CHEBI:17579', 'CHEBI:17580', 'CHEBI:17581', 'CHEBI:17582'])
 
     def test_iter_arenas_select_size(self):
@@ -128,12 +128,12 @@ class CommonReaderAPI(object):
         for arena in reader.iter_arenas(100):
             self._check_target_metadata(arena.metadata)
             if count == 0:
-                self.assertEqual(arena.arena_ids[-5:],
+                self.assertEqual(arena.ids[-5:],
                                   ['CHEBI:5280', 'CHEBI:5445', 'CHEBI:5706', 'CHEBI:5722', 'CHEBI:5864'])
             self.assertEqual(len(arena), 100)
             count += 1
         self.assertEqual(count, 20)
-        self.assertEqual(arena.arena_ids[:5],
+        self.assertEqual(arena.ids[:5],
                           ['CHEBI:17457', 'CHEBI:17458', 'CHEBI:17459', 'CHEBI:17460', 'CHEBI:17464'])
 
     def test_read_from_file_object(self):
@@ -619,8 +619,8 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
 
     def test_slice_ids(self):
         fps = self._open(CHEBI_TARGETS)
-        self.assertEqual(fps.ids[4:10], fps[4:10].arena_ids)
-        self.assertEqual(fps.ids[5:20][1:5], fps[6:10].arena_ids)
+        self.assertEqual(fps.ids[4:10], fps[4:10].ids)
+        self.assertEqual(fps.ids[5:20][1:5], fps[6:10].ids)
 
     def test_slice_fingerprints(self):
         fps = self._open(CHEBI_TARGETS)
@@ -631,8 +631,8 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
     def test_slice_negative(self):
         fps = self._open(CHEBI_TARGETS)
         self.assertEqual(fps[len(fps)-1], fps[-1])
-        self.assertEqual(fps.ids[-2:], fps[-2:].arena_ids)
-        self.assertEqual(fps.ids[-2:], fps[-2:].arena_ids)
+        self.assertEqual(fps.ids[-2:], fps[-2:].ids)
+        self.assertEqual(fps.ids[-2:], fps[-2:].ids)
         self.assertEqual(list(fps[-2:]), [fps[-2], fps[-1]])
         self.assertEqual(fps[-5:-2][-1], fps[-3])
 
@@ -663,7 +663,7 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
             self.assertEqual(len(subarena), 1)
             self.assertEqual(subarena[0][0], id)
             self.assertEqual(subarena[0][1], fp)
-            self.assertEqual(subarena.arena_ids[0], id)
+            self.assertEqual(subarena.ids[0], id)
 
             results = subarena.threshold_tanimoto_search_arena(subarena)
             self.assertEqual(len(results), 1)
@@ -1088,6 +1088,36 @@ class TestFPSParser(unittest2.TestCase):
         for x in results:
             raise AssertionError("Should not get here")
 
+
+class CountTanimotoHits(unittest2.TestCase):
+    def test_with_initial_offset(self):
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        it = targets.iter_arenas(10)
+        # Skip the first arena and use only the second
+        next(it)
+        subarena = next(it)
+        hits = list(chemfp.count_tanimoto_hits(subarena, subarena, 0.2, arena_size=3))
+        self.assertEqual(hits, 
+                         [("CHEBI:15343", 6), ("CHEBI:15858", 4), ("CHEBI:16007", 3),
+                          ("CHEBI:16052", 4), ("CHEBI:16234", 7), ("CHEBI:16382", 4),
+                          ("CHEBI:16716", 1), ("CHEBI:16842", 5), ("CHEBI:17051", 4),
+                          ("CHEBI:17087", 4)])
+        self.assertEqual(subarena.ids,
+                         ["CHEBI:15343", "CHEBI:15858", "CHEBI:16007", "CHEBI:16052", "CHEBI:16234",
+                          "CHEBI:16382", "CHEBI:16716", "CHEBI:16842", "CHEBI:17051", "CHEBI:17087"])
+        self.assertEqual(len(subarena.arena_ids), len(targets))
+        self.assertEqual(subarena.ids, targets.arena_ids[10:20])
+        
+            
+    def test_with_large_input(self):
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        for (query_id, count) in chemfp.count_tanimoto_hits(targets, targets, threshold=0.9,
+                                                             arena_size=10):
+            pass
+        self.assertEqual(query_id, "CHEBI:16379")
+        self.assertEqual(count, 5)
+        
+
 class ThresholdTanimotoSearch(unittest2.TestCase):
     def test_with_fps_reader_as_targets(self):
         queries = chemfp.open(CHEBI_QUERIES).iter_arenas(10).next()
@@ -1154,11 +1184,30 @@ class ThresholdTanimotoSearch(unittest2.TestCase):
         self.assertSequenceEqual(result.get_scores(), [0.8571428571428571, 0.8571428571428571])
         self.assertEqual(result.get_ids(), ['CHEBI:17034', 'CHEBI:17302'])
 
+    def test_with_initial_offset(self):
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        it = targets.iter_arenas(10)
+        # Skip the first arena and use only the second
+        next(it)
+        subarena = next(it)
+        hits = list(chemfp.threshold_tanimoto_search(subarena, subarena, 0.2, arena_size=3))
+        self.assertEqual([(query_id, len(hit)) for (query_id, hit) in hits],
+                         [("CHEBI:15343", 6), ("CHEBI:15858", 4), ("CHEBI:16007", 3),
+                          ("CHEBI:16052", 4), ("CHEBI:16234", 7), ("CHEBI:16382", 4),
+                          ("CHEBI:16716", 1), ("CHEBI:16842", 5), ("CHEBI:17051", 4),
+                          ("CHEBI:17087", 4)])
+        self.assertEqual(subarena.ids,
+                         ["CHEBI:15343", "CHEBI:15858", "CHEBI:16007", "CHEBI:16052", "CHEBI:16234",
+                          "CHEBI:16382", "CHEBI:16716", "CHEBI:16842", "CHEBI:17051", "CHEBI:17087"])
+        self.assertEqual(len(subarena.arena_ids), len(targets))
+        self.assertEqual(subarena.ids, targets.arena_ids[10:20])
+        
+
     def test_with_large_input(self):
         targets = chemfp.load_fingerprints(CHEBI_TARGETS)
         for (query_id, result) in chemfp.threshold_tanimoto_search(targets, targets, threshold=0.9):
             pass
-        self.assertEqual(query_id, "CHEBI:16508")
+        self.assertEqual(query_id, "CHEBI:16379")
         result.reorder("increasing-score")
         self.assertSequenceEqual(result.get_scores(),
                   [0.956989247311828, 0.96739130434782605, 0.97826086956521741, 0.97826086956521741, 1.0])
@@ -1251,11 +1300,29 @@ class KNearestTanimotoSearch(unittest2.TestCase):
         self.assertEqual(result.get_ids(), ['CHEBI:15843', 'CHEBI:7896', 'CHEBI:15894', 'CHEBI:16759',
                                             'CHEBI:16148', 'CHEBI:17539', 'CHEBI:17034', 'CHEBI:17302'])
 
+    def test_with_initial_offset(self):
+        targets = chemfp.load_fingerprints(CHEBI_TARGETS)
+        it = targets.iter_arenas(10)
+        # Skip the first arena and use only the second
+        next(it)
+        subarena = next(it)
+        hits = list(chemfp.knearest_tanimoto_search(subarena, subarena, k=5, threshold=0.2, arena_size=3))
+        self.assertEqual([(query_id, len(hit)) for (query_id, hit) in hits],
+                         [("CHEBI:15343", 5), ("CHEBI:15858", 4), ("CHEBI:16007", 3),
+                          ("CHEBI:16052", 4), ("CHEBI:16234", 5), ("CHEBI:16382", 4),
+                          ("CHEBI:16716", 1), ("CHEBI:16842", 5), ("CHEBI:17051", 4),
+                          ("CHEBI:17087", 4)])
+        self.assertEqual(subarena.ids,
+                         ["CHEBI:15343", "CHEBI:15858", "CHEBI:16007", "CHEBI:16052", "CHEBI:16234",
+                          "CHEBI:16382", "CHEBI:16716", "CHEBI:16842", "CHEBI:17051", "CHEBI:17087"])
+        self.assertEqual(len(subarena.arena_ids), len(targets))
+        self.assertEqual(subarena.ids, targets.arena_ids[10:20])
+
     def test_with_large_input(self):
         targets = chemfp.load_fingerprints(CHEBI_TARGETS)
         for (query_id, result) in chemfp.knearest_tanimoto_search(targets, targets, threshold=0.9):
             pass
-        self.assertEqual(query_id, "CHEBI:16508")
+        self.assertEqual(query_id, "CHEBI:16379")
         result.reorder("increasing-score")
         self.assertSequenceEqual(result.get_scores(),
                   [0.97826086956521741, 0.97826086956521741, 1.0])

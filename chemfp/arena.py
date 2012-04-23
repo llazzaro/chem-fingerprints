@@ -42,7 +42,7 @@ class FingerprintArena(FingerprintReader):
     """
     def __init__(self, metadata, alignment,
                  start_padding, end_padding, storage_size, arena,
-                 popcount_indices, ids, start=0, end=None):
+                 popcount_indices, arena_ids, start=0, end=None):
         if metadata.num_bits is None:
             raise TypeError("Missing metadata num_bits information")
         if metadata.num_bytes is None:
@@ -55,7 +55,7 @@ class FingerprintArena(FingerprintReader):
         self.storage_size = storage_size
         self.arena = arena
         self.popcount_indices = popcount_indices
-        self.ids = ids
+        self.arena_ids = arena_ids
         self.start = start
         if end is None:
             if self.metadata.num_bytes:
@@ -71,8 +71,8 @@ class FingerprintArena(FingerprintReader):
         return self.end - self.start
 
     @property
-    def arena_ids(self):
-        return self.ids[self.start:self.end]
+    def ids(self):
+        return self.arena_ids[self.start:self.end]
 
     def __getitem__(self, i):
         """Return the (id, fingerprint) at position i"""
@@ -87,7 +87,7 @@ class FingerprintArena(FingerprintReader):
             return FingerprintArena(self.metadata, self.alignment,
                                     self.start_padding, self.end_padding,
                                     self.storage_size, self.arena,
-                                    self.popcount_indices, self.ids,
+                                    self.popcount_indices, self.arena_ids,
                                     self.start+start, self.start+end)
         try:
             i = self._range_check[i]
@@ -96,7 +96,7 @@ class FingerprintArena(FingerprintReader):
         arena_i = i + self.start
         start_offset = arena_i * self.storage_size + self.start_padding
         end_offset = start_offset + self.metadata.num_bytes
-        return self.ids[arena_i], self.arena[start_offset:end_offset]
+        return self.arena_ids[arena_i], self.arena[start_offset:end_offset]
 
 
     def save(self, destination):
@@ -132,7 +132,7 @@ class FingerprintArena(FingerprintReader):
             return
         target_fp_size = self.metadata.num_bytes
         arena = self.arena
-        for id, start_offset in zip(self.ids[self.start:self.end],
+        for id, start_offset in zip(self.arena_ids[self.start:self.end],
                                     xrange(self.start*storage_size+self.start_padding,
                                            self.end*storage_size+self.start_padding,
                                            storage_size)):
@@ -166,7 +166,7 @@ class FingerprintArena(FingerprintReader):
             yield FingerprintArena(self.metadata, self.alignment,
                                    self.start_padding, self.end_padding,
                                    self.storage_size, self.arena,
-                                   self.popcount_indices, self.ids, start, end)
+                                   self.popcount_indices, self.arena_ids, start, end)
             start = end
 
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):

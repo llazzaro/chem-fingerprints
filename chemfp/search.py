@@ -51,8 +51,8 @@ class SearchResult(object):
         return ids[self._row]
 
 class SearchResults(_chemfp.SearchResults):
-    def __init__(self, n, ids=None):
-        super(SearchResults, self).__init__(n, ids)
+    def __init__(self, n, arena_ids=None):
+        super(SearchResults, self).__init__(n, arena_ids)
         self._results = [SearchResult(self, i) for i in xrange(n)]
     def __iter__(self):
         return iter(self._results)
@@ -210,7 +210,7 @@ def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
         query_fp, target_arena.alignment, target_arena.storage_size)
 
 
-    results = SearchResults(1, target_arena.ids)
+    results = SearchResults(1, target_arena.arena_ids)
     _chemfp.threshold_tanimoto_arena(
         threshold, target_arena.num_bits,
         query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
@@ -227,7 +227,7 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
 
     num_queries = len(query_arena)
 
-    results = SearchResults(num_queries, target_arena.ids)
+    results = SearchResults(num_queries, target_arena.arena_ids)
     if num_queries:
         _chemfp.threshold_tanimoto_arena(
             threshold, target_arena.num_bits,
@@ -244,7 +244,7 @@ def threshold_tanimoto_search_symmetric(arena, threshold, include_lower_triangle
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
     N = len(arena)
-    results = SearchResults(N, arena.ids)
+    results = SearchResults(N, arena.arena_ids)
 
 
     if N:
@@ -317,7 +317,7 @@ def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
     if k < 0:
         raise ValueError("k must be non-negative")
 
-    results = SearchResults(1, target_arena.ids)
+    results = SearchResults(1, target_arena.arena_ids)
     _chemfp.knearest_tanimoto_arena(
         k, threshold, target_arena.num_bits,
         query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
@@ -334,7 +334,7 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
 
     num_queries = len(query_arena)
 
-    results = SearchResults(num_queries, target_arena.ids)
+    results = SearchResults(num_queries, target_arena.arena_ids)
 
     _chemfp.knearest_tanimoto_arena(
         k, threshold, target_arena.num_bits,
@@ -355,7 +355,7 @@ def knearest_tanimoto_search_symmetric(arena, k, threshold, batch_size=100):
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
 
-    results = SearchResults(N, arena.ids)
+    results = SearchResults(N, arena.arena_ids)
 
     if N:
         # Break it up into batch_size groups in order to let Python's
