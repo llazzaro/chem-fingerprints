@@ -126,7 +126,7 @@ class build_ext_subclass( build_ext ):
 
 
 setup(name = "chemfp",
-      version = "1.1b4",
+      version = "1.1b5",
       description = DESCRIPTION,
       author = "Andrew Dalke",
       author_email = 'dalke@dalkescientific.com',
