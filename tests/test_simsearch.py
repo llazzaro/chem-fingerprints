@@ -326,6 +326,26 @@ class TestNxN(unittest2.TestCase):
                                   '2\tDEADdead',
                                   '2\tDeaf Beef',
             ])
+
+    def test_with_low_batch_size(self):
+        # This is the same as test_k_2 but with a batch-size of 1.
+        # This tests a bug where I wasn't incrementing the offset
+        # to the start of each batch location in the results.
+        header, lines = run_split("--NxN -k 2 --batch-size 1", 7, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                          "#software": SOFTWARE,
+                          "#type": "Tanimoto k=2 threshold=0.0 NxN=full"})
+        self.assertEquals(len(lines), 7, lines)
+        self.assertEquals(lines, ['0\tzeros',
+                                  '2\tbit1\ttwo_bits\t0.500\tseveral\t0.143',
+                                  '2\ttwo_bits\tbit1\t0.500\tseveral\t0.286',
+                                  '2\tseveral\ttwo_bits\t0.286\tDEADdead\t0.261',
+                                  '2\tdeadbeef\tDeaf Beef\t0.960\tDEADdead\t0.840',
+                                  '2\tDEADdead\tdeadbeef\t0.840\tDeaf Beef\t0.808',
+                                  '2\tDeaf Beef\tdeadbeef\t0.960\tDEADdead\t0.808'])
+        
         
         
         

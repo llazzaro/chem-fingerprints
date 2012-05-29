@@ -974,13 +974,14 @@ int RENAME(chemfp_knearest_tanimoto_arena_symmetric)(
   /* Loop through the query fingerprints */
 #if USE_OPENMP == 1
   #pragma omp parallel for \
-    private(result, query_fp, query_threshold, query_popcount, target_popcount, best_possible_score, \
-          start, end, target_fp, popcount_sum, target_index, intersect_popcount, score) \
+    private(result, query_fp, query_threshold, query_popcount, popcount_order,\
+          target_popcount, best_possible_score, start, end, target_fp, \
+          popcount_sum, target_index, intersect_popcount, score) \
       schedule(dynamic)
 #endif
-  for (query_index=0; query_index < (query_end-query_start); query_index++) {
+  for (query_index=query_start; query_index < query_end; query_index++) {
     result = results+query_index;
-    query_fp = arena + (query_start+query_index) * storage_size;
+    query_fp = arena + query_index * storage_size;
 
     query_threshold = threshold;
     query_popcount = calc_popcount(fp_size, query_fp);
