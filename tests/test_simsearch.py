@@ -327,7 +327,25 @@ class TestNxN(unittest2.TestCase):
                                   '2\tDeaf Beef',
             ])
 
-    def test_with_low_batch_size(self):
+    def test_threshold_with_low_batch_size(self):
+        header, lines = run_split("--NxN --threshold 0.5 --batch-size 1", 7, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                          "#software": SOFTWARE,
+                          "#type": "Tanimoto k=all threshold=0.5 NxN=full"})
+        self.assertEquals(len(lines), 7, lines)
+        self.assertEquals(lines, ['0\tzeros',
+                                  '1\tbit1\ttwo_bits\t0.500',
+                                  '1\ttwo_bits\tbit1\t0.500',
+                                  '0\tseveral',
+                                  # The order here is implementation dependent...
+                                  '2\tdeadbeef\tDeaf Beef\t0.960\tDEADdead\t0.840',
+                                  '2\tDEADdead\tdeadbeef\t0.840\tDeaf Beef\t0.808',
+                                  #'2\tDeaf Beef\tdeadbeef\t0.960\tDEADdead\t0.808',
+                                  '2\tDeaf Beef\tDEADdead\t0.808\tdeadbeef\t0.960',
+            ])
+    def test_knearest_with_low_batch_size(self):
         # This is the same as test_k_2 but with a batch-size of 1.
         # This tests a bug where I wasn't incrementing the offset
         # to the start of each batch location in the results.
@@ -346,6 +364,23 @@ class TestNxN(unittest2.TestCase):
                                   '2\tDEADdead\tdeadbeef\t0.840\tDeaf Beef\t0.808',
                                   '2\tDeaf Beef\tdeadbeef\t0.960\tDEADdead\t0.808'])
         
+    def test_count_with_low_batch_size(self):
+        header, lines = count_run_split("--NxN --count --batch-size 1", 7, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                          "#software": SOFTWARE,
+                          "#type": "Count threshold=0.7 NxN=full"})
+        self.assertEquals(len(lines), 7, lines)
+        self.assertEquals(lines, ['0\tzeros',
+                                  '0\tbit1',
+                                  '0\ttwo_bits',
+                                  '0\tseveral',
+                                  '2\tdeadbeef',
+                                  '2\tDEADdead',
+                                  '2\tDeaf Beef',
+            ])
+
         
         
         
