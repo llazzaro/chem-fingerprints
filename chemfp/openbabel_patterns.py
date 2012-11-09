@@ -7,7 +7,7 @@ from . import pattern_fingerprinter
 from . import types
 from . import __version__ as chemfp_version
 
-SOFTWARE = openbabel.SOFTWARE + ("chemfp/%s" % (chemfp_version,))
+SOFTWARE = openbabel.SOFTWARE + (" chemfp/%s" % (chemfp_version,))
 
 # HasMatch was added to OpenBabel 2.3 .
 _HAS_HASMATCH = hasattr(OBSmartsPattern(), "HasMatch")
