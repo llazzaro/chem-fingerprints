@@ -442,6 +442,246 @@ SearchResults_count_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   return PyInt_FromLong(count);
 }
 
+static PyObject *
+SearchResults_cumulative_score_all(SearchResults *self, PyObject *args, PyObject *kwds) {
+  static char *kwlist[] = {"min_score", "max_score", "interval", NULL};
+  int row=-1;
+  PyObject *min_score_obj=Py_None, *max_score_obj=Py_None;
+  double min_score=0.0, max_score=1.0;
+  int num_hits, num_rows;
+  double *scores;
+  int include_min=0, include_max=0;
+  double score=0.0;
+  int i;
+  const char *interval = "[]";
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOs:cumulative_score_all", kwlist,
+                                   &min_score_obj, &max_score_obj, &interval)) {
+    return NULL;
+  }
+  if (!check_min_max_score(min_score_obj, max_score_obj, &min_score, &max_score) ||
+      !check_interval(interval, &include_min, &include_max)) {
+    return NULL;
+  }
+  num_rows = self->num_results;
+  if (min_score_obj == Py_None) { /* No lower bound */
+    if (max_score_obj == Py_None) {
+      for (row=0; row<num_rows; row++) {
+	num_hits = chemfp_get_num_hits(self->results+row);
+	scores = self->results[row].scores;
+	for (i=0; i<num_hits; i++) {
+	  score += scores[i];
+	}
+      }
+    } else {
+      /* No min but has a max. */
+      if (include_max) {
+        for (row=0; row<num_rows; row++) {
+          num_hits = chemfp_get_num_hits(self->results+row);
+          scores = self->results[row].scores;
+          for (i=0; i<num_hits; i++) {
+	    score += scores[i];
+          }
+        }
+      } else {
+        for (row=0; row<num_rows; row++) {
+          num_hits = chemfp_get_num_hits(self->results+row);
+          scores = self->results[row].scores;
+          for (i=0; i<num_hits; i++) {
+            if (scores[i] < max_score) 
+              score += scores[i];
+          }
+        }
+      }
+    }
+  } else if (max_score_obj == Py_None) {
+    /* No max but has a min. */
+    if (include_min) {
+      for (row=0; row<num_rows; row++) {
+        num_hits = chemfp_get_num_hits(self->results+row);
+        scores = self->results[row].scores;
+        for (i=0; i<num_hits; i++) {
+          if (scores[i] >= min_score)
+            score += scores[i];
+        }
+      }
+    } else {
+      for (row=0; row<num_rows; row++) {
+        num_hits = chemfp_get_num_hits(self->results+row);
+        scores = self->results[row].scores;
+        for (i=0; i<num_hits; i++) {
+          if (scores[i] > min_score)
+            score += scores[i];
+        }
+      }
+    }
+  } else {
+    /* Both an upper and lower range are defined */
+    if (min_score > max_score)  {
+      score = 0.0;
+    } else if (min_score == max_score) {
+      if (include_min && include_max) {
+        for (row=0; row<num_rows; row++) {
+          num_hits = chemfp_get_num_hits(self->results+row);
+          scores = self->results[row].scores;
+          for (i=0; i<num_hits; i++) {
+            if (scores[i] == min_score)
+              score += scores[i];
+          }
+        }
+      } else {
+	/* Impossible to find a match beause one side is open */
+        score = 0.0;
+      }
+    } else {
+      if (include_min) {
+        if (include_max) {
+          for (row=0; row<num_rows; row++) {
+            num_hits = chemfp_get_num_hits(self->results+row);
+            scores = self->results[row].scores;
+            for (i=0; i<num_hits; i++) {
+              if (min_score <= scores[i] && scores[i] <= max_score)
+                score += scores[i];
+            }
+          }
+        } else {
+          for (row=0; row<num_rows; row++) {
+            num_hits = chemfp_get_num_hits(self->results+row);
+            scores = self->results[row].scores;
+            for (i=0; i<num_hits; i++) {
+              if (min_score <= scores[i] && scores[i] < max_score)
+                score += scores[i];
+            }
+          }
+        }
+      } else {
+        if (include_max) {
+          for (row=0; row<num_rows; row++) {
+            num_hits = chemfp_get_num_hits(self->results+row);
+            scores = self->results[row].scores;
+            for (i=0; i<num_hits; i++) {
+              if (min_score < scores[i] && scores[i] <= max_score)
+                score += scores[i];
+            }
+          }
+        } else {
+          for (row=0; row<num_rows; row++) {
+            num_hits = chemfp_get_num_hits(self->results+row);
+            scores = self->results[row].scores;
+            for (i=0; i<num_hits; i++) {
+              if  (min_score < scores[i] && scores[i] < max_score)
+                score += scores[i];
+            }
+          }
+        }
+      }
+    }   /* end of case where min_score < max_score */
+  } /* End of case where both upper and lower range are defined */
+  return PyFloat_FromDouble(score);
+}
+
+static PyObject *
+SearchResults_cumulative_score_row(SearchResults *self, PyObject *args, PyObject *kwds) {
+  static char *kwlist[] = {"row", "min_score", "max_score", "interval", NULL};
+  int row=-1;
+  PyObject *min_score_obj=Py_None, *max_score_obj=Py_None;
+  double min_score=0.0, max_score=1.0;
+  int num_hits;
+  double *scores;
+  int include_min=0, include_max=0;
+  double score=0.0;
+  int i;
+  const char *interval = "[]";
+  if (!PyArg_ParseTupleAndKeywords(args, kwds, "i|OOs:cumulative_score_row", kwlist,
+                                   &row, &min_score_obj, &max_score_obj, &interval)) {
+    return NULL;
+  }
+  if (!check_row(self->num_results, &row) ||
+      !check_min_max_score(min_score_obj, max_score_obj, &min_score, &max_score) ||
+      !check_interval(interval, &include_min, &include_max)) {
+    return NULL;
+  }
+  num_hits = chemfp_get_num_hits(self->results+row);
+  scores = (self->results+row)->scores;
+
+  if (min_score_obj == Py_None) {
+    if (max_score_obj == Py_None) {
+      for (i=0; i<num_hits; i++) {
+	if (scores[i] <= max_score)
+	  score += scores[i];
+      }
+    } else {
+      /* No min but has a max. */
+      if (include_max) {
+        for (i=0; i<num_hits; i++) {
+          if (scores[i] <= max_score)
+            score += scores[i];
+        }
+      } else {
+        for (i=0; i<num_hits; i++) {
+          if (scores[i] < max_score) 
+            score += scores[i];
+        }
+      }
+    }
+  } else if (max_score_obj == Py_None) {
+    /* No max but has a min. */
+    if (include_min) {
+      for (i=0; i<num_hits; i++) {
+        if (scores[i] >= min_score)
+          score += scores[i];
+      }
+    } else {
+      for (i=0; i<num_hits; i++) {
+        if (scores[i] > min_score)
+          score += scores[i];
+      }
+    }
+  } else {
+    /* Both an upper and lower range are defined */
+    if (min_score > max_score)  {
+      score = 0.0;
+    } else if (min_score == max_score) {
+      if (include_min && include_max) {
+        for (i=0; i<num_hits; i++) {
+          if (scores[i] == min_score)
+            score += scores[i];
+        }
+      } else {
+        score += scores[i];
+      }
+    } else {
+      /* Tanimoto scores can only be between 0.0 and 1.0, so at present */
+      /* I could special-case that range. However, I don't want to depend */
+      /* on that assumption. */
+      if (include_min) {
+        if (include_max) {
+          for (i=0; i<num_hits; i++) {
+            if (min_score <= scores[i] && scores[i] <= max_score)
+              score += scores[i];
+          }
+        } else {
+          for (i=0; i<num_hits; i++) {
+            if (min_score <= scores[i] && scores[i] < max_score)
+              score += scores[i];
+          }
+        }
+      } else {
+        if (include_max) {
+          for (i=0; i<num_hits; i++) {
+            if (min_score < scores[i] && scores[i] <= max_score)
+              score += scores[i];
+          }
+        } else {
+          for (i=0; i<num_hits; i++) {
+            if  (min_score < scores[i] && scores[i] < max_score)
+              score += scores[i];
+          }
+        }
+      }
+    }   /* end of case where min_score < max_score */
+  } /* End of case where both upper and lower range are defined */
+  return PyFloat_FromDouble(score);
+}
 
 
 static PyObject *
@@ -628,6 +868,10 @@ static PyMethodDef SearchResults_methods[] = {
    "clear the hits in-place"},
   {"_clear_row", (PyCFunction) SearchResults_clear_row, METH_VARARGS | METH_KEYWORDS,
    "clear the hits in-place"},
+  {"cumulative_score_all", (PyCFunction) SearchResults_cumulative_score_all, METH_VARARGS | METH_KEYWORDS,
+   "find the sum of all of the scores in the given range"},
+  {"_cumulative_score_row", (PyCFunction) SearchResults_cumulative_score_row, METH_VARARGS | METH_KEYWORDS,
+   "find the sum of all of the scores in the given range, and for a given row"},
   {"count_all", (PyCFunction) SearchResults_count_all, METH_VARARGS | METH_KEYWORDS,
    "count the number of scores in the given range"},
   {"_count_row", (PyCFunction) SearchResults_count_row, METH_VARARGS | METH_KEYWORDS,

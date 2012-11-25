@@ -45,7 +45,9 @@ class SearchResult(object):
 
     def count(self, min_score=None, max_score=None, interval="[]"):
         return self._search_results._count_row(self._row, min_score, max_score, interval)
-        
+
+    def cumulative_score(self, min_score=None, max_score=None, interval="[]"):
+        return self._search_results._cumulative_score_row(self._row, min_score, max_score, interval)
         
     @property
     def target_id(self):
