@@ -209,7 +209,7 @@ static PyObject *
 SearchResults_count_all(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"min_score", "max_score", "interval", NULL};
   int row=-1;
-  PyObject *min_score_obj=NULL, *max_score_obj=NULL;
+  PyObject *min_score_obj=Py_None, *max_score_obj=Py_None;
   double min_score=0.0, max_score=1.0;
   int num_hits, num_rows;
   double *scores;
@@ -345,7 +345,7 @@ static PyObject *
 SearchResults_count_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"row", "min_score", "max_score", "interval", NULL};
   int row=-1;
-  PyObject *min_score_obj=NULL, *max_score_obj=NULL;
+  PyObject *min_score_obj=Py_None, *max_score_obj=Py_None;
   double min_score=0.0, max_score=1.0;
   int num_hits;
   double *scores;
