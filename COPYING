@@ -33,6 +33,7 @@ Other copyright holders are:
  - Kim Walisch, <kim.walisch@gmail.com>
  - Stanford Univeristy (written by Imran S. Haque <ihaque@cs.stanford.edu>)
  - Python Software Foundation (the heapq code)
+ - Christopher Swenson (the TimSort code in hits.c)
 
 This package also includes (nearly) unmodified copies of
  - chemfp/progressbar/ by Nilton Volpato under the LGPL 2.1 and/or BSD license
