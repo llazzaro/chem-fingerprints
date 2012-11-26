@@ -287,6 +287,95 @@ class FingerprintArena(FingerprintReader):
         """
         return search.knearest_tanimoto_search_arena(queries, self, k, threshold)
 
+    def copy_arena(self, indices=None, reorder=True):
+        if indices is None:
+            # Make a completely new arena
+
+            # Handle the trivial case where I don't need to do anything.
+            if (self.start == 0 and (self.end + self.start_padding + self.end_padding == len(self.arena)) and
+                (not reorder or self.popcount_indices)):
+                return FingerprintArena(self.metadata, self.alignment,
+                                        self.start_padding, self.end_padding, self.storage_size, self.arena,
+                                        self.popcount_indices, self.arena_ids)
+            # Otherwise I need to do some work
+            # Make a copy of the actual fingerprints
+            start = self.start_padding + self.start*self.storage_size
+            end = start + self.end*self.storage_size
+            arena = self.arena[start:end]
+
+            if not (reorder or self.popcount_indices):
+                # Don't reorder the unordered fingerprints
+                start_padding, end_padding, arena = _chemfp.make_unsorted_aligned_arena(arena, self.alignment)
+                return FingerprintArena(self.metadata, self.alignment, start_padding, end_padding, storage_size,
+                                        unsorted_arena, "", self.ids)
+
+            # Either we're already sorted or we should become sorted
+            current_ids = self.ids
+            ordering = (ChemFPOrderedPopcount*len(current_ids))()
+            popcounts = array.array("i", (0,)*(self.metadata.num_bits+2))
+
+            start_padding, end_padding, arena = _chemfp.make_sorted_aligned_arena(
+                self.metadata.num_bits, storage_size, arena, len(current_ids),
+                ordering, popcounts, self.alignment)
+
+            reordered_ids = [current_ids[item.index] for item in ordering]
+            return FingerprintArena(self.metadata, self.alignment,
+                                    start_padding, end_padding, storage_size,
+                                    arena, popcounts.tostring(), reordered_ids)
+
+        # We have indicies - we need to select fingerprint rows
+        
+        arena = self.arena
+        storage_size = self.storage_size
+        start = self.start
+        start_padding = self.start_padding
+        arena_ids = self.arena_ids
+        
+        # First make sure that all of the indices are in range. Also handle negative indices.
+        new_indices = []
+        range_check = self._range_check
+        try:
+            for i in indices:
+                new_indices.append(range_check[i])
+        except IndexError:
+            raise IndexError("arena fingerprint index %d is out of range" % (i,))
+
+        if reorder and self.popcount_indices:
+            # There's a slight performance benefit because
+            # make_sorted_aligned_arena will see that the fingerprints
+            # are already in sorted order and not resort.
+            new_indices.sort()
+
+        # Copy the fingerprints over to a StringIO 
+        unsorted_fps = []
+        new_ids = []
+        for new_i in new_indices:
+            start_offset = new_i*storage_size + start_padding
+            end_offset = start_offset + storage_size
+            unsorted_fps.append(arena[start_offset:end_offset])
+            new_ids.append(arena_ids[new_i])
+                
+        unsorted_arena = "".join(unsorted_fps)
+        unsorted_fps = None
+
+        if not reorder:
+            start_padding, end_padding, unsorted_arena = _chemfp.make_unsorted_aligned_arena(
+                unsorted_arena, self.alignment)
+            return FingerprintArena(self.metadata, self.alignment, start_padding, end_padding, storage_size,
+                                    unsorted_arena, "", new_ids)
+
+        ordering = (ChemFPOrderedPopcount*len(new_ids))()
+        popcounts = array.array("i", (0,)*(self.metadata.num_bits+2))
+
+        start_padding, end_padding, sorted_arena = _chemfp.make_sorted_aligned_arena(
+            self.metadata.num_bits, storage_size, unsorted_arena, len(new_ids),
+            ordering, popcounts, self.alignment)
+
+        reordered_ids = [new_ids[item.index] for item in ordering]
+        return FingerprintArena(self.metadata, self.alignment,
+                                start_padding, end_padding, storage_size,
+                                sorted_arena, popcounts.tostring(), reordered_ids)
+        
 
 # TODO: push more of this malloc-management down into C
 class ChemFPOrderedPopcount(ctypes.Structure):
