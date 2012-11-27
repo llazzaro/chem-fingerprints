@@ -23,6 +23,8 @@ const char *chemfp_strerror(int err) {
 
   case CHEMFP_METHOD_MISMATCH: return "Mismatch between popcount method and alignment type";
 
+  case CHEMFP_UNKNOWN_ORDERING: return "Unknown sort order";
+
   default: return "Unknown error";
   }
 }
@@ -40,9 +42,9 @@ typedef struct {
 } chemfp_option_type;
 
 const chemfp_option_type chemfp_options[] = {
-  {"report-popcount", _chemfp_get_option_report_popcount, _chemfp_set_option_report_popcount},
-  {"report-intersect", _chemfp_get_option_report_intersect_popcount,
-   _chemfp_set_option_report_intersect_popcount},
+  {"report-popcount", chemfp_get_option_report_popcount, chemfp_set_option_report_popcount},
+  {"report-intersect", chemfp_get_option_report_intersect_popcount,
+   chemfp_set_option_report_intersect_popcount},
 };
 
 int
@@ -88,14 +90,14 @@ chemfp_set_option(const char *option, int value) {
 
 /* The value 0 means "initialize using omp_get_max_threads()" */
 /* Otherwise, this will be a value between 1 and omp_get_max_threads() */
-static int _chemfp_num_threads = 0;
+static int chemfp_num_threads = 0;
 
 int chemfp_get_num_threads(void) {
 #if defined(_OPENMP)
-  if (_chemfp_num_threads == 0) {
-    _chemfp_num_threads = omp_get_max_threads();
+  if (chemfp_num_threads == 0) {
+    chemfp_num_threads = omp_get_max_threads();
   }
-  return _chemfp_num_threads;
+  return chemfp_num_threads;
 #else
   return 1;
 #endif
@@ -106,10 +108,13 @@ void chemfp_set_num_threads(int num_threads) {
   /* Can only have between 1 thread and the number of logical cores */
   if (num_threads < 1) {
     num_threads = 1;
-  } else if (num_threads > omp_get_max_threads()) {
-    num_threads = omp_get_max_threads();
   }
-  _chemfp_num_threads = num_threads;
+  omp_set_num_threads(num_threads);
+
+  /* Quoting from the docs: If you use omp_set_num_threads to change
+     the number of threads, subsequent calls to omp_get_max_threads
+     will return the new value. */
+  chemfp_num_threads = omp_get_max_threads();
 #else
   UNUSED(num_threads);
 #endif

@@ -2,7 +2,7 @@
 
 # All chem-fingerprint software is distributed with the following license:
 
-# Copyright (c) 2010-2011 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
+# Copyright (c) 2010-2012 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -24,7 +24,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-__version__ = "1.1a4"
+__version__ = "1.1b5"
 __version_info = (1, 1, 0)
 SOFTWARE = "chemfp/" + __version__
 
@@ -32,10 +32,7 @@ import os
 import itertools
 
 __all__ = ["open", "load_fingerprints", "read_structure_fingerprints",
-           "count_tanimoto_hits", "threshold_tanimoto_search",
-           "knearest_tanimoto_search", "Metadata", "FingerprintIterator",
-           "Fingerprints"]
-           
+           "Metadata", "FingerprintIterator", "Fingerprints"]
            
 
 class ChemFPError(Exception):
@@ -107,10 +104,8 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, err
         if metadata.type is None:
             raise ValueError("Missing fingerprint type information in metadata")
         type = metadata.type
-    try:
-        structure_fingerprinter = types.parse_type(type)
-    except ValueError, err:
-        raise ValueError("Cannot parse fingerprint type %r: %s" % (metadata.type, err))
+
+    structure_fingerprinter = types.parse_type(type)
     return structure_fingerprinter.read_structure_fingerprints(source, format, id_tag, errors, metadata=metadata)
     
 # Low-memory, forward-iteration, or better
@@ -154,8 +149,10 @@ def open(source, format=None):
 
     if format_name == "fpb":
         raise NotImplementedError("fpb format support not implemented")
-
-    raise TypeError("Unable to determine fingerprint format type from %r" % (source,))
+    if format is None:
+        raise ValueError("Unable to determine fingerprint format type from %r" % (source,))
+    else:
+        raise ValueError("Unknown fingerprint format %r" % (format,))
 
 
 def load_fingerprints(reader, metadata=None, reorder=True, alignment=None):
@@ -236,18 +233,38 @@ def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     :returns:
        An iterator containing (query_id, score) pairs, one for each query
     """
-    if arena_size == 1:
-        for (query_id, query_fp) in queries:
-            targets.reset()
-            yield query_id, targets.tanimoto_count_arena(query_fp, threshold)
-        return
+    from . import readers
+    if isinstance(targets, readers.FPSReader):
+        from . import fps_search
+        count_hits = fps_search.count_tanimoto_hits_arena
+    else:
+        from . import search
+        count_hits = search.count_tanimoto_hits_arena
 
-    for query_arena in queries.iter_arenas(arena_size):
-        targets.reset()
-        results = targets.count_tanimoto_hits_arena(query_arena, threshold)
-        for item in zip(query_arena.ids, results):
-            yield item
+    ### Start the search now so compatibility errors are raised eagerly
+
+    # Start iterating through the subarenas, and get the first of those
+    subarenas = queries.iter_arenas(arena_size)
+    try:
+        first_query_arena = subarenas.next()
+    except StopIteration:
+        # There are no subarenas; return an empty iterator
+        return iter([])
+
+    # Get the first result, and hold on to it for the generator
+    first_counts = count_hits(first_query_arena, targets, threshold=threshold)
     
+    def count_tanimoto_hits():
+        # Return results for the first arena
+        for query_id, count in zip(first_query_arena.ids, first_counts):
+            yield query_id, count
+        # Return results for the rest of the arenas
+        for query_arena in subarenas:
+            counts = count_hits(query_arena, targets, threshold=threshold)
+            for query_id, count in zip(query_arena.ids, counts):
+                yield query_id, count
+    return count_tanimoto_hits()
+
 
 def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
     """Find all targets within 'threshold' of each query term
@@ -261,7 +278,7 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
 
       queries = chemfp.open("queries.fps")
       targets = chemfp.load_fingerprints("targets.fps.gz")
-      for (query_id, hits) in chemfp.threshold_tanimoto_search(queries, targets, threshold=0.8):
+      for (query_id, hits) in chemfp.id_threshold_tanimoto_search(queries, targets, threshold=0.8):
           print query_id, "has", len(hits), "neighbors with at least 0.8 similarity"
           non_identical = [target_id for (target_id, score) in hits if score != 1.0]
           print "  The non-identical hits are:", non_identical
@@ -287,17 +304,44 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
       An iterator containing (query_id, hits) pairs, one for each query.
       'hits' contains a list of (target_id, score) pairs.
     """
-    if arena_size == 1:
-        for (query_id, query_fp) in queries:
-            targets.reset()
-            yield query_id, targets.threshold_tanimoto_search_fp(query_fp, threshold)
-        return
-    
-    for query_arena in queries.iter_arenas(arena_size):
-        targets.reset()
-        results = targets.threshold_tanimoto_search_arena(query_arena, threshold)
-        for item in zip(query_arena.ids, results):
-            yield item
+    from . import readers
+    if isinstance(targets, readers.FPSReader):
+        from . import fps_search
+        threshold_search = fps_search.threshold_tanimoto_search_arena
+    else:
+        from . import search
+        threshold_search = search.threshold_tanimoto_search_arena
+
+    ### Start the search now so compatibility errors are raised eagerly
+
+    # Start iterating through the subarenas, and get the first of those
+    subarenas = queries.iter_arenas(arena_size)
+    try:
+        first_query_arena = subarenas.next()
+    except StopIteration:
+        # There are no subarenas; return an empty iterator
+        return iter([])
+
+    # Get the first result, and hold on to it for the generator
+    first_results = threshold_search(first_query_arena, targets, threshold=threshold)
+    ## Here's a thought; allow a 'result_order' parameter so I can do:
+    # if result_order is not None:
+    #    first_results.reorder(reorder)
+
+    def threshold_tanimoto_search():
+        # Return results for the first arena
+        for query_id, row in zip(first_query_arena.ids, first_results):
+            yield query_id, row
+        
+        for query_arena in subarenas:
+            results = threshold_search(query_arena, targets, threshold=threshold)
+            ## I would also need to do
+            #if result_order is not None:
+            #    first_results.reorder(reorder)
+                
+            for query_id, row in zip(query_arena.ids, results):
+                yield (query_id, row)
+    return threshold_tanimoto_search()
 
 def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=100):
     """Find the 'k'-nearest targets within 'threshold' of each query term
@@ -318,7 +362,7 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
       targets = chemfp.load_fingerprints("pubchem_subset.fps")
       
       # Find the 3 nearest hits with a similarity of at least 0.8
-      for (query_id, hits) in chemfp.knearest_tanimoto_search(queries, targets, k=3, threshold=0.8):
+      for (query_id, hits) in chemfp.id_knearest_tanimoto_search(queries, targets, k=3, threshold=0.8):
           print query_id, "has", len(hits), "neighbors with at least 0.8 similarity"
           if hits:
               target_id, score = hits[-1]
@@ -347,17 +391,79 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
       An iterator containing (query_id, hits) pairs, one for each query.
       'hits' contains a list of (target_id, score) pairs, sorted by score.
     """
-    if arena_size == 1:
-        for (query_id, query_fp) in queries:
-            targets.reset()
-            yield query_id, targets.knearest_tanimoto_search_fp(query_fp, k, threshold)
-        return
+    from . import readers
+    if isinstance(targets, readers.FPSReader):
+        from . import fps_search
+        knearest_search = fps_search.knearest_tanimoto_search_arena
+    else:
+        from . import search
+        knearest_search = search.knearest_tanimoto_search_arena
+        
+    ### Start the search now so compatibility errors are raised eagerly
 
-    for query_arena in queries.iter_arenas(arena_size):
-        targets.reset()
-        results = targets.knearest_tanimoto_search_arena(query_arena, k, threshold)
-        for item in zip(query_arena.ids, results):
-            yield item
+    # Start iterating through the subarenas, and get the first of those
+    subarenas = queries.iter_arenas(arena_size)
+    try:
+        first_query_arena = subarenas.next()
+    except StopIteration:
+        # There are no subarenas; return an empty iterator
+        return iter([])
+
+    # Get the first result, and hold on to it for the generator
+    first_results = knearest_search(first_query_arena, targets, k=k, threshold=threshold)
+
+    def knearest_tanimoto_search():
+        # Return results for the first arena
+        for query_id, row in zip(first_query_arena.ids, first_results):
+            yield query_id, row
+
+        # and for the subarenas
+        for query_arena in subarenas:
+            results = knearest_search(query_arena, targets, k=k, threshold=threshold)
+            for query_id, row in zip(query_arena.ids, results):
+                yield (query_id, row)
+        
+    return knearest_tanimoto_search()
+
+def count_tanimoto_hits_symmetric(fingerprints, threshold=0.7):
+    from . import readers, search
+    if (isinstance(fingerprints, readers.FPSReader) or
+        not getattr(fingerprints, "popcount_indices", None)):
+        raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
+
+    # Start the search now so the errors are caught early
+    results = search.count_tanimoto_hits_symmetric(fingerprints, threshold)
+    def count_tanimoto_hits_symmetric_internal():
+        for id, count in zip(fingerprints.ids, results):
+            yield id, count
+    return count_tanimoto_hits_symmetric_internal()
+
+def threshold_tanimoto_search_symmetric(fingerprints, threshold=0.7):
+    from . import readers, search
+    if (isinstance(fingerprints, readers.FPSReader) or
+        not getattr(fingerprints, "popcount_indices", None)):
+        raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
+
+    # Start the search now so the errors are caught early
+    results = search.threshold_tanimoto_search_symmetric(fingerprints, threshold)
+    def threshold_tanimoto_search_symmetric_internal():
+        for id, hits in zip(fingerprints.ids, results):
+            yield id, hits
+    return threshold_tanimoto_search_symmetric_internal()
+
+def knearest_tanimoto_search_symmetric(fingerprints, k=3, threshold=0.7):
+    from . import readers, search
+    if (isinstance(fingerprints, readers.FPSReader) or
+        not getattr(fingerprints, "popcount_indices", None)):
+        raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
+
+    # Start the search now so the errors are caught early
+    results = search.knearest_tanimoto_search_symmetric(fingerprints, k, threshold)
+    def knearest_tanimoto_search_symmetric_internal():
+        for id, hits in zip(fingerprints.ids, results):
+            yield id, hits
+    return knearest_tanimoto_search_symmetric_internal()
+        
 
 def check_fp_problems(fp, metadata):
     "This interface is not documented and may change in the future"
@@ -441,9 +547,11 @@ class Metadata(object):
                 pass
             else:
                 num_bytes = (num_bits + 7)//8
-        elif num_bits is not None:
+        elif num_bits is None:
+            num_bits = num_bytes * 8
+        else:
             if (num_bits + 7)//8 != num_bytes:
-                raise TypeError("num_bits of %d is incompatible with num_bytes of %d" %
+                raise ValueError("num_bits of %d is incompatible with num_bytes of %d" %
                                 (num_bits, num_bytes))
             
         self.num_bits = num_bits
@@ -461,7 +569,7 @@ class Metadata(object):
         self.date = date
 
     def __repr__(self):
-        return "Metadata(num_bits=%(num_bits)s, num_bytes=%(num_bytes)d, type=%(type)r, aromaticity=%(aromaticity)r, sources=%(sources)r, software=%(software)r, date=%(date)r)" % self.__dict__
+        return "Metadata(num_bits=%(num_bits)r, num_bytes=%(num_bytes)r, type=%(type)r, aromaticity=%(aromaticity)r, sources=%(sources)r, software=%(software)r, date=%(date)r)" % self.__dict__
 
     def __str__(self):
         from cStringIO import StringIO
@@ -534,6 +642,12 @@ class FingerprintReader(object):
             if not arena:
                 break
             yield arena
+
+    def save(self, destination):
+        from . import io
+        io.write_fps1_output(self, destination, self.metadata)
+        from . import io
+
 
 class FingerprintIterator(FingerprintReader):
     """A FingerprintReader for an iterator of (id, fingerprint) pairs

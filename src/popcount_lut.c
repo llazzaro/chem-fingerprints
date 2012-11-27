@@ -4102,7 +4102,7 @@ static char lut[] = {
 
 
 int
-_chemfp_popcount_lut8_1(int n, const unsigned char *fp) {
+chemfp_popcount_lut8_1(int n, const unsigned char *fp) {
   int cnt=0;
   int i;
   int top = n-n%2;
@@ -4118,7 +4118,7 @@ _chemfp_popcount_lut8_1(int n, const unsigned char *fp) {
 
 
 int
-_chemfp_intersect_popcount_lut8_1(int n, const unsigned char *fp1, const unsigned char *fp2) {
+chemfp_intersect_popcount_lut8_1(int n, const unsigned char *fp1, const unsigned char *fp2) {
   int cnt=0;
   int i;
   /* I tried unrolling and using a 16 bit popcount, but saw no time advantage */
@@ -4130,7 +4130,7 @@ _chemfp_intersect_popcount_lut8_1(int n, const unsigned char *fp1, const unsigne
 
 
 int
-_chemfp_popcount_lut8_4(int n, uint32_t *fp) {
+chemfp_popcount_lut8_4(int n, uint32_t *fp) {
   int cnt=0;
   unsigned int i, value;
 
@@ -4147,7 +4147,7 @@ _chemfp_popcount_lut8_4(int n, uint32_t *fp) {
 }
 
 int
-_chemfp_intersect_popcount_lut8_4(int n, uint32_t *fp1, uint32_t *fp2) {
+chemfp_intersect_popcount_lut8_4(int n, uint32_t *fp1, uint32_t *fp2) {
   int cnt=0;
   unsigned int i;
   n = (n+3) / 4;
@@ -4166,7 +4166,7 @@ _chemfp_intersect_popcount_lut8_4(int n, uint32_t *fp1, uint32_t *fp2) {
 /* 16 bit LUT assuming I can fetch 4 bytes at a time */
 
 int
-_chemfp_popcount_lut16_4(int n, uint32_t *fp) {
+chemfp_popcount_lut16_4(int n, uint32_t *fp) {
   int cnt=0;
   unsigned int i;
 
@@ -4182,7 +4182,7 @@ _chemfp_popcount_lut16_4(int n, uint32_t *fp) {
 }
 
 int
-_chemfp_intersect_popcount_lut16_4(int n, uint32_t *fp1, uint32_t *fp2) {
+chemfp_intersect_popcount_lut16_4(int n, uint32_t *fp1, uint32_t *fp2) {
   int cnt=0;
   unsigned int i;
   n = (n+3) / 4;

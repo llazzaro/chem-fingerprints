@@ -40,15 +40,14 @@ FPS format in his fingerprint analysis tools.
 Dmitry Pavlov for insights in how Indigo works and improvements in the
 Indigo implementations.
 
-Roche, for helping fund part of the project, and especially to Jerome
-Hart, for his work on getting chemfp working for their needs and in
+Roche, for helping fund part of the project, and especially to Jérôme
+Hert, for his work on getting chemfp working for their needs and in
 helping track down a subtle memory bug.
 
 Kim Walisch, for suggestions and code for faster popcount
 implementations.
 
-To patches and feedback from Chris Morely, Jörg Kurt Wegner, Phil
-Evans, Björn Grüning, Andrew Henry and others.
+To Chris Morely, Jörg Kurt Wegner, Phil Evans, Björn Grüning, Andrew
+Henry, Brian McClain and others for patches, bug reports, and feedback.
 
-
-To you, for reading this list and using the code.
+To you, for reading these thanks and using the code.

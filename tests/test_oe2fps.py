@@ -19,6 +19,7 @@ except ImportError:
 if has_oechem:
     from chemfp.commandline import oe2fps
     import chemfp.openeye
+    OEGRAPHSIM_API_VERSION = chemfp.openeye.OEGRAPHSIM_API_VERSION
     chemfp.openeye._USE_SELECT = False # Grrr. Needed to automate testing.
 
     real_stdout = sys.stdout
@@ -31,7 +32,37 @@ if has_oechem:
 
     oeerrs = oechem.oeosstream()
     oechem.OEThrow.SetOutputStream(oeerrs)
-    
+
+def convert_v1_atom_names_to_v2(s):
+    return (s.replace("Aromaticity", "Arom")
+            .replace("AtomicNumber", "AtmNum")
+            .replace("EqAromatic", "EqArom")
+            .replace("EqHalogen", "EqHalo")
+            .replace("FormalCharge", "FCharge")
+            .replace("HvyDegree", "HvyDeg")
+            .replace("Hybridization", "Hyb")
+            .replace("DefaultAtom", "Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb"))
+
+def convert_v1_bond_names_to_v2(s):
+    return (s.replace("DefaultBond", "Order|Chiral")
+             .replace("BondOrder", "Order"))
+
+def convert_v1_names_to_v2(s):
+    return convert_v1_atom_names_to_v2(convert_v1_bond_names_to_v2(s))
+
+def convert_type_string(s):
+    if " " not in s:
+        word = s
+        rest = None
+    else:
+        word, rest = s.split(" ", 1)
+    assert word.endswith("/1")
+    word = word[:-1] + "2"
+    if rest is None:
+        return word
+    else:
+        return word + " " + convert_v1_names_to_v2(rest)
+
 def _check_for_oe_errors():
     lines = oeerrs.str().splitlines()
     for line in lines:
@@ -51,13 +82,15 @@ def _check_for_oe_errors():
 # would have the nagging feeling that I got the ordering
 # backwards. Instead, I do it from scratch using the bit offset.
 
-def _construct_test_values():
+def _construct_test_values(fp_func = None, num_bits=4096):
     from openeye.oechem import oemolistream
     from openeye.oegraphsim import OEFingerPrint, OEMakePathFP
     fp = OEFingerPrint()
     ifs = oemolistream()
     assert ifs.open(PUBCHEM_SDF)
     hex_data = []
+    if fp_func is None:
+        fp_func = OEMakePathFP
 
     def _convert_to_chemfp_order(s):
         # The FPS format allows either case but I prefer lowercase
@@ -66,15 +99,15 @@ def _construct_test_values():
         return "".join( (s[i+1]+s[i]) for i in range(0, len(s), 2))
 
     for mol in ifs.GetOEGraphMols():
-        OEMakePathFP(fp, mol)
+        fp_func(fp, mol)
         # Set the byte values given the bit offsets
-        bytes = [0] * (4096//8)
+        bytes = [0] * (num_bits//8)
         i = fp.FirstBit()
         while i >= 0:
             bytes[i//8] |= 1<<(i%8)
             i = fp.NextBit(i)
         as_hex = "".join("%02x" % i for i in bytes)
-        assert len(as_hex) == 2*(4096//8), len(as_hex)
+        assert len(as_hex) == 2*(num_bits//8), len(as_hex)
         # Double-check that it matches the (reordered) ToHexString()
         oe_hex = fp.ToHexString()[:-1]
         assert as_hex == _convert_to_chemfp_order(oe_hex), (
@@ -173,50 +206,50 @@ class TestPath(unittest2.TestCase):
         self.assertEquals(result, hex_test_values)
 
     def test_atype_default_flags(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertEquals(result, hex_test_values)
 
 
     def test_atype_default_flags_with_duplicates(self):
-        result = run_fps("--atype Aromaticity|Chiral|AtomicNumber|AtomicNumber|EqHalogen|"
-                         "HvyDegree|FormalCharge|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|Chiral|AtomicNumber|AtomicNumber|EqHalogen|HvyDegree|FormalCharge|Hybridization"), 19)
         self.assertEquals(result, hex_test_values)
 
     # Make sure that each of the flags returns some other answer
     def test_atype_different_1(self):
-        result = run_fps("--atype AtomicNumber|Chiral|EqHalogen|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_2(self):
-        result = run_fps("--atype Aromaticity|Chiral|EqHalogen|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_3(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|EqHalogen|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|EqHalogen|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_4(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|"
-                         "FormalCharge|HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|FormalCharge|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_5(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|"
-                         "HvyDegree|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|HvyDegree|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_6(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|"
-                         "FormalCharge|Hybridization", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|Hybridization"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_atype_different_7(self):
-        result = run_fps("--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|"
-                         "FormalCharge|HvyDegree", 19)
+        result = run_fps(atom_type_converter(
+            "--atype Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree"), 19)
         self.assertNotEquals(result, hex_test_values)
 
 
@@ -225,11 +258,11 @@ class TestPath(unittest2.TestCase):
         self.assertEquals(result, hex_test_values)
 
     def test_btype_default_flags(self):
-        result = run_fps("--btype BondOrder|Chiral", 19)
+        result = run_fps(bond_type_converter("--btype BondOrder|Chiral"), 19)
         self.assertEquals(result, hex_test_values)
 
     def test_btype_different_1(self):
-        result = run_fps("--btype BondOrder", 19)
+        result = run_fps(bond_type_converter("--btype BondOrder"), 19)
         self.assertNotEquals(result, hex_test_values)
 
     def test_btype_different_2(self):
@@ -237,6 +270,29 @@ class TestPath(unittest2.TestCase):
         self.assertNotEquals(result, hex_test_values)
 
 TestPath = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestPath)
+
+class TestPatterns(unittest2.TestCase):
+    def test_rdmaccs(self):
+        headers, fps = runner.run_split("--rdmaccs", 19)
+        self.assertEquals(headers["#type"], "RDMACCS-OpenEye/1")
+        self.assertEquals(fps[0], "000000000002080019c444eacd6c981baea178ef1f\t9425004")
+        self.assertEquals(fps[1], "000000002000082159d404eea968b81b8ea17eef1f\t9425009")
+        self.assertEquals(fps[2], "000000000000080159c404efa9689a1b8eb1faef1b\t9425012")
+        self.assertEquals(fps[3], "000000000000082019c404ee8968b81b8ea1ffef1f\t9425015")
+        self.assertEquals(fps[4], "000000000000088419c6b5fa8968981b8eb37aef1f\t9425018")
+
+    def test_substruct(self):
+        headers, fps = runner.run_split("--substruct", 19)
+        self.assertEquals(headers["#type"], "ChemFP-Substruct-OpenEye/1")
+        self.assertEquals(fps[0], "07de8d002000000000000000000000000080060000000c000000000000000080030000f8401800000030508379344c014956000055c0a44e2a0049200084e140581f041d661b10064483cb0f2925100619001393e10001007000000000008000000000000000400000000000000000\t9425004")
+        # Note: not the same as OpenBabel's answer; bit 260 (>= 3 hetero-aromatic rings) is different.
+        # openeye_patterns doesn't handle this.
+        self.assertEquals(fps[1], "07de0d000000000000000000000000000080460300000c000000000000000080070000780038000000301083f920cc09695e0800d5c0e44e6e00492190844145dc1f841d261911164d039b8f29251026b9401313e0ec01007000000000000000000000000000000000000000000000\t9425009")
+
+if skip_oechem:
+    TestPatterns = unittest2.skipIf(True, "OEChem not installed")(TestPatterns)
+elif chemfp.openeye.OEGRAPHSIM_API_VERSION == "1":
+    TestPatterns = unittest2.skipIf(True, "OEGraphSim is not new enough")(TestPatterns)
 
 class TestIO(unittest2.TestCase, support.TestIdAndErrors):
     _runner = runner
@@ -307,28 +363,42 @@ class TestArgErrors(unittest2.TestCase):
                   "--maxbonds must not be smaller than --minbonds")
 
     def test_bad_atype(self):
-        self._run("--atype spam", "Unknown atom type 'spam'")
+        self._run("--atype spam", "Unknown path atom type 'spam'")
 
     def test_bad_atype2(self):
-        self._run("--atype DefaultAtom|spam", "Unknown atom type 'spam'")
+        self._run("--atype DefaultAtom|spam", "Unknown path atom type 'spam'")
 
     def test_bad_atype3(self):
-        self._run("--atype DefaultAtom|", "Missing atom flag")
+        self._run("--atype DefaultAtom|", "Missing path atom flag")
 
     def test_bad_btype(self):
-        self._run("--btype eggs", "Unknown bond type 'eggs'")
+        self._run("--btype eggs", "Unknown path bond type 'eggs'")
 
     def test_bad_btype2(self):
-        self._run("--btype DefaultBond|eggs", "Unknown bond type 'eggs'")
+        self._run("--btype DefaultBond|eggs", "Unknown path bond type 'eggs'")
 
     def test_bad_btype3(self):
-        self._run("--btype DefaultBond|", "Missing bond flag")
+        self._run("--btype DefaultBond|", "Missing path bond flag")
 
 TestArgErrors = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestArgErrors)
 
+if has_oechem:
+    if OEGRAPHSIM_API_VERSION == "1":
+        type_converter = str
+        atom_type_converter = str
+        bond_type_converter = str
+    else:
+        type_converter = convert_type_string
+        atom_type_converter = convert_v1_atom_names_to_v2
+        bond_type_converter = convert_v1_bond_names_to_v2
+
 class TestHeaderOutput(unittest2.TestCase):
     def _field(self, s, field):
-        result = run(s)
+        try:
+            result = run(s)
+        except SystemExit, err:
+            raise
+            raise AssertionError("Should not die: %r" % (err,))
         filtered = [line for line in result if line.startswith(field)]
         self.assertEquals(len(filtered), 1, result)
         return filtered[0]
@@ -343,15 +413,16 @@ class TestHeaderOutput(unittest2.TestCase):
 
     def test_type(self):
         result = self._field("", "#type")
-        self.assertEquals(result,
-  "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond")
+        self.assertEquals(result, type_converter(
+  "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond"))
 
     def test_default_atom_and_bond(self):
         result = self._field(
-            "--atype=Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization "
-            "--btype=BondOrder|Chiral", "#type")
-        self.assertEquals(result,
-  "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond")
+            atom_type_converter("--atype=Aromaticity|AtomicNumber|Chiral|EqHalogen|FormalCharge|HvyDegree|Hybridization") +
+            " " +
+            bond_type_converter("--btype=BondOrder|Chiral"), "#type")
+        self.assertEquals(result, type_converter(
+            "#type=OpenEye-Path/1 numbits=4096 minbonds=0 maxbonds=5 atype=DefaultAtom btype=DefaultBond"))
 
         
     # different flags. All flags? and order
@@ -360,27 +431,159 @@ class TestHeaderOutput(unittest2.TestCase):
         self.assertEquals(result, "#num_bits=38")
         
     def test_atype_flags(self):
-        result = self._field("--atype FormalCharge|FormalCharge", "#type") + " "
-        self.assertIn(" atype=FormalCharge ", result)
+        result = self._field(atom_type_converter("--atype FormalCharge|FormalCharge"), "#type") + " "
+        self.assertIn(atom_type_converter(" atype=FormalCharge "), result)
     
     def test_btype_flags(self):
-        result = self._field("--btype Chiral|BondOrder", "#type") + " "
-        self.assertIn(" btype=DefaultBond ", result)
-        result = self._field("--btype BondOrder|Chiral", "#type") + " "
-        self.assertIn(" btype=DefaultBond ", result)
+        result = self._field(bond_type_converter("--btype Chiral|BondOrder"), "#type") + " "
+        self.assertIn(bond_type_converter(" btype=DefaultBond "), result)
+        result = self._field(bond_type_converter("--btype BondOrder|Chiral"), "#type") + " "
+        self.assertIn(bond_type_converter(" btype=DefaultBond "), result)
     
     def test_pipe_or_comma(self):
-        result = self._field("--atype HvyDegree,FormalCharge --btype Chiral,BondOrder",
+        result = self._field(atom_type_converter("--atype HvyDegree,FormalCharge") + " " +
+                             bond_type_converter("--btype Chiral,BondOrder"),
                              "#type") + " "
-        self.assertIn(" atype=FormalCharge|HvyDegree ", result)
-        self.assertIn(" btype=DefaultBond ", result)
+        self.assertIn(atom_type_converter(" atype=FormalCharge|HvyDegree "), result)
+        self.assertIn(bond_type_converter(" btype=DefaultBond "), result)
         
     
     def test_maccs_header(self):
         result = self._field("--maccs166", "#type")
-        self.assertEquals(result, "#type=OpenEye-MACCS166/1")
+        self.assertEquals(result, type_converter("#type=OpenEye-MACCS166/1"))
     
 TestHeaderOutput = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestHeaderOutput)
+
+
+if has_oechem and OEGRAPHSIM_API_VERSION == "2":
+    from openeye.oegraphsim import (
+        OEMakePathFP, OEFPAtomType_DefaultPathAtom, OEFPBondType_DefaultPathBond,
+        OEMakeCircularFP, OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond,
+        OEMakeTreeFP, OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond,
+        OEFPAtomType_Aromaticity, OEFPAtomType_AtomicNumber, OEFPAtomType_EqHalogen,
+        OEFPAtomType_HvyDegree, OEFPAtomType_FormalCharge,
+        OEFPBondType_Chiral, OEFPBondType_InRing, OEFPBondType_BondOrder,
+        )
+
+
+class TestOEGraphSimVersion2(unittest2.TestCase):
+    def test_hash(self):
+        header, result = runner.run_split("--path", 19)
+        self.assertEquals(header["#type"], "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+        self.assertEquals(result, _construct_test_values())
+        
+    def test_path_defaults(self):
+        header, result = runner.run_split("--path --numbits 4096 --minbonds 0 --maxbonds 5 "
+                                          "--atype AtmNum|Arom|Chiral|FCharge|HvyDeg|Hyb|EqHalo --btype Order|Chiral", 19)
+        self.assertEquals(header["#type"], "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+        self.assertEquals(result, _construct_test_values())
+
+    def test_change_all_path_fields(self):
+        header, result = runner.run_split("--path --numbits 1024 --minbonds 2 --maxbonds 4 "
+                                          "--atype AtmNum|EqHalo --btype InRing|Order", 19)
+        self.assertEquals(header["#type"], "OpenEye-Path/2 numbits=1024 minbonds=2 maxbonds=4 atype=AtmNum|EqHalo btype=Order|InRing")
+        def compute_path_fingerprints(fp, mol):
+            OEMakePathFP(fp, mol, 1024, 2, 4,
+                         OEFPAtomType_AtomicNumber|OEFPAtomType_EqHalogen,
+                         OEFPBondType_InRing|OEFPBondType_BondOrder)
+        self.assertEquals(result, _construct_test_values(compute_path_fingerprints, 1024))
+        
+    def test_path_default_type(self):
+        result = run("--atype DefaultPathAtom") # (DefaultPathAtom is the same as DefaultAtom)
+        typename = [line for line in result if line.startswith("#type=")][0]
+        self.assertEquals(typename, "#type=OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+
+    def test_check_path_default_types(self):
+        header, result = runner.run_split("--path --atype Default --btype Default")
+        self.assertEquals(header["#type"],
+              "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+        header, result = runner.run_split("--path --atype DefaultCircularAtom --btype DefaultCircularBond")
+        self.assertEquals(header["#type"],
+              "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
+        header, result = runner.run_split("--path --atype DefaultPathAtom --btype DefaultPathBond")
+        self.assertEquals(header["#type"],
+              "OpenEye-Path/2 numbits=4096 minbonds=0 maxbonds=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+
+
+    ########################
+    # Note: The documentation says that OEFPBondType_DefaultCircularBond is Order|Chiral
+    # but the code says it's only Order.
+        
+    def test_circular(self):
+        header, result = runner.run_split("--circular", 19)
+        def compute_circular_fingerprints(fp, mol):
+            OEMakeCircularFP(fp, mol, 4096, 0, 5,
+                             OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond)
+        self.assertEquals(header["#type"], "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
+        self.assertEquals(result, _construct_test_values(compute_circular_fingerprints))
+
+    def test_circular_defaults(self):
+        # Make sure that when I specify the defaults then I get the same results
+        header, result = runner.run_split("--circular --numbits 4096 --minradius 0 --maxradius 5 "
+                                          "--atype AtmNum|Arom|Chiral|FCharge|HCount|EqHalo --btype Order")
+        self.assertEquals(header["#type"], "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
+                
+        def compute_circular_fingerprints(fp, mol):
+            OEMakeCircularFP(fp, mol, 4096, 0, 5,
+                             OEFPAtomType_DefaultCircularAtom, OEFPBondType_DefaultCircularBond)
+        self.assertEquals(result, _construct_test_values(compute_circular_fingerprints))
+
+    def test_change_all_circular_fields(self):
+        header, result = runner.run_split("--circular --numbits 1024 --minradius 2 --maxradius 4 --atype Arom --btype Chiral", 19)
+        def compute_circular_fingerprints(fp, mol):
+            OEMakeCircularFP(fp, mol, 1024, 2, 4,
+                             OEFPAtomType_Aromaticity, OEFPBondType_Chiral)
+        self.assertEquals(header["#type"],
+              "OpenEye-Circular/2 numbits=1024 minradius=2 maxradius=4 atype=Arom btype=Chiral")
+        self.assertEquals(result, _construct_test_values(compute_circular_fingerprints, 1024))
+
+    def test_check_circular_default_types(self):
+        header, result = runner.run_split("--circular --atype Default --btype Default")
+        self.assertEquals(header["#type"],
+              "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
+        header, result = runner.run_split("--circular --atype DefaultCircularAtom --btype DefaultCircularBond")
+        self.assertEquals(header["#type"],
+              "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HCount btype=Order")
+        header, result = runner.run_split("--circular --atype DefaultPathAtom --btype DefaultPathBond")
+        self.assertEquals(header["#type"],
+              "OpenEye-Circular/2 numbits=4096 minradius=0 maxradius=5 atype=Arom|AtmNum|Chiral|EqHalo|FCharge|HvyDeg|Hyb btype=Order|Chiral")
+
+
+    ########################
+
+    def test_tree(self):
+        header, result = runner.run_split("--tree", 19)
+        self.assertEquals(header["#type"], "OpenEye-Tree/2 numbits=4096 minbonds=0 maxbonds=4 atype=Arom|AtmNum|Chiral|FCharge|HvyDeg|Hyb btype=Order")
+        def compute_tree_fingerprints(fp, mol):
+            OEMakeTreeFP(fp, mol, 4096, 0, 4,
+                         OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond)
+        self.assertEquals(result, _construct_test_values(compute_tree_fingerprints))
+    
+    def test_tree_defaults(self):
+        # Make sure that when I specify the defaults then I get the same results
+        header, result = runner.run_split("--tree --numbits 4096 --minradius 0 --maxradius 5 "
+                                          "--atype FCharge|HvyDeg|AtmNum|Arom|Chiral|Hyb --btype Order")
+        self.assertEquals(header["#type"], "OpenEye-Tree/2 numbits=4096 minbonds=0 maxbonds=4 atype=Arom|AtmNum|Chiral|FCharge|HvyDeg|Hyb btype=Order")
+        def compute_tree_fingerprints(fp, mol):
+            OEMakeTreeFP(fp, mol, 4096, 0, 4,
+                         OEFPAtomType_DefaultTreeAtom, OEFPBondType_DefaultTreeBond)
+        self.assertEquals(result, _construct_test_values(compute_tree_fingerprints))
+
+    
+    def test_change_all_tree_fields(self):
+        header, result = runner.run_split("--tree --numbits 1024 --minbonds 1 --maxbonds 2 --atype HvyDeg|FCharge --btype InRing", 19)
+        def compute_circular_fingerprints(fp, mol):
+            OEMakeTreeFP(fp, mol, 1024, 1, 2,
+                         OEFPAtomType_HvyDegree | OEFPAtomType_FormalCharge, OEFPBondType_InRing)
+        self.assertEquals(header["#type"],
+              "OpenEye-Tree/2 numbits=1024 minbonds=1 maxbonds=2 atype=FCharge|HvyDeg btype=InRing")
+        self.assertEquals(result, _construct_test_values(compute_circular_fingerprints, 1024))
+    
+if skip_oechem:
+    TestOEGraphSimVersion2 = unittest2.skipIf(skip_oechem, "OEChem not installed")(TestOEGraphSimVersion2)
+else:
+    TestOEGraphSimVersion2 = unittest2.skipIf(OEGRAPHSIM_API_VERSION == "1",
+                                       "OEGraphSim library is too old")(TestOEGraphSimVersion2)
         
 if __name__ == "__main__":
     unittest2.main()

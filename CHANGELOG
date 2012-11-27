@@ -1,11 +1,20 @@
 What's new in 1.1 (in development)
 ==================
 
+The command-line search tools support an --NxN option for when the
+queries and targets are the same. (The search results do not include
+the diagonal term.)  The implemention takes advantage of the symmetry
+to get almost a two-fold performance increase. This option assumes
+that everything will fit into memory.
+
+Added public APIs for the symmetric searches.
+
 New popcount algorithms:
   - Lauradoux and POPCNT versions contributed by Kim Walisch
-      (These are 2x and 3x faster than the original method.)
+      These are 2x and 3x faster than the original method.
   - SSSE3 version by Imran Haque, Stanford University
-      (This is about 2.5x faster than the original method.)
+      This is about 2.5x faster than the original method.
+      Use --without-ssse3 to disable support for that method.
   - Gilles method, which can be better than the original method.
 
 The timings depend very much on the compiler, CPU features, and choice
@@ -21,12 +30,41 @@ available methods and the fingerprint size. (It will be 8 or less
 unless you have SSSE3 hardware but not SSE4.2, and your fingerprint is
 larger than 224 bits, in which case it's 64 bytes.)
 
+Optional OpenMP support. This is used when the query is an arena. If
+your compiler does not support OpenMP then use "--without-openmp" to
+disable it.
+
 Support for RDKit's Morgan fingerprints.
+
+Support for Daylight's Circular and Tree fingerprints (if you have
+OEGraphSim 2.0.0 installed.)
 
 New decoder for Daylight's "binary2ascii" encoding.
 
 Fixed a memory overflow bug which caused crashes on some Windows and
 Linux machines.
+
+Changed the API so that "arena.ids" or "subarena.ids" refers to the
+identifiers for that arena/subarena, and "arena.arena_ids" and
+"subarena.arena_ids" refers to the complete list of identifiers for
+the underlying arena. This is what my code expected, only I got the
+implementation backwards. Two of the test cases should have failed
+with swapped attributes but it looks like I assumed the computer was
+right and made the tests agree with the wrong values. Also added more
+tests to highlight other places where I could make a mistake between
+'ids' and 'arena_ids.' This fix resolves a serious error identified by
+Brian McClain of Vertex.
+
+Moved most memory management code from Python to C. The speedup is
+most noticable when there is a hit density (eg, when the threshold is
+below 0.5).
+
+Created a new 'Results' return object, which lets you sort the hits in
+different ways, and request only the score, or only the ids, or both
+from the hitlist.  The arena search results specifically are stored in
+a C data structure. This new API greatly simplfies implementing some
+types of clustering algorithms, reduces memory overhead, and improves
+performance.
 
 Added Alex Grönholm's 'futures' package as a submodule. It greatly
 simplifies making a thread- or process pool. It is a backport of the

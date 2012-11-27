@@ -10,7 +10,7 @@ import heapq
 import itertools
 import ctypes
 
-from . import load_fingerprints, Metadata
+from . import load_fingerprints, Metadata, ParseError, FingerprintReader
 from . import fps_search
 from . import io
 
@@ -20,7 +20,7 @@ from . import io
 BLOCKSIZE=11400
 # (BTW, the compressed time took 1.3x the uncompressed time)
 
-class FPSParseError(Exception):
+class FPSParseError(ParseError):
     def __init__(self, errcode, lineno, filename):
         self.errcode = errcode
         self.lineno = lineno
@@ -31,14 +31,14 @@ class FPSParseError(Exception):
         msg = _chemfp.strerror(self.errcode)
         msg += " at line %d" % (self.lineno,)
         if self.filename is not None:
-            msg += " of file %r" % (self.filename,)
+            msg += " of %r" % (self.filename,)
         return msg
 
 
 def open_fps(source, format=None):
     format_name, compression = io.normalize_format(source, format)
     if format_name != "fps":
-        raise TypeError("Unknown format %r" % (format_name,))
+        raise ValueError("Unknown format %r" % (format_name,))
 
     infile = io.open_compressed_input_universal(source, compression)
     filename = io.get_filename(source)
@@ -65,7 +65,8 @@ def _read_blocks(infile):
 
             
 
-class FPSReader(object):
+class FPSReader(FingerprintReader):
+    _search = fps_search
     def __init__(self, infile, metadata, first_fp_lineno, first_fp_block):
         self._infile = infile
         self._filename = getattr(infile, "name", "<unknown>")
@@ -82,11 +83,6 @@ class FPSReader(object):
 # Not sure if this is complete. Also, should have a context manager
 #    def close(self):
 #        self._infile.close()
-        
-    def reset(self):
-        if self._at_start:
-            return
-        raise TypeError("FPSReader instances do not support reset()")
         
     def iter_blocks(self):
         if self._block_reader is None:
@@ -107,16 +103,6 @@ class FPSReader(object):
         for block in block_stream:
             yield block
 
-    def iter_arenas(self, arena_size = 1000):
-        id_fps = iter(self)
-        while 1:
-            arena = load_fingerprints(itertools.islice(id_fps, 0, arena_size),
-                                      metadata = self.metadata,
-                                      reorder = False)
-            if not arena:
-                break
-            yield arena
-        
     def iter_rows(self):
         unhexlify = binascii.unhexlify
         lineno = self._first_fp_lineno
@@ -142,23 +128,34 @@ class FPSReader(object):
                 yield id_fp
                 lineno += 1
 
+    def _check_at_start(self):
+        if not self._at_start:
+            raise TypeError("FPS file is not at the start of the file; cannot search")
+
+
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
+        self._check_at_start()
         return fps_search.count_tanimoto_hits_fp(query_fp, self, threshold)
 
-    def count_tanimoto_hits_arena(self, query_arena, threshold=0.7):
-        return fps_search.count_tanimoto_hits_arena(query_arena, self, threshold)
+    def count_tanimoto_hits_arena(self, queries, threshold=0.7, arena_size=100):
+        self._check_at_start()
+        return fps_search.count_tanimoto_hits_arena(queries, self, threshold)
 
     def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
+        self._check_at_start()
         return fps_search.threshold_tanimoto_search_fp(query_fp, self, threshold)
 
-    def threshold_tanimoto_search_arena(self, query_arena, threshold=0.7):
-        return fps_search.threshold_tanimoto_search_all(query_arena, self, threshold)
+    def threshold_tanimoto_search_arena(self, queries, threshold=0.7, arena_size=100):
+        self._check_at_start()
+        return fps_search.threshold_tanimoto_search_arena(queries, self, threshold)
 
     def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
+        self._check_at_start()
         return fps_search.knearest_tanimoto_search_fp(query_fp, self, k, threshold)
 
-    def knearest_tanimoto_search_arena(self, query_arena, k=3, threshold=0.7):
-        return fps_search.knearest_tanimoto_search_all(query_arena, self, k, threshold)
+    def knearest_tanimoto_search_arena(self, queries, k=3, threshold=0.7, arena_size=100):
+        self._check_at_start()
+        return fps_search.knearest_tanimoto_search_arena(queries, self, k, threshold)
 
 def _where(filename, lineno):
     if filename is None:

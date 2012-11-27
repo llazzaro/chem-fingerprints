@@ -18,11 +18,11 @@ class FPSFormatError(ChemFPError):
     def __repr__(self):
         return "FPSFormatError(%r, %r, %r)" % (self.code, self.filename, self.lineno)
     def __str__(self):
-        return "%s at line %s of %r" % (_chemfp.strerror(code), lineno, filename)
+        return "%s at line %s of %r" % (_chemfp.strerror(self.code), self.lineno, self.filename)
 
 def _chemfp_error(err, lineno, filename):
     if -40 <= err <= -30:
-        return FPSFormatError(err, lineno, filename)
+        return FPSFormatError(err, filename, lineno)
     elif err == -2:
         raise MemoryError(_chemfp.strerror(err))
     else:
@@ -94,8 +94,12 @@ class TanimotoCell(ctypes.Structure):
 
 
 def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
-    hits = []
+    """Find matches in the target reader which are at least threshold similar to the query fingerprint
 
+    The results is an FPSSearchResults instance contain the result.
+    """
+    ids = []
+    scores = []
     fp_size = len(query_fp)
     num_bits = fp_size * 8
         
@@ -117,18 +121,24 @@ def threshold_tanimoto_search_fp(query_fp, target_reader, threshold):
                 raise _chemfp_error(err, lineno, target_reader._filename)
                 
             for cell in itertools.islice(cells, 0, num_cells):
-                    id = block[cell.id_start:cell.id_end]
-                    hits.append( (id, cell.score) )
+                    ids.append(block[cell.id_start:cell.id_end])
+                    scores.append(cell.score)
             if start == end:
                 break
-    return hits
+    return FPSSearchResult(ids, scores)
 
-def threshold_tanimoto_search_all(query_arena, target_reader, threshold):
+def threshold_tanimoto_search_arena(query_arena, target_reader, threshold):
+    """Find matches in the target reader which are at least threshold similar to the query arena fingerprints
+
+    The results are a list in the form [search_results1, search_results2, ...]
+    where search_results are in the same order as the fingerprints in the query_arena.
+    """
+    
     require_matching_sizes(query_arena, target_reader)
-    all_hits = [[] for i in xrange(len(query_arena))]
-    if not all_hits:
-        return []
 
+    if not query_arena:
+        return FPSSearchResults([])
+    results = [FPSSearchResult([], []) for i in xrange(len(query_arena))]
     
     # Compute at least 100 tanimotos per query, but at most 10,000 at a time
     # (That's about 200K of memory)
@@ -153,12 +163,14 @@ def threshold_tanimoto_search_all(query_arena, target_reader, threshold):
                 
             for cell in itertools.islice(cells, 0, num_cells):
                 id = block[cell.id_start:cell.id_end]
-                all_hits[cell.query_index].append( (id, cell.score) )
-
+                result = results[cell.query_index]
+                result.ids.append(id)
+                result.scores.append(cell.score)
+                
             if start == end:
                 break
 
-    return all_hits
+    return FPSSearchResults(results)
             
 ######### k-nearest Tanimoto search, with threshold
 
@@ -190,10 +202,14 @@ def _make_knearest_search(num_queries, k):
 
 
 def knearest_tanimoto_search_fp(query_fp, target_reader, k, threshold):
-    query_arena = _fp_to_arena(query_fp, target_reader.metadata)
-    return knearest_tanimoto_search_all(query_arena, target_reader, k, threshold)[0]
+    """Find k matches in the target reader which are at least threshold similar to the query fingerprint
 
-def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
+    The results is an FPSSearchResults instance contain the result.
+    """
+    query_arena = _fp_to_arena(query_fp, target_reader.metadata)
+    return knearest_tanimoto_search_arena(query_arena, target_reader, k, threshold)[0]
+
+def knearest_tanimoto_search_arena(query_arena, target_reader, k, threshold):
     require_matching_sizes(query_arena, target_reader)
     if k < 0:
         raise ValueError("k must be non-negative")
@@ -217,16 +233,105 @@ def knearest_tanimoto_search_all(query_arena, target_reader, k, threshold):
 
         _chemfp.fps_knearest_search_finish(search)
 
-        all_results = []
+        results = []
         for query_index in xrange(num_queries):
             heap = search.heaps[0][query_index]
-            results = []
+            ids = []
             for i in xrange(heap.size):
                 id = ctypes.string_at(heap.ids[0][i])
-                score = heap.scores[0][i]
-                results.append( (id, score) )
-            all_results.append(results)
-        return all_results
+                ids.append(id)
+            scores = heap.scores[0][:heap.size]
+            results.append(FPSSearchResult(ids, scores))
+        return FPSSearchResults(results)
 
     finally:
         _chemfp.fps_knearest_search_free(search)
+
+def _reorder_row(ids, scores, name):
+    indices = range(len(ids))
+    if name == "decreasing-score":
+        indices.sort(key=lambda i: (-scores[i], ids[i]))
+    elif name == "increasing-score":
+        indices.sort(key=lambda i: (scores[i], ids[i]))
+    elif name == "decreasing-id":
+        indices.sort(key=lambda i: ids[i], reverse=True)
+    elif name == "increasing-id":
+        indices.sort(key=lambda i: ids[i])
+    elif name == "reverse":
+        ids.reverse()
+        scores.reverse()
+        return
+    elif name == "move-closest-first":
+        if len(ids) <= 1:
+            # Short-circuit when I don't need to do anything
+            return
+        x = max(scores)
+        i = scores.index(x)
+        ids[0], ids[i] = ids[i], ids[0]
+        scores[0], scores[i] = scores[i], scores[0]
+        return
+    else:
+        raise ValueError("Unknown sort order")
+
+    new_ids = [ids[i] for i in indices]
+    new_scores = [scores[i] for i in indices]
+    ids[:] = new_ids
+    scores[:] = new_scores
+
+class FPSSearchResult(object):
+    def __init__(self, ids, scores):
+        self.ids = ids
+        self.scores = scores
+    def __len__(self):
+        return len(self.ids)
+    def __nonzero__(self):
+        return bool(self.ids)
+    def __iter__(self):
+        return itertools.izip(self.ids, self.scores)
+    def __getitem__(self, i):
+        return (self.ids[i], self.scores[i])
+    def clear(self):
+        self.ids = []
+        self.scores = []
+
+    def get_ids(self):
+        return self.ids
+    def get_scores(self):
+        return self.scores
+    def get_ids_and_scores(self):
+        return zip(self.ids, self.scores)
+    def reorder(self, order="decreasing-score"):
+        _reorder_row(self.ids, self.scores, order)
+
+class FPSSearchResults(object):
+    def __init__(self, results):
+        self._results = results
+
+    def __len__(self):
+        return len(self._results)
+
+    def __getitem__(self, i):
+        return self._results[i]
+
+    def __iter__(self):
+        return iter(self._results)
+
+    def iter_ids(self):
+        for result in self._results:
+            yield result.ids
+
+    def iter_scores(self):
+        for result in self._results:
+            yield result.scores
+            
+    def iter_ids_and_scores(self):
+        for result in self._results:
+            yield zip(result.ids, result.scores)
+
+    def reorder_all(self, order="decreasing-score"):
+        for result in self._results:
+            _reorder_row(result.ids, result.scores, order)
+
+    def clear_all(self):
+        for result in self._results:
+            result.clear()

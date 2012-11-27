@@ -131,8 +131,8 @@ def open_compressed_output(destination, compression):
     if not compression:
         if destination is None:
             return sys.stdout
-        elif isinstance(source, basestring):
-            return open(source, "w")
+        elif isinstance(destination, basestring):
+            return open(destination, "w")
         else:
             return destination
 
@@ -148,18 +148,18 @@ def open_compressed_output(destination, compression):
     if compression == ".bz2":
         import bz2
         if destination is None:
-            if not exists("/dev/stdout"):
+            if not os.path.exists("/dev/stdout"):
                 raise NotImplementedError("Cannot write bz2 compressed data to stdout on this platform")
             return bz2.BZ2File("/dev/stdout", "w")
         elif isinstance(destination, basestring):
             return bz2.BZ2File(destination, "w")
         else:
-            raise NotImplementedError("bzip2 compression not supported")
+            raise NotImplementedError("bzip2 compression to file-like objects is not supported")
 
     if compression == ".xz":
-        raise NotImplementedError("xz compression not supported")
+        raise NotImplementedError("xz compression is not supported")
 
-    raise TypeError("unknown compression type %r" % (compression,))
+    raise ValueError("Unknown compression type %r" % (compression,))
 
 def open_compressed_input_universal(source, compression):
     if not compression:
@@ -186,18 +186,18 @@ def open_compressed_input_universal(source, compression):
             # bz2 doesn't support Python objects. On some platforms
             # I can work around the problem
             if not os.path.exists("/dev/stdin"):
-                raise NotImplementedError("Cannot read bz2 compressed data from stdin on this platform")
+                raise NotImplementedError("Cannot compressed bzip2 data from stdin on this platform")
             return bz2.BZ2File("/dev/stdin", "rU")
         elif isinstance(source, basestring):
             return bz2.BZ2File(source, "rU")
         else:
             # Well, I could emulate it, but I'm not going to
-            raise NotImplementedError("Cannot read bz2 compress data from a Python stream")
+            raise NotImplementedError("bzip decompression from file-like objects is not supported")
 
     if compression == ".xz":
-        raise NotImplementedError("xz decompression not supported")
+        raise NotImplementedError("xz decompression is not supported")
 
-    raise TypeError("unknown compression type %r" % (compression,))
+    raise ValueError("Unknown compression type %r" % (compression,))
 
 
 
@@ -249,11 +249,11 @@ ignore_pipe_errors = _IgnorePipeErrors()
 
 def write_fps1_fingerprint(outfile, fp, id):
     if "\t" in id:
-        raise ValueError("fingerprint ids must not contain a tab: %r" % (id,))
+        raise ValueError("Fingerprint ids must not contain a tab: %r" % (id,))
     if "\n" in id:
-        raise ValueError("fingerprint ids must not contain a newline: %r" % (id,))
+        raise ValueError("Fingerprint ids must not contain a newline: %r" % (id,))
     if not id:
-        raise ValueError("fingerprint ids must contain characters: %r" % (id,))
+        raise ValueError("Fingerprint ids must not be the empty string")
     
     outfile.write("%s\t%s\n" % (binascii.hexlify(fp), id))
 
@@ -263,11 +263,12 @@ def write_fps1_fingerprint(outfile, fp, id):
 
 class _closing_output(object):
     def __init__(self, destination):
+        self.destination = destination
         self.output = open_output(destination)
     def __enter__(self):
         return self.output
     def __exit__(self, *exec_info):
-        if self.output is not sys.stdout:
+        if isinstance(self.destination, basestring):
             self.output.close()
 
 def write_fps1_output(reader, destination, metadata=None):
@@ -279,11 +280,14 @@ def write_fps1_output(reader, destination, metadata=None):
             write_fps1_magic(outfile)
             write_fps1_header(outfile, metadata)
 
-            for (id, fp) in reader:
+            for i, (id, fp) in enumerate(reader):
                 if "\t" in id:
-                    raise ValueError("fingerprint ids must not contain a tab: %r" % (id,))
+                    raise ValueError("Fingerprint ids must not contain a tab: %r in record %d" %
+                                     (id, i+1))
                 if "\n" in id:
-                    raise ValueError("fingerprint ids must not contain a newline: %r" % (id,))
+                    raise ValueError("Fingerprint ids must not contain a newline: %r in record %d" %
+                                     (id, i+1))
                 if not id:
-                    raise ValueError("fingerprint ids must contain characters: %r" % (id,))
+                    raise ValueError("Fingerprint ids must not be the empty string in record %d" %
+                                     (i+1,))
                 outfile.write("%s\t%s\n" % (hexlify(fp), id))

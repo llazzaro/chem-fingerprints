@@ -1,5 +1,8 @@
+# Tests for the different alignment methods in bitops
+
 from __future__ import absolute_import, with_statement
 import unittest2
+from cStringIO import StringIO
 
 from support import fullpath
 
@@ -121,7 +124,7 @@ class TestAlign8SmallMethods(unittest2.TestCase):
             set_alignment_method(alignment, method)
             self.assertEquals(get_alignment_method(alignment), method)
         
-        hits = targets.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2)
+        hits = targets.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2).get_ids_and_scores()
         self.assertEqual(hits, [('CHEBI:8069', 1.0),
                                 ('CHEBI:6758', 0.78723404255319152),
                                 ('CHEBI:7983', 0.73999999999999999),
@@ -170,7 +173,7 @@ class TestAlign8LargeMethods(unittest2.TestCase):
             set_alignment_method("align-ssse3", "LUT8-1")
             self.assertEquals(get_alignment_method("align-ssse3"), "LUT8-1")
         
-        hits = targets_64.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2)
+        hits = targets_64.knearest_tanimoto_search_fp("00000000100410200290000b03a29241846163ee1f".decode("hex"), k=12, threshold=0.2).get_ids_and_scores()
         self.assertEqual(hits, [('CHEBI:8069', 1.0),
                                 ('CHEBI:6758', 0.78723404255319152),
                                 ('CHEBI:7983', 0.73999999999999999),
@@ -233,7 +236,42 @@ class TestSelectFastestMethod(unittest2.TestCase):
         best_methods2 = chemfp.bitops.get_alignment_methods()
         self.assertEquals(best_methods1, best_methods2) # This might fail if two methods have nearly identical timings
 
-        chemfp.bitops.select_fastest_method(repeat=-1000)
+# Tests based on coverage analysis
+class TestErrorConditions(unittest2.TestCase):
+    def test_get_unknown_alignment(self):
+        with self.assertRaisesRegexp(ValueError, "Unknown alignment 'Blah'"):
+            get_alignment_method("Blah")
+    def test_set_unknown_alignment(self):
+        with self.assertRaisesRegexp(ValueError, "Unknown alignment 'Blah'"):
+            set_alignment_method("Blah", "LUT8-1")
+    def test_set_unknown_alignment_method(self):
+        with self.assertRaisesRegexp(ValueError, "Unknown method 'LUT8-7'"):
+            set_alignment_method("align1", "LUT8-7")
+
+    def test_too_large_repeat(self):
+        with self.assertRaisesRegexp(ValueError, "repeat size is meaninglessly large"):
+            chemfp.bitops.select_fastest_method(2**30)
+    def test_negative_repeat(self):
+        with self.assertRaisesRegexp(ValueError, "repeat size must be 1 or larger.*"):
+            chemfp.bitops.select_fastest_method(-10)
+
+class TestPrintReport(unittest2.TestCase):
+    def test_print_report(self):
+        stdout = StringIO()
+        chemfp.bitops.print_report(stdout)
+        output = stdout.getvalue()
+
+class TestEnvironmentVariables(unittest2.TestCase):
+    def setUp(self):
+        self._alignment_methods = chemfp.bitops.get_alignment_methods()
+    def tearDown(self):
+        for k,v in self._alignment_methods.items():
+            set_alignment_method(k, v)
+
+    def set_align4(self):
+        set_alignment_method("align4", "LUT8-4")
+        chemfp.bitops.use_environment_variables({"CHEMFP-ALIGN4": "LUT8-1"})
+        self.assertEquals(get_alignment_methods("align4"), "LUT8-1")
 
 if __name__ == "__main__":
     chemfp.bitops.use_environment_variables()

@@ -26,235 +26,9 @@ import array
 
 from chemfp import FingerprintReader, check_fp_problems, check_metadata_problems
 import _chemfp
-from chemfp import bitops
+from chemfp import bitops, search
 
 __all__ = []
-
-def require_matching_fp_size(query_fp, target_arena):
-    if len(query_fp) != target_arena.metadata.num_bytes:
-        raise ValueError("query_fp uses %d bytes while target_arena uses %d bytes" % (
-            len(query_fp), target_arena.metadata.num_bytes))
-
-def require_matching_sizes(query_arena, target_arena):
-    assert query_arena.metadata.num_bits is not None, "arenas must define num_bits"
-    assert target_arena.metadata.num_bits is not None, "arenas must define num_bits"
-    if query_arena.metadata.num_bits != target_arena.metadata.num_bits:
-        raise ValueError("query_arena has %d bits while target_arena has %d bits" % (
-            query_arena.metadata.num_bits, target_arena.metadata.num_bits))
-    if query_arena.metadata.num_bytes != target_arena.metadata.num_bytes:
-        raise ValueError("query_arena uses %d bytes while target_arena uses %d bytes" % (
-            query_arena.metadata.num_bytes, target_arena.metadata.num_bytes))
-    
-
-def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
-    require_matching_fp_size(query_fp, target_arena)
-    # Improve the alignment so the faster algorithms can be used
-    query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
-        query_fp, target_arena.alignment, target_arena.storage_size)
-                                                 
-    counts = array.array("i", (0 for i in xrange(len(query_fp))))
-    _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
-                                 query_start_padding, query_end_padding,
-                                 target_arena.storage_size, query_fp, 0, 1,
-                                 target_arena.start_padding, target_arena.end_padding,
-                                 target_arena.storage_size, target_arena.arena,
-                                 target_arena.start, target_arena.end,
-                                 target_arena.popcount_indices,
-                                 counts)
-    return counts[0]
-
-
-def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
-    require_matching_sizes(query_arena, target_arena)
-
-    counts = (ctypes.c_int*len(query_arena))()
-    _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
-                                 query_arena.start_padding, query_arena.end_padding,
-                                 query_arena.storage_size,
-                                 query_arena.arena, query_arena.start, query_arena.end,
-                                 target_arena.start_padding, target_arena.end_padding,
-                                 target_arena.storage_size,
-                                 target_arena.arena, target_arena.start, target_arena.end,
-                                 target_arena.popcount_indices,
-                                 counts)
-    return counts
-
-
-class ThresholdSearchResults(object):
-    def __init__(self, num_results, results, target_ids):
-        self.num_results = num_results
-        self._result_ptr = results
-        self.target_ids = target_ids
-
-    def __del__(self, free=_chemfp.free_threshold_results):
-        free(self._result_ptr, 0, self.num_results)
-
-    def __len__(self):
-        return self.num_results
-
-    def size(self, i):
-        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
-        return _chemfp.get_num_threshold_hits(self._result_ptr, i)
-
-    def __getitem__(self, i):
-        i = xrange(self.num_results)[i]  # Use this trick to support negative index lookups
-        ids = self.target_ids
-        return [(ids[idx], score) for (idx, score) in
-                    _chemfp.threshold_result_get_hits(self._result_ptr, i)]
-    
-    def __iter__(self):
-        ids = self.target_ids
-        for i in range(0, self.num_results):
-            yield [(ids[idx], score) for (idx, score) in
-                         _chemfp.threshold_result_get_hits(self._result_ptr, i)]
-
-    def iter_hits(self):
-        for i in range(0, self.num_results):
-            yield _chemfp.threshold_result_get_hits(self._result_ptr, i)
-
-    def iter_indices(self):
-        # This can be optimized with more C code
-        for i in range(0, self.num_results):
-            yield [idx for (idx, score) in
-                        _chemfp.threshold_result_get_hits(self._result_ptr, i)]
-        
-
-
-
-def threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold):
-    require_matching_fp_size(query_fp, target_arena)
-
-    # Improve the alignment so the faster algorithms can be used
-    query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
-        query_fp, target_arena.alignment, target_arena.storage_size)
-
-
-    results = _chemfp.alloc_threshold_results(1)
-    try:
-        _chemfp.threshold_tanimoto_arena(
-            threshold, target_arena.num_bits,
-            query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena,
-            target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-        return _chemfp.threshold_result_get_hits(results, 0)
-    finally:
-        _chemfp.free_threshold_results(results, 0, 1)
-
-
-
-def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
-    require_matching_fp_size(query_fp, target_arena)
-    result = threshold_tanimoto_search_fp_indices(query_fp, target_arena, threshold)
-    return [(target_arena.ids[index-target_arena.start], score) for (index, score) in result]
-
-
-def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
-    require_matching_sizes(query_arena, target_arena)
-
-    num_queries = len(query_arena)
-
-    results = _chemfp.alloc_threshold_results(num_queries)
-    try:
-        _chemfp.threshold_tanimoto_arena(
-            threshold, target_arena.num_bits,
-            query_arena.start_padding, query_arena.end_padding,
-            query_arena.storage_size, query_arena.arena, query_arena.start, query_arena.end,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-    except:
-        _chemfp.free_threshold_results(results, 0, num_queries)
-        raise
-    
-    return ThresholdSearchResults(num_queries, results, target_arena.ids)
-
-##########
-            
-def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
-    result = knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold)
-    return [(target_arena.ids[index-target_arena.start], score) for (index, score) in result]
-
-def knearest_tanimoto_search_fp_indices(query_fp, target_arena, k, threshold):
-    require_matching_fp_size(query_fp, target_arena)
-    query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
-        query_fp, target_arena.alignment, target_arena.storage_size)
-    
-    if k < 0:
-        raise ValueError("k must be non-negative")
-
-    results = _chemfp.alloc_threshold_results(1)
-    try:
-        _chemfp.knearest_tanimoto_arena(
-            k, threshold, target_arena.num_bits,
-            query_start_padding, query_end_padding, target_arena.storage_size, query_fp, 0, 1,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-        _chemfp.knearest_results_finalize(results, 0, 1)
-        return _chemfp.threshold_result_get_hits(results, 0)
-    finally:
-        _chemfp.free_threshold_results(results, 0, 1)
-        pass
-
-
-def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
-    require_matching_sizes(query_arena, target_arena)
-
-    num_queries = len(query_arena)
-
-    results = _chemfp.alloc_threshold_results(num_queries)
-    try:
-        _chemfp.knearest_tanimoto_arena(
-            k, threshold, target_arena.num_bits,
-            query_arena.start_padding, query_arena.end_padding,
-            query_arena.storage_size, query_arena.arena, query_arena.start, query_arena.end,
-            target_arena.start_padding, target_arena.end_padding,
-            target_arena.storage_size, target_arena.arena, target_arena.start, target_arena.end,
-            target_arena.popcount_indices,
-            results, 0)
-        _chemfp.knearest_results_finalize(results, 0, num_queries)
-    except:
-        _chemfp.free_threshold_results(results, 0, num_queries)
-        raise
-    
-    return ThresholdSearchResults(num_queries, results, target_arena.ids)
-
-
-def count_tanimoto_hits_arena_symmetric(arena, threshold):
-    num_queries = len(arena)
-    counts = (ctypes.c_int*num_queries)()
-    _chemfp.count_tanimoto_hits_arena_symmetric(
-        threshold, arena.num_bits,
-        arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-        0, num_queries, 0, num_queries,
-        arena.popcount_indices,
-        counts)
-        
-    return counts
-    
-def threshold_tanimoto_search_arena_symmetric(arena, threshold):
-    num_queries = len(arena)
-    results = _chemfp.alloc_threshold_results(num_queries)
-    try:
-        _chemfp.threshold_tanimoto_arena_symmetric(
-            threshold, arena.num_bits,
-            arena.start_padding, arena.end_padding, arena.storage_size, arena.arena,
-            0, num_queries, 0, num_queries,
-            arena.popcount_indices,
-            results)
-        _chemfp.knearest_results_finalize(results, 0, num_queries)
-    except:
-        _chemfp.free_threshold_results(results, 0, num_queries)
-        raise
-    
-    return ThresholdSearchResults(num_queries, results, arena.ids)
-
-
     
 
 class FingerprintArena(FingerprintReader):
@@ -268,7 +42,7 @@ class FingerprintArena(FingerprintReader):
     """
     def __init__(self, metadata, alignment,
                  start_padding, end_padding, storage_size, arena,
-                 popcount_indices, ids, start=0, end=None):
+                 popcount_indices, arena_ids, start=0, end=None):
         if metadata.num_bits is None:
             raise TypeError("Missing metadata num_bits information")
         if metadata.num_bytes is None:
@@ -281,7 +55,7 @@ class FingerprintArena(FingerprintReader):
         self.storage_size = storage_size
         self.arena = arena
         self.popcount_indices = popcount_indices
-        self.ids = ids
+        self.arena_ids = arena_ids
         self.start = start
         if end is None:
             if self.metadata.num_bytes:
@@ -297,8 +71,8 @@ class FingerprintArena(FingerprintReader):
         return self.end - self.start
 
     @property
-    def arena_ids(self):
-        return self.ids[self.start:self.end]
+    def ids(self):
+        return self.arena_ids[self.start:self.end]
 
     def __getitem__(self, i):
         """Return the (id, fingerprint) at position i"""
@@ -313,7 +87,7 @@ class FingerprintArena(FingerprintReader):
             return FingerprintArena(self.metadata, self.alignment,
                                     self.start_padding, self.end_padding,
                                     self.storage_size, self.arena,
-                                    self.popcount_indices, self.ids,
+                                    self.popcount_indices, self.arena_ids,
                                     self.start+start, self.start+end)
         try:
             i = self._range_check[i]
@@ -322,7 +96,7 @@ class FingerprintArena(FingerprintReader):
         arena_i = i + self.start
         start_offset = arena_i * self.storage_size + self.start_padding
         end_offset = start_offset + self.metadata.num_bytes
-        return self.ids[arena_i], self.arena[start_offset:end_offset]
+        return self.arena_ids[arena_i], self.arena[start_offset:end_offset]
 
 
     def save(self, destination):
@@ -338,8 +112,11 @@ class FingerprintArena(FingerprintReader):
         try:
             io.write_fps1_magic(output)
             io.write_fps1_header(output, self.metadata)
-            for id, fp in self:
-                io.write_fps1_fingerprint(output, fp, id)
+            try:
+                for i, (id, fp) in enumerate(self):
+                    io.write_fps1_fingerprint(output, fp, id)
+            except ValueError, err:
+                raise ValueError("%s in record %i" % (err, i+1))
         finally:
             if need_close:
                 output.close()
@@ -355,7 +132,7 @@ class FingerprintArena(FingerprintReader):
             return
         target_fp_size = self.metadata.num_bytes
         arena = self.arena
-        for id, start_offset in zip(self.ids[self.start:self.end],
+        for id, start_offset in zip(self.arena_ids[self.start:self.end],
                                     xrange(self.start*storage_size+self.start_padding,
                                            self.end*storage_size+self.start_padding,
                                            storage_size)):
@@ -384,17 +161,19 @@ class FingerprintArena(FingerprintReader):
         start = self.start
         for i in xrange(0, len(self), arena_size):
             end = start+arena_size
-            if end > len(self):
-                end = len(self)
+            if end > self.end:
+                end = self.end
             yield FingerprintArena(self.metadata, self.alignment,
                                    self.start_padding, self.end_padding,
                                    self.storage_size, self.arena,
-                                   self.popcount_indices, self.ids, start, end)
+                                   self.popcount_indices, self.arena_ids, start, end)
             start = end
 
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
         """Count the fingerprints which are similar enough to the query fingerprint
 
+        XXX
+        
         Return the number of fingerprints in this arena which are
         at least `threshold` similar to the query fingerprint `query_fp`.
 
@@ -404,26 +183,36 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: integer count
         """
-        return count_tanimoto_hits_fp(query_fp, self, threshold)
+        return search.count_tanimoto_hits_fp(query_fp, self, threshold)
 
-    def count_tanimoto_hits_arena(self, query_arena, threshold=0.7):
+    def count_tanimoto_hits_arena(self, queries, threshold=0.7):
         """Count the fingerprints which are similar enough to each query fingerprint
 
-        For each fingerprint in the `query_arena`, count the number of
-        fingerprints in this arena with Tanimoto similarity of at
-        least `threshold`. The resulting list order is the same as the
-        query fingerprint order.
+        XXX
         
-        :param query_fp: query arena
-        :type query_fp: FingerprintArena
+        Returns an iterator containing the (query_id, count) for each
+        fingerprint in `queries`, where `query_id` is the query
+        fingerprint id and `count` is the number of fingerprints found
+        which are at least `threshold` similar to the query.
+
+        The order of results is the same as the order of the
+        queries. For efficiency reasons, `arena_size` queries are
+        processed at a time.
+        
+        :param queries: query fingerprints
+        :type query_fp: FingerprintArena or FPSReader (must implement iter_arenas())
         :param threshold: minimum similarity threshold (default: 0.7)
         :type threshold: float between 0.0 and 1.0, inclusive
-        :returns: list of integer counts
+        :param arena_size: number of queries to process at a time (default: 100)
+        :type arena_size: positive integer
+        :returns: list of (query_id, integer count) pairs, one for each query
         """
-        return count_tanimoto_hits_arena(query_arena, self, threshold)
+        return search.count_tanimoto_hits_arena(queries, self, threshold)
 
     def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
         """Find the fingerprints which are similar enough to the query fingerprint
+
+        XXX
 
         Find all of the fingerprints in this arena which are at least
         `threshold` similar to the query fingerprint `query_fp`.
@@ -436,10 +225,12 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: list of (int, score) tuples
         """
-        return threshold_tanimoto_search_fp(query_fp, self, threshold)
+        return search.threshold_tanimoto_search_fp(query_fp, self, threshold)
 
-    def threshold_tanimoto_search_arena(self, query_arena, threshold=0.7):
+    def threshold_tanimoto_search_arena(self, queries, threshold=0.7, arena_size=100):
         """Find the fingerprints which are similar to each of the query fingerprints
+
+        XXX
 
         For each fingerprint in the `query_arena`, find all of the
         fingerprints in this arena which are at least `threshold`
@@ -451,11 +242,13 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: SearchResults
         """
-        return threshold_tanimoto_search_arena(query_arena, self, threshold)
+        return search.threshold_tanimoto_search_arena(queries, self, threshold)
 
     def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
         """Find the k-nearest fingerprints which are similar to the query fingerprint
 
+        XXX
+        
         Find the `k` fingerprints in this arena which are most similar
         to the query fingerprint `query_fp` and which are at least `threshold`
         similar to the query. The hits are returned as a list of
@@ -470,10 +263,12 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: SearchResults
         """
-        return knearest_tanimoto_search_fp(query_fp, self, k, threshold)
+        return search.knearest_tanimoto_search_fp(query_fp, self, k, threshold)
 
-    def knearest_tanimoto_search_arena(self, query_arena, k=3, threshold=0.7):
+    def knearest_tanimoto_search_arena(self, queries, k=3, threshold=0.7):
         """Find the k-nearest fingerprint which are similar to each of the query fingerprints
+
+        XXX
 
         For each fingerprint in the `query_arena`, find the `k`
         fingerprints in this arena which are most similar and which
@@ -490,8 +285,108 @@ class FingerprintArena(FingerprintReader):
         :type threshold: float between 0.0 and 1.0, inclusive
         :returns: SearchResult
         """
-        return knearest_tanimoto_search_arena(query_arena, self, k, threshold)
+        return search.knearest_tanimoto_search_arena(queries, self, k, threshold)
 
+    def copy_subset(self, indices=None, reorder=True):
+        if indices is None:
+            # Make a completely new arena
+
+            # Handle the trivial case where I don't need to do anything.
+            if (self.start == 0 and (self.end + self.start_padding + self.end_padding == len(self.arena)) and
+                (not reorder or self.popcount_indices)):
+                return FingerprintArena(self.metadata, self.alignment,
+                                        self.start_padding, self.end_padding, self.storage_size, self.arena,
+                                        self.popcount_indices, self.arena_ids)
+            # Otherwise I need to do some work
+            # Make a copy of the actual fingerprints. (Which could be a subarena.)
+            start = self.start_padding + self.start*self.storage_size
+            end = start + self.end*self.storage_size
+            arena = self.arena[start:end]
+
+            # If we don't popcount_indices and don't want them ordered
+            # then just do the alignment and we're done.
+            if not reorder and not self.popcount_indices:
+                # Don't reorder the unordered fingerprints
+                start_padding, end_padding, arena = _chemfp.make_unsorted_aligned_arena(arena, self.alignment)
+                return FingerprintArena(self.metadata, self.alignment, start_padding, end_padding, storage_size,
+                                        unsorted_arena, "", self.ids)
+
+            # Either we're already sorted or we should become sorted.
+            # If we're sorted then make_sorted_aligned_arena will detect
+            # that and keep the old arena. Otherwise it sorts first and
+            # makes a new arena block.
+            current_ids = self.ids
+            ordering = (ChemFPOrderedPopcount*len(current_ids))()
+            popcounts = array.array("i", (0,)*(self.metadata.num_bits+2))
+
+            start_padding, end_padding, arena = _chemfp.make_sorted_aligned_arena(
+                self.metadata.num_bits, storage_size, arena, len(current_ids),
+                ordering, popcounts, self.alignment)
+
+            reordered_ids = [current_ids[item.index] for item in ordering]
+            return FingerprintArena(self.metadata, self.alignment,
+                                    start_padding, end_padding, storage_size,
+                                    arena, popcounts.tostring(), reordered_ids)
+
+        # On this pathway, we want to make a new arena which contains
+        # selected fingerprints givesn indices into the old arena.
+        
+        arena = self.arena
+        storage_size = self.storage_size
+        start = self.start
+        start_padding = self.start_padding
+        arena_ids = self.arena_ids
+        
+        # First make sure that all of the indices are in range.
+        # This will also convert negative indices into positive ones.
+        new_indices = []
+        range_check = self._range_check
+        try:
+            for i in indices:
+                new_indices.append(range_check[i])
+        except IndexError:
+            raise IndexError("arena fingerprint index %d is out of range" % (i,))
+
+        if reorder and self.popcount_indices:
+            # There's a slight performance benefit because
+            # make_sorted_aligned_arena will see that the fingerprints
+            # are already in sorted order and not resort.
+            # XXX Is that true? Why do a Python sort instead of a C sort?
+            # Perhaps because then I don't need to make fingerprint copies.
+            new_indices.sort()
+
+        # Copy the fingerprints over to a new arena block
+        unsorted_fps = []
+        new_ids = []
+        for new_i in new_indices:
+            start_offset = new_i*storage_size + start_padding
+            end_offset = start_offset + storage_size
+            unsorted_fps.append(arena[start_offset:end_offset])
+            new_ids.append(arena_ids[new_i])
+                
+        unsorted_arena = "".join(unsorted_fps)
+        unsorted_fps = None   # regain some memory
+
+        # If the caller doesn't want ordered data, then leave it unsorted
+        if not reorder:
+            start_padding, end_padding, unsorted_arena = _chemfp.make_unsorted_aligned_arena(
+                unsorted_arena, self.alignment)
+            return FingerprintArena(self.metadata, self.alignment, start_padding, end_padding, storage_size,
+                                    unsorted_arena, "", new_ids)
+
+        # Otherwise, reorder and align the area, along with popcount information
+        ordering = (ChemFPOrderedPopcount*len(new_ids))()
+        popcounts = array.array("i", (0,)*(self.metadata.num_bits+2))
+
+        start_padding, end_padding, sorted_arena = _chemfp.make_sorted_aligned_arena(
+            self.metadata.num_bits, storage_size, unsorted_arena, len(new_ids),
+            ordering, popcounts, self.alignment)
+
+        reordered_ids = [new_ids[item.index] for item in ordering]
+        return FingerprintArena(self.metadata, self.alignment,
+                                start_padding, end_padding, storage_size,
+                                sorted_arena, popcounts.tostring(), reordered_ids)
+        
 
 # TODO: push more of this malloc-management down into C
 class ChemFPOrderedPopcount(ctypes.Structure):
@@ -547,6 +442,8 @@ def fps_to_arena(fps_reader, metadata=None, reorder=True, alignment=None):
         metadata = fps_reader.metadata
     num_bits = metadata.num_bits
     if not num_bits:
+        if metadata.num_bytes is None:
+            raise ValueError("metadata must contain at least one of num_bits or num_bytes")
         num_bits = metadata.num_bytes * 8
     #assert num_bits
 

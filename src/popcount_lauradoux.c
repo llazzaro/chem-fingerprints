@@ -25,7 +25,7 @@
  * http://perso.citi.insa-lyon.fr/claurado/hamming.html
  */
 int
-_chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
+chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
   const uint64_t m1  = UINT64_C(0x5555555555555555);
   const uint64_t m2  = UINT64_C(0x3333333333333333);
   const uint64_t m4  = UINT64_C(0x0F0F0F0F0F0F0F0F);
@@ -94,7 +94,7 @@ _chemfp_popcount_lauradoux(int byte_size, const uint64_t *fp) {
 }
 
 int
-_chemfp_intersect_popcount_lauradoux(int byte_size,
+chemfp_intersect_popcount_lauradoux(int byte_size,
                                      const uint64_t *fp1, const uint64_t *fp2) {
   const uint64_t m1  = UINT64_C(0x5555555555555555);
   const uint64_t m2  = UINT64_C(0x3333333333333333);

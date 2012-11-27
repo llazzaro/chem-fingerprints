@@ -144,10 +144,14 @@ def main(args=None):
             fpSize=args.fpSize,
             targetSize=args.targetSize)
     elif args.pairs:
-        opener = types.get_fingerprint_family("RDKit-Pair")(
+        minLength = args.minLength
+        maxLength = args.maxLength
+        if maxLength < minLength:
+            parser.error("--minLength must not be greater than --maxLength")
+        opener = types.get_fingerprint_family("RDKit-AtomPair")(
             fpSize=args.fpSize,
-            minLength=args.minLength,
-            maxLength=args.maxLength)
+            minLength=minLength,
+            maxLength=maxLength)
         
     else:
         raise AssertionError("Unknown fingerprinter")

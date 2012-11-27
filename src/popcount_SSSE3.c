@@ -6,7 +6,7 @@
   See http://cs.stanford.edu/people/ihaque/
 
   Kim Walisch modified the code for use in chemfp and implemented two
-  new *_chemfp_*() popcount functions for molecular fingerprints.
+  new chemfp popcount functions for molecular fingerprints.
   Copyright (c) 2011 Kim Walisch, <kim.walisch@gmail.com>.
   License: MIT license.
 */
@@ -227,7 +227,7 @@ static __m128i intersect_popcount_SSSE3_helper(const unsigned *buf, const unsign
  *           2) Use (get_cpuid_flags() & bit_SSSE3) from cpuid.h to
  *              test if the CPU supports the SSSE3 instructions.
  */
-int _chemfp_popcount_SSSE3(int size, const unsigned *fp) {
+int chemfp_popcount_SSSE3(int size, const unsigned *fp) {
 #if defined(GENERATE_SSSE3)
   /* 2^5 loop iters might overflow 8-bit counter,
      so cap it at 2^4 iters per chunk */
@@ -259,7 +259,7 @@ int _chemfp_popcount_SSSE3(int size, const unsigned *fp) {
  *           2) Use (get_cpuid_flags() & bit_SSSE3) from cpuid.h to
  *              test if the CPU supports the SSSE3 instructions.
  */
-int _chemfp_intersect_popcount_SSSE3(int size, const unsigned *fp1, const unsigned *fp2) {
+int chemfp_intersect_popcount_SSSE3(int size, const unsigned *fp1, const unsigned *fp2) {
 #if defined(GENERATE_SSSE3)
   /* 2^5 loop iters might overflow 8-bit counter,
      so cap it at 2^4 iters per chunk */
@@ -285,7 +285,7 @@ int _chemfp_intersect_popcount_SSSE3(int size, const unsigned *fp1, const unsign
 #endif
 }
 
-int _chemfp_has_ssse3(void) {
+int chemfp_has_ssse3(void) {
 #if defined(GENERATE_SSSE3)
   return (get_cpuid_flags() & bit_SSSE3);
 #else

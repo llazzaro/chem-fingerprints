@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 from openeye.oechem import (
     OESubSearch, OEChemGetRelease, OEChemGetVersion, OEGraphMol, OEAndAtom,
-    OENotAtom, OEIsAromaticAtom, OEIsCarbon, OEIsAromaticBond, OEHasBondIdx,
+    OENotAtom, OEIsAromaticAtom, OEIsCarbon, OEIsAromaticBond, OEAtomIsInRing, OEHasBondIdx,
     OEFindRingAtomsAndBonds, OEDetermineAromaticRingSystems, OEDetermineComponents)
 
 
@@ -76,9 +76,9 @@ class AromaticRings(object):
         assert num_aromatic_systems != 0, "there is supposed to be an aromatic ring"
         if num_aromatic_systems == 1:
             return (1,)
-        return (1,2)
-
-_is_hetereo_aromatic = OEAndAtom(OEIsAromaticAtom(), OENotAtom(OEIsCarbon()))
+        raise AssertionError("Should not get here")
+    
+_is_hetereo_aromatic = OEAndAtom(OEAndAtom(OEIsAromaticAtom(), OENotAtom(OEIsCarbon())), OEAtomIsInRing())
 class HeteroAromaticRings(object):
     def __init__(self, max_count):
         if max_count > 2:
@@ -120,7 +120,7 @@ class HeteroAromaticRings(object):
             newmol.DeleteBond(newmol_bond)
             OEFindRingAtomsAndBonds(newmol)
 
-            for atom in mol.GetAtoms(_is_hetereo_aromatic):
+            for atom in newmol.GetAtoms(_is_hetereo_aromatic):
                 return (1,2)
 
         return (1,)
@@ -129,8 +129,7 @@ class NumFragments(object):
     def __init__(self, max_count):
         pass
     def SingleMatch(self, mol):
-        count, parts = OEDetermineComponents(mol)
-        return count > 0
+        return mol.NumAtoms() > 0
     def Match(self, mol, flg=True):
         count, parts = OEDetermineComponents(mol)
         # parts is a list of component numbers.
@@ -151,7 +150,7 @@ def aromatic_rings(max_count):
 
 def hetero_aromatic_rings(max_count):
     if max_count > 2:
-        return NotImplemented
+        return pattern_fingerprinter.LimitedMatcher(2, HeteroAromaticRings(2))
     return HeteroAromaticRings(max_count)
 
 _pattern_classes = {

@@ -4,11 +4,13 @@ import unittest2
 import tempfile
 import shutil
 import os
+from cStringIO import StringIO
+import tempfile
 
 import support
 
 try:
-    import rdkit
+    import chemfp.rdkit
     has_rdkit = True
     skip_rdkit = False
 except ImportError:
@@ -27,6 +29,7 @@ else:
     runner = None
 
 MACCS_SMI = support.fullpath("maccs.smi")
+TRP = open(support.fullpath("tryptophan.sdf")).read()
 
 class TestMACCS(unittest2.TestCase):
     def test_bitorder(self):
@@ -227,6 +230,129 @@ class TestRDKMorgan(unittest2.TestCase):
         
 TestRDKMorgan = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestRDKMorgan)
 
+_atom_pair_fingerprints = {
+None: None,
+"1": {"2048": "100000100008007000045020000008b0080220a4420084c000054010800300e02040000088c080010000800101404023000000100000000020000000004000a00002060400040800000000000002c00108000000000030009d00100002001001900080003081058010000400200209004000000000050b00800008084042060801000800000000010200030000000000040000000080000000000400000000021000708000100000600010008080200008000c8020000004040008000000600000000008000000100000000402000000400080300000600090004020000020000002008100000800000100020000000000000000000008100000000002000000",
+       "128": "fd42febdfaddfff5ff05df3fe3c3fffb",
+       "minLength": "dd02bebd328cbff5be055f3e6242ff32",
+       "maxLength": "3042c000e8d1e141f101d02181c160cb",
+       },
+
+"2": {"2048": "0100070010000000101100000013010000000000001100000010000001001703100000000007000011000301000310001000000010000000003000110100731000310001300000000000101000033110100000010000001000037311000000370313033003010000000101070000130030000010330000000000170031001077000013301000000300003133030000300030133003000131011100100f000010000013010300000000030310310000000300101030000011033010077100100000300003000000000011000000000110000010000301000037300000000101000001303000000000003000000010000010000001100000073001100100101010",
+       "128": "77f7fff7ff17017f7fffff7fff3fffff",
+       "minLength": "71777f777317003377ffff37733fff77",
+       "maxLength": "073033737f0001370100337f7f101077",
+       },
+}
+if not (skip_rdkit or chemfp.rdkit.ATOM_PAIR_VERSION is None):
+    _atom_pair_fps = _atom_pair_fingerprints[chemfp.rdkit.ATOM_PAIR_VERSION]
+    PAIR_TYPE = "RDKit-AtomPair/" + chemfp.rdkit.ATOM_PAIR_VERSION + " "
+
+class TestAtomPairFingerprinter(unittest2.TestCase):
+    def test_pair_defaults(self):
+        header, output = runner.run_split("--pair", 19)
+        self.assertEqual(header["#type"], PAIR_TYPE + "fpSize=2048 minLength=1 maxLength=30")
+        self.assertEqual(output[0], _atom_pair_fps["2048"] + "\t9425004")
+    def test_pair_explicit_defaults(self):
+        header, output = runner.run_split("--pair --fpSize 2048 --minLength 1 --maxLength 30", 19)
+        self.assertEqual(header["#type"], PAIR_TYPE + "fpSize=2048 minLength=1 maxLength=30")
+        self.assertEqual(output[0], _atom_pair_fps["2048"] + "\t9425004")
+    def test_num_bits_128(self):
+        header, output = runner.run_split("--pair --fpSize 128", 19)
+        self.assertEqual(header["#type"], PAIR_TYPE + "fpSize=128 minLength=1 maxLength=30")
+        self.assertEqual(output[0], _atom_pair_fps["128"] + "\t9425004")
+    def test_num_bits_error(self):
+        errmsg = runner.run_exit("--pair --fpSize 0")
+        self.assertIn("fpSize must be 1 or greater", errmsg)
+        errmsg = runner.run_exit("--pair --fpSize 2.3")
+        self.assertIn("fpSize must be 1 or greater", errmsg)
+    def test_min_length(self):
+        header, output = runner.run_split("--pair --fpSize 128 --minLength 4", 19)
+        self.assertEqual(header["#type"], PAIR_TYPE + "fpSize=128 minLength=4 maxLength=30")
+        self.assertEqual(output[0], _atom_pair_fps["minLength"] + "\t9425004")
+    def test_max_length(self):
+        header, output = runner.run_split("--pair --fpSize 128 --maxLength 3", 19)
+        self.assertEqual(header["#type"], PAIR_TYPE + "fpSize=128 minLength=1 maxLength=3")
+        self.assertEqual(output[0], _atom_pair_fps["maxLength"] + "\t9425004")
+    def test_min_length_error(self):
+        errmsg = runner.run_exit("--pair --minLength spam")
+        self.assertIn("minLength must be 0 or greater", errmsg)
+    def test_max_length_error(self):
+        errmsg = runner.run_exit("--pair --maxLength -3")
+        self.assertIn("maxLength must be 0 or greater", errmsg)
+        errmsg = runner.run_exit("--pair --maxLength spam")
+        self.assertIn("maxLength must be 0 or greater", errmsg)
+    def test_invalid_min_max_lengths(self):
+        errmsg = runner.run_exit("--pair --maxLength 0") # default minLength is 1
+        self.assertIn("--minLength must not be greater than --maxLength", errmsg)
+        errmsg = runner.run_exit("--pair --minLength 4 --maxLength 3")
+        self.assertIn("--minLength must not be greater than --maxLength", errmsg)
+    def test_valid_min_max_lengths(self):
+        header, output = runner.run_split("--pair --minLength 0")
+        self.assertEqual(header["#type"], PAIR_TYPE + "fpSize=2048 minLength=0 maxLength=30")
+        header, output = runner.run_split("--pair --minLength 0 --maxLength 0")
+        self.assertEqual(header["#type"], PAIR_TYPE + "fpSize=2048 minLength=0 maxLength=0")
+        header, output = runner.run_split("--pair --minLength 5 --maxLength 5")
+        self.assertEqual(header["#type"], PAIR_TYPE + "fpSize=2048 minLength=5 maxLength=5")
+        header, output = runner.run_split("--pair --minLength 6 --maxLength 8")
+        self.assertEqual(header["#type"], PAIR_TYPE + "fpSize=2048 minLength=6 maxLength=8")
+
+
+if skip_rdkit:
+    TestAtomPairFingerprinter = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestAtomPairFingerprinter)
+else:
+    TestAtomPairFingerprinter = unittest2.skipIf(chemfp.rdkit.ATOM_PAIR_VERSION is None,
+   "This version of RDKit has a broken GetHashedAtomPairFingerprintAsBitVect")(TestAtomPairFingerprinter)
+
+
+_torsion_fingerprints = {
+"1": {
+    "2048": "000000010100000000000040800008000000000000000000000000000000000040004000000000000c0000000000000040000000003010000000000000000800000000000000000000000000000000000000000000100000000000000000000000000080000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000002000000000000000000000000000000000000002000000000000000000000000000000020200080000000000000100000000000000000000000000000800000000000008400000000000000000200000000000000000000020000000000000000010008000000000200000000",
+    "128": "c2104083013018a42c008042c0000800",
+    "targetSize": "1491150001c0f010648000086245052c",
+    },
+"2": {
+    "2048": "00000000000003000000000001000000010000000000000000000000000000000000000000000000000000000000000700000010000000000010000000000000000000100000000000000000100000000000000000000100000000000001003000000000000000000000000000000000000000000000000000000000000000001000000100000000000000010000001000000000000000000000000000001000001100000000000000000000100000000000000000000000000000000000000000000001000000000000000000000000010000000000330000100100000010000000100000000000000000101000000000000001000000000030000000000000",
+    "128": "13111033000037000070011131013037",
+    "targetSize": "33037307030103730303131100331100",
+      }
+}
+if not skip_rdkit:
+    _torsion_fps = _torsion_fingerprints[chemfp.rdkit.TORSION_VERSION]
+    TORSION_TYPE = "RDKit-Torsion/" + chemfp.rdkit.TORSION_VERSION + " "
+
+class TestTorsionFingerprinter(unittest2.TestCase):
+    def test_torsion_defaults(self):
+        header, output = runner.run_split("--torsion", 19)
+        self.assertEqual(header["#type"], "RDKit-Torsion/1 fpSize=2048 targetSize=4")
+        self.assertEqual(output[0], _torsion_fps["2048"] + "\t9425004")
+    def test_torsion_explicit_defaults(self):
+        header, output = runner.run_split("--torsion --fpSize 2048 --targetSize 4", 19)
+        self.assertEqual(header["#type"], "RDKit-Torsion/1 fpSize=2048 targetSize=4")
+        self.assertEqual(output[0], _torsion_fps["2048"] + "\t9425004")
+    def test_num_bits_128(self):        
+        header, output = runner.run_split("--torsion --fpSize 128 --targetSize 4", 19)
+        self.assertEqual(header["#type"], "RDKit-Torsion/1 fpSize=128 targetSize=4")
+        self.assertEqual(output[0], _torsion_fps["128"] + "\t9425004")
+    def test_num_bits_error(self):
+        errmsg = runner.run_exit("--torsion --fpSize 0")
+        self.assertIn("fpSize must be 1 or greater", errmsg)
+        errmsg = runner.run_exit("--torsion --fpSize 2.3")
+        self.assertIn("fpSize must be 1 or greater", errmsg)
+    def test_target_size(self):
+        header, output = runner.run_split("--torsion --fpSize 128 --targetSize 5", 19)
+        self.assertEqual(header["#type"], "RDKit-Torsion/1 fpSize=128 targetSize=5")
+        self.assertEqual(output[0], _torsion_fps["targetSize"] + "\t9425004")
+    def test_target_size_error(self):
+        errmsg = runner.run_exit("--torsion --fpSize 128 --targetSize -1")
+        self.assertIn("targetSize must be 1 or greater", errmsg)
+        errmsg = runner.run_exit("--torsion --fpSize 128 --targetSize spam")
+        self.assertIn("targetSize must be 1 or greater", errmsg)
+        errmsg = runner.run_exit("--torsion --fpSize 128 --targetSize 0")
+        self.assertIn("targetSize must be 1 or greater", errmsg)
+
+TestTorsionFingerprinter = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestTorsionFingerprinter)
+
 class TestIO(unittest2.TestCase, support.TestIdAndErrors):
     _runner = runner
     def test_input_format(self):
@@ -267,5 +393,118 @@ class TestIO(unittest2.TestCase, support.TestIdAndErrors):
 
 TestIO = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestIO)
 
+
+class TestBadStructureFiles(unittest2.TestCase):
+    def setUp(self):
+        self.dirname = tempfile.mkdtemp()
+    def tearDown(self):
+        shutil.rmtree(self.dirname)
+
+    def _make_datafile(self, text, ext):
+        filename = os.path.join(self.dirname, "input."+ext)
+        with open(filename, "w") as f:
+            f.write(text)
+        return filename
+    
+    def test_blank_line_in_smiles(self):
+        filename = self._make_datafile("C methane\n\nO water\n", "smi")
+        msg = runner.run_exit([filename])
+        self.assertIn("Unexpected blank line at line 2 of", msg)
+
+    def test_bad_smiles(self):
+        filename = self._make_datafile("C methane\nQ Q-ane\nO water\n", "smi")
+        msg = runner.run_exit([filename])
+        self.assertIn("Cannot parse the SMILES 'Q' at line 2", msg)
+
+    def test_smiles_without_title(self):
+        filename = self._make_datafile("C methane\nO water\n[235U]\n", "smi")
+        msg = runner.run_exit([filename])
+        self.assertIn("Missing SMILES name (second column) at line 3", msg)
+
+    def test_sdf_with_bad_record(self):
+        # Three records, second one is bad
+        input = TRP + TRP.replace("32 28", "40 21") + TRP
+        filename = self._make_datafile(input, "sdf")
+        msg = runner.run_exit([filename])
+        self.assertIn("Could not parse molecule block at line 70", msg)
+        self.assertIn("input.sdf", msg)
+
+    def test_sdf_with_bad_record_checking_id(self):
+        # This tests a different code path than the previous
+        input = TRP + TRP.replace("32 28", "40 21") + TRP
+        filename = self._make_datafile(input, "sdf")
+        msg = runner.run_exit(["--id-tag", "COMPND", filename])
+        self.assertIn("Could not parse molecule block at line 70", msg)
+        self.assertIn("input.sdf", msg)
+
+    def test_sdf_with_missing_id(self):
+        filename = self._make_datafile(TRP, "sdf")
+        msg = runner.run_exit(["--id-tag", "SPAM", filename])
+        self.assertIn("Missing id tag 'SPAM' for record #1 at line 1", msg)
+        self.assertIn("input.sdf", msg)
+
+    def test_ignore_errors(self):
+        input = TRP + TRP.replace("32 28", "40 21") + TRP.replace("COMPND", "BLAH")
+        filename = self._make_datafile(input, "sdf")
+        header, output = runner.run_split(["--errors", "ignore", "--id-tag", "BLAH"], source=filename)
+        self.assertEqual(len(output), 1)
+
+    def test_unsupported_format(self):
+        filename = self._make_datafile("Unknown", "xyzzy")
+        result = runner.run_exit([filename])
+        self.assertIn("Unknown structure filename extension", result)
+        self.assertIn("input.xyzzy", result)
+        
+TestBadStructureFiles = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestBadStructureFiles)
+        
+
+# Some code to test the internal interface
+class TestInternals(unittest2.TestCase):
+    def test_make_rdk_fingerprinter(self):
+        # Make sure that I can call with the defaults
+        chemfp.rdkit.make_rdk_fingerprinter()
+            
+    def test_make_rdk_fingerprinter_bad_fpSize(self):
+        with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
+            chemfp.rdkit.make_rdk_fingerprinter(fpSize=0)
+        with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
+            chemfp.rdkit.make_rdk_fingerprinter(fpSize=-10)
+
+    def test_make_rdk_fingerprinter_min_path(self):
+        with self.assertRaisesRegexp(ValueError, "minPath must be positive"):
+            chemfp.rdkit.make_rdk_fingerprinter(minPath=0)
+        with self.assertRaisesRegexp(ValueError, "minPath must be positive"):
+            chemfp.rdkit.make_rdk_fingerprinter(monPath=-3)
+
+    def test_make_rdk_fingerprinter_max_path(self):
+        chemfp.rdkit.make_rdk_fingerprinter(minPath=2, maxPath=2)
+        with self.assertRaisesRegexp(ValueError, "maxPath must not be smaller than minPath"):
+            chemfp.rdkit.make_rdk_fingerprinter(minPath=3, maxPath=2)
+
+    def test_make_rdk_fingerprinter_min_path(self):
+        with self.assertRaisesRegexp(ValueError, "nBitsPerHash must be positive"):
+            chemfp.rdkit.make_rdk_fingerprinter(nBitsPerHash=0)
+        with self.assertRaisesRegexp(ValueError, "nBitsPerHash must be positive"):
+            chemfp.rdkit.make_rdk_fingerprinter(nBitsPerHash=-1)
+
+
+    def test_make_morgan_fingerprinter(self):
+        chemfp.rdkit.make_morgan_fingerprinter()
+        
+    def test_make_morgan_fingerprinter_bad_fpSize(self):
+        with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
+            chemfp.rdkit.make_morgan_fingerprinter(fpSize=0)
+        with self.assertRaisesRegexp(ValueError, "fpSize must be positive"):
+            chemfp.rdkit.make_morgan_fingerprinter(fpSize=-10)
+
+    def test_make_morgan_fingerprinter_bad_radius(self):
+        with self.assertRaisesRegexp(ValueError, "radius must be positive or zero"):
+            chemfp.rdkit.make_morgan_fingerprinter(radius=-1)
+        with self.assertRaisesRegexp(ValueError, "radius must be positive or zero"):
+            chemfp.rdkit.make_morgan_fingerprinter(radius=-10)
+
+    
+TestInternals = unittest2.skipIf(skip_rdkit, "RDKit not installed")(TestInternals)
+        
 if __name__ == "__main__":
     unittest2.main()

@@ -236,7 +236,7 @@ def main(args=None):
             # Decode the fingerprint, and complain if it isn't decodeable.
             try:
                 num_bits, fp = fp_decoder(encoded_fp)
-            except TypeError, err:
+            except ValueError, err:
                 msg = ("Could not %(decoder_name)s decode %(tag)r value %(encoded_fp)r: %(err)s %(where)s" %
                        dict(decoder_name=fp_decoder_name, tag=args.fp_tag,
                             where=location.where(), err=err, encoded_fp=encoded_fp))

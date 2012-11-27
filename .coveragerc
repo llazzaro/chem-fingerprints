@@ -1,0 +1,19 @@
+[run]
+omit = */numpy/*
+       */RDKit_2010_12_1/*
+       */RDKit_2011_03_2/rdkit/*
+       */RDKit_2011_06_1-py26/rdkit/*
+       */RDKit_2011_12-svn/rdkit/*
+       */site-packages/openbabel/*
+       */openeye/wrappers/*
+
+[report]
+include =
+        *chemfp/*
+omit =
+        *chemfp/argparse*
+exclude_lines =
+       raise AssertionError
+
+# [paths]
+# source = 

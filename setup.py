@@ -126,7 +126,7 @@ class build_ext_subclass( build_ext ):
 
 
 setup(name = "chemfp",
-      version = "1.1a4",
+      version = "1.1b5",
       description = DESCRIPTION,
       author = "Andrew Dalke",
       author_email = 'dalke@dalkescientific.com',
@@ -150,8 +150,8 @@ setup(name = "chemfp",
                                 "src/searches.c", "src/hits.c",
                                 "src/select_popcount.c", "src/popcount_popcnt.c",
                                 "src/popcount_lauradoux.c", "src/popcount_lut.c",
-                                "src/popcount_gillies.c",
-                                "src/popcount_SSSE3.c", "src/python_api.c"],
+                                "src/popcount_gillies.c", "src/popcount_SSSE3.c",
+                                "src/python_api.c", "src/pysearch_results.c"],
                                )],
       cmdclass = {"build_ext": build_ext_subclass},
      )

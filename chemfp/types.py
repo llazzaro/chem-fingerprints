@@ -8,7 +8,7 @@ from .decoders import import_decoder  # XXX too specific to the decoder module
 
 
 def check_openbabel_maccs166():
-    from chemfp.openbabel import HAS_MACCS, MACCS_VERSION
+    from .openbabel import HAS_MACCS, MACCS_VERSION
     assert HAS_MACCS
     if MACCS_VERSION == 1:
         return "OpenBabel-MACCS/1"
@@ -16,30 +16,48 @@ def check_openbabel_maccs166():
         return "OpenBabel-MACCS/2"
     raise AssertionError
 
-class FamilyProxy(object):
-    def __init__(self, family_name, path):
-        self.family_name = family_name
-        self.path = path
+def check_openeye_maccs166():
+    from .openeye import OEGRAPHSIM_API_VERSION
+    return "OpenEye-MACCS166/"+OEGRAPHSIM_API_VERSION
 
-    def __call__(self, **kwargs):
-        cls = import_decoder(self.path)
-        assert cls.name == self.family_name
-        return cls(kwargs)
+def check_openeye_path():
+    from .openeye import OEGRAPHSIM_API_VERSION
+    return "OpenEye-Path/"+OEGRAPHSIM_API_VERSION
 
-    def make_fingerprinter(self, kwargs):
-        family = import_decoder(self.path)
-        assert family.name == self.family_name
-        return family.make_fingerprinter(kwargs)
+def check_rdkit_atom_pair():
+    from .rdkit import ATOM_PAIR_VERSION
+    if ATOM_PAIR_VERSION is None:
+        ATOM_PAIR_VERSION = "2"  # Nothing is supported; pretend to want v2
+    return "RDKit-AtomPair/"+ATOM_PAIR_VERSION
+
+def check_rdkit_torsion():
+    from .rdkit import TORSION_VERSION
+    return "RDKit-Torsion/"+TORSION_VERSION
+
+### The chemfp fingerprint type API isn't powerful enough
+
+# I have to list all of the possible fingerprint types, even if the
+# platform doesn't support that specific type. There's also no support
+# for toolkit vendors which do carefully tracks the fingerprint
+# version (like OEChem); I should be using their version information
+# rather than doing it myself.
 
 _family_config_paths = (
     ("OpenEye-MACCS166/1", "chemfp.openeye.OpenEyeMACCSFingerprintFamily_v1"),
     ("OpenEye-Path/1", "chemfp.openeye.OpenEyePathFingerprintFamily_v1"),
+
+    ("OpenEye-MACCS166/2", "chemfp.openeye.OpenEyeMACCSFingerprintFamily_v2"),
+    ("OpenEye-Path/2", "chemfp.openeye.OpenEyePathFingerprintFamily_v2"),
+    ("OpenEye-Circular/2", "chemfp.openeye.OpenEyeCircularFingerprintFamily_v2"),
+    ("OpenEye-Tree/2", "chemfp.openeye.OpenEyeTreeFingerprintFamily_v2"),
     
     ("RDKit-MACCS166/1", "chemfp.rdkit.RDKitMACCSFingerprintFamily_v1"),
     ("RDKit-Fingerprint/1", "chemfp.rdkit.RDKitFingerprintFamily_v1"),
     ("RDKit-Morgan/1", "chemfp.rdkit.RDKitMorganFingerprintFamily_v1"),
     ("RDKit-Torsion/1", "chemfp.rdkit.RDKitTorsionFingerprintFamily_v1"),
-    ("RDKit-Pair/1", "chemfp.rdkit.RDKitPairFingerprintFamily_v1"),
+    ("RDKit-Torsion/2", "chemfp.rdkit.RDKitTorsionFingerprintFamily_v2"),
+    ("RDKit-AtomPair/1", "chemfp.rdkit.RDKitAtomPairFingerprintFamily_v1"),
+    ("RDKit-AtomPair/2", "chemfp.rdkit.RDKitAtomPairFingerprintFamily_v2"),
     
     ("OpenBabel-FP2/1", "chemfp.openbabel.OpenBabelFP2FingerprintFamily_v1"),
     ("OpenBabel-FP3/1", "chemfp.openbabel.OpenBabelFP3FingerprintFamily_v1"),
@@ -81,7 +99,11 @@ _family_config_paths = (
 )
 
 _alternates = {
-    "OpenBabel-MACCS": check_openbabel_maccs166
+    "OpenBabel-MACCS": check_openbabel_maccs166,
+    "OpenEye-MACCS166": check_openeye_maccs166,
+    "OpenEye-Path": check_openeye_path,
+    "RDKit-AtomPair": check_rdkit_atom_pair,
+    "RDKit-Torsion": check_rdkit_torsion,
     }
 
 
@@ -143,7 +165,7 @@ class FingerprintFamily(object):
     def make_fingerprinter_from_type(self, type):
         terms = type.split()
         if not terms:
-            raise ValueError("missing name in fingerprint type %r" % (type,))
+            raise ValueError("Empty fingerprint type (%r)" % (type,))
 
         required_args = self.config.get_args()
 
@@ -182,18 +204,6 @@ class FingerprintFamily(object):
 
         return Fingerprinter(self.config, kwargs)
 
-
-    def __repr__(self):
-        1/0
-
-    def __eq__(self):
-        2/0
-
-    def __ne__(self):
-        3/0
-
-    
-    
 
 class Fingerprinter(object):
     def __init__(self, config, fingerprinter_kwargs):
@@ -260,15 +270,18 @@ class Fingerprinter(object):
                                             date = io.utcnow(),
                                             aromaticity = metadata.aromaticity),
                                    reader)
-    
-    def describe(self, bitno):
-        if not (0 <= bitno < self.num_bits):
-            raise KeyError("Bit number %d is out of range" % (bitno,))
 
-        bit_description = self.config.bit_description
-        if bit_description is None:
-            return "(unknown)"
-        return bit_description[bitno]
+#    def describe(self, bitno):
+#        if not (0 <= bitno < self.num_bits):
+#            raise KeyError("Bit number %d is out of range" % (bitno,))
+#
+#        bit_description = self.config.bit_description
+#        if bit_description is None:
+#            return "(unknown)"
+#        return bit_description[bitno]
+
+
+## Some code to figure out what the format strings are inside of a string
 
 class Dummy(object):
     def __str__(self):
@@ -277,19 +290,20 @@ class Dummy(object):
         return 0
 
 class GetArgs(object):
-    def __init__(self):
+    def __init__(self, format_string):
+        self.format_string = format_string
         self.args = []
     def __getitem__(self, name):
         # O(n**2) but n is small.
         if name in self.args:
-            raise TypeError
+            raise TypeError("Duplicate name %r in format string %r" % (name, self.format_string))
         self.args.append(name)
         return Dummy()
 
 def _get_arg_names(s):
     if not s:
         return []
-    args = GetArgs()
+    args = GetArgs(s)
     s % args
     return args.args
     
@@ -376,6 +390,9 @@ class FingerprintFamilyConfig(object):
                                                 help=help))
         self.args[name] = arg
 
+    def remove_argument(self, name):
+        del self.args[name]
+
     def add_argument_to_argparse(self, name, parser):
         info = self.args[name]
         parser.add_argument("--" + info.name, **info.kwargs)
@@ -408,7 +425,7 @@ def zero_or_one(s):
 def parse_type(type):
     terms = type.split()
     if not terms:
-        raise ValueError("missing name in fingerprint type %r" % (type,))
+        raise ValueError("Empty fingerprint type (%r)" % (type,))
 
     name = terms[0]
     family = get_fingerprint_family(name)
