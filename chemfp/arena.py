@@ -287,7 +287,7 @@ class FingerprintArena(FingerprintReader):
         """
         return search.knearest_tanimoto_search_arena(queries, self, k, threshold)
 
-    def copy_arena(self, indices=None, reorder=True):
+    def copy_subset(self, indices=None, reorder=True):
         if indices is None:
             # Make a completely new arena
 
@@ -298,18 +298,23 @@ class FingerprintArena(FingerprintReader):
                                         self.start_padding, self.end_padding, self.storage_size, self.arena,
                                         self.popcount_indices, self.arena_ids)
             # Otherwise I need to do some work
-            # Make a copy of the actual fingerprints
+            # Make a copy of the actual fingerprints. (Which could be a subarena.)
             start = self.start_padding + self.start*self.storage_size
             end = start + self.end*self.storage_size
             arena = self.arena[start:end]
 
-            if not (reorder or self.popcount_indices):
+            # If we don't popcount_indices and don't want them ordered
+            # then just do the alignment and we're done.
+            if not reorder and not self.popcount_indices:
                 # Don't reorder the unordered fingerprints
                 start_padding, end_padding, arena = _chemfp.make_unsorted_aligned_arena(arena, self.alignment)
                 return FingerprintArena(self.metadata, self.alignment, start_padding, end_padding, storage_size,
                                         unsorted_arena, "", self.ids)
 
-            # Either we're already sorted or we should become sorted
+            # Either we're already sorted or we should become sorted.
+            # If we're sorted then make_sorted_aligned_arena will detect
+            # that and keep the old arena. Otherwise it sorts first and
+            # makes a new arena block.
             current_ids = self.ids
             ordering = (ChemFPOrderedPopcount*len(current_ids))()
             popcounts = array.array("i", (0,)*(self.metadata.num_bits+2))
@@ -323,7 +328,8 @@ class FingerprintArena(FingerprintReader):
                                     start_padding, end_padding, storage_size,
                                     arena, popcounts.tostring(), reordered_ids)
 
-        # We have indicies - we need to select fingerprint rows
+        # On this pathway, we want to make a new arena which contains
+        # selected fingerprints givesn indices into the old arena.
         
         arena = self.arena
         storage_size = self.storage_size
@@ -331,7 +337,8 @@ class FingerprintArena(FingerprintReader):
         start_padding = self.start_padding
         arena_ids = self.arena_ids
         
-        # First make sure that all of the indices are in range. Also handle negative indices.
+        # First make sure that all of the indices are in range.
+        # This will also convert negative indices into positive ones.
         new_indices = []
         range_check = self._range_check
         try:
@@ -344,9 +351,11 @@ class FingerprintArena(FingerprintReader):
             # There's a slight performance benefit because
             # make_sorted_aligned_arena will see that the fingerprints
             # are already in sorted order and not resort.
+            # XXX Is that true? Why do a Python sort instead of a C sort?
+            # Perhaps because then I don't need to make fingerprint copies.
             new_indices.sort()
 
-        # Copy the fingerprints over to a StringIO 
+        # Copy the fingerprints over to a new arena block
         unsorted_fps = []
         new_ids = []
         for new_i in new_indices:
@@ -356,14 +365,16 @@ class FingerprintArena(FingerprintReader):
             new_ids.append(arena_ids[new_i])
                 
         unsorted_arena = "".join(unsorted_fps)
-        unsorted_fps = None
+        unsorted_fps = None   # regain some memory
 
+        # If the caller doesn't want ordered data, then leave it unsorted
         if not reorder:
             start_padding, end_padding, unsorted_arena = _chemfp.make_unsorted_aligned_arena(
                 unsorted_arena, self.alignment)
             return FingerprintArena(self.metadata, self.alignment, start_padding, end_padding, storage_size,
                                     unsorted_arena, "", new_ids)
 
+        # Otherwise, reorder and align the area, along with popcount information
         ordering = (ChemFPOrderedPopcount*len(new_ids))()
         popcounts = array.array("i", (0,)*(self.metadata.num_bits+2))
 
