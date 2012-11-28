@@ -113,7 +113,7 @@ check_min_max_score(PyObject *min_score_obj, PyObject *max_score_obj,
                     double *min_score, double *max_score) {
   double value;
   if (min_score_obj == Py_None) {
-    *min_score = -DBL_MAX;
+    *min_score = -HUGE_VAL;
   } else {
     value = PyFloat_AsDouble(min_score_obj);
     if (value == -1.0) {
@@ -124,7 +124,7 @@ check_min_max_score(PyObject *min_score_obj, PyObject *max_score_obj,
     *min_score = value;
   }
   if (max_score_obj == Py_None) {
-    *max_score = DBL_MAX;
+    *max_score = HUGE_VAL;
   } else {
     value = PyFloat_AsDouble(max_score_obj);
     if (value == -1.0) {
@@ -147,7 +147,7 @@ check_interval(const char *interval, int *include_min, int *include_max) {
     *include_min = 1;
     break;
   default:
-      PyErr_SetString(PyExc_ValueError, "First 'interval' character must be '(' or '['");
+      PyErr_SetString(PyExc_ValueError, "First interval character must be '(' or '['");
       return 0;
   }
   switch (interval[1]) {
@@ -158,11 +158,11 @@ check_interval(const char *interval, int *include_min, int *include_max) {
     *include_max = 1;
     break;
   default:
-      PyErr_SetString(PyExc_ValueError, "Second 'interval' character must be ')' or ']'");
+      PyErr_SetString(PyExc_ValueError, "Second interval character must be ')' or ']'");
       return 0;
   }
   if (interval[2]) {
-    PyErr_SetString(PyExc_ValueError, "The 'interval' may only contain two characters");
+    PyErr_SetString(PyExc_ValueError, "The interval may only contain two characters");
     return 0;
   }
   return 1;
@@ -205,6 +205,17 @@ SearchResults_reorder_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   Py_RETURN_NONE;
 }
 
+#define COUNT_ALL_MACRO(expr)                           \
+  for (row=0; row<num_rows; row++) {                    \
+    num_hits = chemfp_get_num_hits(self->results+row);  \
+    scores = self->results[row].scores;                 \
+    for (i=0; i<num_hits; i++) {                        \
+      if (expr) {                                       \
+        count++;                                        \
+      }                                                 \
+    }                                                   \
+  }
+
 static PyObject *
 SearchResults_count_all(SearchResults *self, PyObject *args, PyObject *kwds) {
   static char *kwlist[] = {"min_score", "max_score", "interval", NULL};
@@ -225,121 +236,67 @@ SearchResults_count_all(SearchResults *self, PyObject *args, PyObject *kwds) {
       !check_interval(interval, &include_min, &include_max)) {
     return NULL;
   }
+  if ((min_score > max_score) ||
+      (min_score == max_score && !(include_min && include_max))) {
+    return PyInt_FromLong(0);
+  }
+
   num_rows = self->num_results;
-  if (min_score_obj == Py_None) { /* No lower bound */
-    if (max_score_obj == Py_None) {
-      for (row=0; row<num_rows; row++) {
-        count += chemfp_get_num_hits(self->results+row);
-      }
-    } else {
-      /* No min but has a max. */
-      if (include_max) {
-        for (row=0; row<num_rows; row++) {
-          num_hits = chemfp_get_num_hits(self->results+row);
-          scores = self->results[row].scores;
-          for (i=0; i<num_hits; i++) {
-            if (scores[i] <= max_score)
-              count++;
+  if (include_min) {
+    if (include_max) {
+      /* [] -- Include both ends */
+      if (min_score_obj == Py_None) {
+        if (max_score_obj == Py_None) {
+          /* Special case; just report the number of elements */
+          for (row=0; row<num_rows; row++) {
+            count += chemfp_get_num_hits(self->results+row);
           }
+        } else {
+          /* No lower bound */
+          COUNT_ALL_MACRO(scores[i] <= max_score);
         }
       } else {
-        for (row=0; row<num_rows; row++) {
-          num_hits = chemfp_get_num_hits(self->results+row);
-          scores = self->results[row].scores;
-          for (i=0; i<num_hits; i++) {
-            if (scores[i] < max_score) 
-              count++;
-          }
-        }
-      }
-    }
-  } else if (max_score_obj == Py_None) {
-    /* No max but has a min. */
-    if (include_min) {
-      for (row=0; row<num_rows; row++) {
-        num_hits = chemfp_get_num_hits(self->results+row);
-        scores = self->results[row].scores;
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] >= min_score)
-            count++;
+        if (max_score_obj == Py_None) {
+          /* Lower bound but no upper bound */
+          COUNT_ALL_MACRO(min_score <= scores[i]);
+        } else {
+          /* Definite lower and upper bound */
+          COUNT_ALL_MACRO(min_score <= scores[i] && scores[i] <= max_score);
         }
       }
     } else {
-      for (row=0; row<num_rows; row++) {
-        num_hits = chemfp_get_num_hits(self->results+row);
-        scores = self->results[row].scores;
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] > min_score)
-            count++;
-        }
+      /* [) -- Include the minimum but not the maximum */
+      if (min_score_obj == Py_None) {
+        /* There is no minimum */
+        COUNT_ALL_MACRO(scores[i] < max_score);
+      } else {
+        /* There is a minimum and a maximum test */
+        COUNT_ALL_MACRO(min_score <= scores[i] && scores[i] < max_score);
       }
     }
   } else {
-    /* Both an upper and lower range are defined */
-    if (min_score > max_score)  {
-      count=0;
-    } else if (min_score == max_score) {
-      if (include_min && include_max) {
-        for (row=0; row<num_rows; row++) {
-          num_hits = chemfp_get_num_hits(self->results+row);
-          scores = self->results[row].scores;
-          for (i=0; i<num_hits; i++) {
-            if (scores[i] == min_score)
-              count++;
-          }
-        }
+    if (include_max) {
+      /* (] -- Exclude the minimum, include the maximum */
+      if (max_score_obj == Py_None) {
+        /* No specified max, so must only be greater than the lower bound */
+        COUNT_ALL_MACRO(min_score < scores[i]);
       } else {
-        count = 0;
+        COUNT_ALL_MACRO(min_score < scores[i] && scores[i] <= max_score);
       }
     } else {
-      /* Tanimoto scores can only be between 0.0 and 1.0, so at present */
-      /* I could special-case that range. However, I don't want to depend */
-      /* on that assumption. */
-      if (include_min) {
-        if (include_max) {
-          for (row=0; row<num_rows; row++) {
-            num_hits = chemfp_get_num_hits(self->results+row);
-            scores = self->results[row].scores;
-            for (i=0; i<num_hits; i++) {
-              if (min_score <= scores[i] && scores[i] <= max_score)
-                count++;
-            }
-          }
-        } else {
-          for (row=0; row<num_rows; row++) {
-            num_hits = chemfp_get_num_hits(self->results+row);
-            scores = self->results[row].scores;
-            for (i=0; i<num_hits; i++) {
-              if (min_score <= scores[i] && scores[i] < max_score)
-                count++;
-            }
-          }
-        }
-      } else {
-        if (include_max) {
-          for (row=0; row<num_rows; row++) {
-            num_hits = chemfp_get_num_hits(self->results+row);
-            scores = self->results[row].scores;
-            for (i=0; i<num_hits; i++) {
-              if (min_score < scores[i] && scores[i] <= max_score)
-                count++;
-            }
-          }
-        } else {
-          for (row=0; row<num_rows; row++) {
-            num_hits = chemfp_get_num_hits(self->results+row);
-            scores = self->results[row].scores;
-            for (i=0; i<num_hits; i++) {
-              if  (min_score < scores[i] && scores[i] < max_score)
-                count++;
-            }
-          }
-        }
-      }
-    }   /* end of case where min_score < max_score */
-  } /* End of case where both upper and lower range are defined */
+      /* () -- Exclude the minimum and exclude the maximum */
+      COUNT_ALL_MACRO(min_score < scores[i] && scores[i] < max_score);
+    }
+  }
   return PyInt_FromLong(count);
 }
+
+#define COUNT_ROW_MACRO(expr)                         \
+  for (i=0; i<num_hits; i++) {                        \
+    if (expr) {                                       \
+      count++;                                        \
+    }                                                 \
+  }
 
 static PyObject *
 SearchResults_count_row(SearchResults *self, PyObject *args, PyObject *kwds) {
@@ -365,82 +322,68 @@ SearchResults_count_row(SearchResults *self, PyObject *args, PyObject *kwds) {
   num_hits = chemfp_get_num_hits(self->results+row);
   scores = (self->results+row)->scores;
 
-  if (min_score_obj == Py_None) {
-    if (max_score_obj == Py_None) {
-      count = num_hits;
-    } else {
-      /* No min but has a max. */
-      if (include_max) {
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] <= max_score)
-            count++;
+  if ((min_score > max_score) ||
+      (min_score == max_score && (!include_min || !include_max))) {
+    return PyInt_FromLong(0);
+  }
+
+  if (include_min) {
+    if (include_max) {
+      /* [] -- Include both ends */
+      if (min_score_obj == Py_None) {
+        if (max_score_obj == Py_None) {
+          /* Special case; just report the number of elements */
+          count = chemfp_get_num_hits(self->results+row);
+        } else {
+          /* No lower bound */
+          COUNT_ROW_MACRO(scores[i] <= max_score);
         }
       } else {
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] < max_score) 
-            count++;
+        if (max_score_obj == Py_None) {
+          /* Lower bound but no upper bound */
+          COUNT_ROW_MACRO(min_score <= scores[i]);
+        } else {
+          /* Definite lower and upper bound */
+          COUNT_ROW_MACRO(min_score <= scores[i] && scores[i] <= max_score);
         }
       }
-    }
-  } else if (max_score_obj == Py_None) {
-    /* No max but has a min. */
-    if (include_min) {
-      for (i=0; i<num_hits; i++) {
-        if (scores[i] >= min_score)
-          count++;
-      }
     } else {
-      for (i=0; i<num_hits; i++) {
-        if (scores[i] > min_score)
-          count++;
+      /* [) -- Include the minimum but not the maximum */
+      if (min_score_obj == Py_None) {
+        /* There is no minimum */
+        COUNT_ROW_MACRO(scores[i] < max_score);
+      } else {
+        /* There is a minimum and a maximum test */
+        COUNT_ROW_MACRO(min_score <= scores[i] && scores[i] < max_score);
       }
     }
   } else {
-    /* Both an upper and lower range are defined */
-    if (min_score > max_score)  {
-      count=0;
-    } else if (min_score == max_score) {
-      if (include_min && include_max) {
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] == min_score)
-            count++;
-        }
+    if (include_max) {
+      /* (] -- Exclude the minimum, include the maximum */
+      if (max_score_obj == Py_None) {
+        /* No specified max, so must only be greater than the lower bound */
+        COUNT_ROW_MACRO(min_score < scores[i]);
       } else {
-        count = 0;
+        COUNT_ROW_MACRO(min_score < scores[i] && scores[i] <= max_score);
       }
     } else {
-      /* Tanimoto scores can only be between 0.0 and 1.0, so at present */
-      /* I could special-case that range. However, I don't want to depend */
-      /* on that assumption. */
-      if (include_min) {
-        if (include_max) {
-          for (i=0; i<num_hits; i++) {
-            if (min_score <= scores[i] && scores[i] <= max_score)
-              count++;
-          }
-        } else {
-          for (i=0; i<num_hits; i++) {
-            if (min_score <= scores[i] && scores[i] < max_score)
-              count++;
-          }
-        }
-      } else {
-        if (include_max) {
-          for (i=0; i<num_hits; i++) {
-            if (min_score < scores[i] && scores[i] <= max_score)
-              count++;
-          }
-        } else {
-          for (i=0; i<num_hits; i++) {
-            if  (min_score < scores[i] && scores[i] < max_score)
-              count++;
-          }
-        }
-      }
-    }   /* end of case where min_score < max_score */
-  } /* End of case where both upper and lower range are defined */
+      /* () -- Exclude the minimum and exclude the maximum */
+      COUNT_ROW_MACRO(min_score < scores[i] && scores[i] < max_score);
+    }
+  }
   return PyInt_FromLong(count);
 }
+
+#define CUMULATIVE_SCORE_ALL_MACRO(expr)                \
+  for (row=0; row<num_rows; row++) {                    \
+    num_hits = chemfp_get_num_hits(self->results+row);  \
+    scores = self->results[row].scores;                 \
+    for (i=0; i<num_hits; i++) {                        \
+      if (expr) {                                       \
+        score += scores[i];                             \
+      }                                                 \
+    }                                                   \
+  }
 
 static PyObject *
 SearchResults_cumulative_score_all(SearchResults *self, PyObject *args, PyObject *kwds) {
@@ -462,122 +405,65 @@ SearchResults_cumulative_score_all(SearchResults *self, PyObject *args, PyObject
       !check_interval(interval, &include_min, &include_max)) {
     return NULL;
   }
+  if ((min_score > max_score) ||
+      (min_score == max_score && !(include_min && include_max))) {
+    return PyInt_FromLong(0);
+  }
+
   num_rows = self->num_results;
-  if (min_score_obj == Py_None) { /* No lower bound */
-    if (max_score_obj == Py_None) {
-      for (row=0; row<num_rows; row++) {
-	num_hits = chemfp_get_num_hits(self->results+row);
-	scores = self->results[row].scores;
-	for (i=0; i<num_hits; i++) {
-	  score += scores[i];
-	}
-      }
-    } else {
-      /* No min but has a max. */
-      if (include_max) {
-        for (row=0; row<num_rows; row++) {
-          num_hits = chemfp_get_num_hits(self->results+row);
-          scores = self->results[row].scores;
-          for (i=0; i<num_hits; i++) {
-	    score += scores[i];
-          }
+  if (include_min) {
+    if (include_max) {
+      /* [] -- Include both ends */
+      if (min_score_obj == Py_None) {
+        if (max_score_obj == Py_None) {
+          CUMULATIVE_SCORE_ALL_MACRO(1);
+        } else {
+          /* No lower bound */
+          CUMULATIVE_SCORE_ALL_MACRO(scores[i] <= max_score);
         }
       } else {
-        for (row=0; row<num_rows; row++) {
-          num_hits = chemfp_get_num_hits(self->results+row);
-          scores = self->results[row].scores;
-          for (i=0; i<num_hits; i++) {
-            if (scores[i] < max_score) 
-              score += scores[i];
-          }
-        }
-      }
-    }
-  } else if (max_score_obj == Py_None) {
-    /* No max but has a min. */
-    if (include_min) {
-      for (row=0; row<num_rows; row++) {
-        num_hits = chemfp_get_num_hits(self->results+row);
-        scores = self->results[row].scores;
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] >= min_score)
-            score += scores[i];
+        if (max_score_obj == Py_None) {
+          /* Lower bound but no upper bound */
+          CUMULATIVE_SCORE_ALL_MACRO(min_score <= scores[i]);
+        } else {
+          /* Definite lower and upper bound */
+          CUMULATIVE_SCORE_ALL_MACRO(min_score <= scores[i] && scores[i] <= max_score);
         }
       }
     } else {
-      for (row=0; row<num_rows; row++) {
-        num_hits = chemfp_get_num_hits(self->results+row);
-        scores = self->results[row].scores;
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] > min_score)
-            score += scores[i];
-        }
+      /* [) -- Include the minimum but not the maximum */
+      if (min_score_obj == Py_None) {
+        /* There is no minimum */
+        CUMULATIVE_SCORE_ALL_MACRO(scores[i] < max_score);
+      } else {
+        /* There is a minimum and a maximum test */
+        CUMULATIVE_SCORE_ALL_MACRO(min_score <= scores[i] && scores[i] < max_score);
       }
     }
   } else {
-    /* Both an upper and lower range are defined */
-    if (min_score > max_score)  {
-      score = 0.0;
-    } else if (min_score == max_score) {
-      if (include_min && include_max) {
-        for (row=0; row<num_rows; row++) {
-          num_hits = chemfp_get_num_hits(self->results+row);
-          scores = self->results[row].scores;
-          for (i=0; i<num_hits; i++) {
-            if (scores[i] == min_score)
-              score += scores[i];
-          }
-        }
+    if (include_max) {
+      /* (] -- Exclude the minimum, include the maximum */
+      if (max_score_obj == Py_None) {
+        /* No specified max, so must only be greater than the lower bound */
+        CUMULATIVE_SCORE_ALL_MACRO(min_score < scores[i]);
       } else {
-	/* Impossible to find a match beause one side is open */
-        score = 0.0;
+        CUMULATIVE_SCORE_ALL_MACRO(min_score < scores[i] && scores[i] <= max_score);
       }
     } else {
-      if (include_min) {
-        if (include_max) {
-          for (row=0; row<num_rows; row++) {
-            num_hits = chemfp_get_num_hits(self->results+row);
-            scores = self->results[row].scores;
-            for (i=0; i<num_hits; i++) {
-              if (min_score <= scores[i] && scores[i] <= max_score)
-                score += scores[i];
-            }
-          }
-        } else {
-          for (row=0; row<num_rows; row++) {
-            num_hits = chemfp_get_num_hits(self->results+row);
-            scores = self->results[row].scores;
-            for (i=0; i<num_hits; i++) {
-              if (min_score <= scores[i] && scores[i] < max_score)
-                score += scores[i];
-            }
-          }
-        }
-      } else {
-        if (include_max) {
-          for (row=0; row<num_rows; row++) {
-            num_hits = chemfp_get_num_hits(self->results+row);
-            scores = self->results[row].scores;
-            for (i=0; i<num_hits; i++) {
-              if (min_score < scores[i] && scores[i] <= max_score)
-                score += scores[i];
-            }
-          }
-        } else {
-          for (row=0; row<num_rows; row++) {
-            num_hits = chemfp_get_num_hits(self->results+row);
-            scores = self->results[row].scores;
-            for (i=0; i<num_hits; i++) {
-              if  (min_score < scores[i] && scores[i] < max_score)
-                score += scores[i];
-            }
-          }
-        }
-      }
-    }   /* end of case where min_score < max_score */
-  } /* End of case where both upper and lower range are defined */
+      /* () -- Exclude the minimum and exclude the maximum */
+      CUMULATIVE_SCORE_ALL_MACRO(min_score < scores[i] && scores[i] < max_score);
+    }
+  }
   return PyFloat_FromDouble(score);
 }
+
+#define CUMULATIVE_SCORE_ROW_MACRO(expr)              \
+  for (i=0; i<num_hits; i++) {                        \
+    if (expr) {                                       \
+      score += scores[i];                             \
+    }                                                 \
+  }
+
 
 static PyObject *
 SearchResults_cumulative_score_row(SearchResults *self, PyObject *args, PyObject *kwds) {
@@ -603,83 +489,54 @@ SearchResults_cumulative_score_row(SearchResults *self, PyObject *args, PyObject
   num_hits = chemfp_get_num_hits(self->results+row);
   scores = (self->results+row)->scores;
 
-  if (min_score_obj == Py_None) {
-    if (max_score_obj == Py_None) {
-      for (i=0; i<num_hits; i++) {
-	if (scores[i] <= max_score)
-	  score += scores[i];
-      }
-    } else {
-      /* No min but has a max. */
-      if (include_max) {
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] <= max_score)
-            score += scores[i];
+  if ((min_score > max_score) ||
+      (min_score == max_score && (!include_min || !include_max))) {
+    return PyFloat_FromDouble(0.0);
+  }
+
+  if (include_min) {
+    if (include_max) {
+      /* [] -- Include both ends */
+      if (min_score_obj == Py_None) {
+        if (max_score_obj == Py_None) {
+          CUMULATIVE_SCORE_ROW_MACRO(1);
+        } else {
+          /* No lower bound */
+          CUMULATIVE_SCORE_ROW_MACRO(scores[i] <= max_score);
         }
       } else {
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] < max_score) 
-            score += scores[i];
+        if (max_score_obj == Py_None) {
+          /* Lower bound but no upper bound */
+          CUMULATIVE_SCORE_ROW_MACRO(min_score <= scores[i]);
+        } else {
+          /* Definite lower and upper bound */
+          CUMULATIVE_SCORE_ROW_MACRO(min_score <= scores[i] && scores[i] <= max_score);
         }
       }
-    }
-  } else if (max_score_obj == Py_None) {
-    /* No max but has a min. */
-    if (include_min) {
-      for (i=0; i<num_hits; i++) {
-        if (scores[i] >= min_score)
-          score += scores[i];
-      }
     } else {
-      for (i=0; i<num_hits; i++) {
-        if (scores[i] > min_score)
-          score += scores[i];
+      /* [) -- Include the minimum but not the maximum */
+      if (min_score_obj == Py_None) {
+        /* There is no minimum */
+        CUMULATIVE_SCORE_ROW_MACRO(scores[i] < max_score);
+      } else {
+        /* There is a minimum and a maximum test */
+        CUMULATIVE_SCORE_ROW_MACRO(min_score <= scores[i] && scores[i] < max_score);
       }
     }
   } else {
-    /* Both an upper and lower range are defined */
-    if (min_score > max_score)  {
-      score = 0.0;
-    } else if (min_score == max_score) {
-      if (include_min && include_max) {
-        for (i=0; i<num_hits; i++) {
-          if (scores[i] == min_score)
-            score += scores[i];
-        }
+    if (include_max) {
+      /* (] -- Exclude the minimum, include the maximum */
+      if (max_score_obj == Py_None) {
+        /* No specified max, so must only be greater than the lower bound */
+        CUMULATIVE_SCORE_ROW_MACRO(min_score < scores[i]);
       } else {
-        score += scores[i];
+        CUMULATIVE_SCORE_ROW_MACRO(min_score < scores[i] && scores[i] <= max_score);
       }
     } else {
-      /* Tanimoto scores can only be between 0.0 and 1.0, so at present */
-      /* I could special-case that range. However, I don't want to depend */
-      /* on that assumption. */
-      if (include_min) {
-        if (include_max) {
-          for (i=0; i<num_hits; i++) {
-            if (min_score <= scores[i] && scores[i] <= max_score)
-              score += scores[i];
-          }
-        } else {
-          for (i=0; i<num_hits; i++) {
-            if (min_score <= scores[i] && scores[i] < max_score)
-              score += scores[i];
-          }
-        }
-      } else {
-        if (include_max) {
-          for (i=0; i<num_hits; i++) {
-            if (min_score < scores[i] && scores[i] <= max_score)
-              score += scores[i];
-          }
-        } else {
-          for (i=0; i<num_hits; i++) {
-            if  (min_score < scores[i] && scores[i] < max_score)
-              score += scores[i];
-          }
-        }
-      }
-    }   /* end of case where min_score < max_score */
-  } /* End of case where both upper and lower range are defined */
+      /* () -- Exclude the minimum and exclude the maximum */
+      CUMULATIVE_SCORE_ROW_MACRO(min_score < scores[i] && scores[i] < max_score);
+    }
+  }
   return PyFloat_FromDouble(score);
 }
 

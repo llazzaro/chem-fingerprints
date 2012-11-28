@@ -1,7 +1,9 @@
 from __future__ import with_statement
 
+import math
 import unittest2
 import random
+import re
 
 from chemfp.search import SearchResults
 from chemfp.fps_search import FPSSearchResults, FPSSearchResult
@@ -688,6 +690,204 @@ class TestArenaReverse(TestCase, CreateSearchResults, TestReverse):
     
 class TestFPSReverse(TestCase, CreateFPSSearchResults, TestReverse):
     pass
+
+neg_inf = float("-inf")
+pos_inf = float("inf")
+
+def _count_scores(func, scores):
+    return sum(1 for score in scores if func(score))
+def _add_scores(func, scores):
+    return sum(score for score in scores if func(score))
+
+def _range_searches(func):
+    expected_count = [
+        _count_scores(func, (0.1, 0.9, 0.2, 0.3, 0.15, 1.0)),
+        0.0,
+        _count_scores(func, (1.0, 0.0, 0.5, 0.14, 0.28)),
+        _count_scores(func, (neg_inf, 0.0001, pos_inf))]
+    expected_cumulative = [
+        _add_scores(func, (0.1, 0.9, 0.2, 0.3, 0.15, 1.0)),
+        0.0,
+        _add_scores(func, (1.0, 0.0, 0.5, 0.14, 0.28)),
+        _add_scores(func, (neg_inf, 0.0001, pos_inf))]
+    return expected_count, expected_cumulative
+
+class TestRangeSearches(TestCase):
+    def setUp(self):
+        self.results = self._create()
+        
+    def _create(self):
+        results = SearchResults(4)
+        for i, score in enumerate((0.1, 0.9, 0.2, 0.3, 0.15, 1.0)):
+            results._add_hit(0, i, score)
+        for i, score in enumerate((1.0, 0.0, 0.5, 0.14, 0.28)):
+            results._add_hit(2, i, score)
+        for i, score in enumerate((neg_inf, 0.0001, pos_inf)):
+            results._add_hit(3, i, score)
+        return results
+
+    def _test(self, func, *args, **kwargs):
+        expected_count, expected_cumulative = _range_searches(func)
+        results = self.results
+        self._compare_lists([result.count(*args, **kwargs) for result in results], expected_count)
+        self._compare(results.count_all(*args, **kwargs), sum(expected_count))
+        self._compare_lists([result.cumulative_score(*args, **kwargs) for result in results],
+                            expected_cumulative)
+        self._compare(results.cumulative_score_all(*args, **kwargs), sum(expected_cumulative))
+
+    def _compare_lists(self, got, expected):
+        self.assertEqual(len(got), len(expected))
+        for got_term, expected_term in zip(got, expected):
+            n = math.isnan(got_term) + math.isnan(expected_term)
+            if n != 2:
+                self.assertAlmostEqual(got_term, expected_term)
+    def _compare(self, got, expected):
+        n = math.isnan(got) + math.isnan(expected)
+        if n != 2:
+            self.assertAlmostEqual(got, expected)
+
+    def test_empty(self):
+        self._test(lambda score: 1)
+
+    def test_impossible_to_match(self):
+        self._test((lambda score: 1.0 <= score <= 0.0), min_score=1.0, max_score=0.0)
+        self._test((lambda score: 1.0 <= score <= 0.0), min_score=1.0, max_score=0.0, interval="[]")
+        self._test((lambda score: 1.0 <= score <= 0.0), min_score=1.0, max_score=0.0, interval="[)")
+        self._test((lambda score: 1.0 <= score <= 0.0), min_score=1.0, max_score=0.0, interval="(]")
+        self._test((lambda score: 1.0 <= score <= 0.0), min_score=1.0, max_score=0.0, interval="()")
+
+    def test_single_point(self):
+        self._test((lambda score: 1.0 <= score <= 1.0), min_score=1.0, max_score=1.0, interval="[]")
+        self._test((lambda score: 1.0 <= score < 1.0), min_score=1.0, max_score=1.0, interval="[)")
+        self._test((lambda score: 1.0 < score <= 1.0), min_score=1.0, max_score=1.0, interval="(]")
+        self._test((lambda score: 1.0 <= score < 1.0), min_score=1.0, max_score=1.0, interval="()")
+
+    def test_min_default(self):
+        self._test((lambda score: score>=0.15), min_score=0.15)
+        self._test((lambda score: score>=0.14), 0.14)
+        
+    def test_min_oo(self):
+        self._test((lambda score: 0.15 < score < pos_inf), min_score=0.15, interval="()")
+        self._test((lambda score: 0.14 < score < pos_inf), min_score=0.14, interval="()")
+        
+    def test_min_oc(self):
+        self._test((lambda score: 0.15 < score <=pos_inf), min_score=0.15, interval="(]")
+        self._test((lambda score: 0.14 < score <=pos_inf), min_score=0.14, interval="(]")
+        
+    def test_min_co(self):
+        self._test((lambda score: 0.15 <= score < pos_inf), min_score=0.15, interval="[)")
+        self._test((lambda score: 0.14 <= score < pos_inf), min_score=0.14, interval="[)")
+
+    def test_min_cc(self):
+        self._test((lambda score: 0.15 <= score), min_score=0.15, interval="[]")
+        self._test((lambda score: 0.14 <= score), min_score=0.14, interval="[]")
+
+
+    def test_max_default(self):
+        self._test((lambda score: score <= 0.15), max_score=0.15)
+        self._test((lambda score: score <= 0.14), None, 0.14)
+        
+    def test_max_oo(self):
+        self._test((lambda score: neg_inf < score < 0.15), max_score=0.15, interval="()")
+        self._test((lambda score: neg_inf < score < 0.14), max_score=0.14, interval="()")
+        
+    def test_max_oc(self):
+        self._test((lambda score: neg_inf < score <= 0.15), max_score=0.15, interval="(]")
+        self._test((lambda score: neg_inf < score <= 0.14), max_score=0.14, interval="(]")
+        
+    def test_max_co(self):
+        self._test((lambda score: score < 0.15), max_score=0.15, interval="[)")
+        self._test((lambda score: score < 0.14), max_score=0.14, interval="[)")
+
+    def test_max_cc(self):
+        self._test((lambda score: score <= 0.15), max_score=0.15, interval="[]")
+        self._test((lambda score: score <= 0.14), max_score=0.14, interval="[]")
+
+    # The same min/max tests but using -inf as the lower bound/+inf as the upper
+        
+    def test_min_default_max_inf(self):
+        self._test((lambda score: 0.15 <= score <= pos_inf), min_score=0.15, max_score=pos_inf)
+        self._test((lambda score: 0.14 <= score <= pos_inf), 0.14, pos_inf)
+        
+    def test_min_oo_max_inf(self):
+        self._test((lambda score: 0.15 < score < pos_inf), min_score=0.15, max_score=pos_inf, interval="()")
+        self._test((lambda score: 0.14 < score < pos_inf), min_score=0.14, max_score=pos_inf, interval="()")
+        
+    def test_min_oc_max_inf(self):
+        self._test((lambda score: 0.15 < score <= pos_inf), min_score=0.15, max_score=pos_inf, interval="(]")
+        self._test((lambda score: 0.14 < score <= pos_inf), min_score=0.14, max_score=pos_inf, interval="(]")
+        
+    def test_min_co_max_inf(self):
+        self._test((lambda score: 0.15 <= score < pos_inf), min_score=0.15, max_score=pos_inf, interval="[)")
+        self._test((lambda score: 0.14 <= score < pos_inf), min_score=0.14, max_score=pos_inf, interval="[)")
+
+    def test_min_cc_max_inf(self):
+        self._test((lambda score: 0.15 <= score <= pos_inf), min_score=0.15, max_score=pos_inf, interval="[]")
+        self._test((lambda score: 0.14 <= score <= pos_inf), min_score=0.14, max_score=pos_inf, interval="[]")
+
+
+    def test_max_default_min_ninf(self):
+        self._test((lambda score: neg_inf <= score <= 0.15), min_score=neg_inf, max_score=0.15)
+        self._test((lambda score: neg_inf <= score <= 0.14), neg_inf, 0.14)
+        
+    def test_max_oo_min_ninf(self):
+        self._test((lambda score: neg_inf < score < 0.15), max_score=0.15, min_score=neg_inf, interval="()")
+        self._test((lambda score: neg_inf < score < 0.14), max_score=0.14, min_score=neg_inf, interval="()")
+        
+    def test_max_oc_min_ninf(self):
+        self._test((lambda score: neg_inf < score <= 0.15), max_score=0.15, min_score=neg_inf, interval="(]")
+        self._test((lambda score: neg_inf < score <= 0.14), max_score=0.14, min_score=neg_inf, interval="(]")
+        
+    def test_max_co_min_ninf(self):
+        self._test((lambda score: neg_inf <= score < 0.15), max_score=0.15, min_score=neg_inf, interval="[)")
+        self._test((lambda score: neg_inf <= score < 0.14), max_score=0.14, min_score=neg_inf, interval="[)")
+
+    def test_max_cc_min_ninf(self):
+        self._test((lambda score: neg_inf <= score <= 0.15), max_score=0.15, min_score=neg_inf, interval="[]")
+        self._test((lambda score: neg_inf <= score <= 0.14), max_score=0.14, min_score=neg_inf, interval="[]")
+
+    # Specify both min and max
+        
+    def test_min_max_default(self):
+        self._test((lambda score: 0.15 <= score <= 1.0), min_score=0.15, max_score=1.0)
+        self._test((lambda score: 0.14 <= score <= 1.0), 0.14, 1.0)
+        self._test((lambda score: 0.14 <= score <= 0.9), 0.14, 0.9)
+        
+    def test_min_max_oo(self):
+        self._test((lambda score: 0.15 < score < 1.0), min_score=0.15, max_score=1.0, interval="()")
+        self._test((lambda score: 0.14 < score < 1.0), min_score=0.14, max_score=1.0, interval="()")
+        self._test((lambda score: 0.14 < score < 0.9), 0.14, 0.9, "()")
+        
+    def test_min_max_oc(self):
+        self._test((lambda score: 0.15 < score <= 1.0), min_score=0.15, max_score=1.0, interval="(]")
+        self._test((lambda score: 0.14 < score <= 1.0), min_score=0.14, max_score=1.0, interval="(]")
+        self._test((lambda score: 0.14 < score <= 0.9), 0.14, 0.9, "(]")
+        
+    def test_min_max_co(self):
+        self._test((lambda score: 0.15 <= score < 1.0), min_score=0.15, max_score=1.0, interval="[)")
+        self._test((lambda score: 0.14 <= score < 1.0), min_score=0.14, max_score=1.0, interval="[)")
+        self._test((lambda score: 0.14 <= score < 0.9), 0.14, 0.9, "[)")
+
+    def test_min_max_cc(self):
+        self._test((lambda score: 0.15 <= score <= 1.0), min_score=0.15, max_score=1.0, interval="[]")
+        self._test((lambda score: 0.14 <= score <= 1.0), min_score=0.14, max_score=1.0, interval="[]")
+        self._test((lambda score: 0.14 <= score <= 0.9), 0.14, 0.9, "[]")
+
+    def test_bad_interval(self):
+        results = self.results
+        for interval, msg in (("[", "Second interval character must be ')' or ']'"),
+                              ("(", "Second interval character must be ')' or ']'"),
+                              ("]", "First interval character must be '(' or '['"),
+                              (")", "First interval character must be '(' or '['"),
+                              ("a", "First interval character must be '(' or '['"),
+                              ("((", "Second interval character must be ')' or ']'"),
+                              ("()(", "The interval may only contain two characters")):
+            for method in (results.count_all, results[0].count,
+                           results.cumulative_score_all, results[0].cumulative_score):
+                with self.assertRaisesRegexp(ValueError, re.escape(msg)):
+                    method(interval=interval)
+                
+
 
 if __name__ == "__main__":
     unittest2.main()
