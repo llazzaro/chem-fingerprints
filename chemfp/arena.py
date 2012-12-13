@@ -65,6 +65,10 @@ class FingerprintArena(FingerprintReader):
             else:
                 end = 0
         self.end = end
+        if self.start == 0 and self.end == len(arena_ids):
+            self._ids = arena_ids
+        else:
+            self._ids = None
         self._id_lookup = id_lookup
         assert end >= start
         self._range_check = xrange(end-start)
@@ -75,7 +79,11 @@ class FingerprintArena(FingerprintReader):
 
     @property
     def ids(self):
-        return self.arena_ids[self.start:self.end]
+        ids = self._ids
+        if ids is None:
+            ids = self.arena_ids[self.start:self.end]
+            self._ids = ids
+        return ids
 
     def __getitem__(self, i):
         """Return the (id, fingerprint) at position i"""
