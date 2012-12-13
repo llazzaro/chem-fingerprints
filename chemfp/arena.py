@@ -30,7 +30,6 @@ from chemfp import bitops, search
 
 __all__ = []
     
-
 class FingerprintArena(FingerprintReader):
     """Stores fingerprints in a contiguous block of memory
 
@@ -332,7 +331,16 @@ class FingerprintArena(FingerprintReader):
         """
         return search.knearest_tanimoto_search_arena(queries, self, k, threshold)
 
-    def copy(self, indices=None, reorder=False):
+    def copy(self, indices=None, reorder=None):
+        if reorder is None:
+            if indices is None:
+                # This is a pure copy. Reorder only if there are popcount indices.
+                reorder = (self.popcount_indices != "")
+            else:
+                # The default is to go fast. If you want to preserve index order
+                # then you'll need to set reorder=False
+                reorder = True
+            
         if indices is None:
             # Make a completely new arena
             # Handle the trivial case where I don't need to do anything.

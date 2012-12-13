@@ -850,6 +850,7 @@ class TestArenaCopy(unittest2.TestCase):
         self.assertEqual(ordered_values1, values2)
         
     def test_simple_copy_of_unordered_arena(self):
+        # A copy of an unordered arena leaves things unordered
         arena1 = QUERY_ARENA.copy()
         self.assertEqual(arena1.popcount_indices, "") # internal API; make sure it's unsorted
         self._compare(QUERY_ARENA, arena1)
@@ -906,36 +907,36 @@ class TestArenaCopy(unittest2.TestCase):
     
     def test_select_all(self):
         arena1 = QUERY_ARENA.copy()
-        arena2 = arena1.copy(indices=range(len(arena1)))
+        arena2 = arena1.copy(indices=range(len(arena1)), reorder=False)
         self._compare(arena1, arena2)
         self._check_by_id(arena1, "CHEBI:17586")
         self._check_by_id(arena2, "CHEBI:17586")
 
     def test_select_all_reversed(self):
         arena1 = QUERY_ARENA.copy()
-        arena2 = arena1.copy(indices=range(len(arena1)-1, -1, -1))
+        arena2 = arena1.copy(indices=range(len(arena1)-1, -1, -1), reorder=False)
         self.assertEqual(arena1.ids, arena2.ids[::-1])
         self.assertEqual(list(arena1), list(reversed(arena2)))
         self._check_by_id(arena2, "CHEBI:17586")
 
     def test_subset_equals_slice(self):
-        arena1 = QUERY_ARENA.copy(indices=range(2, 8))
+        arena1 = QUERY_ARENA.copy(indices=range(2, 8), reorder=False)
         self._compare(arena1, QUERY_ARENA[2:8])
         self._check_by_id(arena1, "CHEBI:17589")
 
     def test_double_subset_equals_slice(self):
-        arena1 = QUERY_ARENA.copy(indices=range(2, 8))
-        arena2 = arena1.copy(indices=range(1, 3))
+        arena1 = QUERY_ARENA.copy(indices=range(2, 8), reorder=False)
+        arena2 = arena1.copy(indices=range(1, 3), reorder=False)
         self._compare(arena2, QUERY_ARENA[3:5])
         self._check_by_id(arena2, "CHEBI:17588")
 
     def test_negative_subset(self):
-        arena1 = QUERY_ARENA.copy(indices=[-4, -3, -2])
+        arena1 = QUERY_ARENA.copy(indices=[-4, -3, -2], reorder=False)
         self._compare(arena1, QUERY_ARENA[6:9])
         self._check_by_id(arena1, "CHEBI:17592")
 
     def test_duplicate_indices(self):
-        arena1 = QUERY_ARENA.copy(indices=[0, 0, 0])
+        arena1 = QUERY_ARENA.copy(indices=[0, 0, 0], reorder=False)
         self.assertEqual(len(arena1), 3)
         self.assertEqual(arena1[0], arena1[1])
         self.assertEqual(arena1[0], arena1[2])
@@ -955,13 +956,19 @@ class TestArenaCopy(unittest2.TestCase):
     def test_unordered_copy_with_indicies_from_ordered(self):
         arena1 = QUERY_ARENA.copy(reorder=True)
         self.assertNotEqual(arena1.popcount_indices, "")
-        arena2 = arena1.copy(indices=[2,3,6,7,9])
+        arena2 = arena1.copy(indices=[2,3,6,7,9], reorder=False)
         self.assertEqual(arena2.popcount_indices, "")
         self._check_by_id(arena2, "CHEBI:17597")
             
     def test_ordered_copy_with_indicies_from_ordered(self):
         arena1 = QUERY_ARENA.copy(reorder=True)
         self.assertNotEqual(arena1.popcount_indices, "")
+        arena2 = arena1.copy(indices=[2,3,6,7,9])
+        self.assertNotEqual(arena2.popcount_indices, "")
+        self.assertEqual(arena1[2], arena2[0])
+        self.assertEqual(arena1[3], arena2[1])
+
+        # make sure that reorder=True changes nothing
         arena2 = arena1.copy(indices=[2,3,6,7,9], reorder=True)
         self.assertNotEqual(arena2.popcount_indices, "")
         self.assertEqual(arena1[2], arena2[0])
@@ -977,6 +984,17 @@ class TestArenaCopy(unittest2.TestCase):
             QUERY_ARENA.copy(indices=[100])
         with self.assertRaisesRegexp(IndexError, "arena fingerprint index 0 is out of range"):
             QUERY_ARENA[4:4].copy(indices=[0])
+
+    def test_reorder_is_none_when_arena_is_unordered(self):
+        arena1 = QUERY_ARENA.copy(reorder=None)
+        self.assertEqual(arena1.popcount_indices, "")
+        
+    def test_reorder_is_none_when_arena_is_ordered(self):
+        arena1 = QUERY_ARENA.copy(reorder=True)
+        self.assertNotEqual(arena1.popcount_indices, "")
+        arena2 = arena1.copy()
+        self.assertNotEqual(arena2.popcount_indices, "")
+        
         
         
         
