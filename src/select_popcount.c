@@ -59,7 +59,7 @@ chemfp_alignment_type chemfp_alignments[] = {
 
 static int
 has_popcnt_instruction(void) {
-  long test_bytes[] = {255, 0};
+  const uint64_t test_bytes = 255;
   int test_popcount;
   if (!(get_cpuid_flags() & bit_POPCNT)) {
     return 0;
@@ -68,7 +68,7 @@ has_popcnt_instruction(void) {
   /* We are on a machine which has a popcount instruction. Was the */
   /* underlying code compiled to be able to use that instruction? */
   /* If not, then the function will return 0 instead of the popcount. */
-  test_popcount = chemfp_popcount_popcnt(1, test_bytes);
+  test_popcount = chemfp_popcount_popcnt(8, &test_bytes);
   if (test_popcount == 8) {
     return 1;
   }
