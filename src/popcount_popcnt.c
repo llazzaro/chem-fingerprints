@@ -40,7 +40,9 @@ static uint32_t POPCNT32(uint32_t x) {
 #elif defined(__x86_64__)
 static uint64_t POPCNT64(uint64_t x) {
 /* GNU GCC >= 4.2 supports the POPCNT instruction */
-#if !defined(__GNUC__) || (__GNUC__ >= 4 && __GNUC_MINOR__ >= 2)
+/* APD: Apple's gcc-4.0 supports POPCNT and RHEL5's gcc-4.1 supports POPCNT */
+/* I'll assume that 4.2 is good enough. Is there a better feature test for this? */
+#if !defined(__GNUC__) || (__GNUC__ >= 4 && __GNUC_MINOR__ >= 1)
   __asm__ ("popcnt %1, %0" : "=r" (x) : "0" (x));
 #endif
   return x;
@@ -48,7 +50,7 @@ static uint64_t POPCNT64(uint64_t x) {
 #elif defined(__i386__) || defined(__i386)
 static uint32_t POPCNT32(uint32_t x) {
 /* GNU GCC >= 4.2 supports the POPCNT instruction */
-#if !defined(__GNUC__) || (__GNUC__ >= 4 && __GNUC_MINOR__ >= 2)
+#if !defined(__GNUC__) || (__GNUC__ >= 4 && __GNUC_MINOR__ >= 1)
   __asm__ ("popcnt %1, %0" : "=r" (x) : "0" (x));
 #endif
   return x;
