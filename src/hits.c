@@ -150,8 +150,9 @@ static inline int64_t binary_insertion_find(SORT_TYPE1 *dst1, SORT_TYPE2 *dst2, 
     {
       do
       {
+        ++c;
         cx1 = dst1[c];
-        cx2 = dst2[++c];
+        cx2 = dst2[c];
       } while (SORT_CMP(x1, cx1, x2, cx2) == 0);
       return c;
     }

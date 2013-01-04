@@ -429,6 +429,14 @@ class TestArenaTestSortOrder(TestCase, CreateSearchResults, TestSortOrder):
                 results.reorder_all(name)
                 expected.sort(key = _get_sort_key[name])
                 self.assertListEquals(results[0], expected, "error in %s:%d" % (name, size))
+
+    def test_regression_error_where_duplicate_ids_did_not_sort_correctly(self):
+        results = SearchResults(1)
+        ids = range(5) * 2
+        for id in ids:
+            results._add_hit(0, id, id/10.0)
+        results.reorder_all("increasing-index")
+        self.assertListEquals(results[0].get_indices(), sorted(ids))
     
 class TestFPSSortOrder(TestCase, CreateFPSSearchResults, TestSortOrder):
     def test_order_by_id(self):
