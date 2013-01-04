@@ -450,7 +450,9 @@ def fps_to_arena(fps_reader, metadata=None, reorder=True, alignment=None):
     if alignment is None:
         alignment = get_optimal_alignment(num_bits)
 
-    storage_size = metadata.num_bytes
+    num_bytes = metadata.num_bytes
+
+    storage_size = num_bytes
     if storage_size % alignment != 0:
         n = alignment - storage_size % alignment
         end_padding = "\0" * n
@@ -461,6 +463,9 @@ def fps_to_arena(fps_reader, metadata=None, reorder=True, alignment=None):
     ids = []
     unsorted_fps = StringIO()
     for (id, fp) in fps_reader:
+        if len(fp) != num_bytes:
+            raise ValueError("Fingerprint for id %r has %d bytes while the metadata says it should have %d"
+                             % (id, len(fp), num_bytes))
         unsorted_fps.write(fp)
         if end_padding:
             unsorted_fps.write(end_padding)

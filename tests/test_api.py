@@ -706,6 +706,14 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
         self.assertEqual(arena[0], ("first", "1234".decode("hex")))
         self.assertEqual(arena[1], ("second", "ABCD".decode("hex")))
 
+    def test_declared_size_mismatch(self):
+        pairs = [("first", "1234".decode("hex"))]
+        with self.assertRaisesRegexp(ValueError,
+                                     "Fingerprint for id 'first' has 2 bytes "
+                                     "while the metadata says it should have 4"):
+            arena = chemfp.load_fingerprints(pairs, chemfp.Metadata(type="Blah!", num_bytes=4))
+        
+
 
 # Use this to verify the other implementations
 from chemfp.slow import SlowFingerprints
