@@ -20,7 +20,7 @@ like sparse and count fingerprints. RDKit's MACCS definitions are
 (excepting minor portability tweaks) the definitions used for the
 RDMACCS patterns. Greg's definitions are also used in CDK and
 OpenBabel. Greg also contributed additional support for RDKit
-fingerprints.
+fingerprints and reported bugs.
 
 OpenEye, for a non-commercial license to their tools.
 
