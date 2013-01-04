@@ -430,7 +430,12 @@ class TestArenaTestSortOrder(TestCase, CreateSearchResults, TestSortOrder):
                 expected.sort(key = _get_sort_key[name])
                 self.assertListEquals(results[0], expected, "error in %s:%d" % (name, size))
 
-    def test_regression_error_where_duplicate_ids_did_not_sort_correctly(self):
+    def test_regression_error_where_duplicate_indices_did_not_sort_correctly(self):
+        # The id case doesn't happen in real code, since duplicate
+        # indices are not possible. However, I suspect that the real
+        # issue is with duplicate primary keys, so duplicate scores
+        # might trigger the same problem.  It's easiest to test with
+        # indices.
         results = SearchResults(1)
         ids = range(5) * 2
         for id in ids:
