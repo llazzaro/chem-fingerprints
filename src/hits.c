@@ -143,8 +143,6 @@ static inline int64_t binary_insertion_find(SORT_TYPE1 *dst1, SORT_TYPE2 *dst2, 
     {
       if (r - c <= 1) return c + 1;
       l = c;
-      lx1 = cx2;
-      lx2 = cx2;
     }
     else
     {
