@@ -14,7 +14,14 @@ except NameError:
     # Compatibility with Python 2.5
     def next(it):
         return it.next()
-  
+
+if hasattr(math, "isnan"):
+    isnan = math.isnan
+else:
+    # math.isnan was added in Python 2.6
+    # NaN is a number which isn't equal to itself
+    def isnan(x):
+        return x != x
 
 random_scores = [
   0.676, 0.384, 0.740, 0.970, 0.148, 0.361, 0.621, 0.715, 0.698,
@@ -738,11 +745,11 @@ class TestRangeSearches(TestCase):
     def _compare_lists(self, got, expected):
         self.assertEqual(len(got), len(expected))
         for got_term, expected_term in zip(got, expected):
-            n = math.isnan(got_term) + math.isnan(expected_term)
+            n = isnan(got_term) + isnan(expected_term)
             if n != 2:
                 self.assertAlmostEqual(got_term, expected_term)
     def _compare(self, got, expected):
-        n = math.isnan(got) + math.isnan(expected)
+        n = isnan(got) + isnan(expected)
         if n != 2:
             self.assertAlmostEqual(got, expected)
 
