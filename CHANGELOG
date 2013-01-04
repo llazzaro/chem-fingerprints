@@ -1,3 +1,11 @@
+What's new in 1.1b7
+===================
+
+
+Fixed a problem when the code is compiled on an old compiler which
+doesn't understand the POPCNT inline assembly then run on a machine
+which implements POPCNT.
+
 What's new in 1.1b6
 ===================
 

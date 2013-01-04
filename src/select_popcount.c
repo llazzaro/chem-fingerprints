@@ -59,7 +59,26 @@ chemfp_alignment_type chemfp_alignments[] = {
 
 static int
 has_popcnt_instruction(void) {
-  return (get_cpuid_flags() & bit_POPCNT);
+  long test_bytes[] = {255, 0};
+  int test_popcount;
+  if (!(get_cpuid_flags() & bit_POPCNT)) {
+    return 0;
+  }
+
+  /* We are on a machine which has a popcount instruction. Was the */
+  /* underlying code compiled to be able to use that instruction? */
+  /* If not, then the function will return 0 instead of the popcount. */
+  test_popcount = chemfp_popcount_popcnt(1, test_bytes);
+  if (test_popcount == 8) {
+    return 1;
+  }
+  if (test_popcount == 0) {
+    return 0;
+  }
+  fprintf(stderr,
+          "Popcount function POPCNT32(256) returned %d; expected 0 or 8. This should not happen.\n",
+          test_popcount);
+  return 0;
 }
 
 /* These are in the same order as an enum in popcount.h */
