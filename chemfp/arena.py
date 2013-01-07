@@ -42,7 +42,9 @@ class FingerprintArena(FingerprintReader):
     """
     def __init__(self, metadata, alignment,
                  start_padding, end_padding, storage_size, arena,
-                 popcount_indices, arena_ids, start=0, end=None):
+                 popcount_indices, arena_ids, start=0, end=None,
+                 id_lookup=None,
+                 ):
         if metadata.num_bits is None:
             raise TypeError("Missing metadata num_bits information")
         if metadata.num_bytes is None:
@@ -56,13 +58,14 @@ class FingerprintArena(FingerprintReader):
         self.arena = arena
         self.popcount_indices = popcount_indices
         self.arena_ids = arena_ids
-        self.start = start
-        if end is None:
+        self.start = start   # the starting index in the arena (not byte position!)
+        if end is None:      # the ending index in the arena (not byte position!)
             if self.metadata.num_bytes:
                 end = (len(arena) - start_padding - end_padding) // self.storage_size
             else:
                 end = 0
         self.end = end
+        self._id_lookup = id_lookup
         assert end >= start
         self._range_check = xrange(end-start)
 
@@ -78,12 +81,12 @@ class FingerprintArena(FingerprintReader):
         """Return the (id, fingerprint) at position i"""
         if isinstance(i, slice):
             start, end, step = i.indices(self.end - self.start)
+            if step != 1:
+                raise IndexError("arena slice step size must be 1")
             if start >= end:
                 return FingerprintArena(self.metadata, self.alignment,
                                         0, 0, self.storage_size, "",
                                         "", [], 0, 0)
-            if step != 1:
-                raise IndexError("arena slice step size must be 1")
             return FingerprintArena(self.metadata, self.alignment,
                                     self.start_padding, self.end_padding,
                                     self.storage_size, self.arena,
@@ -98,6 +101,40 @@ class FingerprintArena(FingerprintReader):
         end_offset = start_offset + self.metadata.num_bytes
         return self.arena_ids[arena_i], self.arena[start_offset:end_offset]
 
+    def _make_id_lookup(self):
+        d = dict((id, i) for (i, id) in enumerate(self.ids))
+        self._id_lookup = d.get
+        return self._id_lookup
+        
+    def get_by_id(self, id):
+        id_lookup = self._id_lookup
+        if id_lookup is None:
+            id_lookup = self._make_id_lookup()
+        i = id_lookup(id)
+        if i is None:
+            return None
+        arena_i = i + self.start
+        start_offset = arena_i * self.storage_size + self.start_padding
+        end_offset = start_offset + self.metadata.num_bytes
+        return self.arena_ids[arena_i], self.arena[start_offset:end_offset]
+
+    def get_index_by_id(self, id):
+        id_lookup = self._id_lookup
+        if id_lookup is None:
+            id_lookup = self._make_id_lookup()
+        return id_lookup(id)
+
+    def get_fingerprint_by_id(self, id):
+        id_lookup = self._id_lookup
+        if id_lookup is None:
+            id_lookup = self._make_id_lookup()
+        i = id_lookup(id)
+        if i is None:
+            return None
+        arena_i = i + self.start
+        start_offset = arena_i * self.storage_size + self.start_padding
+        end_offset = start_offset + self.metadata.num_bytes
+        return self.arena[start_offset:end_offset]
 
     def save(self, destination):
         """Save the arena contents to the given filename or file object"""
@@ -287,29 +324,34 @@ class FingerprintArena(FingerprintReader):
         """
         return search.knearest_tanimoto_search_arena(queries, self, k, threshold)
 
-    def copy_subset(self, indices=None, reorder=True):
+    def copy(self, indices=None, reorder=False):
         if indices is None:
             # Make a completely new arena
-
             # Handle the trivial case where I don't need to do anything.
-            if (self.start == 0 and (self.end + self.start_padding + self.end_padding == len(self.arena)) and
+            if (self.start == 0 and
+                (self.end*self.storage_size + self.start_padding + self.end_padding == len(self.arena)) and
                 (not reorder or self.popcount_indices)):
                 return FingerprintArena(self.metadata, self.alignment,
                                         self.start_padding, self.end_padding, self.storage_size, self.arena,
-                                        self.popcount_indices, self.arena_ids)
+                                        self.popcount_indices, self.arena_ids,
+                                        start = 0, end = self.end,
+                                        id_lookup = self._id_lookup)
+            
             # Otherwise I need to do some work
             # Make a copy of the actual fingerprints. (Which could be a subarena.)
             start = self.start_padding + self.start*self.storage_size
-            end = start + self.end*self.storage_size
+            end = self.start_padding + self.end*self.storage_size
             arena = self.arena[start:end]
 
-            # If we don't popcount_indices and don't want them ordered
+            # If we don't have popcount_indices and don't want them ordered
             # then just do the alignment and we're done.
             if not reorder and not self.popcount_indices:
                 # Don't reorder the unordered fingerprints
-                start_padding, end_padding, arena = _chemfp.make_unsorted_aligned_arena(arena, self.alignment)
-                return FingerprintArena(self.metadata, self.alignment, start_padding, end_padding, storage_size,
-                                        unsorted_arena, "", self.ids)
+                start_padding, end_padding, unsorted_arena = (
+                    _chemfp.make_unsorted_aligned_arena(arena, self.alignment))
+                return FingerprintArena(self.metadata, self.alignment, start_padding, end_padding,
+                                        self.storage_size, unsorted_arena, "", self.ids,
+                                        id_lookup = self._id_lookup)
 
             # Either we're already sorted or we should become sorted.
             # If we're sorted then make_sorted_aligned_arena will detect
@@ -318,18 +360,17 @@ class FingerprintArena(FingerprintReader):
             current_ids = self.ids
             ordering = (ChemFPOrderedPopcount*len(current_ids))()
             popcounts = array.array("i", (0,)*(self.metadata.num_bits+2))
-
             start_padding, end_padding, arena = _chemfp.make_sorted_aligned_arena(
-                self.metadata.num_bits, storage_size, arena, len(current_ids),
+                self.metadata.num_bits, self.storage_size, arena, len(current_ids),
                 ordering, popcounts, self.alignment)
 
             reordered_ids = [current_ids[item.index] for item in ordering]
             return FingerprintArena(self.metadata, self.alignment,
-                                    start_padding, end_padding, storage_size,
+                                    start_padding, end_padding, self.storage_size,
                                     arena, popcounts.tostring(), reordered_ids)
 
         # On this pathway, we want to make a new arena which contains
-        # selected fingerprints givesn indices into the old arena.
+        # selected fingerprints given indices into the old arena.
         
         arena = self.arena
         storage_size = self.storage_size
@@ -352,14 +393,14 @@ class FingerprintArena(FingerprintReader):
             # make_sorted_aligned_arena will see that the fingerprints
             # are already in sorted order and not resort.
             # XXX Is that true? Why do a Python sort instead of a C sort?
-            # Perhaps because then I don't need to make fingerprint copies.
+            # Perhaps because then I don't need to copy fingerprints?
             new_indices.sort()
 
         # Copy the fingerprints over to a new arena block
         unsorted_fps = []
         new_ids = []
         for new_i in new_indices:
-            start_offset = new_i*storage_size + start_padding
+            start_offset = start_padding + new_i*storage_size
             end_offset = start_offset + storage_size
             unsorted_fps.append(arena[start_offset:end_offset])
             new_ids.append(arena_ids[new_i])

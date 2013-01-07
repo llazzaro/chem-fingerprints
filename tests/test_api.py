@@ -8,6 +8,7 @@ import tempfile
 import gzip
 import shutil
 import itertools
+import random
 
 import chemfp
 from chemfp import bitops, io
@@ -655,6 +656,9 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
             arena[-len(arena)-1]
         with self.assertRaisesRegexp(IndexError, "arena slice step size must be 1"):
             arena[4:45:2]
+        with self.assertRaisesRegexp(IndexError, "arena slice step size must be 1"):
+            arena[45:5:-1]
+
 
     def test_search_in_slice(self):
         fps = self._open(CHEBI_TARGETS)
@@ -713,7 +717,6 @@ class TestLoadFingerprints(unittest2.TestCase, CommonReaderAPI):
                                      "while the metadata says it should have 4"):
             arena = chemfp.load_fingerprints(pairs, chemfp.Metadata(type="Blah!", num_bytes=4))
         
-
 
 # Use this to verify the other implementations
 from chemfp.slow import SlowFingerprints
@@ -799,7 +802,232 @@ class TestLoadFingerprintsOrdered(unittest2.TestCase, CommonReaderAPI):
         subarenas = list(arena.iter_arenas(None))
         self.assertEqual(len(subarenas), 1)
         self.assertEqual(len(subarenas[0]), 2000)
+
+_expected_records = dict((rec[0], rec) for rec in QUERY_ARENA)
+_expected_ids = set(_expected_records)
+
+class TestArenaCopy(unittest2.TestCase):
+    def _check_by_id(self, arena, id):
+        # The identifier lookup is a bit tricky with copies.
+        # This helps me feel a bit better.
+        self.assertEqual(arena.get_by_id(id), _expected_records[id])
+        self.assertEqual(arena.get_fingerprint_by_id(id), _expected_records[id][1])
+        i = arena.get_index_by_id(id)
+        self.assertNotEqual(i, None)
+        self.assertEqual(arena[i], _expected_records[id])
+
+        # And as long as I'm here, make sure I can look up a random id ..
+        new_id = random.choice(arena.ids)
+        self.assertEqual(arena.get_by_id(new_id), _expected_records[new_id])
+
+        # .. and a record which doesn't exist
+        missing_ids = _expected_ids - set(arena.ids)
+        if missing_ids:
+            missing_id = missing_ids.pop()
+        else:
+            missing_id = "spam"
         
+        self.assertEqual(arena.get_by_id(missing_id), None)
+        self.assertEqual(arena.get_fingerprint_by_id(missing_id), None)
+        self.assertEqual(arena.get_index_by_id(missing_id), None)
+        
+
+    def _compare(self, arena1, arena2):
+        self.assertEqual(len(arena1), len(arena2))
+        for i in range(len(arena1)):
+            self.assertEqual((i, arena1[i]), (i, arena2[i]))
+
+    def _anti_compare(self, arena1, arena2):
+        # These are supposed to be different, where the second is already ordered by popcount
+        assert arena2.popcount_indices != "", "arena2 must be sorted!"
+        self.assertEqual(len(arena1), len(arena2))
+        values1 = list(arena1)
+        values2 = list(arena2)
+        self.assertNotEqual(values1, values2)
+        indices = range(len(arena1))
+        indices.sort(key = lambda i: (bitops.byte_popcount(values1[i][1]), i))
+        ordered_values1 = [values1[i] for i in indices]
+        self.assertEqual(ordered_values1, values2)
+        
+    def test_simple_copy_of_unordered_arena(self):
+        arena1 = QUERY_ARENA.copy()
+        self.assertEqual(arena1.popcount_indices, "") # internal API; make sure it's unsorted
+        self._compare(QUERY_ARENA, arena1)
+        # Do it again to make sure.
+        arena2 = arena1.copy()
+        self._compare(arena1, arena2)
+        self._check_by_id(arena1, "CHEBI:17586")
+        self._check_by_id(arena2, "CHEBI:17586")
+
+    def test_reordered_copy_of_unordered_arena(self):
+        arena1 = QUERY_ARENA.copy(reorder=True)
+        self._anti_compare(QUERY_ARENA, arena1)
+        self.assertNotEqual(arena1.popcount_indices, "") # internal API; make sure it's sorted
+        # Do another copy. This triggers a different path through the code.
+        arena2 = arena1.copy()
+        self._compare(arena1, arena2)
+        self.assertIs(arena1.popcount_indices, arena2.popcount_indices) # internal API; share popcounts
+        self._check_by_id(arena1, "CHEBI:17586")
+        self._check_by_id(arena2, "CHEBI:17586")
+
+    def test_simple_copy_of_aligned_unordered_arena(self):
+        arena1 = chemfp.load_fingerprints(QUERY_ARENA, alignment=128, reorder=False)
+        self.assertEqual(arena1.alignment, 128)
+        self.assertEqual(arena1.start_padding + arena1.end_padding, 128-1)
+        arena2 = arena1.copy(reorder=False)
+        self._compare(arena1, arena2)
+        arena3 = arena2.copy(reorder=True)
+        self._anti_compare(arena1, arena3)
+        self._check_by_id(arena1, "CHEBI:17586")
+        self._check_by_id(arena3, "CHEBI:17586")
+
+    def test_copy_of_reordered_arena_slice(self):
+        arena1 = QUERY_ARENA.copy(reorder=True)
+        arena2_slice = arena1[1:8]
+        arena2_copy = arena2_slice.copy()
+        self._compare(arena2_slice, arena2_copy)
+        self._check_by_id(arena2_slice, "CHEBI:17587")
+        self._check_by_id(arena2_copy, "CHEBI:17587")
+
+    def test_copy_of_unordered_arena_slice(self):
+        arena1 = QUERY_ARENA.copy(reorder=False)
+        arena2_slice = arena1[1:8]
+        arena2_copy = arena2_slice.copy()
+        self._compare(arena2_slice, arena2_copy)
+        self._check_by_id(arena2_slice, "CHEBI:17586")
+        self._check_by_id(arena2_copy, "CHEBI:17586")
+
+    def test_empty_input(self):
+        arena1 = QUERY_ARENA[2:8][2:4][1:1]
+        arena2 = arena1.copy()
+        self._compare(arena1, arena2)
+
+    ##### Work with indicies
+    
+    def test_select_all(self):
+        arena1 = QUERY_ARENA.copy()
+        arena2 = arena1.copy(indices=range(len(arena1)))
+        self._compare(arena1, arena2)
+        self._check_by_id(arena1, "CHEBI:17586")
+        self._check_by_id(arena2, "CHEBI:17586")
+
+    def test_select_all_reversed(self):
+        arena1 = QUERY_ARENA.copy()
+        arena2 = arena1.copy(indices=range(len(arena1)-1, -1, -1))
+        self.assertEqual(arena1.ids, arena2.ids[::-1])
+        self.assertEqual(list(arena1), list(reversed(arena2)))
+        self._check_by_id(arena2, "CHEBI:17586")
+
+    def test_subset_equals_slice(self):
+        arena1 = QUERY_ARENA.copy(indices=range(2, 8))
+        self._compare(arena1, QUERY_ARENA[2:8])
+        self._check_by_id(arena1, "CHEBI:17589")
+
+    def test_double_subset_equals_slice(self):
+        arena1 = QUERY_ARENA.copy(indices=range(2, 8))
+        arena2 = arena1.copy(indices=range(1, 3))
+        self._compare(arena2, QUERY_ARENA[3:5])
+        self._check_by_id(arena2, "CHEBI:17588")
+
+    def test_negative_subset(self):
+        arena1 = QUERY_ARENA.copy(indices=[-4, -3, -2])
+        self._compare(arena1, QUERY_ARENA[6:9])
+        self._check_by_id(arena1, "CHEBI:17592")
+
+    def test_duplicate_indices(self):
+        arena1 = QUERY_ARENA.copy(indices=[0, 0, 0])
+        self.assertEqual(len(arena1), 3)
+        self.assertEqual(arena1[0], arena1[1])
+        self.assertEqual(arena1[0], arena1[2])
+        self._check_by_id(arena1, "CHEBI:17585")
+
+    def test_ordered_copy_with_indicies_from_unordered(self):
+        arena1 = QUERY_ARENA.copy(indices=[3, 5, 9], reorder=True)
+        self.assertNotEqual(arena1.popcount_indices, "")
+        popcounts = [bitops.byte_popcount(fp) for (id, fp) in arena1]
+        self.assertEqual(popcounts, sorted(popcounts))
+
+        arena2 = chemfp.load_fingerprints((QUERY_ARENA[i] for i in [3, 5, 9]), QUERY_ARENA.metadata)
+        self._compare(arena1, arena2)
+        self._check_by_id(arena1, "CHEBI:17597")
+        self._check_by_id(arena2, "CHEBI:17597")
+
+    def test_unordered_copy_with_indicies_from_ordered(self):
+        arena1 = QUERY_ARENA.copy(reorder=True)
+        self.assertNotEqual(arena1.popcount_indices, "")
+        arena2 = arena1.copy(indices=[2,3,6,7,9])
+        self.assertEqual(arena2.popcount_indices, "")
+        self._check_by_id(arena2, "CHEBI:17597")
+            
+    def test_ordered_copy_with_indicies_from_ordered(self):
+        arena1 = QUERY_ARENA.copy(reorder=True)
+        self.assertNotEqual(arena1.popcount_indices, "")
+        arena2 = arena1.copy(indices=[2,3,6,7,9], reorder=True)
+        self.assertNotEqual(arena2.popcount_indices, "")
+        self.assertEqual(arena1[2], arena2[0])
+        self.assertEqual(arena1[3], arena2[1])
+            
+        
+    def test_empty_input_with_indices(self):
+        arena1 = QUERY_ARENA.copy(indices=[])
+        self._compare(arena1, QUERY_ARENA[8:7])
+
+    def test_indices_out_of_range(self):
+        with self.assertRaisesRegexp(IndexError, "arena fingerprint index 100 is out of range"):
+            QUERY_ARENA.copy(indices=[100])
+        with self.assertRaisesRegexp(IndexError, "arena fingerprint index 0 is out of range"):
+            QUERY_ARENA[4:4].copy(indices=[0])
+        
+        
+        
+# These tests use part of the private, internal API (the "_id_lookup").
+# That's the only way I could figure out to make sure I'm caching correctly.
+class TestArenaGetById(unittest2.TestCase):
+    def test_get_by_id(self):
+        arena = QUERY_ARENA.copy()
+        assert arena._id_lookup is None
+        record = arena.get_by_id("CHEBI:17586")
+        self.assertEqual(record, ("CHEBI:17586",
+                                  "002000102084302197d69ecfbbf3b4ffdf6ffeff1f".decode("hex")))
+        assert arena._id_lookup is not None
+
+    def test_get_by_id_not_present(self):
+        arena = QUERY_ARENA.copy()
+        assert arena._id_lookup is None
+        record = arena.get_by_id("spam")
+        self.assertIs(record, None)
+        assert arena._id_lookup is not None
+        
+    def test_get_index_by_id(self):
+        arena = QUERY_ARENA.copy()
+        assert arena._id_lookup is None
+        index = arena.get_index_by_id("CHEBI:17586")
+        self.assertEqual(index, 1)
+        assert arena._id_lookup is not None
+
+    def test_get_index_by_id_not_present(self):
+        arena = QUERY_ARENA.copy()
+        assert arena._id_lookup is None
+        index = arena.get_index_by_id("spam")
+        self.assertIs(index, None)
+        assert arena._id_lookup is not None
+
+    def test_get_fingerprint_by_id(self):
+        arena = QUERY_ARENA.copy()
+        assert arena._id_lookup is None
+        fp = arena.get_fingerprint_by_id("CHEBI:17586")
+        self.assertEqual(fp, "002000102084302197d69ecfbbf3b4ffdf6ffeff1f".decode("hex"))
+        assert arena._id_lookup is not None
+        
+    def test_get_fingerprint_by_id_not_present(self):
+        arena = QUERY_ARENA.copy()
+        assert arena._id_lookup is None
+        fp = arena.get_fingerprint_by_id("spam")
+        self.assertIs(fp, None)
+        assert arena._id_lookup is not None
+        
+
+
 
 SDF_IDS = ['9425004', '9425009', '9425012', '9425015', '9425018',
            '9425021', '9425030', '9425031', '9425032', '9425033',
