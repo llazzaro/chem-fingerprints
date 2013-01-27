@@ -12,8 +12,23 @@ Install in the normal Python way:
 
   python setup.py install
 
-You may need a 'sudo' or be root, depending on your system. To
-disable OpenMP support, append "--with-openmp".
+You may need a 'sudo' or be root, depending on your system.
+
+If you get a message like:
+   unrecognized command line option "-fopenmp"
+then your compiler does not understand OpenMP. To compile without
+OpenMP append "--without-openmp" to the setup.py line.
+
+If you get a message like:
+    cc1: error: invalid option ‘ssse3’
+then your compiler does not understand the SSSE3 intrinsics. To
+compile without the SSSE3 intrinsics, append "--without-ssse3" to
+the setup.py line.
+
+For example, to compile with gcc-4.0 using sudo:
+
+  sudo python setup.py install --without-openmp --without-ssse3
+
 
 Note: chemfp requires a C compiler to build the _chemfp extension. 
 
