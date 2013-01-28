@@ -144,8 +144,8 @@ def open(source, format=None):
     format_name, compression = io.normalize_format(source, format)
 
     if format_name == "fps":
-        from . import readers
-        return readers.open_fps(source, format_name+compression)
+        from . import fps_io
+        return fps_io.open_fps(source, format_name+compression)
 
     if format_name == "fpb":
         raise NotImplementedError("fpb format support not implemented")
@@ -233,8 +233,8 @@ def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
     :returns:
        An iterator containing (query_id, score) pairs, one for each query
     """
-    from . import readers
-    if isinstance(targets, readers.FPSReader):
+    from . import fps_io
+    if isinstance(targets, fps_io.FPSReader):
         from . import fps_search
         count_hits = fps_search.count_tanimoto_hits_arena
     else:
@@ -304,8 +304,8 @@ def threshold_tanimoto_search(queries, targets, threshold=0.7, arena_size=100):
       An iterator containing (query_id, hits) pairs, one for each query.
       'hits' contains a list of (target_id, score) pairs.
     """
-    from . import readers
-    if isinstance(targets, readers.FPSReader):
+    from . import fps_io
+    if isinstance(targets, fps_io.FPSReader):
         from . import fps_search
         threshold_search = fps_search.threshold_tanimoto_search_arena
     else:
@@ -391,8 +391,8 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
       An iterator containing (query_id, hits) pairs, one for each query.
       'hits' contains a list of (target_id, score) pairs, sorted by score.
     """
-    from . import readers
-    if isinstance(targets, readers.FPSReader):
+    from . import fps_io
+    if isinstance(targets, fps_io.FPSReader):
         from . import fps_search
         knearest_search = fps_search.knearest_tanimoto_search_arena
     else:
@@ -426,8 +426,8 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
     return knearest_tanimoto_search()
 
 def count_tanimoto_hits_symmetric(fingerprints, threshold=0.7):
-    from . import readers, search
-    if (isinstance(fingerprints, readers.FPSReader) or
+    from . import fps_io, search
+    if (isinstance(fingerprints, fps_io.FPSReader) or
         not getattr(fingerprints, "popcount_indices", None)):
         raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
 
@@ -439,8 +439,8 @@ def count_tanimoto_hits_symmetric(fingerprints, threshold=0.7):
     return count_tanimoto_hits_symmetric_internal()
 
 def threshold_tanimoto_search_symmetric(fingerprints, threshold=0.7):
-    from . import readers, search
-    if (isinstance(fingerprints, readers.FPSReader) or
+    from . import fps_io, search
+    if (isinstance(fingerprints, fps_io.FPSReader) or
         not getattr(fingerprints, "popcount_indices", None)):
         raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
 
@@ -452,8 +452,8 @@ def threshold_tanimoto_search_symmetric(fingerprints, threshold=0.7):
     return threshold_tanimoto_search_symmetric_internal()
 
 def knearest_tanimoto_search_symmetric(fingerprints, k=3, threshold=0.7):
-    from . import readers, search
-    if (isinstance(fingerprints, readers.FPSReader) or
+    from . import fps_io, search
+    if (isinstance(fingerprints, fps_io.FPSReader) or
         not getattr(fingerprints, "popcount_indices", None)):
         raise ValueError("`fingerprints` must be a FingerprintArena with pre-computed popcount indices")
 

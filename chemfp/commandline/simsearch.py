@@ -5,7 +5,7 @@ import itertools
 import time
 
 import chemfp
-from chemfp import argparse, readers, io, SOFTWARE, bitops
+from chemfp import argparse, io, SOFTWARE, bitops
 from chemfp import search
 
 # Suppose you have a 4K fingerprint.
