@@ -10,7 +10,7 @@ import heapq
 import itertools
 import ctypes
 
-from . import load_fingerprints, Metadata, ParseError, FingerprintReader
+from . import Metadata, ParseError, FingerprintReader
 from . import fps_search
 from . import io
 

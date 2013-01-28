@@ -14,7 +14,6 @@ import os
 import errno
 import ctypes
 import warnings
-import errno
 
 from openeye.oechem import *
 from openeye.oegraphsim import *
