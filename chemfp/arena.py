@@ -24,7 +24,7 @@ import ctypes
 from cStringIO import StringIO
 import array
 
-from chemfp import FingerprintReader, check_fp_problems, check_metadata_problems
+from chemfp import FingerprintReader
 import _chemfp
 from chemfp import bitops, search
 
@@ -202,7 +202,7 @@ class FingerprintArena(FingerprintReader):
                 end = self.end
             yield FingerprintArena(self.metadata, self.alignment,
                                    self.start_padding, self.end_padding,
-                                   self.storage_size, self.arena,
+                                   storage_size, self.arena,
                                    self.popcount_indices, self.arena_ids, start, end)
             start = end
 
