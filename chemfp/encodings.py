@@ -298,59 +298,59 @@ _daylight_table = (".+" +
 # The '+' used to be represented as ',' in pre-4.61 code
 _daylight_reverse_table = {}
 for i, c in enumerate(_daylight_table):
-  _daylight_reverse_table[c] = i
+    _daylight_reverse_table[c] = i
 
 _daylight_reverse_table[","] = _daylight_reverse_table["+"]
 del i, c
 
 def from_daylight(text):
-  """Decode a Daylight ASCII fingerprint
-
-  >>> from_daylight("I5Z2MLZgOKRcR...1")
-  (None, 'PyDaylight')
-
-  See the implementation for format details.
-  """
-  if len(text) % 4 != 1:
-    raise ValueError("Daylight binary encoding is of the wrong length")
-
-  if text == "3":
-    # This is the encoding of an empty string (perverse, I know)
-    return None, ""
+    """Decode a Daylight ASCII fingerprint
   
-  count = text[-1]
-  if count not in ("1", "2", "3"):
-    raise ValueError("Last character of encoding must be 1, 2, or 3, not %r" %
-                     (count,))
+    >>> from_daylight("I5Z2MLZgOKRcR...1")
+    (None, 'PyDaylight')
   
-  count = int(count)
-  try:
-      # Take four digits at a time
-      fields = []
-      reverse_table = _daylight_reverse_table
-      for i in range(0, len(text)-1, 4):
-        t = text[i:i+4]
-        d = (reverse_table[t[0]] * 262144 +  # (2**6) ** 3
-             reverse_table[t[1]] * 4096 +    # (2**6) ** 2
-             reverse_table[t[2]] * 64 +      # (2**6) ** 1
-             reverse_table[t[3]])            # (2**6) ** 0
-
-        # This is a 24 bit field
-        # Convert back into 8 bits at a time
-        c1 = d >> 16
-        c2 = (d >> 8) & 0xFF
-        c3 = d & 0xFF
-
-        fields.append( chr(c1) + chr(c2) + chr(c3) )
-  except KeyError:
-      raise ValueError("Unknown encoding symbol")
+    See the implementation for format details.
+    """
+    if len(text) % 4 != 1:
+        raise ValueError("Daylight binary encoding is of the wrong length")
   
-  # Only 'count' of the last field is legal
-  # Because of the special case for empty string earlier,
-  #  the 'fields' array is non-empty
-  fields[-1] = fields[-1][:count]
-  s = "".join(fields)
-  return (None, s)
+    if text == "3":
+        # This is the encoding of an empty string (perverse, I know)
+        return None, ""
+  
+    count = text[-1]
+    if count not in ("1", "2", "3"):
+        raise ValueError("Last character of encoding must be 1, 2, or 3, not %r" %
+                         (count,))
+  
+    count = int(count)
+    try:
+        # Take four digits at a time
+        fields = []
+        reverse_table = _daylight_reverse_table
+        for i in range(0, len(text)-1, 4):
+            t = text[i:i+4]
+            d = (reverse_table[t[0]] * 262144 +  # (2**6) ** 3
+                 reverse_table[t[1]] * 4096 +    # (2**6) ** 2
+                 reverse_table[t[2]] * 64 +      # (2**6) ** 1
+                 reverse_table[t[3]])            # (2**6) ** 0
+
+            # This is a 24 bit field
+            # Convert back into 8 bits at a time
+            c1 = d >> 16
+            c2 = (d >> 8) & 0xFF
+            c3 = d & 0xFF
+
+            fields.append( chr(c1) + chr(c2) + chr(c3) )
+    except KeyError:
+        raise ValueError("Unknown encoding symbol")
+
+    # Only 'count' of the last field is legal
+    # Because of the special case for empty string earlier,
+    #  the 'fields' array is non-empty
+    fields[-1] = fields[-1][:count]
+    s = "".join(fields)
+    return (None, s)
 
 
 assert from_daylight("I5Z2MLZgOKRcR...1") == (None, "PyDaylight")
@@ -415,12 +415,12 @@ def import_decoder(path):
     # Now start from the top and work down with getattr calls
     obj = __import__(terms[0], level=0)
     for i, subattr in enumerate(terms[1:]):
-       obj = getattr(obj, subattr, None)
-       if obj is None:
-           failure_path = ".".join(terms[:i+2])
-           raise ValueError(("Unable to import a decoder: "
-                             "Could not find %(attr)r from %(path)r") %
-                             dict(attr=failure_path, path=path))
+        obj = getattr(obj, subattr, None)
+        if obj is None:
+            failure_path = ".".join(terms[:i+2])
+            raise ValueError(("Unable to import a decoder: "
+                              "Could not find %(attr)r from %(path)r") %
+                              dict(attr=failure_path, path=path))
 
     return obj
 
