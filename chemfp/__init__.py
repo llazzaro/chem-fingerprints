@@ -646,7 +646,6 @@ class FingerprintReader(object):
     def save(self, destination):
         from . import io
         io.write_fps1_output(self, destination, self.metadata)
-        from . import io
 
 
 class FingerprintIterator(FingerprintReader):
