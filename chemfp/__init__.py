@@ -426,6 +426,28 @@ def knearest_tanimoto_search(queries, targets, k=3, threshold=0.7, arena_size=10
     return knearest_tanimoto_search()
 
 def count_tanimoto_hits_symmetric(fingerprints, threshold=0.7):
+    """Find the number of other fingerprints within `threshold` of each fingerprint
+    
+    For each fingerprint in the `fingerprints` arena, find the number
+    of other fingerprints in the same arena which are at least
+    `threshold` similar to it. The arena must have pre-computed
+    popcounts. A fingerprint never matches itself.
+
+    This function returns an iterator of (fingerprint_id, count) pairs.
+
+    Example::
+
+      arena = chemfp.load_fingerprints("targets.fps.gz")
+      for (fp_id, count) in chemfp.count_tanimoto_hits_symmetric(arena, threshold=0.6):
+          print fp_id, "has", count, "neighbors with at least 0.6 similarity"
+    
+    :param fingerprints: The arena containing the fingerprints.
+    :type fingerprints: a FingerprintArena with precomputed popcount_indices
+    :param threshold: The minimum score threshold.
+    :type threshod: float between 0.0 and 1.0, inclusive
+    :returns:
+      An iterator of (fp_id, count) pairs, one for each fingerprint
+    """
     from . import fps_io, search
     if (isinstance(fingerprints, fps_io.FPSReader) or
         not getattr(fingerprints, "popcount_indices", None)):
@@ -439,6 +461,30 @@ def count_tanimoto_hits_symmetric(fingerprints, threshold=0.7):
     return count_tanimoto_hits_symmetric_internal()
 
 def threshold_tanimoto_search_symmetric(fingerprints, threshold=0.7):
+    """Find the other fingerprints within `threshold` of each fingerprint
+
+    For each fingerprint in the `fingerprints` arena, find the other
+    fingerprints in the same arena which hare at least `threshold`
+    similar to it. The arena must have pre-computed popcounts. A
+    fingerprint never matches itself.
+
+    This function returns an iterator of (fingerprint, SearchResult) pairs.
+    The SearchResult hit order is arbitrary.
+
+    Example::
+    
+      arena = chemfp.load_fingerprints("targets.fps.gz")
+      for (fp_id, hits) in chemfp.threshold_tanimoto_search_symmetric(arena, threshold=0.75):
+          print fp_id, "has", len(hits), "neighbors:"
+          for (other_id, score) in hits.get_ids_and_scores():
+              print "   %s  %.2f" % (other_id, score)
+
+    :param fingerprints: The arena containing the fingerprints.
+    :type fingerprints: a FingerprintArena with precomputed popcount_indices
+    :param threshold: The minimum score threshold.
+    :type threshod: float between 0.0 and 1.0, inclusive
+    :returns: An iterator of (fp_id, SearchResult) pairs, one for each fingerprint
+    """
     from . import fps_io, search
     if (isinstance(fingerprints, fps_io.FPSReader) or
         not getattr(fingerprints, "popcount_indices", None)):
@@ -452,6 +498,32 @@ def threshold_tanimoto_search_symmetric(fingerprints, threshold=0.7):
     return threshold_tanimoto_search_symmetric_internal()
 
 def knearest_tanimoto_search_symmetric(fingerprints, k=3, threshold=0.7):
+    """Find the nearest `k` fingerprints within `threshold` of each fingerprint
+
+    For each fingerprint in the `fingerprints` arena, find the nearest
+    `k` fingerprints in the same arena which hare at least `threshold`
+    similar to it. The arena must have pre-computed popcounts. A
+    fingerprint never matches itself.
+
+    This function returns an iterator of (fingerprint, SearchResult) pairs.
+    The SearchResult hits are ordered from highest score to lowest, with
+    ties broken arbitrarily.
+
+    Example::
+    
+      arena = chemfp.load_fingerprints("targets.fps.gz")
+      for (fp_id, hits) in chemfp.knearest_tanimoto_search_symmetric(arena, k=5, threshold=0.5):
+          print fp_id, "has", len(hits), "neighbors, with scores", 
+          print ", ".join("%.2f" % x for x in hits.get_scores())
+
+    :param fingerprints: The arena containing the fingerprints.
+    :type fingerprints: a FingerprintArena with precomputed popcount_indices
+    :param k: The maximum number of nearest neighbors to find.
+    :type k: positive integer
+    :param threshold: The minimum score threshold.
+    :type threshod: float between 0.0 and 1.0, inclusive
+    :returns: An iterator of (fp_id, SearchResult) pairs, one for each fingerprint
+    """
     from . import fps_io, search
     if (isinstance(fingerprints, fps_io.FPSReader) or
         not getattr(fingerprints, "popcount_indices", None)):
