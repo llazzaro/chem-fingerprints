@@ -6,7 +6,7 @@ import itertools
 
 from .. import Metadata, FingerprintIterator, ParseError
 from .. import argparse
-from .. import decoders
+from .. import encodings
 from .. import sdf_reader
 from .. import io
 from .. import error_handlers
@@ -111,7 +111,7 @@ parser.add_argument(
 
 
 # This adds --cactvs, --base64 and other decoders to the command-line arguments
-decoders._add_decoding_group(parser)
+encodings._add_decoding_group(parser)
 
 # Support the "--pubchem" option
 shortcuts_group = parser.add_argument_group("shortcuts")
@@ -142,7 +142,7 @@ def main(args=None):
     if args.num_bits is not None and args.num_bits <= 0:
         parser.error("--num-bits must be a positive integer")
 
-    fp_decoder_name, fp_decoder = decoders._extract_decoder(parser, args)
+    fp_decoder_name, fp_decoder = encodings._extract_decoder(parser, args)
 
     missing = cmdsupport.check_filenames(args.filenames)
     if missing:

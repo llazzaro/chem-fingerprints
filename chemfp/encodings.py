@@ -109,7 +109,6 @@ def from_binary_lsb(text):
     except KeyError:
         raise ValueError("Not a binary string")
     return (N, bytes)
-
 def from_binary_msb(text):
     """Convert a string like '10101000' (bit 0 here is off) into '\\xa8'
 

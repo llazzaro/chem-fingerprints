@@ -16,7 +16,7 @@ import rdkit.rdBase
 from rdkit.Chem.MACCSkeys import GenMACCSKeys
 
 from . import sdf_reader
-from .decoders import from_binary_lsb as _from_binary_lsb
+from .encodings import from_binary_lsb as _from_binary_lsb
 from . import io
 from . import types
 

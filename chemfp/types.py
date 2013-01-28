@@ -4,7 +4,7 @@ from . import argparse
 from . import FingerprintIterator, Metadata
 
 from . import io
-from .decoders import import_decoder  # XXX too specific to the decoder module
+from .encodings import import_decoder  # XXX too specific to the decoder module
 
 
 def check_openbabel_maccs166():
