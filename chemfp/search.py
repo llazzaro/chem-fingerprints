@@ -1,4 +1,7 @@
-"Ways to search an arena"
+"""Search a FingerprintArena and work with the search results
+
+
+"""
 
 import _chemfp
 import ctypes
@@ -6,100 +9,197 @@ import array
 
 
 class SearchResult(object):
+    """Search results for a query fingerprint against a target arena.
+
+    The results contains a list of hits. Hits contain a target index,
+    score, and optional target ids. The hits can be reordered based on
+    score or index.
+    
+    """
     def __init__(self, search_results, row):
         self._search_results = search_results
         self._row = row
 
     def __len__(self):
+        """The number of hits"""
         return self._search_results._size(self._row)
 
     def __iter__(self):
+        """Iterate through the pairs of (target index, score) using the current ordering"""
         return iter(self._search_results._get_indices_and_scores(self._row))
         
     def clear(self):
+        """Remove all hits from this result"""
         self._search_results._clear_row(self._row)
 
     def get_indices(self):
+        """The list of target indices, in the current ordering."""
         return self._search_results._get_indices(self._row)
 
     def get_ids(self):
+        """The list of target identifiers (if available), in the current ordering"""
         ids = self._search_results.target_ids
         if ids is None:
             return None
         return [ids[i] for i in self._search_results._get_indices(self._row)]
     
     def get_scores(self):
+        """The list of target scores, in the current ordering"""
         return self._search_results._get_scores(self._row)
         
     def get_ids_and_scores(self):
+        """The list of (target identifier, target score) pairs, in the current ordering
+
+        Raises a TypeError if the target IDs are not available.
+        """
         ids = self._search_results.target_ids
         if ids is None:
             raise TypeError("target_ids are not available")
         return zip(self.get_ids(), self.get_scores())
 
     def get_indices_and_scores(self):
+        """The list of (target index, score) pairs, in the current ordering"""
         return self._search_results._get_indices_and_scores(self._row)
             
     def reorder(self, ordering="decreasing-score"):
+        """Reorder the hits based on the requested ordering.
+
+        The available orderings are:
+          increasing-score: sort by increasing score
+          decreasing-score: sort by decreasing score
+          increasing-index: sort by increasing target index
+          decreasing-index: sort by decreasing target index
+          move-closest-first: move the hit with the highest score to the first position
+          reverse: reverse the current ordering
+
+        :param ordering: the name of the ordering to use
+        """
         self._search_results._reorder_row(self._row, ordering)
 
     def count(self, min_score=None, max_score=None, interval="[]"):
+        """Count the number of hits with a score between `min_score` and `max_score`
+
+        Using the default parameters this returns the number of
+        hits in the result.
+
+        The default `min_score` of None is equivalent to -infinity.
+        The default `max_score` of None is equivalent to +infinity.
+        
+        The `interval` parameter describes the interval end
+        conditions. The default of "[]" uses a closed interval,
+        where min_score <= score <= max_score. The interval "()"
+        uses the open interval where min_score < score < max_score.
+        The half-open/half-closed intervals "(]" and "[)" are
+        also supported.
+
+        :param min_score: the minimum score in the range.
+        :type min_score: a float, or None for -infinity
+        :param max_score: the maximum score in the range.
+        :type max_score: a float, or None for +infinity
+        :param interval: specify if the end points are open or closed.
+        :type interval: one of "[]", "()", "(]", "[)"
+        :returns: an integer count
+        """
         return self._search_results._count_row(self._row, min_score, max_score, interval)
 
     def cumulative_score(self, min_score=None, max_score=None, interval="[]"):
-        return self._search_results._cumulative_score_row(self._row, min_score, max_score, interval)
+        """The sum of the scores which are between `min_score` and `max_score`
+
+        Using the default parameters this returns the sum of all of
+        the scores in the result. With a specified range this returns
+        the sum of all of the scores in that range. The cumulative
+        score is also known as the raw score.
         
-    @property
-    def target_id(self):
-        ids = self._search_results.target_ids
-        if ids is None:
-            return None
-        return ids[self._row]
+        The default `min_score` of None is equivalent to -infinity.
+        The default `max_score` of None is equivalent to +infinity.
+        
+        The `interval` parameter describes the interval end
+        conditions. The default of "[]" uses a closed interval,
+        where min_score <= score <= max_score. The interval "()"
+        uses the open interval where min_score < score < max_score.
+        The half-open/half-closed intervals "(]" and "[)" are
+        also supported.
+        
+        :param min_score: the minimum score in the range.
+        :type min_score: a float, or None for -infinity
+        :param max_score: the maximum score in the range.
+        :type max_score: a float, or None for +infinity
+        :param interval: specify if the end points are open or closed.
+        :type interval: one of "[]", "()", "(]", "[)"
+        :returns: an floating point count
+        """
+        return self._search_results._cumulative_score_row(self._row, min_score, max_score, interval)
+
+    ## ??? What does this do?
+    ## @property
+    ## def target_id(self):
+    ##     ids = self._search_results.target_ids
+    ##     if ids is None:
+    ##         return None
+    ##     return ids[self._row]
 
 class SearchResults(_chemfp.SearchResults):
+    """Search results for a list of query fingerprints against a target arena
+
+    This acts like a tuple of SearchResult elements, with the ability
+    to iterate over each search results, look them up by index, and
+    get the number of scores.
+
+    In addition, there are helper methods to iterate over each hit and
+    get the hit indicies, scores, and identifiers directly as Python
+    lists.
+    
+    """
     def __init__(self, n, arena_ids=None):
         super(SearchResults, self).__init__(n, arena_ids)
         self._results = [SearchResult(self, i) for i in xrange(n)]
+
     def __iter__(self):
+        """Iterate over each SearchResult hit"""
         return iter(self._results)
 
     def __getitem__(self, i):
+        """Get the `i`th SearchResult"""
         try:
-            i = xrange(len(self))[i]
+            return self._results[i]
         except IndexError:
             raise IndexError("row index is out of range")
-        return self._results[i]
 
     def iter_indices(self):
+        """For each hit, yield the list of target indices"""
         for i in xrange(len(self)):
             yield self._get_indices(i)
 
     def iter_ids(self):
+        """For each hit, yield the list of target identifiers"""
         ids = self.target_ids
         for indicies in self.iter_indices():
             yield [ids[idx] for idx in indicies]
 
     def iter_scores(self):
+        """For each hit, yield the list of target scores"""
         for i in xrange(len(self)):
             yield self._get_scores(i)
 
     def iter_indices_and_scores(self):
+        """For each hit, yield the list of (target index, score) tuples"""
         for i in xrange(len(self)):
             yield self[i]
     
     def iter_ids_and_scores(self):
+        """For each hit, yield the list of (target id, score) tuples"""
         ids = self.target_ids
         for i in xrange(len(self)):
             yield [(ids[idx], score) for (idx, score) in self[i]]
 
 
         
-def require_matching_fp_size(query_fp, target_arena):
+def _require_matching_fp_size(query_fp, target_arena):
     if len(query_fp) != target_arena.metadata.num_bytes:
         raise ValueError("query_fp uses %d bytes while target_arena uses %d bytes" % (
             len(query_fp), target_arena.metadata.num_bytes))
 
-def require_matching_sizes(query_arena, target_arena):
+def _require_matching_sizes(query_arena, target_arena):
     assert query_arena.metadata.num_bits is not None, "arenas must define num_bits"
     assert target_arena.metadata.num_bits is not None, "arenas must define num_bits"
     if query_arena.metadata.num_bits != target_arena.metadata.num_bits:
@@ -112,8 +212,25 @@ def require_matching_sizes(query_arena, target_arena):
 
 
 
-def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
-    require_matching_fp_size(query_fp, target_arena)
+def count_tanimoto_hits_fp(query_fp, target_arena, threshold=0.7):
+    """Count the number of hits in `target_arena` at least `threshold` similar to the `query_fp`
+
+    Example::
+    
+        query_id, query_fp = chemfp.load_fingerprints("queries.fps")[0]
+        targets = chemfp.load_fingerprints("targets.fps")
+        print chemfp.search.count_tanimoto_hits_fp(query_fp, targets, threshold=0.1)
+        
+
+    :param query_fp: the query fingerprint
+    :type query_fp: a byte string
+    :param target_arena: the target arena
+    :type target_fp: a FingerprintArena
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :returns: an integer count
+    """
+    _require_matching_fp_size(query_fp, target_arena)
     # Improve the alignment so the faster algorithms can be used
     query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
         query_fp, target_arena.alignment, target_arena.storage_size)
@@ -130,8 +247,29 @@ def count_tanimoto_hits_fp(query_fp, target_arena, threshold):
     return counts[0]
 
 
-def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
-    require_matching_sizes(query_arena, target_arena)
+def count_tanimoto_hits_arena(query_arena, target_arena, threshold=0.7):
+    """For each fingerprint in `query_arena`, count the number of hits in `target_arena` at least `threshold` similar
+    
+    Example::
+    
+        queries = chemfp.load_fingerprints("queries.fps")
+        targets = chemfp.load_fingerprints("targets.fps")
+        counts = chemfp.search.count_tanimoto_hits_arena(query_fp, targets, threshold=0.1)
+        print counts[:10]
+
+    The result is implementation specific. You'll always be able to
+    get its length and do an index lookup to get an integer
+    count. Currently it's a ctype array of longs, but it could be an
+    array.array or Python list in the future.
+
+    :param query_arena: The query fingerprints.
+    :type query_arena: a FingerprintArena
+    :param target_arena: The target fingerprints.
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :returns: an array of counts
+    """
+    _require_matching_sizes(query_arena, target_arena)
 
     counts = (ctypes.c_int*len(query_arena))()
     _chemfp.count_tanimoto_arena(threshold, target_arena.num_bits,
@@ -146,6 +284,33 @@ def count_tanimoto_hits_arena(query_arena, target_arena, threshold):
     return counts    
 
 def count_tanimoto_hits_symmetric(arena, threshold, batch_size=100):
+    """For each fingerprint in the `arena`, count the number of other fingerprints at least `threshold` similar to it
+
+    A fingerprint never matches itself.
+
+    Experimental: The computation can take a long time. Python won't check
+    check for a ^C until the function finishes. This can be irritating. Instead,
+    process only `batch_size` rows at a time before checking for a ^C.
+
+    Example::
+
+        arena = chemfp.load_fingerprints("targets.fps")
+        counts = chemfp.search.count_tanimoto_hits_symmetric(arena, threshold=0.2)
+        print counts[:10]
+
+    The result is implementation specific. You'll always be able to
+    get its length and do an index lookup to get an integer
+    count. Currently it's a ctype array of longs, but it could be an
+    array.array or Python list in the future.
+
+    :param arena: the set of fingerprints
+    :type arena: a FingerprintArena
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :param batch_size: the number of rows to process before checking for a ^C
+    :type batch_size: integer
+    :returns: an array of counts
+    """
     N = len(arena)
     counts = (ctypes.c_int * N)()
 
@@ -181,6 +346,60 @@ def count_tanimoto_hits_symmetric(arena, threshold, batch_size=100):
 def partial_count_tanimoto_hits_symmetric(counts, arena, threshold,
                                           query_start=0, query_end=None,
                                           target_start=0, target_end=None):
+    """Compute a portion of the symmetric Tanimoto counts
+
+    For most cases, use count_tanimoto_hits_symmetric instead of this
+    function!
+    
+    This function is only useful for thread-pool implementations. In
+    that case you'll need to set the number of OpenMP threads to 0.
+
+    `counts` is a contiguous array of integers. It should be
+    initialized to zeros, and reused for successive calls.
+
+    The function adds counts for counts[query_start:query_end] based
+    on computing the upper-triangle portion contained in the rectangle
+    query_start:query_end and target_start:target_end.
+
+    You know, this is pretty complicated. Here's the bare minimum
+    example of how to use it correctly to process 10 rows at a time
+    using up to 4 threads::
+
+        import chemfp
+        import chemfp.search
+        from chemfp import futures
+        import array
+        
+        chemfp.set_num_threads(1)  # Globally disable OpenMP
+        
+        arena = chemfp.load_fingerprints("targets.fps")  # Load the fingerprints
+        n = len(arena)
+        counts = array.array("i", [0]*n)
+        
+        with futures.ThreadPoolExecutor(max_workers=4) as executor:
+            for row in xrange(0, n, 10):
+                executor.submit(chemfp.search.partial_count_tanimoto_hits_symmetric,
+                                counts, arena, threshold=0.2,
+                                query_start=row, query_end=min(row+10, n))
+        
+        print counts
+
+    :param counts: the acumulated Tanimoto counts
+    :type counts: a contiguous block of integer
+    :param arena: the fingerprints.
+    :type arena: a FingerprintArena
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :param query_start: the query start row
+    :type query_start: an integer
+    :param query_end: the query end row
+    :type query_end: an integer, or None to mean the last query row
+    :param target_start: the target start row
+    :type target_start: an integer
+    :param target_end: the target end row
+    :type target_end: an integer, or None to mean the last target row
+    :returns: nothing
+    """
     N = len(arena)
     
     if query_end is None:
@@ -209,7 +428,7 @@ def partial_count_tanimoto_hits_symmetric(counts, arena, threshold,
 # These all return indices into the arena!
 
 def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
-    require_matching_fp_size(query_fp, target_arena)
+    _require_matching_fp_size(query_fp, target_arena)
 
     # Improve the alignment so the faster algorithms can be used
     query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
@@ -229,7 +448,7 @@ def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
 
 
 def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
-    require_matching_sizes(query_arena, target_arena)
+    _require_matching_sizes(query_arena, target_arena)
 
     num_queries = len(query_arena)
 
@@ -316,7 +535,7 @@ def fill_lower_triangle(results):
 # These all return indices into the arena!
 
 def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
-    require_matching_fp_size(query_fp, target_arena)
+    _require_matching_fp_size(query_fp, target_arena)
     query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
         query_fp, target_arena.alignment, target_arena.storage_size)
     
@@ -336,7 +555,7 @@ def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
     return results[0]
 
 def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
-    require_matching_sizes(query_arena, target_arena)
+    _require_matching_sizes(query_arena, target_arena)
 
     num_queries = len(query_arena)
 

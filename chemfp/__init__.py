@@ -208,10 +208,10 @@ def count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100):
 
     Example::
 
-      queries = chemfp.open("queries.fps")
-      targets = chemfp.load_fingerprints("targets.fps.gz")
-      for (query_id, count) in chemfp.count_tanimoto_hits(queries, targets, threshold=0.9):
-          print query_id, "has", count, "neighbors with at least 0.9 similarity"
+        queries = chemfp.open("queries.fps")
+        targets = chemfp.load_fingerprints("targets.fps.gz")
+        for (query_id, count) in chemfp.count_tanimoto_hits(queries, targets, threshold=0.9):
+            print query_id, "has", count, "neighbors with at least 0.9 similarity"
 
     Internally, queries are processed in batches of size 'arena_size'.
     A small batch size uses less overall memory and has lower
