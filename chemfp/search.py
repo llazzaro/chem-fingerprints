@@ -151,6 +151,11 @@ class SearchResults(_chemfp.SearchResults):
     
     """
     def __init__(self, n, arena_ids=None):
+        """`n` is the number of SearchResult instances and `arena_ids` the target arena ids
+
+        There is one SearchResult for each query fingerprint. The `arena_ids`
+        are used to map the hit index back to the hit id.
+        """
         super(SearchResults, self).__init__(n, arena_ids)
         self._results = [SearchResult(self, i) for i in xrange(n)]
 
@@ -248,13 +253,13 @@ def count_tanimoto_hits_fp(query_fp, target_arena, threshold=0.7):
 
 
 def count_tanimoto_hits_arena(query_arena, target_arena, threshold=0.7):
-    """For each fingerprint in `query_arena`, count the number of hits in `target_arena` at least `threshold` similar
+    """For each fingerprint in `query_arena`, count the number of hits in `target_arena` at least `threshold` similar to it
     
     Example::
     
         queries = chemfp.load_fingerprints("queries.fps")
         targets = chemfp.load_fingerprints("targets.fps")
-        counts = chemfp.search.count_tanimoto_hits_arena(query_fp, targets, threshold=0.1)
+        counts = chemfp.search.count_tanimoto_hits_arena(queries, targets, threshold=0.1)
         print counts[:10]
 
     The result is implementation specific. You'll always be able to
@@ -283,13 +288,13 @@ def count_tanimoto_hits_arena(query_arena, target_arena, threshold=0.7):
                                  counts)
     return counts    
 
-def count_tanimoto_hits_symmetric(arena, threshold, batch_size=100):
+def count_tanimoto_hits_symmetric(arena, threshold=0.7, batch_size=100):
     """For each fingerprint in the `arena`, count the number of other fingerprints at least `threshold` similar to it
 
     A fingerprint never matches itself.
 
-    Experimental: The computation can take a long time. Python won't check
-    check for a ^C until the function finishes. This can be irritating. Instead,
+    The computation can take a long time. Python won't check check for
+    a ^C until the function finishes. This can be irritating. Instead,
     process only `batch_size` rows at a time before checking for a ^C.
 
     Example::
@@ -298,7 +303,7 @@ def count_tanimoto_hits_symmetric(arena, threshold, batch_size=100):
         counts = chemfp.search.count_tanimoto_hits_symmetric(arena, threshold=0.2)
         print counts[:10]
 
-    The result is implementation specific. You'll always be able to
+    The result object is implementation specific. You'll always be able to
     get its length and do an index lookup to get an integer
     count. Currently it's a ctype array of longs, but it could be an
     array.array or Python list in the future.
@@ -343,7 +348,7 @@ def count_tanimoto_hits_symmetric(arena, threshold, batch_size=100):
     return counts
 
 
-def partial_count_tanimoto_hits_symmetric(counts, arena, threshold,
+def partial_count_tanimoto_hits_symmetric(counts, arena, threshold=0.7,
                                           query_start=0, query_end=None,
                                           target_start=0, target_end=None):
     """Compute a portion of the symmetric Tanimoto counts
@@ -352,14 +357,15 @@ def partial_count_tanimoto_hits_symmetric(counts, arena, threshold,
     function!
     
     This function is only useful for thread-pool implementations. In
-    that case you'll need to set the number of OpenMP threads to 0.
+    that case, set the number of OpenMP threads to 1.
 
     `counts` is a contiguous array of integers. It should be
     initialized to zeros, and reused for successive calls.
 
     The function adds counts for counts[query_start:query_end] based
     on computing the upper-triangle portion contained in the rectangle
-    query_start:query_end and target_start:target_end.
+    query_start:query_end and target_start:target_end and using
+    symmetry to fill in the lower half.
 
     You know, this is pretty complicated. Here's the bare minimum
     example of how to use it correctly to process 10 rows at a time
@@ -384,7 +390,7 @@ def partial_count_tanimoto_hits_symmetric(counts, arena, threshold,
         
         print counts
 
-    :param counts: the acumulated Tanimoto counts
+    :param counts: the accumulated Tanimoto counts
     :type counts: a contiguous block of integer
     :param arena: the fingerprints.
     :type arena: a FingerprintArena
@@ -427,7 +433,23 @@ def partial_count_tanimoto_hits_symmetric(counts, arena, threshold,
 
 # These all return indices into the arena!
 
-def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
+def threshold_tanimoto_search_fp(query_fp, target_arena, threshold=0.7):
+    """Search for fingerprint hits in `target_arena` which are at least `threshold` similar to `query_fp`
+
+    Example::
+
+        query_id, query_fp = chemfp.load_fingerprints("queries.fps")[0]
+        targets = chemfp.load_fingerprints("targets.fps")
+        print list(chemfp.search.threshold_tanimoto_search_fp(query_fp, targets, threshold=0.15))
+
+    :param query_fp: the query fingerprint
+    :type query_fp: a byte string
+    :param target_arena: the target arena
+    :type target_fp: a FingerprintArena
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :returns: a SearchResult
+    """
     _require_matching_fp_size(query_fp, target_arena)
 
     # Improve the alignment so the faster algorithms can be used
@@ -448,6 +470,24 @@ def threshold_tanimoto_search_fp(query_fp, target_arena, threshold):
 
 
 def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
+    """Find the hits in the `target_arena` at least `threshold` similar to the fingerprints in `query_arena`
+
+    Example::
+    
+        queries = chemfp.load_fingerprints("queries.fps")
+        targets = chemfp.load_fingerprints("targets.fps")
+        results = chemfp.search.threshold_tanimoto_search_arena(queries, targets, threshold=0.5)
+        for query_id, query_hits in zip(queries.ids, results):
+            if len(query_hits) > 0:
+                print query_id, "->", ", ".join(query_hits.get_ids())
+
+    :param query_arena: The query fingerprints.
+    :type query_arena: a FingerprintArena
+    :param target_arena: The target fingerprints.
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :returns: a SearchResults instance
+    """
     _require_matching_sizes(query_arena, target_arena)
 
     num_queries = len(query_arena)
@@ -465,12 +505,42 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     
     return results
 
-def threshold_tanimoto_search_symmetric(arena, threshold, include_lower_triangle=True, batch_size=100):
+def threshold_tanimoto_search_symmetric(arena, threshold=0.7, include_lower_triangle=True, batch_size=100):
+    """Find the hits in the `arena` at least `threshold` similar to the fingerprints in the arena
+
+    When `include_lower_triangle` is True, compute the upper-triangle
+    similarities, then copy the results to get the full set of
+    results. When `include_lower_triangle` is False, only compute the
+    upper triangle.
+
+    The computation can take a long time. Python won't check check for
+    a ^C until the function finishes. This can be irritating. Instead,
+    process only `batch_size` rows at a time before checking for a ^C.
+
+    Example::
+
+        arena = chemfp.load_fingerprints("queries.fps")
+        full_result = chemfp.search.threshold_tanimoto_search_symmetric(arena, threshold=0.2)
+        upper_triangle = chemfp.search.threshold_tanimoto_search_symmetric(
+                  arena, threshold=0.2, include_lower_triangle=False)
+        assert sum(map(len, full_result)) == sum(map(len, upper_triangle))*2
+                  
+    :param arena: the set of fingerprints
+    :type arena: a FingerprintArena
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :param include_lower_triangle:
+        if False, compute only the upper triangle, otherwise use symmetry to compute the full matrix
+    :type include_lower_triangle: boolean
+    :param batch_size: the number of rows to process before checking for a ^C
+    :type batch_size: integer
+    :returns: a SearchResults instance
+    """
+    
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
     N = len(arena)
     results = SearchResults(N, arena.arena_ids)
-
 
     if N:
         # Break it up into batch_size groups in order to let Python's
@@ -496,9 +566,67 @@ def threshold_tanimoto_search_symmetric(arena, threshold, include_lower_triangle
 #                                      results_offsets=0):
 #    pass
 
-def partial_threshold_tanimoto_search_symmetric(results, arena, threshold,
+def partial_threshold_tanimoto_search_symmetric(results, arena, threshold=0.7,
                                                 query_start=0, query_end=None,
                                                 target_start=0, target_end=None):
+    """Compute a portion of the symmetric Tanimoto search results
+
+    For most cases, use threshold_tanimoto_arena_symmetric instead of this
+    function!
+    
+    This function is only useful for thread-pool implementations. In
+    that case, set the number of OpenMP threads to 1.
+
+    `results` is a SearchResults instance which is at least as large
+    as the arena. It should be reused for successive updates.
+
+    The function adds hits to results[query_start:query_end] based
+    on computing the upper-triangle portion contained in the rectangle
+    query_start:query_end and target_start:target_end.
+
+    It does not fill in the lower triangle. To get the full matrix,
+    call `fill_lower_triangle`.
+
+    You know, this is pretty complicated. Here's the bare minimum
+    example of how to use it correctly to process 10 rows at a time
+    using up to 4 threads::
+
+        import chemfp
+        import chemfp.search
+        from chemfp import futures
+        import array
+
+        chemfp.set_num_threads(1)
+
+        arena = chemfp.load_fingerprints("targets.fps")
+        n = len(arena)
+        results = chemfp.search.SearchResults(n, arena.ids)
+
+        with futures.ThreadPoolExecutor(max_workers=4) as executor:
+            for row in xrange(0, n, 10):
+                executor.submit(chemfp.search.partial_threshold_tanimoto_search_symmetric,
+                                results, arena, threshold=0.2,
+                                query_start=row, query_end=min(row+10, n))
+
+        chemfp.search.fill_lower_triangle(results)
+
+
+    :param counts: the intermediate search results
+    :type counts: a SearchResults instance
+    :param arena: the fingerprints.
+    :type arena: a FingerprintArena
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :param query_start: the query start row
+    :type query_start: an integer
+    :param query_end: the query end row
+    :type query_end: an integer, or None to mean the last query row
+    :param target_start: the target start row
+    :type target_start: an integer
+    :param target_end: the target end row
+    :type target_end: an integer, or None to mean the last target row
+    :returns: nothing
+    """
     assert arena.popcount_indices
     N = len(arena)
     
@@ -534,7 +662,7 @@ def fill_lower_triangle(results):
 
 # These all return indices into the arena!
 
-def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
+def knearest_tanimoto_search_fp(query_fp, target_arena, k=3, threshold=0.7):
     _require_matching_fp_size(query_fp, target_arena)
     query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
         query_fp, target_arena.alignment, target_arena.storage_size)
@@ -554,7 +682,7 @@ def knearest_tanimoto_search_fp(query_fp, target_arena, k, threshold):
 
     return results[0]
 
-def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
+def knearest_tanimoto_search_arena(query_arena, target_arena, k=3, threshold=0.7):
     _require_matching_sizes(query_arena, target_arena)
 
     num_queries = len(query_arena)
@@ -575,7 +703,7 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k, threshold):
     return results
 
 
-def knearest_tanimoto_search_symmetric(arena, k, threshold, batch_size=100):
+def knearest_tanimoto_search_symmetric(arena, k=3, threshold=0.7, batch_size=100):
     N = len(arena)
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
