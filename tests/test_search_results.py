@@ -4,6 +4,7 @@ import math
 import unittest2
 import random
 import re
+import array
 
 from chemfp.search import SearchResults
 from chemfp.fps_search import FPSSearchResults, FPSSearchResult
@@ -190,44 +191,49 @@ class TestIterAPI(TestCase):
             for i, score in enumerate(scores):
                 results._add_hit(row, i*(row+1), score)
         self.results = results
+
+    def assertRealListEquals(self, left, right):
+        # Make sure it's really a list - the ListEquals allows iterators
+        self.assertTrue(isinstance(left, list) or isinstance(left, array.array))
+        self.assertListEquals(left, right)
         
     def test_iter_indices(self):
         results = self.results
         it = results.iter_indices()
-        self.assertListEquals(next(it), range(10))
-        self.assertListEquals(next(it), [0, 2, 4, 6, 8])
+        self.assertRealListEquals(next(it), range(10))
+        self.assertRealListEquals(next(it), [0, 2, 4, 6, 8])
         with self.assertRaisesRegexp(StopIteration, ""):
             next(it)
 
     def test_iter_ids(self):
         results = self.results
         it = results.iter_ids()
-        self.assertListEquals(next(it), map(str, range(10)))
-        self.assertListEquals(next(it), map(str, [0, 2, 4, 6, 8]))
+        self.assertRealListEquals(next(it), map(str, range(10)))
+        self.assertRealListEquals(next(it), map(str, [0, 2, 4, 6, 8]))
         with self.assertRaisesRegexp(StopIteration, ""):
             next(it)
 
     def test_iter_scores(self):
         results = self.results
         it = results.iter_scores()
-        self.assertListEquals(next(it), random_scores[:10])
-        self.assertListEquals(next(it), random_scores[30:35])
+        self.assertRealListEquals(next(it), random_scores[:10])
+        self.assertRealListEquals(next(it), random_scores[30:35])
         with self.assertRaisesRegexp(StopIteration, ""):
             next(it)
 
     def test_iter_indices_and_scores(self):
         results = self.results
         it = results.iter_indices_and_scores()
-        self.assertListEquals(next(it), zip(range(10), random_scores[:10]))
-        self.assertListEquals(next(it), zip([0, 2, 4, 6, 8], random_scores[30:35]))
+        self.assertRealListEquals(next(it), zip(range(10), random_scores[:10]))
+        self.assertRealListEquals(next(it), zip([0, 2, 4, 6, 8], random_scores[30:35]))
         with self.assertRaisesRegexp(StopIteration, ""):
             next(it)
 
     def test_iter_ids_and_scores(self):
         results = self.results
         it = results.iter_ids_and_scores()
-        self.assertListEquals(next(it), zip(map(str, range(10)), random_scores[:10]))
-        self.assertListEquals(next(it), zip(map(str, [0, 2, 4, 6, 8]), random_scores[30:35]))
+        self.assertRealListEquals(next(it), zip(map(str, range(10)), random_scores[:10]))
+        self.assertRealListEquals(next(it), zip(map(str, [0, 2, 4, 6, 8]), random_scores[30:35]))
         with self.assertRaisesRegexp(StopIteration, ""):
             next(it)
 

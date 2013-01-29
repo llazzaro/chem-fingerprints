@@ -189,7 +189,7 @@ class SearchResults(_chemfp.SearchResults):
     def iter_indices_and_scores(self):
         """For each hit, yield the list of (target index, score) tuples"""
         for i in xrange(len(self)):
-            yield self[i]
+            yield zip(self._get_indices(i), self._get_scores(i))
     
     def iter_ids_and_scores(self):
         """For each hit, yield the list of (target id, score) tuples"""

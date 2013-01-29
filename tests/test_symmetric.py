@@ -149,7 +149,7 @@ class TestThreshold(unittest2.TestCase):
     def test_upper_only(self):
         # query[i] always matches target[i] so x[i] will always contain i
         x = search.threshold_tanimoto_search_arena(fps, fps, 0.9)
-        x = list(x.iter_indices_and_scores())
+        x = list(x)
 
         # This only processes the upper-triangle, and not the diagonal
         y = search.threshold_tanimoto_search_symmetric(fps, 0.9, include_lower_triangle=False)
