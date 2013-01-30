@@ -473,6 +473,8 @@ def partial_count_tanimoto_hits_symmetric(counts, arena, threshold=0.7,
 def threshold_tanimoto_search_fp(query_fp, target_arena, threshold=0.7):
     """Search for fingerprint hits in `target_arena` which are at least `threshold` similar to `query_fp`
 
+    The hits in the returned `SearchResult` are in arbitrary order.
+
     Example::
 
         query_id, query_fp = chemfp.load_fingerprints("queries.fps")[0]
@@ -507,7 +509,9 @@ def threshold_tanimoto_search_fp(query_fp, target_arena, threshold=0.7):
 
 
 def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
-    """Find the hits in the `target_arena` at least `threshold` similar to the fingerprints in `query_arena`
+    """Search for the hits in the `target_arena` at least `threshold` similar to the fingerprints in `query_arena`
+
+    The hits in the returned `SearchResults` are in arbitrary order.
 
     Example::
     
@@ -521,6 +525,7 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     :param query_arena: The query fingerprints.
     :type query_arena: a FingerprintArena
     :param target_arena: The target fingerprints.
+    :type target_arena: a FingerprintArena
     :param threshold: The minimum score threshold.
     :type threshold: float between 0.0 and 1.0, inclusive
     :returns: a SearchResults instance
@@ -543,7 +548,7 @@ def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
     return results
 
 def threshold_tanimoto_search_symmetric(arena, threshold=0.7, include_lower_triangle=True, batch_size=100):
-    """Find the hits in the `arena` at least `threshold` similar to the fingerprints in the arena
+    """Search for the hits in the `arena` at least `threshold` similar to the fingerprints in the arena
 
     When `include_lower_triangle` is True, compute the upper-triangle
     similarities, then copy the results to get the full set of
@@ -553,6 +558,8 @@ def threshold_tanimoto_search_symmetric(arena, threshold=0.7, include_lower_tria
     The computation can take a long time. Python won't check check for
     a ^C until the function finishes. This can be irritating. Instead,
     process only `batch_size` rows at a time before checking for a ^C.
+
+    The hits in the returned `SearchResults` are in arbitrary order.
 
     Example::
 
@@ -647,6 +654,7 @@ def partial_threshold_tanimoto_search_symmetric(results, arena, threshold=0.7,
 
         chemfp.search.fill_lower_triangle(results)
 
+    The hits in the `SearchResults` are in arbitrary order.
 
     :param counts: the intermediate search results
     :type counts: a SearchResults instance
@@ -704,6 +712,26 @@ def fill_lower_triangle(results):
 # These all return indices into the arena!
 
 def knearest_tanimoto_search_fp(query_fp, target_arena, k=3, threshold=0.7):
+    """Search for `k`-nearest hits in `target_arena` which are at least `threshold` similar to `query_fp`
+
+    The hits in the `SearchResults` are ordered by decreasing similarity score.
+
+    Example::
+
+        query_id, query_fp = chemfp.load_fingerprints("queries.fps")[0]
+        targets = chemfp.load_fingerprints("targets.fps")
+        print list(chemfp.search.knearest_tanimoto_search_fp(query_fp, targets, k=3, threshold=0.0))
+
+    :param query_fp: the query fingerprint
+    :type query_fp: a byte string
+    :param target_arena: the target arena
+    :type target_fp: a FingerprintArena
+    :param k: the number of nearest neighbors to find.
+    :type k: positive integer
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :returns: a SearchResult
+    """
     _require_matching_fp_size(query_fp, target_arena)
     query_start_padding, query_end_padding, query_fp = _chemfp.align_fingerprint(
         query_fp, target_arena.alignment, target_arena.storage_size)
@@ -724,6 +752,29 @@ def knearest_tanimoto_search_fp(query_fp, target_arena, k=3, threshold=0.7):
     return results[0]
 
 def knearest_tanimoto_search_arena(query_arena, target_arena, k=3, threshold=0.7):
+    """Search for the `k` nearest hits in the `target_arena` at least `threshold` similar to the fingerprints in `query_arena`
+
+    The hits in the `SearchResults` are ordered by decreasing similarity score.
+
+    Example::
+    
+        queries = chemfp.load_fingerprints("queries.fps")
+        targets = chemfp.load_fingerprints("targets.fps")
+        results = chemfp.search.knearest_tanimoto_search_arena(queries, targets, k=3, threshold=0.5)
+        for query_id, query_hits in zip(queries.ids, results):
+            if len(query_hits) >= 2:
+                print query_id, "->", ", ".join(query_hits.get_ids())
+
+    :param query_arena: The query fingerprints.
+    :type query_arena: a FingerprintArena
+    :param target_arena: The target fingerprints.
+    :type target_arena: a FingerprintArena
+    :param k: the number of nearest neighbors to find.
+    :type k: positive integer
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :returns: a SearchResults instance
+    """
     _require_matching_sizes(query_arena, target_arena)
 
     num_queries = len(query_arena)
@@ -745,6 +796,34 @@ def knearest_tanimoto_search_arena(query_arena, target_arena, k=3, threshold=0.7
 
 
 def knearest_tanimoto_search_symmetric(arena, k=3, threshold=0.7, batch_size=100):
+    """Search for the `k`-nearest hits in the `arena` at least `threshold` similar to the fingerprints in the arena
+
+    The computation can take a long time. Python won't check check for
+    a ^C until the function finishes. This can be irritating. Instead,
+    process only `batch_size` rows at a time before checking for a ^C.
+
+    The hits in the `SearchResults` are ordered by decreasing similarity score.
+
+    Example::
+
+        arena = chemfp.load_fingerprints("queries.fps")
+        results = chemfp.search.knearest_tanimoto_search_symmetric(arena, k=3, threshold=0.8)
+        for (query_id, hits) in zip(arena.ids, results):
+            print query_id, "->", ", ".join(("%s %.2f" % hit) for hit in  hits.get_ids_and_scores())
+    
+    :param arena: the set of fingerprints
+    :type arena: a FingerprintArena
+    :param k: the number of nearest neighbors to find.
+    :type k: positive integer
+    :param threshold: The minimum score threshold.
+    :type threshold: float between 0.0 and 1.0, inclusive
+    :param include_lower_triangle:
+        if False, compute only the upper triangle, otherwise use symmetry to compute the full matrix
+    :type include_lower_triangle: boolean
+    :param batch_size: the number of rows to process before checking for a ^C
+    :type batch_size: integer
+    :returns: a SearchResults instance
+    """
     N = len(arena)
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
