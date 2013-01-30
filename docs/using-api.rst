@@ -12,7 +12,7 @@ documented in :ref:`chemfp-api`.
 The API includes:
 
  - low-level Tanimoto and popcount operations
- - Tanimo search algorithms based on threshold and/or k-nearest neighbors
+ - Tanimoto search algorithms based on threshold and/or k-nearest neighbors
  - a cross-toolkit interface for reading fingerprints from a structure file
 
 The following chapters give examples of how to use the API.
