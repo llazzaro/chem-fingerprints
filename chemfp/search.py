@@ -762,13 +762,3 @@ def knearest_tanimoto_search_symmetric(arena, k=3, threshold=0.7, batch_size=100
         _chemfp.knearest_results_finalize(results, 0, N)
     
     return results
-
-
-
-#def partial_knearest_tanimoto_search(results, arena, k, threshold, results_offset=0):
-#    pass
-#
-#def partial_knearest_tanimoto_search_symmetric(results, arena, k, threshold,
-#                                               query_start=0, query_end=None,
-#                                               target_start=0, target_end=None):
-#    pass
