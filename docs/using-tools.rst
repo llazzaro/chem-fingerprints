@@ -196,13 +196,18 @@ higest score to lowest.
 NxN (self-similar) searches
 ===========================
 
-chemfp has no special support for the NxN search of a fingerprint data
-set against itself. Instead, use the same file as both the queries and
-the targets. This will take twice as much memory and time as an
-optimized search.
+Use the --NxN option if you want to use the same fingerprints as both
+the queries and targets::
 
-If you are interested in funding such a tool, I can provide you a cost
-estimate.
+    simsearch -k 3 --threshold 0.7 --NxN pubchem_queries.fps
+
+This is about twice as fast and uses half as much memory compared to::
+
+    simsearch -k 3 --threshold 0.7 -q pubchem_queries.fps pubchem_queries.fps
+
+and the --NxN option excludes matching a fingerprint to itself (the
+diagonal term).
+
 
 
 Using a toolkit to process the ChEBI dataset
