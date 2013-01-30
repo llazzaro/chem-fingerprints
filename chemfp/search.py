@@ -235,6 +235,84 @@ class SearchResults(_chemfp.SearchResults):
             yield [(ids[idx], score) for (idx, score) in self[i]]
 
 
+    # I don't like how C-level doc strings can't report the call
+    # signature even though keyword arguments are supported. I also
+    # don't like maintaining the docstrings in C code.
+    # Problem solved by interposing these Python methods
+    def clear_all(self):
+        """Remove all hits from all of the search results"""
+        return super(SearchResults, self).clear_all()
+            
+    def count_all(self, min_score=None, max_score=None, interval="[]"):
+        """Count the number of hits with a score between `min_score` and `max_score`
+        
+        Using the default parameters this returns the number of
+        hits in the result.
+        
+        The default `min_score` of None is equivalent to -infinity.
+        The default `max_score` of None is equivalent to +infinity.
+        
+        The `interval` parameter describes the interval end
+        conditions. The default of "[]" uses a closed interval,
+        where min_score <= score <= max_score. The interval "()"
+        uses the open interval where min_score < score < max_score.
+        The half-open/half-closed intervals "(]" and "[)" are
+        also supported.
+        
+        :param min_score: the minimum score in the range.
+        :type min_score: a float, or None for -infinity
+        :param max_score: the maximum score in the range.
+        :type max_score: a float, or None for +infinity
+        :param interval: specify if the end points are open or closed.
+        :type interval: one of "[]", "()", "(]", "[)"
+        :returns: an integer count
+        """
+        return super(SearchResults, self).count_all(min_score, max_score, interval)
+        
+    def cumulative_score_all(self, min_score=None, max_score=None, interval="[]"):
+        """The sum of all scores in all rows which are between `min_score` and `max_score`
+
+        Using the default parameters this returns the sum of all of
+        the scores in all of the results. With a specified range this
+        returns the sum of all of the scores in that range. The
+        cumulative score is also known as the raw score.
+        
+        The default `min_score` of None is equivalent to -infinity.
+        The default `max_score` of None is equivalent to +infinity.
+        
+        The `interval` parameter describes the interval end
+        conditions. The default of "[]" uses a closed interval,
+        where min_score <= score <= max_score. The interval "()"
+        uses the open interval where min_score < score < max_score.
+        The half-open/half-closed intervals "(]" and "[)" are
+        also supported.
+        
+        :param min_score: the minimum score in the range.
+        :type min_score: a float, or None for -infinity
+        :param max_score: the maximum score in the range.
+        :type max_score: a float, or None for +infinity
+        :param interval: specify if the end points are open or closed.
+        :type interval: one of "[]", "()", "(]", "[)"
+        :returns: an floating point count
+        """
+        return super(SearchResults, self).cumulative_score_all(min_score, max_score, interval)
+
+    def reorder_all(self, order="decreasing-score"):
+        """Reorder the hits for all of the rows based on the requested `order`.
+        
+        The available orderings are:
+          increasing-score: sort by increasing score
+          decreasing-score: sort by decreasing score
+          increasing-index: sort by increasing target index
+          decreasing-index: sort by decreasing target index
+          move-closest-first: move the hit with the highest score to the first position
+          reverse: reverse the current ordering
+        
+        :param ordering: the name of the ordering to use
+        """
+        return super(SearchResults, self).reorder_all(order)
+
+
         
 def _require_matching_fp_size(query_fp, target_arena):
     if len(query_fp) != target_arena.metadata.num_bytes:

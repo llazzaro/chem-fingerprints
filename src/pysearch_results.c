@@ -720,34 +720,34 @@ SearchResults_add_hit(SearchResults *self, PyObject *args, PyObject *kwds) {
   Py_RETURN_NONE;
 }
 
+
 static PyMethodDef SearchResults_methods[] = {
   {"clear_all", (PyCFunction) SearchResults_clear_all, METH_VARARGS | METH_KEYWORDS,
-   "clear the hits in-place"},
+   "Removes all hits from all of the search results"},
   {"_clear_row", (PyCFunction) SearchResults_clear_row, METH_VARARGS | METH_KEYWORDS,
-   "clear the hits in-place"},
+   "(internal) Remove all hits from a given row result"},
   {"cumulative_score_all", (PyCFunction) SearchResults_cumulative_score_all, METH_VARARGS | METH_KEYWORDS,
-   "find the sum of all of the scores in the given range"},
+   "The sum of all scores in all rows which are between `min_score` and `max_score`"},
   {"_cumulative_score_row", (PyCFunction) SearchResults_cumulative_score_row, METH_VARARGS | METH_KEYWORDS,
-   "find the sum of all of the scores in the given range, and for a given row"},
+   "(internal) The sum of the scores which are between `min_score` and `max_score` for a given row"},
   {"count_all", (PyCFunction) SearchResults_count_all, METH_VARARGS | METH_KEYWORDS,
-   "count the number of scores in the given range"},
+   "Count the number of hits with a score between `min_score` and `max_score`"},
   {"_count_row", (PyCFunction) SearchResults_count_row, METH_VARARGS | METH_KEYWORDS,
-   "count the number of scores in the given range for a given row"},
+   "(internal) Count the number of hits with a score between `min_score` and `max_score` for a given row"},
   {"_get_indices", (PyCFunction) SearchResults_get_indices, METH_VARARGS | METH_KEYWORDS,
-   "get the hit indices for a given row"},
+   "(internal) The list of target indices, in the current ordering for a given row"},
   {"_get_scores", (PyCFunction) SearchResults_get_scores, METH_VARARGS | METH_KEYWORDS,
-   "get the hit scores for a given row"},
+   "(internal) The list of target scores, in the current ordering for a given row"},
   {"_get_indices_and_scores", (PyCFunction) SearchResults_get_indices_and_scores, METH_VARARGS | METH_KEYWORDS,
-   "get (index, score) tuples for each hit in a row"},
+   "(internal) The list of (target index, score) pairs, in the current ordering for a given row"},
   {"_size", (PyCFunction) SearchResults_size, METH_VARARGS | METH_KEYWORDS,
-   "the number of hits in a given row"},
+   "(internal) The number of hits for a given row"},
   {"reorder_all", (PyCFunction) SearchResults_reorder_all, METH_VARARGS | METH_KEYWORDS,
-   "Reorder search results rows, in-place"},
+   "Reorder the hits for all of the rows based on the requested ordering"},
   {"_reorder_row", (PyCFunction) SearchResults_reorder_row, METH_VARARGS | METH_KEYWORDS,
-   "Reorder search results for a given row, in-place"},
+   "(internal) Reorder the hits based on the requested ordering for a given row"},
   {"_add_hit", (PyCFunction) SearchResults_add_hit, METH_VARARGS | METH_KEYWORDS,
-   "(private method) add a hit"},
-  
+   "(internal) Add a target index and hit score to a given row"},
   {NULL}
 };
 
