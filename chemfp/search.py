@@ -692,8 +692,12 @@ def partial_threshold_tanimoto_search_symmetric(results, arena, threshold=0.7,
 
 
 def fill_lower_triangle(results):
-    _chemfp.fill_lower_triangle(results, len(results))
+    """Duplicate each entry of `results` to its transpose
 
+    This is used after the symmetric threshold search to turn the
+    upper-triangle results into a full matrix.
+    """
+    _chemfp.fill_lower_triangle(results, len(results))
 
 
 
