@@ -1,12 +1,49 @@
 """Search a FingerprintArena and work with the search results
 
+This module implements the different ways to search a
+`FingerprintArena`. The search functions are:
 
+  Count the number of hits:
+    count_tanimoto_hits_fp - search an arena using a single fingerprint
+    count_tanimoto_hits_arena - search an arena using an arena
+    count_tanimoto_hits_symmetric - search an arena using itself
+    partial_count_tanimoto_hits_symmetric - (advanced use; see the doc string)
+
+  Find all hits at or above a given threshold, sorted arbitrarily:
+    threshold_tanimoto_search_fp - search an arena using a single fingerprint
+    threshold_tanimoto_search_arena - search an arena using an arena
+    threshold_tanimoto_search_symmetric - search an arena using itself
+    partial_threshold_tanimoto_search_symmetric - (advanced use; see the doc string)
+    fill_lower_triangle - copy the upper triangle terms to the lower triangle
+
+  Find the k-nearest hits at or above a given threshold, sorted by
+  decreasing similarity:
+    knearest_tanimoto_search_fp - search an arena using a single fingerprint
+    knearest_tanimoto_search_arena - search an arena using an arena
+    knearest_tanimoto_search_symmetric - search an arena using itself
+
+The threshold and k-nearest search results use a `SearchResult` when
+a fingerprint is used as a query, or a `SearchResults` when an arena
+is used as a query. These internally use a compressed sparse row format.
 """
 
 import _chemfp
 import ctypes
 import array
 
+# 
+__all__ = ["SearchResult", "SearchResults",
+           "count_tanimoto_hits_fp", "count_tanimoto_hits_arena",
+           "count_tanimoto_hits_symmetric", "partial_count_tanimoto_hits_symmetric",
+
+           "threshold_tanimoto_search_fp", "threshold_tanimoto_search_arena",
+           "threshold_tanimoto_search_symmetric", "partial_threshold_tanimoto_search_symmetric",
+           "fill_lower_triangle",
+
+           "knearest_tanimoto_search_fp", "knearest_tanimoto_search_arena",
+           "knearest_tanimoto_search_symmetric"
+           ]
+           
 
 class SearchResult(object):
     """Search results for a query fingerprint against a target arena.
@@ -141,13 +178,13 @@ class SearchResult(object):
 class SearchResults(_chemfp.SearchResults):
     """Search results for a list of query fingerprints against a target arena
 
-    This acts like a tuple of SearchResult elements, with the ability
+    This acts like a list of SearchResult elements, with the ability
     to iterate over each search results, look them up by index, and
     get the number of scores.
 
     In addition, there are helper methods to iterate over each hit and
-    get the hit indicies, scores, and identifiers directly as Python
-    lists.
+    to get the hit indicies, scores, and identifiers directly as Python
+    lists, sort the list contents, and more.
     
     """
     def __init__(self, n, arena_ids=None):
