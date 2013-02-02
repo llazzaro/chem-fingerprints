@@ -1043,6 +1043,22 @@ class TestArenaGetById(unittest2.TestCase):
         fp = arena.get_fingerprint_by_id("spam")
         self.assertIs(fp, None)
         assert arena._id_lookup is not None
+
+    def test_duplicate_id(self):
+        arena = chemfp.load_fingerprints([("id1", "ABCD"),
+                                          ("id2", "EFGH"),
+                                          ("id3", "IJKL"),
+                                          ("id2", "MNOP")],
+                                          metadata = chemfp.Metadata(num_bytes=4),
+                                          reorder=False)
+        self.assertEqual(arena.get_fingerprint_by_id("id1"), "ABCD")
+        self.assertEqual(arena.get_fingerprint_by_id("id3"), "IJKL")
+        self.assertIn(arena.get_fingerprint_by_id("id2"), ("EFGH", "MNOP"))
+
+        self.assertEqual(arena.get_index_by_id("id1"), 0)
+        self.assertEqual(arena.get_index_by_id("id3"), 2)
+        self.assertIn(arena.get_index_by_id("id2"), (1, 3))
+        
         
 
 
