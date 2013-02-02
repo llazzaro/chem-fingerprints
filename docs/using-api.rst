@@ -256,6 +256,33 @@ targets file 25 records at a time::
 Those add up to 224, which you can verify is the number of structures
 in the original source file.
 
+If you have a `FingerprintArena` then you can also use Python's slice
+notation to make a subarena::
+
+    >>> queries = chemfp.load_fingerprints("pubchem_queries.fps")
+    >>> queries[10:15]
+    <chemfp.arena.FingerprintArena object at 0x552c10>
+    >>> queries[10:15].ids
+    ['27599116', '27599118', '27599120', '27583411', '27599082']
+    >>> queries.ids[10:15]
+    ['27599116', '27599118', '27599120', '27583411', '27599082']
+
+The big restriction is that slices can only have a step size
+of 1. Slices like `[10:20:2]` and `[::-1]` aren't supported. If you
+want something like that then you'll need to make a new arena instead
+of using a subarena slice.
+
+In case you were wondering, yes, you can use `iter_arenas` or the other
+FingerprintArena methods on a subarena::
+
+    >>> queries[10:15][1:3].ids
+    ['27599118', '27599120']
+    >>> queries.ids[11:13]
+    ['27599118', '27599120']
+
+
+
+
 How to use query fingerprints to search for similar target fingerprints
 =======================================================================
 
@@ -302,7 +329,7 @@ which uses less memory and is more responsive. You can change the
 tradeoff using the `arena_size` parameter.
 
 
-If all you care about isthe count of the hits within a given
+If all you care about is the count of the hits within a given
 threshold then use :ref:`chemfp.count_tanimoto_hits <chemfp_count_tanimoto_hits>`
 
     >>> queries = chemfp.open("pubchem_queries.fps")
@@ -371,7 +398,11 @@ won't work for that version. Instead, use::
 
     >>> query_arena = chemfp.open("pubchem_queries.fps").iter_arenas(1).next()
 
-which is the older form.)
+which is the older form. Or you can use the equally bewildering
+
+    >>> for query_arena in chemfp.open("pubchem_queries.fps").iter_arenas(1):
+    ...   break
+.)
 
 Here are the k=5 closest hits against the targets file::
 
@@ -403,7 +434,7 @@ little reason to worry about this.
 FingerprintArena searches returning indices instead of ids
 ===========================================================
 
-In this section you'll learn how to search a FingerprintArea and use
+In this section you'll learn how to search a FingerprintArena and use
 hits based on integer indices rather than string ids.
 
 The previous sections used a high-level interface to the Tanimoto
@@ -415,24 +446,59 @@ memory. It's usually better to work with indices if you can, and in
 the next section I'll show how to make a distance matrix using this
 interface.
 
-The index methods are only available as methods of a FingerprintArena,
-where the arena contains the targets. Three of the methods
-(`count_tanimoto_search_arena`, `threshold_tanimoto_search_arena`, and
-`knearest_tanimoto_search_arena`) take another arena as the
-query. Here's an example where I use the first 5 records from
-pubchem_queries.fps to search the entire contents of that file::
+NOTE: up until the final 1.1 release, this document said to use the
+FingerprintArena methods. This is no longer recommended.  Use the
+`chemfp.search` functions instead. Most of the search methods, except
+perhaps the single fingerprint methods, will issue a
+DeprecationWarning with 1.2 and be removed with 1.3.
+
+The index-based search functions are in the `chemfp.search` module.
+They can be categorized into three groups:
+
+  1. Count the number of hits:
+    * count_tanimoto_hits_fp - search an arena using a single fingerprint
+    * count_tanimoto_hits_arena - search an arena using an arena
+    * count_tanimoto_hits_symmetric - search an arena using itself
+    * partial_count_tanimoto_hits_symmetric - (advanced use; see the doc string)
+
+  2. Find all hits at or above a given threshold, sorted arbitrarily:
+    * threshold_tanimoto_search_fp - search an arena using a single fingerprint
+    * threshold_tanimoto_search_arena - search an arena using an arena
+    * threshold_tanimoto_search_symmetric - search an arena using itself
+    * partial_threshold_tanimoto_search_symmetric - (advanced use; see the doc string)
+    * fill_lower_triangle - copy the upper triangle terms to the lower triangle
+
+  3. Find the k-nearest hits at or above a given threshold, sorted by decreasing similarity:
+    * knearest_tanimoto_search_fp - search an arena using a single fingerprint
+    * knearest_tanimoto_search_arena - search an arena using an arena
+    * knearest_tanimoto_search_symmetric - search an arena using itself
+
+The functions ending '_fp' take a query fingerprint and a target
+arena. The functions ending '_arena' take a query arena and a target
+arena. The functions ending '_symmetric' use the same arena as both
+the query and target.
+
+In the following example, I'll use the first 5 fingerprints of a data
+set to search the entire data set. To do this, I load the data set as
+an arena, extract the first 5 records as a sub-arena, and do the
+search.
 
     >>> import chemfp
-    >>> dataset = chemfp.load_fingerprints("pubchem_queries.fps")
-    >>> first_5 = next(dataset.iter_arenas(5))
-    >>> results = dataset.threshold_tanimoto_search_arena(first_5, threshold=0.7)
+    >>> from chemfp import search
+    >>> targets = chemfp.load_fingerprints("pubchem_queries.fps")
+    >>> queries = targets[:5]
+    >>> results = search.threshold_tanimoto_search_arena (queries, targets, threshold=0.7)
+
+The threshold_tanimoto_search_arena search finds the target
+fingerprints which have a similarity score of at least 0.7 compared to
+the query.
 
 You can iterate over the results to get the list of hits for each of
-the queries. (The order of the results is the same as the order of the
-records in the query.)::
+the queries. The order of the results is the same as the order of the
+records in the query.::
 
-   >>> for hits in results:
-    ...   print len(hits), hits[:3]
+    >>> for hits in results:
+    ...   print len(hits), hits.get_ids_and_scores()[:3]
     ... 
     2 [('27581954', 1.0), ('27581957', 1.0)]
     2 [('27581954', 1.0), ('27581957', 1.0)]
@@ -440,17 +506,31 @@ records in the query.)::
     2 [('27584917', 1.0), ('27585106', 0.89915966386554624)]
     2 [('27584917', 0.89915966386554624), ('27585106', 1.0)]
 
-This is like what you saw earlier, except that it doesn't have the
-query id. (If you want that you can enumerate() over the results and
-use the index into the query arena's ids[] list.)
+
+This result is like what you saw earlier, except that it doesn't have
+the query id. You can get that from the arena's `id` attribute, which
+contains the list of fingerprint identifiers.
+
+    >>> for query_id, hits in zip(queries.ids, results):
+    ...   print "Hits for", query_id
+    ...   for hit in hits.get_ids_and_scores()[:3]:
+    ...     print "", hit
+    Hits for 27581954
+     ('27581954', 1.0)
+     ('27581957', 1.0)
+    Hits for 27581957
+     ('27581954', 1.0)
+     ('27581957', 1.0)
+         ...
+
 
 What I really want to show is that you can get the same data only
 using the offset index for the target record instead of its id. The
-result from a Tanimoto search is a `SearchResult` object, with the
-methods `iter_hits()`::
+result from a Tanimoto search is a `SearchResults` object, with the
+methods `get_indices_and_scores()`::
 
-    >>> for hits in results.iter_hits():
-    ...   print len(hits), hits[:3]
+    >>> for hits in results:
+    ...   print len(hits), hits.get_indices_and_scores()[:3]
     ... 
     2 [(0, 1.0), (1, 1.0)]
     2 [(0, 1.0), (1, 1.0)]
@@ -458,15 +538,42 @@ methods `iter_hits()`::
     2 [(3, 1.0), (4, 0.89915966386554624)]
     2 [(3, 0.89915966386554624), (4, 1.0)]
     >>> 
-    >>> dataset.ids[0]
+    >>> targets.ids[0]
     '27581954'
-    >>> dataset.ids[1]
+    >>> targets.ids[1]
     '27581957'
-    >>> dataset.ids[5]
+    >>> targets.ids[5]
     '27580394'
 
 I did a few id lookups given the target dataset to show you that the
 index corresponds to the identifiers from the previous code.
+
+These examples iterated over each `SearchResult` to fetch the ids and
+scores, or indices and scores. Another possibility is to ask the
+`SearchResults` to iterate directly over the list of fields you want.
+
+    >>> for row in results.iter_indices_and_scores():
+    ...   print len(row), row[:3]
+    ... 
+    2 [(0, 1.0), (1, 1.0)]
+    2 [(0, 1.0), (1, 1.0)]
+    3 [(2, 1.0), (5, 0.88235294117647056), (20, 0.75)]
+    2 [(3, 1.0), (4, 0.89915966386554624)]
+    2 [(3, 0.89915966386554624), (4, 1.0)]
+
+This was added to get a bit more performance out of chemfp and because
+the API is sometimes cleaner one way and sometimes cleaner than the
+other. Yes, I know that the Zen of Python recommends that "there
+should be one-- and preferably only one --obvious way to do it." Oh
+well.
+
+NOTE: The API has changed slightly from 1.0 to 1.1. Previously the
+`SearchResults` had the methods `iter_hits` and iteration over the
+`SearchResult` returned a "hit." However, I couldn't remember if a hit
+used the identifier or the index. You must now be explicit and use
+`iter_ids*` or `iter_indices*` on the `SearchResults`, and use
+`get_ids*` or `get_indices*` on the `SearchResult`.
+
 
 
 Computing a distance matrix for clustering
@@ -480,10 +587,16 @@ arleady do that. A goal of chemfp in the future is to provide some
 core components which clustering algorithms can use.
 
 That's in the future. Right now you can use the following to build a
-distance matrix and pass that to one of those tools. The following is
-a somewhat inefficient since it computes almost twice as many Tanimoto
-scores as it needs to do, and uses twice the necessary memory, but
-what's a factor of two among friends?
+distance matrix and pass that to one of those tools.
+
+Since we're using the same fingerprint arena for both queries and
+targets, we know the distance matrix will be symmetric along the
+diagonal, and the diagonal terms will be 1.0. The
+`threshold_tanimoto_search_symmetric` functions can take advantage of
+the symmetry for a factor of two performance gain. There's also a way
+to limit it to just the upper triangle, which gives a factor of two
+memory gain as well.
+
 
 Most of those tools use `NumPy <http://numpy.scipy.org/>`_, which is a
 popular third-party package for numerical computing. You will need to
@@ -492,29 +605,29 @@ have it installed for the following to work.
 ::
 
     import numpy  # NumPy must be installed
+    from chemfp import search
     
     # Compute distance[i][j] = 1-Tanimoto(fp[i], fp[j])
     
     def distance_matrix(arena):
         n = len(arena)
         
-        # The Tanimoto search computes all of the scores when threshold=0.0.
-        # The SearchResult contains sparse data, so I set all values
-        # now to 1.0 so you can experiment with higher thresholds.
-        distances = numpy.ones((n, n), "d")
+        # Start off a similarity matrix with 1.0s along the diagonal
+        similarities = numpy.identity(n, "d")
         
-        # Keep track of where the query subarena is in the query
-        query_row = 0
+        ## Compute the full similarity matrix.
+        # The implementation computes the upper-triangle then copies
+        # the upper-triangle into lower-triangle. It does not include
+        # terms for the diagonal.
+        results = search.threshold_tanimoto_search_symmetric(arena, threshold=0.0)
         
-        for query_arena in arena.iter_arenas():
-            results = arena.threshold_tanimoto_search_arena(query_arena, threshold=0.0)
-            for q_i, hits in enumerate(results.iter_hits()):
-                query_idx = query_row + q_i
-                for target_idx, score in hits:
-                    distances[query_idx, target_idx] = 1.0 - score
-            query_row += len(query_arena)
-        
-        return distances
+        # Copy the results into the NumPy array.
+        for row_index, row in enumerate(results.iter_indices_and_scores()):
+            for target_index, target_score in row:
+                similarities[row_index, target_index] = target_score
+
+        # Return the distance matrix using the similarity matrix
+        return 1.0 - similarities
 
 
 Once you've computed the distance matrix, clustering is easy. I
@@ -527,7 +640,7 @@ then ran the following to see the hierarchical clustering::
     
     # ... insert the 'distance_matrix' function definition here ...
 
-    dataset = chemfp.load_fingerprints("docs/pubchem_queries.fps")
+    dataset = chemfp.load_fingerprints("pubchem_queries.fps")
     distances  = distance_matrix(dataset)
     
     linkage = hcluster.linkage(distances, method="single", metric="euclidean")
@@ -545,15 +658,18 @@ Taylor-Butina clustering
 
 For the last clustering example, here's my (non-validated) variation
 of the `Butina algorithm from JCICS 1999, 39, 747-750 <http://www.chemomine.co.uk/dbclus-paper.pdf>`_.
-See also http://www.redbrick.dcu.ie/~noel/R_clustering.html .
+See also http://www.redbrick.dcu.ie/~noel/R_clustering.html . You
+might know it as Leader clustering.
+
 
 First, for each fingerprint find all other fingerprints with a
 threshold of 0.8::
 
     import chemfp
+    from chemfp import search
     
-    dataset = chemfp.load_fingerprints("pubchem_targets.fps")
-    search = dataset.threshold_tanimoto_search_arena(dataset, threshold = 0.8)
+    arena = chemfp.load_fingerprints("pubchem_targets.fps")
+    results = search. threshold_tanimoto_search_symmetric (arena, threshold = 0.8)
 
 
 Sort the results so that fingerprints with more hits come first. This
@@ -561,15 +677,13 @@ is more likely to be a cluster centroid. Break ties arbitrarily by the
 fingerprint id; since fingerprints are ordered by the number of bits
 this likely makes larger structures appear first.::
 
-    def get_hit_indices(hits):
-        return [id for (id, score) in hits]
-    
     # Reorder so the centroid with the most hits comes first.
     # (That's why I do a reverse search.)
     # Ignore the arbitrariness of breaking ties by fingerprint index
-    results = sorted( (  (len(hits), i, get_hit_indices(hits))
-                                        for (i, hits) in enumerate(search.iter_hits())  ),
+    results = sorted( (  (len(indices), i, indices)
+                              for (i,indices) in enumerate(results.iter_indices())  ),
                       reverse=True)
+
 
 Apply the leader algorithm to determine the cluster centroids and the singletons::
 
@@ -586,14 +700,8 @@ Apply the leader algorithm to determine the cluster centroids and the singletons
             continue
         seen.add(fp_idx)
     
-        
-        if size == 1:
-            # The only fingerprint in the exclusion sphere is itself
-            true_singletons.append(fp_idx)
-            continue
-    
         # Figure out which ones haven't yet been assigned
-        unassigned = [target_idx for target_idx in members if target_idx not in seen]
+        unassigned = set(members) - seen
     
         if not unassigned:
             false_singletons.append(fp_idx)
@@ -606,42 +714,58 @@ Apply the leader algorithm to determine the cluster centroids and the singletons
 Once done, report the results::
 
     print len(true_singletons), "true singletons"
-    print "=>", " ".join(sorted(dataset.ids[idx] for idx in true_singletons))
+    print "=>", " ".join(sorted(arena.ids[idx] for idx in true_singletons))
     print
     
     print len(false_singletons), "false singletons"
-    print "=>", " ".join(sorted(dataset.ids[idx] for idx in false_singletons))
+    print "=>", " ".join(sorted(arena.ids[idx] for idx in false_singletons))
     print
     
     # Sort so the cluster with the most compounds comes first,
     # then by alphabetically smallest id
     def cluster_sort_key(cluster):
         centroid_idx, members = cluster
-        return -len(members), dataset.ids[centroid_idx]
+        return -len(members), arena.ids[centroid_idx]
         
     clusters.sort(key=cluster_sort_key)
     
     print len(clusters), "clusters"
     for centroid_idx, members in clusters:
-        print dataset.ids[centroid_idx], "has", len(members), "other members"
-        print "=>", " ".join(dataset.ids[idx] for idx in members)
+        print arena.ids[centroid_idx], "has", len(members), "other members"
+        print "=>", " ".join(arena.ids[idx] for idx in members)
 
 
 The algorithm is quick for this small data set.
 
 Out of curiosity, I tried this on 100,000 compounds selected
-arbitrarily from PubChem. It took 7 minutes for my laptop to process
-with a threshold of 0.8. In the Butina paper, it took 24 hours to do
-the same, although that was with a 1024 bit fingerprint instead of
-881. It's hard to judge the absolute speed differences of a 12 year
-old MIPS R4000 to a two year old laptop, but it's less than a factor
-of 200. Part must certainly be due to the work I put into making
-chemfp fast, and I'm almost certain I can get another 3-fold
-performance increase.
+arbitrarily from PubChem. It took 35 seconds on my desktop (a 3.2 GHZ
+Intel Core i3) with a threshold of 0.8. In the Butina paper, it took
+24 hours to do the same, although that was with a 1024 bit fingerprint
+instead of 881. It's hard to judge the absolute speed differences of a
+MIPS R4000 from 1998 to a desktop from 2011, but it's less than the
+factor of about 2000 you see here.
 
-The core Tanimoto search routines release the Python global
-interpreter lock, which means algorithms like this should be easily
-parallizable.
+More relevent is the comparison between these numbers for the 1.1
+release compared to the original numbers for the 1.0 release. On my
+old laptop, may it rest it peace, it took 7 minutes to compute the
+same benchmark. Where did the roughly 16-fold peformance boost come
+from? Money. After 1.0 was released, Roche funded me to add various
+optimizations, including taking advantage of the symmetery (2x) and
+using hardware POPCNT if available (4x). Roche and another company
+helped fund the OpenMP support, and my desktop ran this with 4 cores
+instead of 1.
+
+The wary among you might notice that 2*4*4 = 32x faster, while I
+said the overall code was only 16x faster. Where's the factor of 2x
+slowdown? It's in the Python code! The
+`threshold_tanimoto_search_symmetric` step took only 13 seconds. The
+remaining 22 seconds was in the Leader code written in Python. To
+make the analysis more complicated, improvements to the chemfp API
+sped up the clustering step by about 40%.
+
+With chemfp 1.0 version, the clustering performance overhead was minor
+compared to the full similarity search, so I didn't keep track of
+it. With chemfp 1.1, those roles have reversed! 
 
 
 Reading structure fingerprints using a toolkit
@@ -661,11 +785,12 @@ PubChem file "Compound_027575001_027600000.sdf.gz as the source of
 query structures.::
 
     >>> import chemfp
+    >>> from chemfp import search
     >>> targets = chemfp.load_fingerprints("chebi_maccs.fps")
     >>> queries = chemfp.read_structure_fingerprints(targets.metadata, "Compound_027575001_027600000.sdf.gz")
     >>> for (query_id, hits) in chemfp.knearest_tanimoto_search(queries, targets, k=2, threshold=0.4):
     ...   print query_id, "=>",
-    ...   for (target_id, score) in hits:
+    ...   for (target_id, score) in hits.get_ids_and_scores():
     ...     print "%s %.3f" % (target_id, score),
     ...   print
     ... 
@@ -742,3 +867,183 @@ And if you have RDKit installed then you can do::
     27575577 000000000000449e850185c22190023d8a8beadf1f
     27575602 000000000000449e8401915820a0123eda98bbff1f
     27575603 000000000000449e8401915820a0123eda98bbff1f
+
+
+Select a random fingerprint sample
+==================================
+
+In this section you'll learn how to make a new arena where the
+fingerprints are randomly selected from the old arena.
+
+A FingerprintArena slice creates a subarena. Technically speacking,
+this is a "view" of the original data. The subarena doesn't actually
+copy its fingerprint data from the original arena. Instead, it uses
+the same fingerprint data, but keeps track of the start and end
+position of the range it needs. This is why it's not possible to slice
+with a step size other than +1.
+
+This also means that memory for a large arena won't be freed until
+all of its subarenas are also removed.
+
+You can see some evidence for this because a `FingerprintArena` stores
+the entire fingerprint data as a set of bytes named `arena`::
+
+    >>> import chemfp
+    >>> targets = chemfp.load_fingerprints("pubchem_targets.fps") 
+    >>> subset = targets[10:20]
+    >>> targets.arena is subset.arena
+    True
+
+This shows that the `targets` and `subset` share the same raw data
+set. At least it does to me, the person who wrote the code.
+
+You can ask an arena or subarena to make a `copy`_. This allocates
+new memory for the new arena and copies all of its fingerprints there.
+
+    >>> new_subset = subset.copy()
+    >>> len(new_subset) == len(subset)
+    >>> new_subset.arena is subset.arena
+    False
+    >>> subset[7][0]
+    '14554484'
+    >>> new_subset[7][0]
+    '14554484'
+
+
+The `copy` method can do more than just copy the arena. You can give
+it a list of indices and it will only copy those fingerprints::
+
+    >>> three_targets = targets.copy([3112, 0, 1234])
+    >>> three_targets.ids
+    ['14550474', '14564466', '14564904']
+    >>> [targets.ids[3112], targets.ids[0], targets.ids[1234]]
+    ['14564904', '14550474', '14564466']
+
+Are you confused about why the identifiers aren't in the same order?
+That's because when you specify indicies, the copy automatically
+reorders them by popcount and stores the popcount information. This
+extra work help makes future searches faster. Use `reorder=False`
+to leave the order unchanged
+
+   >>> my_ordering = targets.copy([3112, 0, 1234], reorder=False)
+   >>> my_ordering.ids
+   ['14564904', '14550474', '14564466']
+
+This interesting, in a boring sort of way. Let's get back to the main
+goal of getting a random subset of the data. I want to select `m`
+records at random, without replacement, to make a new data set. You
+can see this just means making a list with `m` different index
+values. Python's built-in `random.sample` function makes this easy::
+
+    >>> import random
+    >>> random.sample("abcdefgh", 3)
+    ['b', 'h', 'f']
+    >>> random.sample("abcdefgh", 2)
+    ['d', 'a']
+    >>> random.sample([5, 6, 7, 8, 9], 2)
+    [7, 9]
+    >>> help(random.sample)
+    sample(self, population, k) method of random.Random instance
+       Chooses k unique random elements from a population sequence.
+       ...
+       To choose a sample in a range of integers, use xrange as an argument.
+       This is especially fast and space efficient for sampling from a
+       large population:   sample(xrange(10000000), 60)
+
+The last line of the help points out what do next!::
+
+    >>> random.sample(xrange(len(targets)), 5)
+    [610, 2850, 705, 1402, 2635]
+    >>> random.sample(xrange(len(targets)), 5)
+    [1683, 2320, 1385, 2705, 1850]
+
+Putting it all together, and here's how to get a new arena containing
+100 randomly selected fingerprints, without replacement, from the
+`targets` arena::
+
+    >>> sample_indices = random.sample(xrange(len(targets)), 100)
+    >>> sample = targets.copy(indices=sample_indices)
+    >>> len(sample)
+    100
+
+
+Look up a fingerprint with a given id
+=====================================
+
+In this section you'll learn how to get a fingerprint record with a
+given id.
+
+All fingerprint records have an identifier and a
+fingerprint. Identifiers should be unique. (Duplicates are allowed, and
+if they exist then the lookup code described in this section will
+arbitrarily decide which record to return. Once made, the choice will
+not change.)
+
+Let's find the fingerprint for the record in "pubchem_targets.fps"
+which has the identifier `14564126`. One solution is to iterate
+over all of the records in a file, using the FPS reader::
+
+    >>> import chemfp
+    >>> for id, fp in chemfp.open("pubchem_targets.fps"):
+    ...   if id == "14564126":
+    ...     break
+    ... else:
+    ...   raise KeyError("%r not found" % (id,))
+    ... 
+    >>> fp[:5]
+    '\x07\x1e\x1c\x00\x00'
+
+I used the somewhat obscure `else` clause to the `for` loop. If the
+`for` finishes without breaking, which would happen if the identifier
+weren't present, then it will raise an exception saying that it
+couldn't find the given identifier.
+
+If the fingerprint records are already in a `FingerprintArena` then
+there's a better solution. Use the `get_fingerprint_with_id` method to
+get the fingerprint byte string, or `None` if the identifier doesn't exist::
+
+    >>> arena = chemfp.load_fingerprints("pubchem_targets.fps")
+    >>> fp = arena.get_fingerprint_by_id("14564126")
+    >>> fp[:5]
+    '\x07\x1e\x1c\x00\x00'
+    >>> missing_fp = arena.get_fingerprint_by_id("does-not-exist")
+    >>> missing_fp
+    >>> missing_fp is None
+     True
+
+Internally this does about what you think it would. It uses the
+arena's `id` list to make a lookup table mapping identifier to
+index, and caches the table for later use. Given the index, it's very
+easy to get the fingerprint.
+
+In fact, you can get the index and do the record lookup yourself::
+
+    >>> fp_index = arena.get_index_by_id("14564126")
+    >>> arena.get_index_by_id("14564126")
+     1559
+    >>> arena[1559]
+     ('14564126', '\x07\x1e\x1c\x00\x00 ...')
+
+
+Sorting search results
+======================
+
+In this section you'll learn how to sort the search results.
+
+The k-nearest and threshold searches return a `SearchResults` when
+both the queries and the targets are arenas. You should think of this
+as returning a sparse matrix. Each row of the matrix is a result for
+the corresponding query term, and is called a `SearchResult`_. Each
+`SearchResult` contains a list of hits, where a hit is the target
+index and its score. The `SearchResults` also knows how to use the
+target index to get the target identifier string.
+
+
+
+Working with raw scores and counts in a range
+=============================================
+
+In this section you'll learn how to get the raw score for a search
+result, and compute hit counts and raw scores in a specified interval.
+
+
