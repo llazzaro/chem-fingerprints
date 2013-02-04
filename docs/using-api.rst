@@ -583,7 +583,7 @@ In this section you'll learn how to compute a distance matrix using
 the chemfp API.
 
 chemfp does not do clustering. There's a huge number of tools which
-arleady do that. A goal of chemfp in the future is to provide some
+already do that. A goal of chemfp in the future is to provide some
 core components which clustering algorithms can use.
 
 That's in the future. Right now you can use the following to build a
@@ -759,7 +759,7 @@ The wary among you might notice that 2*4*4 = 32x faster, while I
 said the overall code was only 16x faster. Where's the factor of 2x
 slowdown? It's in the Python code! The
 `threshold_tanimoto_search_symmetric` step took only 13 seconds. The
-remaining 22 seconds was in the Leader code written in Python. To
+remaining 22 seconds was in the leader code written in Python. To
 make the analysis more complicated, improvements to the chemfp API
 sped up the clustering step by about 40%.
 
@@ -1030,20 +1030,301 @@ Sorting search results
 
 In this section you'll learn how to sort the search results.
 
-The k-nearest and threshold searches return a `SearchResults` when
-both the queries and the targets are arenas. You should think of this
-as returning a sparse matrix. Each row of the matrix is a result for
-the corresponding query term, and is called a `SearchResult`_. Each
-`SearchResult` contains a list of hits, where a hit is the target
-index and its score. The `SearchResults` also knows how to use the
-target index to get the target identifier string.
+The k-nearest searches return the hits sorted from highest score to
+lowest, and break ties arbitrarily. This is usually what you want, and
+the extra cost to sort is small (k*log(k)) compared to the time needed
+to maintain the internal heap (N*log(k)).
+
+By comparison, the threshold searches return the hits in arbitrary
+order. Sorting takes up to N*log(N) time, which is extra work for
+those cases where you don't want sorted data. Use the `reorder` method
+of a `SearchResult` if you want the hits sorted in-place::
+
+    >>> import chemfp
+    >>> arena = chemfp.load_fingerprints("pubchem_queries.fps")
+    >>> query_fp = arena.get_fingerprint_by_id("27599116")
+    >>> from chemfp import search
+    >>> result = search.threshold_tanimoto_search_fp(query_fp, arena, threshold=0.90)
+    >>> len(result)
+    6
+    >>> result.get_ids_and_scores()
+    [('27599092', 0.96153846153846156), ('27599115', 1.0), ('27599116', 1.0),
+    ('27599118', 1.0), ('27599120', 1.0), ('27599082', 0.92537313432835822)]
+
+    >>> result.reorder("decreasing-score")
+    >>> result.get_ids_and_scores()
+    [('27599115', 1.0), ('27599116', 1.0), ('27599118', 1.0), ('27599120', 1.0),
+    ('27599092', 0.96153846153846156), ('27599082', 0.92537313432835822)]
+
+    >>> result.reorder("increasing-score")
+    >>> result.get_ids_and_scores()
+    [('27599082', 0.92537313432835822), ('27599092', 0.96153846153846156),
+    ('27599115', 1.0), ('27599116', 1.0), ('27599118', 1.0), ('27599120', 1.0)]
+
+There are currently six different sort methods, all specified by
+name. These are
+
+      * increasing-score: sort by increasing score
+      * decreasing-score: sort by decreasing score
+      * increasing-index: sort by increasing target index
+      * decreasing-index: sort by decreasing target index
+      * reverse: reverse the current ordering
+      * move-closest-first: move the hit with the highest score to the first position
+
+The first two should be obvious from the examples. If you find
+something useful for the next two then let me know. The `reverse`
+option reverses the current ordering, and is most useful if you want
+to reverse the sorted results from a k-nearest search.
+
+The `move-closest-first` option exists to improve the leader algorithm
+stage used by the Taylor-Butina algorithm. The newly seen compound is
+either in the same cluster as its nearest neighbor or it is the new
+centroid. I felt it best to implement this as a special reorder term,
+rather than one of the other possible options.
+
+If you are interested in other ways to help improve your clustering
+performance, let me know.
+
+Each `SearchResult` has a `reorder` method. If you want to reorder all
+of the hits of a `SearchResults` then use its `reorder_all`
+method::
+
+    >>> similarity_matrix = search.threshold_tanimoto_search_symmetric(
+    ...                         arena, threshold=0.8)
+    >>> for query_id, row in zip(arena.ids, similarity_matrix):
+    ...   print query_id, "->", row.get_ids_and_scores()[:3]
+    ... 
+    27581954 -> [('27581957', 1.0)]
+    27581957 -> [('27581954', 1.0)]
+    27580389 -> [('27580394', 0.88235294117647056)]
+    27584917 -> [('27585106', 0.89915966386554624)]
+    27585106 -> [('27584917', 0.89915966386554624)]
+    27580394 -> [('27580389', 0.88235294117647056)]
+    27593061 -> []
+           ...
+
+It takes the same set of ordering names as `reorder`_.
 
 
 
 Working with raw scores and counts in a range
 =============================================
 
-In this section you'll learn how to get the raw score for a search
-result, and compute hit counts and raw scores in a specified interval.
+In this section you'll learn how to get the hit counts and raw scores
+for a interval.
 
+The length of the `SearchResult` is the number of hits it contains::
+
+    >>> import chemfp
+    >>> from chemfp import search
+    >>> arena = chemfp.load_fingerprints("pubchem_targets.fps")
+    >>> fp = arena.get_fingerprint_by_id("14564126")
+    >>> result = search.threshold_tanimoto_search_fp(fp, arena, threshold=0.2)
+    >>> len(result)
+    2836
+
+This gives you the number of hits at or above a threshold of 0.2,
+which you can also get by doing
+`count_threhsold_tanimoto_search_fp`_. The result also stores the
+hits, and you can get the number of hits which are within a specified
+interval. Here are the hits counts at or above 0.5, 0.80, and 0.95::
+
+    >>> result.count(0.5)
+    735
+    >>> result.count(0.8)
+    5
+    >>> result.count(0.95)
+    2
+
+The first parameter, `min_score`, specifies the minimum
+threshold. The second, `max_score`, specifies the maximum. Here's
+how to get the number of hits with a score of at most 0.95 and 0.5::
+
+    >>> result.count(max_score=0.95)
+    2834
+    >>> result.count(max_score=0.5)
+    2118
+
+If you work out the math, you add 2118+735 and realize that
+2853!=2836. There's a difference of 17. This is because the default
+interval uses a closed range, and there are 17 hits with a score of
+exactly 0.5::
+
+    >>> result.count(0.5, 0.5)
+    17
+
+The third parameter, `interval`, specifies the end conditions. The
+default is "[]" which means that both ends are closed. The interval
+"()" means that both ends are open, and "[)" and "(]" are the two
+half-open/half-closed ranges. To get the number of hits below 0.5 and
+the number of hits at or above 0.5 then you might use:
+
+    >>> result.count(None, 0.5, "[)")
+    2101
+    >>> result.count(0.5, None, "[]")
+    735
+
+at get the expected results. (A min or max of `None` means that there
+is respectively no lower or no upper bound.)
+
+
+Now for something a bit fancier. Suppose you have two sets of
+structures. How well do they compare to each other? I can think of
+various ways to do it. One is to look at a comparison profile. Find
+all NxM comparisons between the two sets. How many of the hits have a
+threshold of 0.2? How many at 0.5? 0.95?
+
+If there are "many", then the two sets are likely more similar than
+not. If the answer is "few", then they are likely rather distinct.
+
+I'll be more specific. Are the coenzyme A-like structures in ChEBI
+more similar to the penicillin-like structures than you would expect
+by comparing two randomly chosen subsets? By similar, I'll use
+Tanimoto similarity of the "chebi_maccs.fps" file created in the
+`Generating fingerprints with ...` command-line tool example.
+
+The CHEBI id for coenzyme A is CHEBI:15346 and for penicillin is
+CHEBI:17334. I'll define the "coenzyme A-like" structures as the 117
+structures where the fingerprint is at least 0.95 similar to coenzyme
+A, and "penicillin-like" as the 15 structures at least 0.90 similar to
+penicillin. This gives 1755 total comparisons.
+
+You know enough to do this, but there's a nice optimization I haven't
+told you about. You can get the total count of all of the threshold
+hits using the `SearchResults.count_all` method, instead of looping
+over each `SearchResult` and calling `count`_::
+
+    import chemfp
+    from chemfp import search
+    
+    def get_neighbors_as_arena(arena, id, threshold):
+        fp = arena.get_fingerprint_by_id(id)
+        neighbor_results =  search.threshold_tanimoto_search_fp(fp, chebi, threshold=threshold)
+        neighbor_arena = arena.copy(neighbor_results.get_indices())
+        return neighbor_arena
+    
+    chebi = chemfp.load_fingerprints("chebi_maccs.fps")
+    
+    # coenzyme A
+    coA_arena = get_neighbors_as_arena(chebi, "CHEBI:15346", threshold=0.95)
+    print len(coA_arena), "coenzyme A-like structures"
+    
+    # penicillin
+    penicillin_arena = get_neighbors_as_arena(chebi, "CHEBI:17334", threshold=0.9)
+    print len(penicillin_arena), "penicillin-like structures"
+    
+    # I'll compute a profile at different thresholds
+    thresholds = [0.25, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
+    
+    # Compare the two sets. (For this case the speed difference between a threshold
+    # of 0.25 and 0.0 is not noticible, but having it makes me feel better.)
+    coA_against_penicillin_result= search.threshold_tanimoto_search_arena(
+        coA_arena, penicillin_arena, threshold=min(thresholds))
+    
+    # Show a similarity profile
+    print "Counts  coA/penicillin"
+    for threshold in thresholds:
+        print " %.2f      %5d" % (threshold,
+                                  coA_against_penicillin_result.count_all(min_score=threshold))
+
+This gives a not very useful output:
+
+    117 coenzyme A-like structures
+    15 penicillin-like structures
+    Counts  coA/penicillin
+     0.25       1755
+     0.50        445
+     0.60          0
+     0.70          0
+     0.80          0
+     0.90          0
+     0.95          0
+
+It's not useful because it's not possible to make any decisions from
+this. Are the numbers high or low? It should be low, because these are
+two quite different structure classes, but there's nothing to compare
+it against.
+
+I need some sort of background reference. What I'll two is construct
+two randomly chosen sets, one with 117 fingerprints and the other with
+15, and generate the same similarity profile with them. That isn't
+quite fair, since randomly chosen sets will most likely be
+diverse. Instead, I'll pick one fingerprint at random, then get its
+117 or 15, respectively, nearest neighbors as the set members::
+
+    # Get background statistics for random similarity groups of the same size
+    import random
+    
+    # Find a fingerprint at random, get its k neighbors, return them as a new arena
+    def get_random_fp_and_its_k_neighbors(arena, k):
+        fp = arena[random.randrange(len(arena))][1]
+        similar_search = search.knearest_tanimoto_search_fp(fp, arena, k)
+        return arena.copy(similar_search.get_indices())
+
+I'll construct 1000 pairs of sets this way, accumulate the threshold
+profile, and compare the CoA/penicillin profile to it::
+
+    # Initialize the threshold counts to 0
+    total_background_counts = dict.fromkeys(thresholds, 0)
+    
+    REPEAT = 1000
+    for i in range(REPEAT):
+        # Select background sets of the same size and accumulate the threshold count totals
+        set1 = get_random_fp_and_its_k_neighbors(chebi, len(coA_arena))
+        set2 = get_random_fp_and_its_k_neighbors(chebi, len(penicillin_arena))
+        background_search = search.threshold_tanimoto_search_arena(set1, set2, threshold=min(thresholds))
+        for threshold in thresholds:
+            total_background_counts[threshold] += background_search.count_all(min_score=threshold)
+    
+    print "Counts  coA/penicillin  background"
+    for threshold in thresholds:
+        print " %.2f      %5d          %5d" % (threshold,
+                                               coA_against_penicillin_result.count_all(min_score=threshold),
+                                               total_background_counts[threshold] / (REPEAT+0.0))
+
+Your output should look something like::
+
+    Counts  coA/penicillin  background
+     0.25       1755            423
+     0.50        445             82
+     0.60          0             38
+     0.70          0             17
+     0.80          0              6
+     0.90          0              4
+     0.95          0              1
+
+
+This is a bit hard to interpret. Clearly the coenzyme A and penicillin
+sets are not closely similar, but for low Tanimoto scores the
+similarity is higher than expected.
+
+
+That difficulty is okay for now because I mostly wanted to show an
+example of how to use the chemfp API. If you want to dive deeper into
+this sort of analysis, then look into the `Similarity Ensemble Approach`
+(SEA) work of Keiser, Roth, Armbruster, Ernsberger, and Irwin. The
+paper online and is available from http://sea.bkslab.org/ .
+
+The paper actually wants you to use the `raw score`_. This is the sum
+of the hit scores in a given range, and not just the number of
+hits. No problem! Use `SearchResult.cumulative_score` for an
+individual result or `SearchResults.cumulative_score_all` for the
+entire set of results::
+
+    >>> sum(row.cumulative_score(min_score=0.5, max_score=0.9)
+    ...             for row in coA_against_penicillin_result)
+    224.83239025119906
+    >>> coA_against_penicillin_result.cumulative_score_all(min_score=0.5, max_score=0.9)
+    224.83239025119866
+
+These also take the `interval` parameter if you don't want the default
+of `[]`_.
+
+You may wonder why these two values aren't exactly the same. Addition
+of floating point numbers isn't associative. You can see that I get
+still different results if I sum up the values in reverse order::
+
+    >>> sum(list(row.cumulative_score(min_score=0.5, max_score=0.9)
+    ...                for row in coA_against_penicillin_result)[::-1])
+    224.83239025119875
 
