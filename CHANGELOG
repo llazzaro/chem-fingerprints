@@ -14,6 +14,8 @@ Documented that the search methods on the FingerprintArena instance
 are deprecated - use chemfp.search instead. These will generate
 warning message in the next release and after that will be removed.
 
+Renamed arena.copy_subset() to arena.copy().
+
 Changed the arena.copy() method so that by default it reorders the
 fingerprints if indices are specified, and by default the (sub)arena
 ordering is preserved.
@@ -55,6 +57,8 @@ Here's how to select a random subset of 100 entries from an arena:
   import random
   subset_indices = random.sample(xrange(len(arena)), 100)
   new_arena = arena.copy_subset(subset_indices)
+
+(NOTE: 'copy_subset' was renamed 'copy' for the final 1.1 release.)
 
 Fixed a bug in the Open Babel patterns FPS output: the 'software' line
 needed a space between the Open Babel and chemfp versions.
