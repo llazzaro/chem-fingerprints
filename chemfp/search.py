@@ -200,6 +200,10 @@ class SearchResults(_chemfp.SearchResults):
         """Iterate over each SearchResult hit"""
         return iter(self._results)
 
+    def __len__(self):
+        """The number of rows in the SearchResults"""
+        super(SearchResults, self).__len__(self)
+
     def __getitem__(self, i):
         """Get the `i`th SearchResult"""
         try:
@@ -586,7 +590,7 @@ def threshold_tanimoto_search_fp(query_fp, target_arena, threshold=0.7):
     return results[0]
 
 
-def threshold_tanimoto_search_arena(query_arena, target_arena, threshold):
+def threshold_tanimoto_search_arena(query_arena, target_arena, threshold=0.7):
     """Search for the hits in the `target_arena` at least `threshold` similar to the fingerprints in `query_arena`
 
     The hits in the returned `SearchResults` are in arbitrary order.
