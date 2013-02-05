@@ -163,7 +163,7 @@ class SearchResult(object):
         :type max_score: a float, or None for +infinity
         :param interval: specify if the end points are open or closed.
         :type interval: one of "[]", "()", "(]", "[)"
-        :returns: an floating point count
+        :returns: a floating point value
         """
         return self._search_results._cumulative_score_row(self._row, min_score, max_score, interval)
 
