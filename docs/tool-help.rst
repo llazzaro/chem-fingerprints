@@ -10,7 +10,7 @@ ob2fps command-line options
 ===========================
 
 
-The following comes from "ob2fps --help"::
+The following comes from ``ob2fps --help``::
 
     usage: ob2fps.py [-h]
                      [--FP2 | --FP3 | --FP4 | --MACCS | --substruct | --rdmaccs]
@@ -46,7 +46,7 @@ The following comes from "ob2fps --help"::
 oe2fps command-line options
 ===========================
 
-The following comes from "oe2fps --help"::
+The following comes from ``oe2fps --help``::
   
     usage: oe2fps [-h] [--path] [--numbits INT] [--minbonds INT] [--maxbonds INT]
                   [--atype ATYPE] [--btype BTYPE] [--maccs166] [--substruct]
@@ -134,7 +134,7 @@ rdkit2fps command-line options
 ==============================
 
 
-The following comes from "rdkit2fps --help"::
+The following comes from ``rdkit2fps --help``::
   
     usage: rdkit2fps [-h] [--fpSize INT] [--RDK] [--minPath INT] [--maxPath INT]
                      [--nBitsPerHash INT] [--useHs 0|1] [--morgan] [--radius INT]
@@ -214,7 +214,7 @@ The following comes from "rdkit2fps --help"::
 sdf2fps command-line options
 ============================
 
-The following comes from "sdf2fps --help"::
+The following comes from ``sdf2fps --help``::
 
     usage: sdf2fps [-h] [--id-tag TAG] [--fp-tag TAG] [--num-bits INT]
                    [--errors {strict,report,ignore}] [-o FILENAME]
@@ -281,7 +281,7 @@ The following comes from "sdf2fps --help"::
 simsearch command-line options
 ==============================
 
-The following comes from "simsearch --help"::
+The following comes from ``simsearch --help``::
 
     usage: simsearch [-h] [-k K_NEAREST] [-t THRESHOLD] [-q QUERIES] [--NxN]
                      [--hex-query HEX_QUERY] [--query-id QUERY_ID] [--in FORMAT]
