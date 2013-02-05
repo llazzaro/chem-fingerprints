@@ -205,7 +205,7 @@ class SearchResults(_chemfp.SearchResults):
         return super(SearchResults, self).__len__()
 
     def __getitem__(self, i):
-        """Get the `i`th SearchResult"""
+        """Get the 'i'th SearchResult"""
         try:
             return self._results[i]
         except IndexError:

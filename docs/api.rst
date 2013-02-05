@@ -917,7 +917,7 @@ results[i]
 
 .. py:method:: __getitem__(i)
 
-Get the `i`th SearchResult
+Get the 'i'-th SearchResult
 
 clear_all
 ---------
@@ -1180,7 +1180,7 @@ The available orderings are:
 .. _chemfp.bitops:
 
 =====================
-chemfp.bitopts module
+chemfp.bitops module
 =====================
 
 .. py:module:: chemfp.bitops
