@@ -26,10 +26,9 @@ meant for public use, along with some examples.
 Remember: chemfp cannot generate fingerprints from a structure file
 without a third-party chemistry toolkit.
 
-Chemfp is regularly tested on a Mac using OEChem 1.7.4, OEChem 1.7.6,
-OpenBabel 2.2.3, OpenBabel 2.3.0, OpenBabel 2.3+svn, RDKit 201012,
-RDKit 201103, RDKit 201106 and RDKit 201112 as well as Python 2.5,
-2.6, and 2.7.
+Chemfp is regularly tested on a Mac using multiple versions of
+OEChem/OEGraphSim, Open Babel, and RDKit as well as Python 2.5, 2.6,
+and 2.7.
 
 
 .. toctree::
@@ -49,13 +48,26 @@ This program was developed by Andrew Dalke of Andrew Dalke Scientific,
 AB. It is distributed free of charge under the "MIT" license, shown
 below.
 
-Further chemfp development depends on fund from people like you. You
-can purchase support or consulting hours from me, and you can pay my
-to develop new features. Additionally, I make my living developing
-custom software for computational chemistry and giving training
-courses for computational chemists who want to get up to speed on
-Python programming for their field.  If you are interested in hiring
-my services, contact me at dalke@dalkescientific.com .
+Further chemfp development depends on funding from people like
+you. Asking for voluntary contributions almost never works. Instead,
+starting with chemfp-1.1, the source code is distributed under an
+incentive program. You can pay for the commerical distribution, or use
+the no-cost version.
+
+If you pay for the commercial distribution then you will get the most
+recent version of chemfp, free upgrades for one year, support, and a
+discount on renewing participation in the incentive program.
+
+If you use the no-cost distribution then you will get the 1.1 version
+of chemfp, limited support, and minor bug fixes and improvements.
+
+The current plan is that older versions of the commercial distribution
+will be released under the no-cost program. However, the no-cost
+version will always be at least one, and more likely two to three
+years behind the version available to those who fund chemfp development.
+
+If you have questions about or with to purchase the commercial
+distribution, send an email to dalke@dalkescientific.com .
 
 
 .. highlight:: none
@@ -94,7 +106,6 @@ code for details. These are:
  - heapq by the Python Software Foundation under the Python license
  - chemfp/progressbar/ by Nilton Volpato under the LGPL 2.1 and/or BSD license
  - chemfp/futures/ by Brian Quinlan under the Python license
- - chemfp/Watcher.py by Allen Downey under the Python license
  - chemfp/argparse.py by Steven J. Bethard under the Apache License 2.0
 
 
@@ -102,21 +113,54 @@ Future
 ======
 
 The chemfp code base is solid and in use at several companies. It has
-great support for fingerprint generation and similarity search, but
-there's plenty left to do in future.
+great support for fingerprint generation and similarity search and
+is very fast, but there's plenty left to do in future.
 
-The biggest question is how to fund the future. Long experience in
-this field says that few people are willing to pay a few hundred
-dollars for 'free' software, even when they are willing to have
-in-house developers work for a week to develop code which is not as
-powerful. My current plan is that 1.2 and later will have two release
-schedules; one for paying customers, and another a few months later
-for those who don't want pay. The software in both cases will be under
-the current MIT license.
+The most likely near-term chemfp improvements are to fix the
+limitations that prevent chemfp from searching arenas which are larger
+than 2GB and add the FPB binary file format to improve the fingerprint
+loading times for large data sets.
 
-The most likely near-term chemfp improvements are to revamp the
-internal fingerprint types API and make it public, and fix limitations
-that prevent chemfp from searching arenas which are larger than 2GB.
+The fingerprint type internals are confusing. I have not documented
+them as part of the public API because it will be rewritten. Once
+done, you will have access to toolkit-specific functions like: list
+the supported fingerprint types, create a fingerprint when the
+structure is a string, and test if two fingerprint types use the same
+toolkit.
+
+I do not have a Microsoft Windows computer. I looked into how I might
+provide an installer for that OS. It's a lot of work, if only because
+I need to support Python 2.5, 2.6, and 2.7 and learn how installers
+work on Windows. I've decided to put it off until a member of the
+incentive program specifically wants it.
+
+
+The goals beyond that will depend in part on user feedback. The
+following are possible ideas, to help inspire you. `Let me know
+<mailto:dalke@dalkescientific.com>`_ if you need something like one of
+these.
+
+The threshold and k-nearest arena search results store hits using
+compressed sparse rows. These work well for sparse results, but when
+you want the entire similarity matrix (ie, with a minimum threshold of
+0.0) of a large arena, then time and space to maintain the sparse data
+structure becomes noticable. It's likely in that case that you want
+to store the scores in a 2D NumPy matrix.
+
+I'm really interested in using chemfp to handle different sorts of
+clustering. Let me know if there are things I can add to the API which
+would help you do that.
+
+The Tanimoto the most common similarity method in cheminformatics, but
+not the only one. I could add support for Tversky and other
+methods. Some of these can also take benefit from chemfp's sublinear
+search method.
+
+I think that an awk-like, or LINQ-like command-line selection tool
+would be useful. It could be used to select fingerprint records by
+position, id, or popcount, or just pick records at random. It's
+tempting to thinking of a full-blown language, but that's what Python
+is for.
 
 There are several internal APIs, like the SDF reader code, which
 should be refined and made part of the public API. This includes
@@ -124,26 +168,12 @@ validating the reader against a larger number of real-world SD files.
 
 If you are not a Python programmer then you might prefer that the core
 search routines be made accessible through a C API. That's possible,
-in that the software was designed with that in mind, but it's never
-been tested.
+in that the software was designed with that in mind, but it needs more
+development and testing.
 
-I can think of a number of possibly useful command-line tools, like
-being able to merge a number of FPS files into one, sorted by popcount
-and able to handle all of PubChem.  Or selecting N fingerprints at
-random from a set of fingerprints.
-
-The 1.1 release supports OpenMP for multi-core support. I'm looking
-for people who will fund me to develop a distributed computing version
-to run on your compute cluster.
-
-I'm really interested in using chemfp to handle different sorts of
-clustering. Let me know if there are things I can add to the API which
-would help you do that.
-
-Are you working with large data sets? Is load time a problem for you?
-I have ideas on how to develop a binary format and would like to
-develop it futher, but it doesn't make much sense if no one is
-interested in it.
+ChemFP 1.1 supports OpenMP. That's great for shared-memory
+machines. Are you interested in supporting a distributed computing
+version?
 
 There are any number of higher-level tools which can be built on the
 chemfp components. For example, what about a wsgi component which
@@ -153,11 +183,10 @@ There's a paper on using locality-sensitive hashing to find highly
 similar fingerprints. Are there cases where it's more useful than
 chemfp?
 
-But fundamentally, future work will be guided by what people want, and
-by funding. `Let me know <mailto:dalke@dalkescientific.com>`_ in
-either case.
-
-
+I will support Python 3, but so far no one has asked for it. While the
+toolkit interfaces will have to wait until the respective toolkits
+support Python 3, the similarity code does not depend on any toolkit
+and could be ported on its own.
 
 Indices and tables
 ==================
