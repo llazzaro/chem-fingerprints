@@ -1,5 +1,5 @@
-What's new in 1.1
-===================
+What's new in 1.1 (5 Feb 2013)
+==============================
 
 New methods to look up a record, record index, or fingerprint given
 the record identifier. These are:
@@ -31,15 +31,15 @@ Detect and raise an exception if the metadata size doesn't match the
 fingerprint size passed to the arena builder. Thanks to Greg Landrum
 for spotting this bug!
 
-What's new in 1.1b7
-===================
+What's new in 1.1b7 (patch release)
+===================================
 
 Fixed a problem when the code is compiled on an old compiler which
 doesn't understand the POPCNT inline assembly then run on a machine
 which implements POPCNT.
 
-What's new in 1.1b6
-===================
+What's new in 1.1b6 (5 Dec 2012)
+================================
 
 Added methods to count the number of hits in the search results which
 are within a given score range, and to compute the cumulative score
@@ -64,8 +64,8 @@ Fixed a bug in the Open Babel patterns FPS output: the 'software' line
 needed a space between the Open Babel and chemfp versions.
 
 
-What's new in 1.1b5
-==================
+What's new in 1.1b5 (23 April 2012)
+===================================
 
 The command-line search tools support an --NxN option for when the
 queries and targets are the same. (The search results do not include
@@ -145,8 +145,8 @@ works by spawning a child process. The main process listens for a ^C
 and forwards that as a os.kill() to the child process. This will
 likely only work on Unix systems.
 
-What's new in 1.0
-==================
+What's new in 1.0 (20 Sept 2011)
+================================
 
 The chemfp format is now a tab-delimited format. I talked with two
 people who have spaces in their ids: one in their corporate ids and
