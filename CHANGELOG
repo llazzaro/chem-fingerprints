@@ -2,7 +2,11 @@ What's new in 1.1
 ===================
 
 New methods to look up a record, record index, or fingerprint given
-the record identifier. 
+the record identifier. These are:
+
+  arena.get_by_id(id)
+  arena.get_index_by_id(id)
+  arena.get_fingerprint_by_id(id)
 
 Added or updated all of the docstrings for the public API.
 
