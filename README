@@ -1,7 +1,7 @@
                        chemfp 1.1
 
 A Python library and set of tools for working with cheminformatics
-fingerprint data.
+fingerprint data. For more information, see http://chemfp.com/ .
 
 Copyright under "the MIT license." See COPYING for details.
 
