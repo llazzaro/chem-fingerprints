@@ -67,7 +67,7 @@ version will always be at least one, and more likely two to three
 years behind the version available to those who fund chemfp development.
 
 If you have questions about or with to purchase the commercial
-distribution, send an email to dalke@dalkescientific.com .
+distribution, send an email to sales@dalkescientific.com .
 
 
 .. highlight:: none
