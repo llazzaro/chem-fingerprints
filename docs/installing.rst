@@ -1,7 +1,7 @@
 Installing
 ==========
 
-Chemfp is available from `http://pypi.python.org/pypi/chemfp/ PyPI`_
+The no-cost version of chemfp is available from `http://pypi.python.org/pypi/chemfp/ PyPI`_
 so if you use the third-party tools
 `http://www.pip-installer.org/en/latest/index.html pip`_
 or 
@@ -12,12 +12,10 @@ then you can install it with one of:
 
   easy_install chemfp
 
-You can also download the chemfp source code from the
-`project home page <http://code.google.com/p/chem-fingerprints/`_.
-
 The chemfp tools depends on a working Python installation.  You can
 download Python 2.7 from http://www.python.org/download/.  Note that
-older versions of OEChem only support up to Python 2.6.
+older versions of OEChem only support up to Python 2.6. At some point
+chemfp will support Python 3.3 or later.
 
 The core chemfp functionality does not depend on a third-party library
 but you will need a chemistry toolkit in order to generate new
@@ -37,3 +35,8 @@ OS X and most Linux-based OSes) you can do::
 while for Windows you can do::
 
    python setup.py install
+
+Bear in mind Python 2.7 for Windows was built with Visual
+C++ 2008. The setup.py step does not work with Visual C++ 2010 or
+later unless you patch your local version of Python. The bug report is
+at http://bugs.python.org/issue13210 .
