@@ -1,6 +1,32 @@
-What's new in 1.1b7
+What's new in 1.1
 ===================
 
+New methods to look up a record, record index, or fingerprint given
+the record identifier. 
+
+Added or updated all of the docstrings for the public API.
+
+Documented that the search methods on the FingerprintArena instance
+are deprecated - use chemfp.search instead. These will generate
+warning message in the next release and after that will be removed.
+
+Changed the arena.copy() method so that by default it reorders the
+fingerprints if indices are specified, and by default the (sub)arena
+ordering is preserved.
+
+Added a cache for getattr(subarena, "ids"). Otherwise subarena.ids[i]
+took O(len(subarena.ids)) time instead of O(1) time.
+
+Renamed chemfp.readers to chemfp.fps_io and decoders.py to
+encodings.py. These were not part of the public API but may be in
+upcoming versions, so it's best to change them now.
+
+Detect and raise an exception if the metadata size doesn't match the
+fingerprint size passed to the arena builder. Thanks to Greg Landrum
+for spotting this bug!
+
+What's new in 1.1b7
+===================
 
 Fixed a problem when the code is compiled on an old compiler which
 doesn't understand the POPCNT inline assembly then run on a machine
