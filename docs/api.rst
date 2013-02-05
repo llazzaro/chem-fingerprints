@@ -18,7 +18,7 @@ The following functions and classes are in the chemfp module.
 open
 ====
 
-.. py:function:: open(source[, format=None])
+.. py:function:: open(source, format=None)
 
 Read fingerprints from a fingerprint file
 
@@ -55,7 +55,7 @@ contents of the file::
 load_fingerprints
 =================
 
-.. py:function:: load_fingerprints(reader[, metadata=None][, reorder=True])
+.. py:function:: load_fingerprints(reader, metadata=None, reorder=True)
 
 Load all of the fingerprints into an in-memory FingerprintArena data structure
 
@@ -71,6 +71,13 @@ metadata the arena. If not specified then 'reader.metadata' is used.
 The loader may reorder the fingerprints for better search performance.
 To prevent ordering, use reorder=False.
 
+The 'alignment' option specifies the alignment data alignment and
+padding size for each fingerprint. A value of 8 means that each
+fingerprint will start on a 8 byte alignment, and use storage
+space which a multiple of 8 bytes long. The default value of None
+determines the best alignment based on the fingerprint size and
+available popcount methods.
+
 :param reader: An iterator over (id, fingerprint) pairs
 :type reader: a string, file object, or (id, fingerprint) iterator
 :param metadata: The metadata for the arena, if other than reader.metadata
@@ -78,6 +85,7 @@ To prevent ordering, use reorder=False.
 :param reorder: Specify if fingerprints should be reordered for better performance
 :type reorder: True or False
 :returns: FingerprintArena
+:param alignment: Alignment size (both data alignment and padding) 
 
 
 .. _chemfp_read_structure_fingerprints:
@@ -85,7 +93,7 @@ To prevent ordering, use reorder=False.
 read_structure_fingerprints
 ===========================
 
-.. py:function:: read_structure_fingerprints(type[, source=None][, format=None][, id_tag=None][, errors="strict"]):
+.. py:function:: read_structure_fingerprints(type, source=None, format=None, id_tag=None, errors="strict"):
 
 Read structures from 'source' and return the corresponding ids and fingerprints
 
@@ -146,7 +154,7 @@ Here is an example of using fingerprints generated from structure file::
 count_tanimoto_hits
 ===================
 
-.. py:function:: count_tanimoto_hits(queries, targets[, threshold=0.7][, arena_size=100])
+.. py:function:: count_tanimoto_hits(queries, targets, threshold=0.7, arena_size=100)
 
 Count the number of targets within 'threshold' of each query term
 
@@ -156,10 +164,10 @@ returns an iterator containing the (query_id, count) pairs.
 
 Example::
 
-  queries = chemfp.open("queries.fps")
-  targets = chemfp.load_fingerprints("targets.fps.gz")
-  for (query_id, count) in chemfp.count_tanimoto_hits(queries, targets, threshold=0.9):
-      print query_id, "has", count, "neighbors with at least 0.9 similarity"
+    queries = chemfp.open("queries.fps")
+    targets = chemfp.load_fingerprints("targets.fps.gz")
+    for (query_id, count) in chemfp.count_tanimoto_hits(queries, targets, threshold=0.9):
+        print query_id, "has", count, "neighbors with at least 0.9 similarity"
 
 Internally, queries are processed in batches of size 'arena_size'.
 A small batch size uses less overall memory and has lower
@@ -187,7 +195,7 @@ than a few queries.
 threshold_tanimoto_search
 =========================
 
-.. py:function:: threshold_tanimoto_search (queries, targets[, threshold=0.7][, arena_size=100])
+.. py:function:: threshold_tanimoto_search (queries, targets, threshold=0.7, arena_size=100)
 
 Find all targets within 'threshold' of each query term
 
@@ -200,7 +208,7 @@ Example::
 
   queries = chemfp.open("queries.fps")
   targets = chemfp.load_fingerprints("targets.fps.gz")
-  for (query_id, hits) in chemfp.threshold_tanimoto_search(queries, targets, threshold=0.8):
+  for (query_id, hits) in chemfp.id_threshold_tanimoto_search(queries, targets, threshold=0.8):
       print query_id, "has", len(hits), "neighbors with at least 0.8 similarity"
       non_identical = [target_id for (target_id, score) in hits if score != 1.0]
       print "  The non-identical hits are:", non_identical
@@ -231,7 +239,7 @@ than a few queries.
 knearest_tanimoto_search
 ========================
 
-.. py:function:: knearest_tanimoto_search (queries, targets[, k=3][, threshold=0.7][, arena_size=100])
+.. py:function:: knearest_tanimoto_search (queries, targets, k=3, threshold=0.7, arena_size=100)
 
 Find the 'k'-nearest targets within 'threshold' of each query term
 
@@ -251,7 +259,7 @@ Example::
   targets = chemfp.load_fingerprints("pubchem_subset.fps")
   
   # Find the 3 nearest hits with a similarity of at least 0.8
-  for (query_id, hits) in chemfp.knearest_tanimoto_search(queries, targets, k=3, threshold=0.8):
+  for (query_id, hits) in chemfp.id_knearest_tanimoto_search(queries, targets, k=3, threshold=0.8):
       print query_id, "has", len(hits), "neighbors with at least 0.8 similarity"
       if hits:
           target_id, score = hits[-1]
@@ -286,7 +294,7 @@ than a few queries.
 Metadata
 ========
 
-.. py:class:: Metadata([num_bits=None][, num_bytes=None][, type=None][, aromaticity=None][, software=None][, sources=None][, date=None])
+.. py:class:: Metadata(num_bits=None, num_bytes=None, type=None, aromaticity=None, software=None, sources=None, date=None)
 
 Store information about a set of fingerprints
 
@@ -331,7 +339,7 @@ iterate over the (id, fingerprint) pairs
 iter_arenas
 -----------
 
-.. py:method:: iter_arenas([arena_size=1000])
+.. py:method:: iter_arenas(arena_size=1000)
 
 iterate through 'arena_size' fingerprints at a time
 
@@ -352,7 +360,7 @@ a single arena containing all of the input.
 chemfp.arena module
 ===================
 
-The following classes are returned as part of the public API but
+FingerprintArena instances are returned as part of the public API but
 should not be constructed directly.
 
 .. _chemfp_arena_fingerprintarena:
@@ -374,6 +382,13 @@ The public attributes are:
    ids
        list of identifiers, ordered by position
 
+arena.ids
+---------
+
+A list of the fingerprint identifiers, in the same order as the
+fingerprints.
+
+
 len(arena)
 ----------
 
@@ -389,6 +404,35 @@ arena[i]
 Return the (id, fingerprint) at position i
 
 
+copy
+----
+
+.. py:method:: copy(indices=None, reorder=None)
+
+None
+
+get_by_id
+---------
+
+.. py:method:: get_by_id(id)
+
+Given the record identifier, return the (id, fingerprint) tuple or None if not present
+
+get_fingerprint_by_id
+---------------------
+
+.. py:method:: get_fingerprint_by_id(id)
+
+Given the record identifier, return its fingerprint or None if not present
+
+get_index_by_id
+---------------
+
+.. py:method:: get_index_by_id(id)
+
+Given the record identifier, return the record index or None if not present
+
+
 iter(arena)
 -----------
 
@@ -400,7 +444,7 @@ Iterate over the (id, fingerprint) contents of the arena
 iter_arenas
 -----------
 
-.. py:method:: iter_arenas([arena_size=1000])
+.. py:method:: iter_arenas(arena_size=1000)
 
 iterate through `arena_size` fingerprints at a time
 
@@ -417,12 +461,24 @@ a single arena containing all of the input.
 :type arena_size: positive integer, or None
 
 
+save
+----
+
+.. py:method:: save(destination)
+
+Save the arena contents to the given filename or file object
+
+
 count_tanimoto_hits_fp
 ----------------------
 
-.. py:method:: count_tanimoto_hits_fp(query_fp[, threshold=0.7])
+(Deprecated. Please use chemfp.search.count_tanimoto_hits_fp.)
+
+.. py:method:: count_tanimoto_hits_fp(query_fp, threshold=0.7)
 
 Count the fingerprints which are similar enough to the query fingerprint
+
+XXX
 
 Return the number of fingerprints in this arena which are
 at least `threshold` similar to the query fingerprint `query_fp`.
@@ -437,27 +493,42 @@ at least `threshold` similar to the query fingerprint `query_fp`.
 count_tanimoto_hits_arena
 -------------------------
 
-.. py:method:: count_tanimoto_hits_arena(query_arena[, threshold=0.7])
+(Deprecated. Please use chemfp.search.count_tanimoto_hits_arena
+or chemfp.search.count_tanimoto_hits_symmetric.)
+
+.. py:method:: count_tanimoto_hits_arena(query_arena, threshold=0.7)
 
 Count the fingerprints which are similar enough to each query fingerprint
 
-For each fingerprint in the `query_arena`, count the number of
-fingerprints in this arena with Tanimoto similarity of at
-least `threshold`. The resulting list order is the same as the
-query fingerprint order.
+XXX
 
-:param query_fp: query arena
-:type query_fp: FingerprintArena
+Returns an iterator containing the (query_id, count) for each
+fingerprint in `queries`, where `query_id` is the query
+fingerprint id and `count` is the number of fingerprints found
+which are at least `threshold` similar to the query.
+
+The order of results is the same as the order of the
+queries. For efficiency reasons, `arena_size` queries are
+processed at a time.
+
+:param queries: query fingerprints
+:type query_fp: FingerprintArena or FPSReader (must implement iter_arenas())
 :param threshold: minimum similarity threshold (default: 0.7)
 :type threshold: float between 0.0 and 1.0, inclusive
-:returns: list of integer counts
+:param arena_size: number of queries to process at a time (default: 100)
+:type arena_size: positive integer
+:returns: list of (query_id, integer count) pairs, one for each query
 
 threshold_tanimoto_search_fp
 ----------------------------
 
-.. py:method:: threshold_tanimoto_search_fp(query_fp[, threshold=0.7])
+(Deprecated. Please use chemfp.search.threshold_tanimoto_search_fp.)
+
+.. py:method:: threshold_tanimoto_search_fp(query_fp, threshold=0.7)
 
 Find the fingerprints which are similar enough to the query fingerprint
+
+XXX
 
 Find all of the fingerprints in this arena which are at least
 `threshold` similar to the query fingerprint `query_fp`.
@@ -474,9 +545,14 @@ in arbitrary order.
 threshold_tanimoto_search_arena
 -------------------------------
 
-.. py:method:: threshold_tanimoto_search_arena(query_arena[, threshold=0.7])
+(Deprecated. Please use chemfp.search.threshold_tanimoto_search_arena
+or chemfp.search.threshold_tanimoto_search_symmetric.)
+
+.. py:method:: threshold_tanimoto_search_arena(query_arena, threshold=0.7)
 
 Find the fingerprints which are similar to each of the query fingerprints
+
+XXX
 
 For each fingerprint in the `query_arena`, find all of the
 fingerprints in this arena which are at least `threshold`
@@ -491,9 +567,13 @@ similar. The hits are returned as a `SearchResults` instance.
 knearest_tanimoto_search_fp
 ----------------------------
 
-.. py:method:: knearest_tanimoto_search_fp(query_fp[, k=3][, threshold=0.7])
+(Deprecated. Please use chemfp.search.knearest_tanimoto_search_fp.)
+
+.. py:method:: knearest_tanimoto_search_fp(query_fp, k=3, threshold=0.7)
 
 Find the k-nearest fingerprints which are similar to the query fingerprint
+
+XXX
 
 Find the `k` fingerprints in this arena which are most similar
 to the query fingerprint `query_fp` and which are at least `threshold`
@@ -513,9 +593,14 @@ Ties are broken arbitrarily.
 knearest_tanimoto_search_arena
 -------------------------------
 
-.. py:method:: knearest_tanimoto_search_arena(query_arena[, k=3][, threshold=0.7])
+(Deprecated. Please use chemfp.search.knearest_tanimoto_search_arena
+or chemfp.search.knearest_tanimoto_search_symmetric.)
+
+.. py:method:: knearest_tanimoto_search_arena(query_arena, k=3, threshold=0.7)
 
 Find the k-nearest fingerprint which are similar to each of the query fingerprints
+
+XXX
 
 For each fingerprint in the `query_arena`, find the `k`
 fingerprints in this arena which are most similar and which
@@ -533,12 +618,275 @@ arbitrarily.
 :returns: SearchResult
 
 
-save
-----
+====================
+chemfp.search module
+====================
 
-.. py:method:: save(destination)
+The following functions and classes are in the chemfp.search module.
 
-Save the arena contents to the given filename or file object
+.. py:module:: chemfp.search
+
+Module functions
+================
+
+The `*_fp` functions search a query fingerprint against a target
+arena. The `*_arena` functions search a query arena against a target
+arena. The `*_symmetric` functions use the same arena as query and
+target, and exclude matching a fingerprint against itself.
+
+count_tanimoto_hits_fp
+----------------------
+
+.. py:method:: count_tanimoto_hits_fp(query_fp, target_arena, threshold=0.7)
+
+Count the number of hits in `target_arena` at least `threshold` similar to the `query_fp`
+
+Example::
+
+    query_id, query_fp = chemfp.load_fingerprints("queries.fps")[0]
+    targets = chemfp.load_fingerprints("targets.fps")
+    print chemfp.search.count_tanimoto_hits_fp(query_fp, targets, threshold=0.1)
+    
+
+:param query_fp: the query fingerprint
+:type query_fp: a byte string
+:param target_arena: the target arena
+:type target_fp: a FingerprintArena
+:param threshold: The minimum score threshold.
+:type threshold: float between 0.0 and 1.0, inclusive
+:returns: an integer count
+
+count_tanimoto_hits_arena
+-------------------------
+
+.. py:method:: count_tanimoto_hits_arena(query_arena, target_arena, threshold=0.7)
+
+For each fingerprint in `query_arena`, count the number of hits in `target_arena` at least `threshold` similar to it
+
+Example::
+
+    queries = chemfp.load_fingerprints("queries.fps")
+    targets = chemfp.load_fingerprints("targets.fps")
+    counts = chemfp.search.count_tanimoto_hits_arena(queries, targets, threshold=0.1)
+    print counts[:10]
+
+The result is implementation specific. You'll always be able to
+get its length and do an index lookup to get an integer
+count. Currently it's a ctype array of longs, but it could be an
+array.array or Python list in the future.
+
+:param query_arena: The query fingerprints.
+:type query_arena: a FingerprintArena
+:param target_arena: The target fingerprints.
+:param threshold: The minimum score threshold.
+:type threshold: float between 0.0 and 1.0, inclusive
+:returns: an array of counts
+
+count_tanimoto_hits_symmetric
+-----------------------------
+
+.. py:method:: count_tanimoto_hits_symmetric(arena, threshold=0.7, batch_size=100)
+
+For each fingerprint in the `arena`, count the number of other fingerprints at least `threshold` similar to it
+
+A fingerprint never matches itself.
+
+The computation can take a long time. Python won't check check for
+a ^C until the function finishes. This can be irritating. Instead,
+process only `batch_size` rows at a time before checking for a ^C.
+
+Example::
+
+    arena = chemfp.load_fingerprints("targets.fps")
+    counts = chemfp.search.count_tanimoto_hits_symmetric(arena, threshold=0.2)
+    print counts[:10]
+
+The result object is implementation specific. You'll always be able to
+get its length and do an index lookup to get an integer
+count. Currently it's a ctype array of longs, but it could be an
+array.array or Python list in the future.
+
+:param arena: the set of fingerprints
+:type arena: a FingerprintArena
+:param threshold: The minimum score threshold.
+:type threshold: float between 0.0 and 1.0, inclusive
+:param batch_size: the number of rows to process before checking for a ^C
+:type batch_size: integer
+:returns: an array of counts
+
+
+threshold_tanimoto_search_fp
+----------------------------
+
+.. py:method:: threshold_tanimoto_search_fp(query_fp, target_arena, threshold=0.7)
+
+Search for fingerprint hits in `target_arena` which are at least `threshold` similar to `query_fp`
+
+The hits in the returned `SearchResult` are in arbitrary order.
+
+Example::
+
+    query_id, query_fp = chemfp.load_fingerprints("queries.fps")[0]
+    targets = chemfp.load_fingerprints("targets.fps")
+    print list(chemfp.search.threshold_tanimoto_search_fp(query_fp, targets, threshold=0.15))
+
+:param query_fp: the query fingerprint
+:type query_fp: a byte string
+:param target_arena: the target arena
+:type target_fp: a FingerprintArena
+:param threshold: The minimum score threshold.
+:type threshold: float between 0.0 and 1.0, inclusive
+:returns: a SearchResult
+
+threshold_tanimoto_search_arena
+-------------------------------
+
+.. py:method:: threshold_tanimoto_search_arena(query_arena, target_arena, threshold=0.7)
+
+Search for the hits in the `target_arena` at least `threshold` similar to the fingerprints in `query_arena`
+
+The hits in the returned `SearchResults` are in arbitrary order.
+
+Example::
+
+    queries = chemfp.load_fingerprints("queries.fps")
+    targets = chemfp.load_fingerprints("targets.fps")
+    results = chemfp.search.threshold_tanimoto_search_arena(queries, targets, threshold=0.5)
+    for query_id, query_hits in zip(queries.ids, results):
+        if len(query_hits) > 0:
+            print query_id, "->", ", ".join(query_hits.get_ids())
+
+:param query_arena: The query fingerprints.
+:type query_arena: a FingerprintArena
+:param target_arena: The target fingerprints.
+:type target_arena: a FingerprintArena
+:param threshold: The minimum score threshold.
+:type threshold: float between 0.0 and 1.0, inclusive
+:returns: a SearchResults instance
+
+threshold_tanimoto_search_symmetric
+-----------------------------------
+
+.. py:method:: threshold_tanimoto_search_symmetric(arena, threshold=0.7, include_lower_triangle=True, batch_size=100)
+
+Search for the hits in the `arena` at least `threshold` similar to the fingerprints in the arena
+
+When `include_lower_triangle` is True, compute the upper-triangle
+similarities, then copy the results to get the full set of
+results. When `include_lower_triangle` is False, only compute the
+upper triangle.
+
+The computation can take a long time. Python won't check check for
+a ^C until the function finishes. This can be irritating. Instead,
+process only `batch_size` rows at a time before checking for a ^C.
+
+The hits in the returned `SearchResults` are in arbitrary order.
+
+Example::
+
+    arena = chemfp.load_fingerprints("queries.fps")
+    full_result = chemfp.search.threshold_tanimoto_search_symmetric(arena, threshold=0.2)
+    upper_triangle = chemfp.search.threshold_tanimoto_search_symmetric(
+              arena, threshold=0.2, include_lower_triangle=False)
+    assert sum(map(len, full_result)) == sum(map(len, upper_triangle))*2
+              
+:param arena: the set of fingerprints
+:type arena: a FingerprintArena
+:param threshold: The minimum score threshold.
+:type threshold: float between 0.0 and 1.0, inclusive
+:param include_lower_triangle:
+    if False, compute only the upper triangle, otherwise use symmetry to compute the full matrix
+:type include_lower_triangle: boolean
+:param batch_size: the number of rows to process before checking for a ^C
+:type batch_size: integer
+:returns: a SearchResults instance
+
+
+knearest_tanimoto_search_fp
+---------------------------
+
+.. py:method:: knearest_tanimoto_search_fp(query_fp, target_arena, k=3, threshold=0.7)
+
+Search for `k`-nearest hits in `target_arena` which are at least `threshold` similar to `query_fp`
+
+The hits in the `SearchResults` are ordered by decreasing similarity score.
+
+Example::
+
+    query_id, query_fp = chemfp.load_fingerprints("queries.fps")[0]
+    targets = chemfp.load_fingerprints("targets.fps")
+    print list(chemfp.search.knearest_tanimoto_search_fp(query_fp, targets, k=3, threshold=0.0))
+
+:param query_fp: the query fingerprint
+:type query_fp: a byte string
+:param target_arena: the target arena
+:type target_fp: a FingerprintArena
+:param k: the number of nearest neighbors to find.
+:type k: positive integer
+:param threshold: The minimum score threshold.
+:type threshold: float between 0.0 and 1.0, inclusive
+:returns: a SearchResult
+
+knearest_tanimoto_search_arena
+------------------------------
+
+.. py:method:: knearest_tanimoto_search_arena(query_arena, target_arena, k=3, threshold=0.7)
+
+Search for the `k` nearest hits in the `target_arena` at least `threshold` similar to the fingerprints in `query_arena`
+
+The hits in the `SearchResults` are ordered by decreasing similarity score.
+
+Example::
+
+    queries = chemfp.load_fingerprints("queries.fps")
+    targets = chemfp.load_fingerprints("targets.fps")
+    results = chemfp.search.knearest_tanimoto_search_arena(queries, targets, k=3, threshold=0.5)
+    for query_id, query_hits in zip(queries.ids, results):
+        if len(query_hits) >= 2:
+            print query_id, "->", ", ".join(query_hits.get_ids())
+
+:param query_arena: The query fingerprints.
+:type query_arena: a FingerprintArena
+:param target_arena: The target fingerprints.
+:type target_arena: a FingerprintArena
+:param k: the number of nearest neighbors to find.
+:type k: positive integer
+:param threshold: The minimum score threshold.
+:type threshold: float between 0.0 and 1.0, inclusive
+:returns: a SearchResults instance
+
+knearest_tanimoto_search_symmetric
+----------------------------------
+
+.. py:method:: knearest_tanimoto_search_symmetric(arena, k=3, threshold=0.7, batch_size=100)
+
+Search for the `k`-nearest hits in the `arena` at least `threshold` similar to the fingerprints in the arena
+
+The computation can take a long time. Python won't check check for
+a ^C until the function finishes. This can be irritating. Instead,
+process only `batch_size` rows at a time before checking for a ^C.
+
+The hits in the `SearchResults` are ordered by decreasing similarity score.
+
+Example::
+
+    arena = chemfp.load_fingerprints("queries.fps")
+    results = chemfp.search.knearest_tanimoto_search_symmetric(arena, k=3, threshold=0.8)
+    for (query_id, hits) in zip(arena.ids, results):
+        print query_id, "->", ", ".join(("%s %.2f" % hit) for hit in  hits.get_ids_and_scores())
+
+:param arena: the set of fingerprints
+:type arena: a FingerprintArena
+:param k: the number of nearest neighbors to find.
+:type k: positive integer
+:param threshold: The minimum score threshold.
+:type threshold: float between 0.0 and 1.0, inclusive
+:param include_lower_triangle:
+    if False, compute only the upper triangle, otherwise use symmetry to compute the full matrix
+:type include_lower_triangle: boolean
+:param batch_size: the number of rows to process before checking for a ^C
+:type batch_size: integer
+:returns: a SearchResults instance
 
 
 
@@ -547,61 +895,286 @@ SearchResults
 
 .. py:class:: SearchResults(... do not call directly ...)
 
-Contains the result of a Tanimoto threshold or k-nearest search
+Search results for a list of query fingerprints against a target arena
 
-Each result contains a list of hits, where the hit is a
-two-element tuple. If you iterate over the SearchResult then
-you'll get the hits as (target_id, target_score) pairs.
-tuples. If you iterate using the method `iter_hits()` then you'll
-get the hits as (target_index, target_score) pairs.
+This acts like a list of SearchResult elements, with the ability
+to iterate over each search results, look them up by index, and
+get the number of scores.
 
-iter(results)
--------------
-
-.. py:method:: __iter__()
-
-Iterate over the named hits for each result
-
-Each term is a list of hits. A hit contains (id, score) tuples.
-The order of the hits depends on the search algorithm.
-
-iter_hits
----------
-
-.. py:method:: iter_hits()
-
-Iterate over the indexed hits for each result
-
-Each term is a list of hits. A hit contains (index, score) tuples.
-The order of the hits depends on the search algorithm.
-
+In addition, there are helper methods to iterate over each hit and
+to get the hit indicies, scores, and identifiers directly as Python
+lists, sort the list contents, and more.
 
 len(results)
 ------------
 
 .. py:method:: __len__()
 
-Number of search results
+x.__len__() <==> len(x)
 
 results[i]
 ----------
 
 .. py:method:: __getitem__(i)
 
-The list of hits for result at position i
+Get the `i`th SearchResult
 
-Each hit contains a (id, score) tuple.
+clear_all
+---------
 
-size(i)
+.. py:method:: clear_all()
+
+Remove all hits from all of the search results
+
+count_all
+---------
+
+.. py:method:: count_all(min_score=None, max_score=None, interval="[]")
+
+Remove all hits from all of the search results
+
+cumulative_score_all
+--------------------
+
+.. py:method:: cumulative_score_all(min_score=None, max_score=None, interval="[]")
+
+The sum of all scores in all rows which are between `min_score` and `max_score`
+
+Using the default parameters this returns the sum of all of
+the scores in all of the results. With a specified range this
+returns the sum of all of the scores in that range. The
+cumulative score is also known as the raw score.
+
+The default `min_score` of None is equivalent to -infinity.
+The default `max_score` of None is equivalent to +infinity.
+
+The `interval` parameter describes the interval end
+conditions. The default of "[]" uses a closed interval,
+where min_score <= score <= max_score. The interval "()"
+uses the open interval where min_score < score < max_score.
+The half-open/half-closed intervals "(]" and "[)" are
+also supported.
+
+:param min_score: the minimum score in the range.
+:type min_score: a float, or None for -infinity
+:param max_score: the maximum score in the range.
+:type max_score: a float, or None for +infinity
+:param interval: specify if the end points are open or closed.
+:type interval: one of "[]", "()", "(]", "[)"
+:returns: an floating point count
+ 
+iter(results)
+-------------
+
+.. py:method:: __iter__()
+
+Iterate over each SearchResult hit
+
+iter_ids
+--------
+
+.. py:method:: iter_ids()
+
+For each hit, yield the list of target identifiers
+
+iter_ids_and_scores
+-------------------
+
+.. py:method:: iter_ids_and_scores()
+
+For each hit, yield the list of (target id, score) tuples
+
+iter_indices
+------------
+
+.. py:method:: iter_indices()
+
+For each hit, yield the list of target indices
+
+iter_indices_and_scores
+-----------------------
+
+.. py:method:: iter_indices_and_scores()
+
+For each hit, yield the list of (target index, score) tuples
+
+iter_scores
+-----------
+
+.. py:method:: iter_scores()
+
+For each hit, yield the list of target scores
+
+iter_hits
+---------
+
+REMOVED: Renamed to iter_ids_and_scores for 1.1.
+
+reorder_all
+-----------
+
+.. py:method:: reorder_all()
+
+Reorder the hits for all of the rows based on the requested `order`.
+
+The available orderings are:
+  increasing-score: sort by increasing score
+  decreasing-score: sort by decreasing score
+  increasing-index: sort by increasing target index
+  decreasing-index: sort by decreasing target index
+  move-closest-first: move the hit with the highest score to the first position
+  reverse: reverse the current ordering
+
+:param ordering: the name of the ordering to use
+
+
+
+SearchResult
+============
+
+.. py:class:: SearchResult(... do not call directly ...)
+
+Search results for a query fingerprint against a target arena.
+
+The results contains a list of hits. Hits contain a target index,
+score, and optional target ids. The hits can be reordered based on
+score or index.
+
+len(result)
+------------
+
+.. py:method:: __len__()
+
+The number of hits
+
+iter(result)
+------------
+
+.. py:method:: __iter__()
+
+Iterate through the pairs of (target index, score) using the current ordering
+
+clear
+-----
+
+.. py:method:: clear()
+
+Remove all hits from this result
+
+count
+-----
+
+.. py:method:: count(min_score=None, max_score=None, interval="[]")
+
+Count the number of hits with a score between `min_score` and `max_score`
+
+Using the default parameters this returns the number of
+hits in the result.
+
+The default `min_score` of None is equivalent to -infinity.
+The default `max_score` of None is equivalent to +infinity.
+
+The `interval` parameter describes the interval end
+conditions. The default of "[]" uses a closed interval,
+where min_score <= score <= max_score. The interval "()"
+uses the open interval where min_score < score < max_score.
+The half-open/half-closed intervals "(]" and "[)" are
+also supported.
+
+:param min_score: the minimum score in the range.
+:type min_score: a float, or None for -infinity
+:param max_score: the maximum score in the range.
+:type max_score: a float, or None for +infinity
+:param interval: specify if the end points are open or closed.
+:type interval: one of "[]", "()", "(]", "[)"
+:returns: an integer count
+
+cumulative_score
+----------------
+
+.. py:method:: cumulative_score(min_score=None, max_score=None, interval="[]")
+
+The sum of the scores which are between `min_score` and `max_score`
+
+Using the default parameters this returns the sum of all of
+the scores in the result. With a specified range this returns
+the sum of all of the scores in that range. The cumulative
+score is also known as the raw score.
+
+The default `min_score` of None is equivalent to -infinity.
+The default `max_score` of None is equivalent to +infinity.
+
+The `interval` parameter describes the interval end
+conditions. The default of "[]" uses a closed interval,
+where min_score <= score <= max_score. The interval "()"
+uses the open interval where min_score < score < max_score.
+The half-open/half-closed intervals "(]" and "[)" are
+also supported.
+
+:param min_score: the minimum score in the range.
+:type min_score: a float, or None for -infinity
+:param max_score: the maximum score in the range.
+:type max_score: a float, or None for +infinity
+:param interval: specify if the end points are open or closed.
+:type interval: one of "[]", "()", "(]", "[)"
+:returns: an floating point count
+
+get_ids
 -------
 
-.. py:method:: size()
+.. py:method:: get_ids()
 
-The number of hits for result at position i
+The list of target identifiers (if available), in the current ordering
 
-:param i: index into the search results
-:type i: int
-:returns: int
+get_ids_and_scores
+------------------
+
+.. py:method:: get_ids_and_scores()
+
+The list of (target identifier, target score) pairs, in the current ordering
+
+Raises a TypeError if the target IDs are not available.
+
+get_indices
+-----------
+
+.. py:method:: get_indices()
+
+The list of target indices, in the current ordering.
+
+get_indices_and_scores
+----------------------
+
+.. py:method:: get_indices_and_scores()
+
+The list of (target index, score) pairs, in the current ordering
+
+get_scores
+----------
+
+.. py:method:: get_scores()
+
+The list of target scores, in the current ordering
+
+reorder
+-------
+
+.. py:method:: reorder(ordering="decreasing-score")
+
+Reorder the hits based on the requested ordering.
+
+The available orderings are:
+  increasing-score: sort by increasing score
+  decreasing-score: sort by decreasing score
+  increasing-index: sort by increasing target index
+  decreasing-index: sort by decreasing target index
+  move-closest-first: move the hit with the highest score to the first position
+  reverse: reverse the current ordering
+
+:param ordering: the name of the ordering to use
+
+
+
 
 
 .. _chemfp.bitops:
