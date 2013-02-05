@@ -50,8 +50,11 @@ int chemfp_set_option(const char *option, int value);
 
 /* This is of the form (\d+\.\d+) (\.\d)? ((a|b|pre)\d+)
      for examples:  0.9, 1.0.4, 1.0pre2.
- The "a"lpha, "b"eta, and "pre"view suffixes will never be seen in production releases */
-#define CHEMFP_VERSION_STRING "1.1b6"
+  In practice, the production releases look like '1.0' and '1.1' and
+  intermediate builds before a full release use the 'b' suffix, like
+  '1.1b7' before the '1.1' final release.
+*/
+#define CHEMFP_VERSION_STRING "1.1"
 
 /* Return the CHEMFP_VERSION.  */
 const char *chemfp_version(void);

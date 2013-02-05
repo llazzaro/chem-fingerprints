@@ -2,7 +2,7 @@
 
 # All chem-fingerprint software is distributed with the following license:
 
-# Copyright (c) 2010-2012 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
+# Copyright (c) 2010-2013 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 #
 # Permission is hereby granted, free of charge, to any person
 # obtaining a copy of this software and associated documentation files
@@ -24,7 +24,7 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-__version__ = "1.1b6"
+__version__ = "1.1"
 __version_info = (1, 1, 0)
 SOFTWARE = "chemfp/" + __version__
 

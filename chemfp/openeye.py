@@ -3,7 +3,7 @@
 
 """
 
-# Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
+# Copyright (c) 2010-2013 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 # Licensed under "the MIT license"
 # See the contents of COPYING or "__init__.py" for full license details.
 

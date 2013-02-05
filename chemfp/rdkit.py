@@ -1,6 +1,6 @@
 "Create RDKit fingerprints"
 
-# Copyright (c) 2010 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
+# Copyright (c) 2010-2013 Andrew Dalke Scientific, AB (Gothenburg, Sweden)
 # See the contents of "__init__.py" for full license details.
 
 from __future__ import absolute_import
