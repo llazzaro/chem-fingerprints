@@ -202,7 +202,7 @@ class SearchResults(_chemfp.SearchResults):
 
     def __len__(self):
         """The number of rows in the SearchResults"""
-        super(SearchResults, self).__len__(self)
+        return super(SearchResults, self).__len__()
 
     def __getitem__(self, i):
         """Get the `i`th SearchResult"""

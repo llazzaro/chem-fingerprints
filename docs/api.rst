@@ -910,7 +910,7 @@ len(results)
 
 .. py:method:: __len__()
 
-x.__len__() <==> len(x)
+The number of rows in the SearchResults
 
 results[i]
 ----------
