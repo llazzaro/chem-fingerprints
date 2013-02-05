@@ -219,7 +219,7 @@ class FingerprintArena(FingerprintReader):
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
         """Count the fingerprints which are similar enough to the query fingerprint
 
-        DEPRECATED: Use chemfp.search.count_tanimoto_hits_fp
+        DEPRECATED: Use `chemfp.search.count_tanimoto_hits_fp`_ instead.
         
         Return the number of fingerprints in this arena which are
         at least `threshold` similar to the query fingerprint `query_fp`.
@@ -235,7 +235,8 @@ class FingerprintArena(FingerprintReader):
     def count_tanimoto_hits_arena(self, queries, threshold=0.7):
         """Count the fingerprints which are similar enough to each query fingerprint
 
-        DEPRECATED: Use chemfp.search.count_tanimoto_hits_arena
+        DEPRECATED: Use `chemfp.search.count_tanimoto_hits_arena`_ or
+        `chemfp.search.count_tanimoto_hits_symmetric`_ instead.
         
         Returns an iterator containing the (query_id, count) for each
         fingerprint in `queries`, where `query_id` is the query
@@ -259,7 +260,7 @@ class FingerprintArena(FingerprintReader):
     def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
         """Find the fingerprints which are similar enough to the query fingerprint
 
-        DEPRECATED: Use chemfp.search.threshold_tanimoto_search_fp
+        DEPRECATED: Use `chemfp.search.threshold_tanimoto_search_fp`_ instead.
 
         Find all of the fingerprints in this arena which are at least
         `threshold` similar to the query fingerprint `query_fp`.
@@ -277,7 +278,8 @@ class FingerprintArena(FingerprintReader):
     def threshold_tanimoto_search_arena(self, queries, threshold=0.7, arena_size=100):
         """Find the fingerprints which are similar to each of the query fingerprints
 
-        DEPRECATED: Use chemfp.search.threshold_tanimoto_search_arena
+        DEPRECATED: Use `chemfp.search.threshold_tanimoto_search_arena`_
+        or `chemfp.search.threshold_tanimoto_search_symmetric`_ instead.
 
         For each fingerprint in the `query_arena`, find all of the
         fingerprints in this arena which are at least `threshold`
@@ -294,7 +296,7 @@ class FingerprintArena(FingerprintReader):
     def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
         """Find the k-nearest fingerprints which are similar to the query fingerprint
 
-        DEPRECATED: Use chemfp.search.knearest_tanimoto_search_fp
+        DEPRECATED: Use `chemfp.search.knearest_tanimoto_search_fp`_ instead.
         
         Find the `k` fingerprints in this arena which are most similar
         to the query fingerprint `query_fp` and which are at least `threshold`
@@ -315,7 +317,8 @@ class FingerprintArena(FingerprintReader):
     def knearest_tanimoto_search_arena(self, queries, k=3, threshold=0.7):
         """Find the k-nearest fingerprint which are similar to each of the query fingerprints
 
-        DEPRECATED: Use chemfp.search.knearest_tanimoto_search_arena or chemfp.search.knearest_tanimoto_search_symmetric
+        DEPRECATED: Use `chemfp.search.knearest_tanimoto_search_arena`_ or
+        `chemfp.search.knearest_tanimoto_search_symmetric`_ instead.
 
         For each fingerprint in the `query_arena`, find the `k`
         fingerprints in this arena which are most similar and which
@@ -335,6 +338,32 @@ class FingerprintArena(FingerprintReader):
         return search.knearest_tanimoto_search_arena(queries, self, k, threshold)
 
     def copy(self, indices=None, reorder=None):
+        """Create a new arena using either all or some of the fingerprints in this arena
+
+        By default this create a new arena. The fingerprint data block and ids may
+        be shared with the original arena, which makes this a shallow copy. If the
+        original arena is a slice, or "sub-arena" of an arena, then the copy will
+        allocate new space to store just the fingerprints in the slice and use its
+        own list for the ids.
+
+        The `indices` parameter, if not None, is an iterable which contains the
+        indicies of the fingerprint records to copy. Duplicates are allowed, though
+        discouraged.
+
+        If indices are specified then the default `reorder=None` or a `reorder=True`
+        will reorder the fingerprints for the new arena by popcount. This improves
+        overall search performance. With `reorder=False`, the fingerprints will be
+        in order given by the indices.
+
+        If indices are not given, then the default is to preserve the order type of
+        the original arena. Otherwise `reorder=True` will always reorder and
+        `reorder=False` will leave them in the current order.
+
+        :param indices: indicies of the records to copy into the new arena
+        :type indices: iterable containing integers, or None
+        :param reorder: describes how to order the fingerprints
+        :type reorder: True to reorder, False to leave in input order, None for default action
+        """
         if reorder is None:
             if indices is None:
                 # This is a pure copy. Reorder only if there are popcount indices.

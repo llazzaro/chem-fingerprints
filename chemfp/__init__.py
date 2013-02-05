@@ -86,7 +86,7 @@ def read_structure_fingerprints(type, source=None, format=None, id_tag=None, err
     :param type: information about how to convert the input structure into a fingerprint
     :type type: string or Metadata
     :param source: The structure data source.
-    :type source: A filename (as a string), a file object, or None to read from stdin.
+    :type source: A filename (as a string), a file object, or None to read from stdin
     :param format: The file format and optional compression.
             Examples: 'smi' and 'sdf.gz'
     :type format: string, or None to autodetect based on the source
@@ -134,7 +134,7 @@ def open(source, format=None):
             print id, fp.encode("hex")
         
     :param source: The fingerprint source.
-    :type source: A filename string, a file object, or None.
+    :type source: A filename string, a file object, or None
     :param format: The file format and optional compression.
     :type format: string, or None
 
