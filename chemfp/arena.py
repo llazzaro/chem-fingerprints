@@ -114,6 +114,7 @@ class FingerprintArena(FingerprintReader):
         return self._id_lookup
         
     def get_by_id(self, id):
+        """Given the record identifier, return the (id, fingerprint) tuple or None if not present"""
         id_lookup = self._id_lookup
         if id_lookup is None:
             id_lookup = self._make_id_lookup()
@@ -126,12 +127,14 @@ class FingerprintArena(FingerprintReader):
         return self.arena_ids[arena_i], self.arena[start_offset:end_offset]
 
     def get_index_by_id(self, id):
+        """Given the record identifier, return the record index or None if not present"""
         id_lookup = self._id_lookup
         if id_lookup is None:
             id_lookup = self._make_id_lookup()
         return id_lookup(id)
 
     def get_fingerprint_by_id(self, id):
+        """Given the record identifier, return its fingerprint or None if not present"""
         id_lookup = self._id_lookup
         if id_lookup is None:
             id_lookup = self._make_id_lookup()
