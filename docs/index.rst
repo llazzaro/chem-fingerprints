@@ -1,8 +1,8 @@
 .. _intro:
 
-====================
+========================
 chemfp 1.1 documentation
-====================
+========================
 
 `chemfp <http://code.google.com/p/chem-fingerprints/>`_ is a set of
 tools for working with cheminformatics fingerprints in the FPS format.
