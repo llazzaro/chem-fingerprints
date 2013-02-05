@@ -219,7 +219,7 @@ class FingerprintArena(FingerprintReader):
     def count_tanimoto_hits_fp(self, query_fp, threshold=0.7):
         """Count the fingerprints which are similar enough to the query fingerprint
 
-        XXX
+        DEPRECATED: Use chemfp.search.count_tanimoto_hits_fp
         
         Return the number of fingerprints in this arena which are
         at least `threshold` similar to the query fingerprint `query_fp`.
@@ -235,7 +235,7 @@ class FingerprintArena(FingerprintReader):
     def count_tanimoto_hits_arena(self, queries, threshold=0.7):
         """Count the fingerprints which are similar enough to each query fingerprint
 
-        XXX
+        DEPRECATED: Use chemfp.search.count_tanimoto_hits_arena
         
         Returns an iterator containing the (query_id, count) for each
         fingerprint in `queries`, where `query_id` is the query
@@ -259,7 +259,7 @@ class FingerprintArena(FingerprintReader):
     def threshold_tanimoto_search_fp(self, query_fp, threshold=0.7):
         """Find the fingerprints which are similar enough to the query fingerprint
 
-        XXX
+        DEPRECATED: Use chemfp.search.threshold_tanimoto_search_fp
 
         Find all of the fingerprints in this arena which are at least
         `threshold` similar to the query fingerprint `query_fp`.
@@ -277,7 +277,7 @@ class FingerprintArena(FingerprintReader):
     def threshold_tanimoto_search_arena(self, queries, threshold=0.7, arena_size=100):
         """Find the fingerprints which are similar to each of the query fingerprints
 
-        XXX
+        DEPRECATED: Use chemfp.search.threshold_tanimoto_search_arena
 
         For each fingerprint in the `query_arena`, find all of the
         fingerprints in this arena which are at least `threshold`
@@ -294,7 +294,7 @@ class FingerprintArena(FingerprintReader):
     def knearest_tanimoto_search_fp(self, query_fp, k=3, threshold=0.7):
         """Find the k-nearest fingerprints which are similar to the query fingerprint
 
-        XXX
+        DEPRECATED: Use chemfp.search.knearest_tanimoto_search_fp
         
         Find the `k` fingerprints in this arena which are most similar
         to the query fingerprint `query_fp` and which are at least `threshold`
@@ -315,7 +315,7 @@ class FingerprintArena(FingerprintReader):
     def knearest_tanimoto_search_arena(self, queries, k=3, threshold=0.7):
         """Find the k-nearest fingerprint which are similar to each of the query fingerprints
 
-        XXX
+        DEPRECATED: Use chemfp.search.knearest_tanimoto_search_arena or chemfp.search.knearest_tanimoto_search_symmetric
 
         For each fingerprint in the `query_arena`, find the `k`
         fingerprints in this arena which are most similar and which
