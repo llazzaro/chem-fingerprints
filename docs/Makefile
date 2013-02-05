@@ -6,6 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
+PYTHON        = python2.7
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -130,4 +131,4 @@ doctest:
 	      "results in $(BUILDDIR)/doctest/output.txt."
 
 api.rst: api.txt ../chemfp/__init__.py ../chemfp/arena.py
-	python apply_template.py api
+	$(PYTHON) apply_template.py api
