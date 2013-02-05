@@ -235,7 +235,7 @@ Arenas are a core part of chemfp. Processing one fingerprint at a time
 is slow, so the main search routines expect to iterate over query
 arenas, rather than query fingerprints.
 
-Thus, the FPSReaders - and all chemfp fingerprint collections - also
+Thus, the FPSReaders -- and all chemfp fingerprint collections -- also
 support the `iter_arenas` interface. Here's an example of reading the
 targets file 25 records at a time::
 
@@ -256,7 +256,7 @@ targets file 25 records at a time::
 Those add up to 224, which you can verify is the number of structures
 in the original source file.
 
-If you have a `FingerprintArena` then you can also use Python's slice
+If you have a `FingerprintArena`_ then you can also use Python's slice
 notation to make a subarena::
 
     >>> queries = chemfp.load_fingerprints("pubchem_queries.fps")
@@ -350,7 +350,8 @@ threshold then use :ref:`chemfp.count_tanimoto_hits <chemfp_count_tanimoto_hits>
          # ... many lines omitted ...
 
 Or, if you only want the k=2 nearest neighbors to each target within
-that same threshold of 0.7 then use ref:`chemfp.knearest_tanimoto_search`::
+that same threshold of 0.7 then use
+:ref:`chemfp.knearest_tanimoto_search <chemfp_knearest_tanimoto_search>`::
 
     >>> queries = chemfp.open("pubchem_queries.fps")
     >>> for (query_id, hits) in chemfp.knearest_tanimoto_search(query_arena, targets, k=2, threshold=0.7):
@@ -402,6 +403,7 @@ which is the older form. Or you can use the equally bewildering
 
     >>> for query_arena in chemfp.open("pubchem_queries.fps").iter_arenas(1):
     ...   break
+
 .)
 
 Here are the k=5 closest hits against the targets file::
@@ -448,30 +450,38 @@ interface.
 
 NOTE: up until the final 1.1 release, this document said to use the
 FingerprintArena methods. This is no longer recommended.  Use the
-`chemfp.search` functions instead. Most of the search methods, except
-perhaps the single fingerprint methods, will issue a
-DeprecationWarning with 1.2 and be removed with 1.3.
+:ref:`chemfp.search <chemfp_search>` functions instead. Most of the
+search methods, except perhaps the single fingerprint methods, will
+issue a DeprecationWarning in the next release and updated in a
+release after that.
 
 The index-based search functions are in the `chemfp.search` module.
 They can be categorized into three groups:
 
   1. Count the number of hits:
-    * count_tanimoto_hits_fp - search an arena using a single fingerprint
-    * count_tanimoto_hits_arena - search an arena using an arena
-    * count_tanimoto_hits_symmetric - search an arena using itself
-    * partial_count_tanimoto_hits_symmetric - (advanced use; see the doc string)
+
+    * :ref:`count_tanimoto_hits_fp <chemfp_search_count_tanimoto_hits_fp>` - search an arena using a single fingerprint
+
+    * :ref:`count_tanimoto_hits_arena <chemfp_search_count_tanimoto_hits_arena>` - search an arena using an arena
+
+    * :ref:`count_tanimoto_hits_symmetric <chemfp_search_count_tanimoto_hits_symmetric>` - search an arena using itself
 
   2. Find all hits at or above a given threshold, sorted arbitrarily:
-    * threshold_tanimoto_search_fp - search an arena using a single fingerprint
-    * threshold_tanimoto_search_arena - search an arena using an arena
-    * threshold_tanimoto_search_symmetric - search an arena using itself
-    * partial_threshold_tanimoto_search_symmetric - (advanced use; see the doc string)
-    * fill_lower_triangle - copy the upper triangle terms to the lower triangle
+
+    * :ref:`threshold_tanimoto_search_fp <chemfp_search_threshold_tanimoto_search_fp>` - search an arena using a single fingerprint
+
+    * :ref:`threshold_tanimoto_search_arena <chemfp_search_threshold_tanimoto_search_arena>` - search an arena using an arena
+
+    * :ref:`threshold_tanimoto_search_symmetric <chemfp_search_threshold_tanimoto_search_symmetric>` - search an arena using itself
+
 
   3. Find the k-nearest hits at or above a given threshold, sorted by decreasing similarity:
-    * knearest_tanimoto_search_fp - search an arena using a single fingerprint
-    * knearest_tanimoto_search_arena - search an arena using an arena
-    * knearest_tanimoto_search_symmetric - search an arena using itself
+
+    * :ref:`knearest_tanimoto_search_fp <chemfp_search_knearest_tanimoto_search_fp>` - search an arena using a single fingerprint
+
+    * :ref:`knearest_tanimoto_search_arena <chemfp_search_knearest_tanimoto_search_arena>` - search an arena using an arena
+
+    * :ref:`knearest_tanimoto_search_symmetric <chemfp_search_knearest_tanimoto_search_symmetric>` - search an arena using itself
 
 The functions ending '_fp' take a query fingerprint and a target
 arena. The functions ending '_arena' take a query arena and a target
@@ -526,8 +536,11 @@ contains the list of fingerprint identifiers.
 
 What I really want to show is that you can get the same data only
 using the offset index for the target record instead of its id. The
-result from a Tanimoto search is a `SearchResults` object, with the
-methods `get_indices_and_scores()`::
+result from a Tanimoto search is a :ref:`SearchResults <SearchResults>`
+object, with the methods
+:ref:`get_indices_and_scores <get_indices_and_scores>`,
+:ref:`get_ids <get_ids>`, :ref:`get__scores <get_scores>`,
+and more::
 
     >>> for hits in results:
     ...   print len(hits), hits.get_indices_and_scores()[:3]
@@ -548,9 +561,10 @@ methods `get_indices_and_scores()`::
 I did a few id lookups given the target dataset to show you that the
 index corresponds to the identifiers from the previous code.
 
-These examples iterated over each `SearchResult` to fetch the ids and
-scores, or indices and scores. Another possibility is to ask the
-`SearchResults` to iterate directly over the list of fields you want.
+These examples iterated over each individual `SearchResult` to fetch
+the ids and scores, or indices and scores. Another possibility is to
+ask the `SearchResults` collection to iterate directly over the list
+of fields you want.
 
     >>> for row in results.iter_indices_and_scores():
     ...   print len(row), row[:3]
@@ -592,10 +606,10 @@ distance matrix and pass that to one of those tools.
 Since we're using the same fingerprint arena for both queries and
 targets, we know the distance matrix will be symmetric along the
 diagonal, and the diagonal terms will be 1.0. The
-`threshold_tanimoto_search_symmetric` functions can take advantage of
-the symmetry for a factor of two performance gain. There's also a way
-to limit it to just the upper triangle, which gives a factor of two
-memory gain as well.
+:ref:`threshold_tanimoto_search_symmetric <chemfp_search_threshold_tanimoto_search_symmetric>`
+functions can take advantage of the symmetry for a factor of two
+performance gain. There's also a way to limit it to just the upper
+triangle, which gives a factor of two memory gain as well.
 
 
 Most of those tools use `NumPy <http://numpy.scipy.org/>`_, which is a
@@ -752,13 +766,13 @@ same benchmark. Where did the roughly 16-fold peformance boost come
 from? Money. After 1.0 was released, Roche funded me to add various
 optimizations, including taking advantage of the symmetery (2x) and
 using hardware POPCNT if available (4x). Roche and another company
-helped fund the OpenMP support, and my desktop ran this with 4 cores
-instead of 1.
+helped fund the OpenMP support, and when my desktop reran this
+benchmark it used 4 cores instead of 1.
 
 The wary among you might notice that 2*4*4 = 32x faster, while I
 said the overall code was only 16x faster. Where's the factor of 2x
 slowdown? It's in the Python code! The
-`threshold_tanimoto_search_symmetric` step took only 13 seconds. The
+:ref:`threshold_tanimoto_search_symmetric <chemfp_search_threshold_tanimoto_search_symmetric>` step took only 13 seconds. The
 remaining 22 seconds was in the leader code written in Python. To
 make the analysis more complicated, improvements to the chemfp API
 sped up the clustering step by about 40%.
@@ -875,7 +889,7 @@ Select a random fingerprint sample
 In this section you'll learn how to make a new arena where the
 fingerprints are randomly selected from the old arena.
 
-A FingerprintArena slice creates a subarena. Technically speacking,
+A FingerprintArena slice creates a subarena. Technically speaking,
 this is a "view" of the original data. The subarena doesn't actually
 copy its fingerprint data from the original arena. Instead, it uses
 the same fingerprint data, but keeps track of the start and end
@@ -885,7 +899,7 @@ with a step size other than +1.
 This also means that memory for a large arena won't be freed until
 all of its subarenas are also removed.
 
-You can see some evidence for this because a `FingerprintArena` stores
+You can see some evidence for this because a :ref:`FingerprintArena <chemfp_arena_FingerprintArena>` stores
 the entire fingerprint data as a set of bytes named `arena`::
 
     >>> import chemfp
@@ -897,8 +911,10 @@ the entire fingerprint data as a set of bytes named `arena`::
 This shows that the `targets` and `subset` share the same raw data
 set. At least it does to me, the person who wrote the code.
 
-You can ask an arena or subarena to make a `copy`_. This allocates
+You can ask an arena or subarena to make a :ref:`copy <chemfp_arena_FingerprintArena_copy>`. This allocates
 new memory for the new arena and copies all of its fingerprints there.
+
+::
 
     >>> new_subset = subset.copy()
     >>> len(new_subset) == len(subset)
@@ -933,7 +949,7 @@ This interesting, in a boring sort of way. Let's get back to the main
 goal of getting a random subset of the data. I want to select `m`
 records at random, without replacement, to make a new data set. You
 can see this just means making a list with `m` different index
-values. Python's built-in `random.sample` function makes this easy::
+values. Python's built-in `random.sample <http://docs.python.org/2/library/random.html#random.sample>`_ function makes this easy::
 
     >>> import random
     >>> random.sample("abcdefgh", 3)
@@ -999,8 +1015,9 @@ weren't present, then it will raise an exception saying that it
 couldn't find the given identifier.
 
 If the fingerprint records are already in a `FingerprintArena` then
-there's a better solution. Use the `get_fingerprint_with_id` method to
-get the fingerprint byte string, or `None` if the identifier doesn't exist::
+there's a better solution. Use the :ref:`get_fingerprint_by_id <get_fingerprint_by_id>`
+method to get the fingerprint byte string, or `None` if the
+identifier doesn't exist::
 
     >>> arena = chemfp.load_fingerprints("pubchem_targets.fps")
     >>> fp = arena.get_fingerprint_by_id("14564126")
@@ -1009,7 +1026,7 @@ get the fingerprint byte string, or `None` if the identifier doesn't exist::
     >>> missing_fp = arena.get_fingerprint_by_id("does-not-exist")
     >>> missing_fp
     >>> missing_fp is None
-     True
+    True
 
 Internally this does about what you think it would. It uses the
 arena's `id` list to make a lookup table mapping identifier to
@@ -1037,8 +1054,9 @@ to maintain the internal heap (N*log(k)).
 
 By comparison, the threshold searches return the hits in arbitrary
 order. Sorting takes up to N*log(N) time, which is extra work for
-those cases where you don't want sorted data. Use the `reorder` method
-of a `SearchResult` if you want the hits sorted in-place::
+those cases where you don't want sorted data. Use the
+:ref:`reorder <chemfp_search_searchresult_reorder>` method
+of a :ref:`SearchResult <SearchResult>` if you want the hits sorted in-place::
 
     >>> import chemfp
     >>> arena = chemfp.load_fingerprints("pubchem_queries.fps")
@@ -1085,8 +1103,9 @@ rather than one of the other possible options.
 If you are interested in other ways to help improve your clustering
 performance, let me know.
 
-Each `SearchResult` has a `reorder` method. If you want to reorder all
-of the hits of a `SearchResults` then use its `reorder_all`
+Each `SearchResult` has a :ref:`reorder <chemfp_search_SearchResult_reorder>` 
+method. If you want to reorder all of the hits of a `SearchResults`
+then use its :ref:`reorder_all <chemfp_search_SearchResults_reorder_all>`
 method::
 
     >>> similarity_matrix = search.threshold_tanimoto_search_symmetric(
@@ -1103,7 +1122,7 @@ method::
     27593061 -> []
            ...
 
-It takes the same set of ordering names as `reorder`_.
+It takes the same set of ordering names as :ref:`SearchResult.reorder <chemfp_search_SearchResult_reorder>`.
 
 
 
@@ -1125,8 +1144,8 @@ The length of the `SearchResult` is the number of hits it contains::
 
 This gives you the number of hits at or above a threshold of 0.2,
 which you can also get by doing
-`count_threhsold_tanimoto_search_fp`_. The result also stores the
-hits, and you can get the number of hits which are within a specified
+:ref:`count_tanimoto_hits_fp <chemfp_search_count_tanimoto_hits_fp>`.
+The result also stores thehits, and you can get the number of hits which are within a specified
 interval. Here are the hits counts at or above 0.5, 0.80, and 0.95::
 
     >>> result.count(0.5)
@@ -1191,8 +1210,9 @@ penicillin. This gives 1755 total comparisons.
 
 You know enough to do this, but there's a nice optimization I haven't
 told you about. You can get the total count of all of the threshold
-hits using the `SearchResults.count_all` method, instead of looping
-over each `SearchResult` and calling `count`_::
+hits using the :ref:`SearchResults.count_all <chemfp_search_SearchResults_count_all>`
+method, instead of looping over each `SearchResult`
+and calling :ref:`count <SearchResult_count>`::
 
     import chemfp
     from chemfp import search
@@ -1227,7 +1247,7 @@ over each `SearchResult` and calling `count`_::
         print " %.2f      %5d" % (threshold,
                                   coA_against_penicillin_result.count_all(min_score=threshold))
 
-This gives a not very useful output:
+This gives a not very useful output::
 
     117 coenzyme A-like structures
     15 penicillin-like structures
@@ -1303,12 +1323,12 @@ That difficulty is okay for now because I mostly wanted to show an
 example of how to use the chemfp API. If you want to dive deeper into
 this sort of analysis, then look into the `Similarity Ensemble Approach`
 (SEA) work of Keiser, Roth, Armbruster, Ernsberger, and Irwin. The
-paper online and is available from http://sea.bkslab.org/ .
+paper is available online from http://sea.bkslab.org/ .
 
-The paper actually wants you to use the `raw score`_. This is the sum
+The paper actually wants you to use the `raw score`. This is the sum
 of the hit scores in a given range, and not just the number of
-hits. No problem! Use `SearchResult.cumulative_score` for an
-individual result or `SearchResults.cumulative_score_all` for the
+hits. No problem! Use :ref:`SearchResult.cumulative_score <SearchResult.cumulative_score>` for an
+individual result or :ref:`SearchResults.cumulative_score_all <SearchResults.cumulative_score_all>` for the
 entire set of results::
 
     >>> sum(row.cumulative_score(min_score=0.5, max_score=0.9)
@@ -1318,7 +1338,7 @@ entire set of results::
     224.83239025119866
 
 These also take the `interval` parameter if you don't want the default
-of `[]`_.
+of `[]`.
 
 You may wonder why these two values aren't exactly the same. Addition
 of floating point numbers isn't associative. You can see that I get

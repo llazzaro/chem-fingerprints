@@ -28,7 +28,12 @@ class LocalDirLoader(BaseLoader):
         
 
 def docstring(f):
-    return inspect.getdoc(f)
+    doc = inspect.getdoc(f)
+    if doc is None:
+        raise AssertionError("Missing docstring for " + f.__name__)
+    doc = inspect.getdoc(f).rstrip("\n")
+    doc = "    " + doc.replace("\n", "\n    ")
+    return doc
 
 env = Environment(loader = LocalDirLoader())
 env.filters['docstring'] = docstring
