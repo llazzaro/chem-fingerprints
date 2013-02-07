@@ -7,6 +7,9 @@ import support
 
 try:
     from openeye import oechem  # These tests require OEChem
+    if not oechem.OEChemIsLicensed():
+        print >>sys.stderr, "oechem library available but not license found. Skipping its tests."
+        raise ImportError
     has_oechem = True
     skip_oechem = False
 except ImportError:
