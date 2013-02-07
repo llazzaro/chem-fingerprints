@@ -534,7 +534,7 @@ fps_parse_id_fp(PyObject *self, PyObject *args) {
   int hex_size, line_size, err, i;
   char *line;
   const char *id_start, *id_end;
-  PyObject *fp, *retval;
+  PyObject *fp;
   char *s;
   UNUSED(self);
 
@@ -561,12 +561,7 @@ fps_parse_id_fp(PyObject *self, PyObject *args) {
     *s++ = (char)((_hex_digit_to_value[(int)line[i]]<<4)+_hex_digit_to_value[(int)line[i+1]]);
   }
 
-  retval = Py_BuildValue("i(s#O)", err, id_start, id_end-id_start, fp);
-
-  /* The "O" added a reference which I need to take away */
-  Py_DECREF(fp);
-
-  return retval;
+  return Py_BuildValue("i(s#N)", err, id_start, id_end-id_start, fp);
 }
 
 
@@ -848,7 +843,6 @@ _align_arena(PyObject *input_arena_obj, int alignment,
     Py_INCREF(input_arena_obj);
     return input_arena_obj;
   }
-
   /* Not aligned. We'll have to move it to a new string */
   output_arena_obj = _alloc_aligned_arena(input_arena_size, alignment,
                                           start_padding, end_padding);
@@ -879,7 +873,7 @@ make_unsorted_aligned_arena(PyObject *self, PyObject *args) {
   if (!output_arena_obj) {
     return NULL;
   }
-  return Py_BuildValue("iiO", start_padding, end_padding, output_arena_obj);
+  return Py_BuildValue("iiN", start_padding, end_padding, output_arena_obj);
 }
 
 static PyObject *
@@ -927,7 +921,7 @@ align_fingerprint(PyObject *self, PyObject *args) {
     /* Zero out the remaining bytes */
     memset(new_fp+start_padding+fp_size, 0, storage_size-fp_size);
   }
-  return Py_BuildValue("iiO", start_padding, end_padding, new_fp_obj);
+  return Py_BuildValue("iiN", start_padding, end_padding, new_fp_obj);
 }
 
 static int
@@ -1074,7 +1068,7 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
     set_popcount_indicies(num_fingerprints, num_bits, ordering, popcount_indices);
     
     /* Everything is aligned and ordered, so we're done */
-    return Py_BuildValue("iiO", start_padding, end_padding, output_arena_obj);
+    return Py_BuildValue("iiN", start_padding, end_padding, output_arena_obj);
   }
 
   /* Not ordered. Make space for the results. */
@@ -1100,8 +1094,7 @@ make_sorted_aligned_arena(PyObject *self, PyObject *args) {
 
 
   Py_END_ALLOW_THREADS;
-
-  return Py_BuildValue("iiO", start_padding, end_padding, output_arena_obj);
+  return Py_BuildValue("iiN", start_padding, end_padding, output_arena_obj);
 }
 
 
