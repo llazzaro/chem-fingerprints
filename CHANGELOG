@@ -1,3 +1,11 @@
+What's new in 1.1p1 (in development)
+================================
+
+Fixed memory leaks caused by using Py_BuildValue with an "O" instead
+of an "N". This caused the reference count on the return arena strings
+to be too high, so they were never garbage collected. This should only
+affect people who made and destroyed many arenas.
+
 What's new in 1.1 (5 Feb 2013)
 ==============================
 
