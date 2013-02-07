@@ -20,8 +20,9 @@ except ImportError:
 
 try:
     # I need to import 'oechem' to make sure I load the shared libries
-    # XXX Check for license?
     from openeye import oechem
+    if not oechem.OEChemIsLicensed():
+        raise ImportError
     from chemfp import openeye
     has_openeye = True
 except ImportError:

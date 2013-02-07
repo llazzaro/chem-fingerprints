@@ -4,7 +4,9 @@ import unittest2
 import support
 
 try:
-    from openeye.oechem import OEGraphMol, OEParseSmiles
+    from openeye.oechem import OEGraphMol, OEParseSmiles, OEChemIsLicensed
+    if not OEChemIsLicensed():
+        raise ImportError
     skip_oechem = False
 except ImportError:
     skip_oechem = support.can_skip("oe")
