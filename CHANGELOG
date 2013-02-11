@@ -1,0 +1,219 @@
+What's new in 1.1p1 (11 Feb 2013)
+=================================
+
+Fixed memory leaks caused by using Py_BuildValue with an "O" instead
+of an "N". This caused the reference count on the return arena strings
+to be too high, so they were never garbage collected. This should only
+affect people who made and destroyed many arenas.
+
+What's new in 1.1 (5 Feb 2013)
+==============================
+
+New methods to look up a record, record index, or fingerprint given
+the record identifier. These are:
+
+  arena.get_by_id(id)
+  arena.get_index_by_id(id)
+  arena.get_fingerprint_by_id(id)
+
+Added or updated all of the docstrings for the public API.
+
+Documented that the search methods on the FingerprintArena instance
+are deprecated - use chemfp.search instead. These will generate
+warning message in the next release and after that will be removed.
+
+Renamed arena.copy_subset() to arena.copy().
+
+Changed the arena.copy() method so that by default it reorders the
+fingerprints if indices are specified, and by default the (sub)arena
+ordering is preserved.
+
+Added a cache for getattr(subarena, "ids"). Otherwise subarena.ids[i]
+took O(len(subarena.ids)) time instead of O(1) time.
+
+Renamed chemfp.readers to chemfp.fps_io and decoders.py to
+encodings.py. These were not part of the public API but may be in
+upcoming versions, so it's best to change them now.
+
+Detect and raise an exception if the metadata size doesn't match the
+fingerprint size passed to the arena builder. Thanks to Greg Landrum
+for spotting this bug!
+
+What's new in 1.1b7 (patch release)
+===================================
+
+Fixed a problem when the code is compiled on an old compiler which
+doesn't understand the POPCNT inline assembly then run on a machine
+which implements POPCNT.
+
+What's new in 1.1b6 (5 Dec 2012)
+================================
+
+Added methods to count the number of hits in the search results which
+are within a given score range, and to compute the cumulative score
+(also called the "raw score") of those hits. These are:
+
+   SearchResults.count_all(min_score=None, max_score=None, interval="[]")
+   SearchResults.cumulative_score_all(min_score=None, max_score=None, interval="[]")
+   SearchResult.count(min_score=None, max_score=None, interval="[]")
+   SearchResult.cumulative_score(min_score=None, max_score=None, interval="[]")
+
+Arenas now have a "copy_subset(indices, reorder=True)" method. This
+selects a subset of the entries in the arena and makes a new arena.
+Here's how to select a random subset of 100 entries from an arena:
+
+  import random
+  subset_indices = random.sample(xrange(len(arena)), 100)
+  new_arena = arena.copy_subset(subset_indices)
+
+(NOTE: 'copy_subset' was renamed 'copy' for the final 1.1 release.)
+
+Fixed a bug in the Open Babel patterns FPS output: the 'software' line
+needed a space between the Open Babel and chemfp versions.
+
+
+What's new in 1.1b5 (23 April 2012)
+===================================
+
+The command-line search tools support an --NxN option for when the
+queries and targets are the same. (The search results do not include
+the diagonal term.)  The implemention takes advantage of the symmetry
+to get almost a two-fold performance increase. This option assumes
+that everything will fit into memory.
+
+Added public APIs for the symmetric searches.
+
+New popcount algorithms:
+  - Lauradoux and POPCNT versions contributed by Kim Walisch
+      These are 2x and 3x faster than the original method.
+  - SSSE3 version by Imran Haque, Stanford University
+      This is about 2.5x faster than the original method.
+      Use --without-ssse3 to disable support for that method.
+  - Gilles method, which can be better than the original method.
+
+The timings depend very much on the compiler, CPU features, and choice
+of 32- vs 64- bit architecture. For example, Lauradoux is slower than
+the lookup tables for 32 bit systems. chemfp selects the best method
+at import run-time. Use chemfp.bitops.set_alignment_method to force a
+specific method.
+
+The new popcount algorithms require a specific fingerprint alignment
+and padding. Use the new "alignment" option in load_fingerprints() to
+specify an alignment. The default uses an alignment based on the
+available methods and the fingerprint size. (It will be 8 or less
+unless you have SSSE3 hardware but not SSE4.2, and your fingerprint is
+larger than 224 bits, in which case it's 64 bytes.)
+
+Optional OpenMP support. This is used when the query is an arena. If
+your compiler does not support OpenMP then use "--without-openmp" to
+disable it.
+
+Support for RDKit's Morgan fingerprints.
+
+Support for Daylight's Circular and Tree fingerprints (if you have
+OEGraphSim 2.0.0 installed.)
+
+New decoder for Daylight's "binary2ascii" encoding.
+
+Fixed a memory overflow bug which caused crashes on some Windows and
+Linux machines.
+
+Changed the API so that "arena.ids" or "subarena.ids" refers to the
+identifiers for that arena/subarena, and "arena.arena_ids" and
+"subarena.arena_ids" refers to the complete list of identifiers for
+the underlying arena. This is what my code expected, only I got the
+implementation backwards. Two of the test cases should have failed
+with swapped attributes but it looks like I assumed the computer was
+right and made the tests agree with the wrong values. Also added more
+tests to highlight other places where I could make a mistake between
+'ids' and 'arena_ids.' This fix resolves a serious error identified by
+Brian McClain of Vertex.
+
+Moved most memory management code from Python to C. The speedup is
+most noticable when there is a hit density (eg, when the threshold is
+below 0.5).
+
+Created a new 'Results' return object, which lets you sort the hits in
+different ways, and request only the score, or only the ids, or both
+from the hitlist.  The arena search results specifically are stored in
+a C data structure. This new API greatly simplfies implementing some
+types of clustering algorithms, reduces memory overhead, and improves
+performance.
+
+Added Alex Grönholm's 'futures' package as a submodule. It greatly
+simplifies making a thread- or process pool. It is a backport of the
+code in Python 3.2.
+
+Added Nilton Volpato's 'progressbar' package as a submodule. Use it to
+show a text-based progress bar in chemfp-based search tools.
+
+Added an experimental "Watcher" module by Allen Downey. Use it to
+handle ^C events, which otherwise get sent to an arbitary thread. It
+works by spawning a child process. The main process listens for a ^C
+and forwards that as a os.kill() to the child process. This will
+likely only work on Unix systems.
+
+What's new in 1.0 (20 Sept 2011)
+================================
+
+The chemfp format is now a tab-delimited format. I talked with two
+people who have spaces in their ids: one in their corporate ids and
+the other wants to use IUPAC names. In discussion with others, having
+a pure tab-delimited format would not be a problem with the primary
+audience.
+
+The simsearch output format is also tab delimited.
+
+Completely redeveloped the in-memory search interface. The core data
+structure is a "FingerprintArena", which can optionally hold
+population count information.
+
+The similarity searches use a compressed row representation,
+which is a more efficient use of memory and reduces the number
+Python-to-C calls I need to make.
+
+The FPS knearest search is push oriented, and keeps track of the
+identifiers at the C level.
+
+Major restructuring of the API so that public functions are at the top
+of the "chemfp" package. Made high-level functions for the expected
+common tasks of searching an FPSReader and a FingerprintArena.
+
+The oe2fps, ob2fps, and rdkit2fps readers now support multiple
+structure filenames. Each filename is listed on its own "source" line.
+
+New --id-tag to use one of the SD tag fields rather than the title
+line. This is needed for ChEBI where you should use --id-tag "ChEBI ID"
+to get ids like "CHEBI:776".
+
+New --aromaticity option for oe2fps, and a corresponding "aromaticity"
+field in the FPS header.
+
+Improved docstring comments.
+
+Improved error reporting.
+
+Added error handling options "strict", "report", and "ignore."
+
+More comprehensive test suite (which, yes, caught several errors).
+
+
+What's new in 0.95
+==================
+
+Cross-platform pattern-based fingerprint generation, and specific
+implementations of a CACTVS/PubChem-like substructure fingerprint and
+of RDKit's MACCS patterns.
+
+
+What's new in 0.9.1
+===================
+
+Support for Python 2.5.
+
+What's new in 0.9
+=================
+
+Major update from 0.5. Changes to the API, code
+cleanup, new search API, and more. Since there are
+no earlier users, I won't go into the details. :)

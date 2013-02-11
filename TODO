@@ -1,0 +1,42 @@
+Include Indigo and CDK support
+
+I use an 8-bit lookup table for the popcount because it's portable and
+pretty fast. On some machines a 16-bit LUT is faster. It's also
+possible that the GCC __builtin_popcount is faster, or the one of the
+approaches which makes use of Intel-specific assembly instructions.
+Should there be a way to toggle which one to use?
+
+What about a way to get a popcount function pointer specialized to,
+say, 64-bit aligned 2048 bit fingerprints?
+
+A "structure2fps" command-line tool which uses metadata from an
+existing fingerprint file to generate new fingerprints. The goal is to
+support:
+ structure2fps --reference targets.fps query.sdf | simsearch targets.fps
+
+Add support for Tversky, Euclidean and other search algorithms
+
+Add support for a "max_score" in doing searches. (This comes from
+looking at Pipeline Pilot, which has a default upper limit of
+0.999. But frankly, I'm not sure that's useful. I think the point is
+to ignore identical hits, so perhaps that's the real requirement.)
+
+Work on the pattern definition format. Should it have a distinction
+between "unique" and "non-unique" matches? Eg, C=* with count >= 2
+is the same as C=* (non-unique) with count >= 3, and the latter is
+likely faster.
+
+I think people will want a way to specify a pattern file as
+input. Perhaps "--patterns"? How do I assign those a type name?
+
+There should be some way to get a description of each set bit in the
+pattern fingerprints.
+
+What about a way to list all of the match atoms which go into a
+different bit? That will take a lot of new code, and many of the
+fingerprinters don't support it. Perhaps limit it to the pattern
+fingerprints?
+
+Add other fingerprints? Eg, the PaDEL substructure descriptors are
+available as a list of SMARTS, and would be easy to add as a pattern
+definition.

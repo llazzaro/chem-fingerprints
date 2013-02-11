@@ -1,0 +1,53 @@
+The thoughts, ideas, help, and support of many people went into making
+this project. In no particular order they are:
+
+Noel O'Boyle: I used his cinfony code as the base to understand how
+the different projects generate fingerprints.  He also encouraged me
+to develop these tools and put them out to the world.
+
+Geoff Hutchison for pointing out that he most often works with small
+data sets, and human-readable/text formats are more important than a
+binary format which is designed for million-compound data
+sets. (Thinking about this was the source for developing both a text
+and a binary format.)
+
+The OpenBabel developers, for developing a widely used tool in
+cheminformatics with both hash and substructure fingerprints.
+
+Greg Landrum, for RDKit and for discussions about what's needed in a
+fingerprint format. I hope some day to include some features he needs,
+like sparse and count fingerprints. RDKit's MACCS definitions are
+(excepting minor portability tweaks) the definitions used for the
+RDMACCS patterns. Greg's definitions are also used in CDK and
+OpenBabel. Greg also contributed additional support for RDKit
+fingerprints and reported bugs.
+
+OpenEye, for a non-commercial license to their tools.
+
+Phil Evans, for being the first external person to test the code and
+give feedback about installation and Python 2.5 compatibility
+problems.
+
+Evan Bolton and Wolf-Dietrich Ihlenfeldt for their help in
+understanding the PubChem/CACTVS substructure keys.
+
+Rajarshi Guha for implementing the PubChem/CACTVS substructure keys in
+CDK (and the anonymous person at the NIH Chemical Genomics Center who
+developed the precursor version). The CDK's independent implementation
+helped me cross-check my implementation. He also added support for the
+FPS format in his fingerprint analysis tools.
+
+Dmitry Pavlov for insights in how Indigo works and improvements in the
+Indigo implementations.
+
+Roche, for helping fund part of the project, and especially to Jérôme
+Hert, for his work on getting chemfp working for their needs and in
+helping track down a subtle memory bug.
+
+Kim Walisch, for suggestions and code for faster popcount
+implementations.
+
+To Chris Morely, Jörg Kurt Wegner, Phil Evans, Björn Grüning, Andrew
+Henry, Brian McClain and others for patches, bug reports, and feedback.
+
+To you, for reading these thanks and using the code.

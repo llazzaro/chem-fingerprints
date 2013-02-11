@@ -1,0 +1,63 @@
+                       chemfp 1.1p1
+
+A Python library and set of tools for working with cheminformatics
+fingerprint data. For more information, see http://chemfp.com/ .
+
+Copyright under "the MIT license." See COPYING for details.
+
+See THANKS for the people who have contributed in some fashion.  (If
+I've left your name out or didn't credit you correctly, let me know.)
+
+Install in the normal Python way:
+
+  python setup.py install
+
+You may need a 'sudo' or be root, depending on your system.
+
+If you get a message like:
+   unrecognized command line option "-fopenmp"
+then your compiler does not understand OpenMP. To compile without
+OpenMP append "--without-openmp" to the setup.py line.
+
+If you get a message like:
+
+    cc1: error: invalid option ssse3
+   -or-
+    cc1: error: unrecognized command line option "-mssse3"
+
+then your compiler does not understand the SSSE3 intrinsics. To
+compile without the SSSE3 intrinsics, append "--without-ssse3" to
+the setup.py line.
+
+For example, to compile in a Mac with gcc-4.0 using sudo:
+
+  sudo python setup.py install --without-openmp --without-ssse3
+
+
+Note: chemfp requires a C compiler to build the _chemfp extension.  If
+you use Visual Studio for Microsoft Window then you will either need
+the 2008 version or you will have to patch your version of Python to
+handle 2010 or newer. See http://bugs.python.org/issue13210 .
+
+
+Documentation? Certainly! Go to:
+
+   https://chemfp.readthedocs.org/en/latest/
+
+or use '--help' on any of the command-line programs:
+
+  rdkit2fps --help
+  ob2fps --help
+  oe2fps --help
+  sdf2fps --help
+  simsearch --help
+
+or (for parts of the public API), look at the doc strings
+
+  import chemfp
+  help(chemfp)
+
+There are many tests. To run them:
+
+  cd tests
+  python unit2 discover
