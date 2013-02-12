@@ -275,9 +275,6 @@ int RENAME(chemfp_threshold_tanimoto_arena)(
     /* Special case when popcount(query) == 0; everything has a score of 0.0 */
     if (query_popcount == 0) {
       if (threshold == 0.0) {
-#if USE_OPENMP == 1
-        #pragma omp critical (add_hit_threshold)
-#endif
         for (target_index = target_start; target_index < target_end; target_index++) {
           if (!chemfp_add_hit(results+(query_index-query_start), target_index, 0.0)) {
             add_hit_error = 1;
@@ -322,9 +319,6 @@ int RENAME(chemfp_threshold_tanimoto_arena)(
         if (denominator * intersect_popcount  >=
             numerator * (popcount_sum - intersect_popcount)) {
           score = ((double) intersect_popcount) / (popcount_sum - intersect_popcount);
-#if USE_OPENMP == 1
-          #pragma omp critical (add_hit_threshold)
-#endif
           if (!chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
             add_hit_error = 1;
           }
