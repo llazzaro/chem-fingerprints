@@ -1,4 +1,4 @@
-What's new in 1.1p1 (11 Feb 2013)
+What's new in 1.1p1 (12 Feb 2013)
 =================================
 
 Fixed memory leaks caused by using Py_BuildValue with an "O" instead
