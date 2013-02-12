@@ -5,7 +5,7 @@ import os
 import chemfp
 import _chemfp
 
-version_pattern = re.compile(r"\d+\.\d+(\.\d)?((a|b|pre)\d+)?$")
+version_pattern = re.compile(r"\d+\.\d+(\.\d)?((a|b|p)\d+)?$")
 
 class SystemTests(unittest2.TestCase):
     def test_version(self):
