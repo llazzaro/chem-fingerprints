@@ -235,9 +235,6 @@ int RENAME(chemfp_threshold_tanimoto_arena)(
            target_index++, target_fp += target_storage_size) {
         score = chemfp_byte_tanimoto(fp_size, query_fp, target_fp);
         if (score >= threshold) {
-#if USE_OPENMP == 1
-          #pragma omp critical (add_hit_threshold)
-#endif
           if (!chemfp_add_hit(results+(query_index-query_start), target_index, score)) {
             add_hit_error = 1;
           }
