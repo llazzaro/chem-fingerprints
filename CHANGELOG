@@ -6,6 +6,10 @@ of an "N". This caused the reference count on the return arena strings
 to be too high, so they were never garbage collected. This should only
 affect people who made and destroyed many arenas.
 
+Removed unneeded lock in threshold arena searches. This should give
+better parallelism when there are many hits (eg, with a low threshold)
+when there are multiple threads.
+
 What's new in 1.1 (5 Feb 2013)
 ==============================
 
