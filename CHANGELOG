@@ -1,3 +1,16 @@
+What's new in 1.1p2 (development)
+=================================
+
+Added "--target-format", to specify the format of the targets file.
+(Thanks to Björn Grüning for the suggestion.)
+
+Added "--query-format" as the preferred way to specify the format
+of the queries file. The older term, "--in", is still supported
+but deprecated.
+
+Report problems if the query or target file is in the wrong format,
+instead of giving a stack trace.
+
 What's new in 1.1p1 (12 Feb 2013)
 =================================
 

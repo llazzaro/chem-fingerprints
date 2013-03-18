@@ -1,12 +1,13 @@
 import unittest2
 import sys
+import gzip
+from cStringIO import StringIO
 
 import chemfp
 from chemfp.commandline import simsearch
 
 SOFTWARE = "chemfp/" + chemfp.__version__
 
-from cStringIO import StringIO
 import support
 
 class SimsearchRunner(support.Runner):
@@ -26,6 +27,7 @@ count_run_split = count_runner.run_split
 count_run_exit = count_runner.run_exit
 
 SIMPLE_FPS = support.fullpath("simple.fps")
+SIMPLE_FPS_GZ = support.fullpath("simple.fps.gz")
 
 def run_split_stdin(input, cmdline, expect_length=None, source=SIMPLE_FPS):
     old_stdin = sys.stdin
@@ -34,6 +36,13 @@ def run_split_stdin(input, cmdline, expect_length=None, source=SIMPLE_FPS):
         return run_split(cmdline, expect_length, source)
     finally:
         sys.stdin = old_stdin
+
+def gzip_compress(s):
+    f = StringIO()
+    g = gzip.GzipFile(fileobj=f, mode="w")
+    g.write(s)
+    g.close()
+    return f.getvalue()
 
 
 # The values I get using gmpy are:
@@ -187,6 +196,78 @@ class TestOptions(unittest2.TestCase):
         self.assertEquals(lines,
                           ["2\tspam\tdeadbeef\t1.000\tDeaf Beef\t0.960",
                            "0\tcountdown"])
+
+    def test_in_format_deprecated(self):
+        s = gzip_compress("deadbeef\tspam\n")
+        # You should use use "--query-format" instead of "--in".
+        header, lines = run_split_stdin(s, "--in fps.gz", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                           "#software": SOFTWARE,
+                           "#type": "Tanimoto k=3 threshold=0.7"})
+        self.assertEquals(lines,
+                          ["3\tspam\tdeadbeef\t1.000\tDeaf Beef\t0.960\tDEADdead\t0.840"])
+
+    def test_query_format_stdin(self):
+        s = gzip_compress("deadbeef\tspam\n")
+        header, lines = run_split_stdin(s, "--query-format fps.gz", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                           "#software": SOFTWARE,
+                           "#type": "Tanimoto k=3 threshold=0.7"})
+        self.assertEquals(lines,
+                          ["3\tspam\tdeadbeef\t1.000\tDeaf Beef\t0.960\tDEADdead\t0.840"])
+
+    def test_query_format_fps_gzip_but_actually_fps(self):
+        errmsg = run_exit(["--queries", SIMPLE_FPS, "--query-format", "fps.gz"], SIMPLE_FPS)
+        self.assertIn("Not a gzipped file", errmsg)
+
+    def test_query_format_fps_but_actually_fps_gz(self):
+        errmsg = run_exit(["--queries", SIMPLE_FPS_GZ, "--query-format", "fps"], SIMPLE_FPS)
+        self.assertIn("Line must end with a newline character at line 1 of", errmsg)
+
+    def test_query_format_unknown(self):
+        errmsg = run_exit(["--queries", SIMPLE_FPS, "--query-format", "f2s"], SIMPLE_FPS)
+        self.assertIn("Unknown fingerprint format 'f2s'", errmsg)
+
+    def test_query_format_compression_unknown(self):
+        errmsg = run_exit(["--queries", SIMPLE_FPS, "--query-format", "fps.33"], SIMPLE_FPS)
+        self.assertIn("Unsupported compression in format 'fps.33'", errmsg)
+
+    def test_target_format_fps(self):
+        header, lines = run_split_stdin("deadbeef\tspam\n", "--target-format fps", 1, SIMPLE_FPS)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                           "#software": SOFTWARE,
+                           "#type": "Tanimoto k=3 threshold=0.7"})
+        self.assertEquals(lines,
+                          ["3\tspam\tdeadbeef\t1.000\tDeaf Beef\t0.960\tDEADdead\t0.840"])
+
+    def test_target_format_fps_gz(self):
+        header, lines = run_split_stdin("deadbeef\tspam\n", "--target-format fps.gz", 1, SIMPLE_FPS_GZ)
+        self.assertIn("simple.fps", header.pop("#targets"))
+        self.assertEquals(header,
+                          {"#num_bits": "32",
+                           "#software": SOFTWARE,
+                           "#type": "Tanimoto k=3 threshold=0.7"})
+        self.assertEquals(lines,
+                          ["3\tspam\tdeadbeef\t1.000\tDeaf Beef\t0.960\tDEADdead\t0.840"])
+
+    def test_target_format_fps_but_actually_fps_gz(self):
+        errmsg = run_exit(["--queries", SIMPLE_FPS, "--target-format", "fps"], SIMPLE_FPS_GZ)
+        self.assertIn("Cannot open targets file: Line must end with a newline character at line 1 of", errmsg)
+
+    def test_target_format_unknown(self):
+        errmsg = run_exit(["--queries", SIMPLE_FPS, "--target-format", "fp3"], SIMPLE_FPS_GZ)
+        self.assertIn("Unknown fingerprint format 'fp3'", errmsg)
+
+    def test_target_format_compression_unknown(self):
+        errmsg = run_exit(["--queries", SIMPLE_FPS, "--target-format", "fps.33"], SIMPLE_FPS_GZ)
+        self.assertIn("Unsupported compression in format 'fps.33'", errmsg)
+        
 
 class _AgainstSelf:
     def test_with_threshold(self):

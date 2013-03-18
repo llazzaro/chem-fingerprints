@@ -174,8 +174,10 @@ parser.add_argument("--NxN", action="store_true",
 parser.add_argument("--hex-query", help="query in hex")
 parser.add_argument("--query-id", default="Query1",
                     help="id for the hex query")
-parser.add_argument("--in", metavar="FORMAT", dest="query_format",
+parser.add_argument("--query-format", "--in", metavar="FORMAT", dest="query_format",
                     help="input query format (default uses the file extension, else 'fps')")
+parser.add_argument("--target-format", metavar="FORMAT", dest="target_format",
+                    help="input target format (default uses the file extension, else 'fps')")
 parser.add_argument("-o", "--output", metavar="FILENAME",
                     help="output filename (default is stdout)")
 
@@ -268,8 +270,8 @@ def main(args=None):
     # Open the target file. This reads just enough to get the header.
 
     try:
-        targets = chemfp.open(target_filename)
-    except (IOError, ValueError), err:
+        targets = chemfp.open(target_filename, format=args.target_format)
+    except (IOError, ValueError, chemfp.ChemFPError), err:
         sys.stderr.write("Cannot open targets file: %s" % err)
         raise SystemExit(1)
 
@@ -294,7 +296,7 @@ def main(args=None):
         query_filename = args.queries
         try:
             queries = chemfp.open(query_filename, format=args.query_format)
-        except (ValueError, IOError), err:
+        except (ValueError, IOError, chemfp.ChemFPError), err:
             sys.stderr.write("Cannot open queries file: %s\n" % (err,))
             raise SystemExit(1)
 
