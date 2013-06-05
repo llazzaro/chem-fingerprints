@@ -28,6 +28,7 @@ def fullpath(name):
 PUBCHEM_SDF = fullpath("pubchem.sdf")
 PUBCHEM_SDF_GZ = fullpath("pubchem.sdf.gz")
 PUBCHEM_ANOTHER_EXT = fullpath("pubchem.should_be_sdf_but_is_not")
+EXAMPLES_INCHI = fullpath("examples.inchi")
 
 MISSING_TITLE = fullpath("missing_title.sdf")
 

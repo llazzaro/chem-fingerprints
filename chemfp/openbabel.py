@@ -246,7 +246,9 @@ def read_structures(filename=None, format=None, id_tag=None, errors="strict"):
 
     if not obconversion.SetInFormat(format_name):
         raise ValueError("Unknown structure format %r" % (format_name,))
+
     if format_name == "inchi":
+        # Allow titles on the InChI line
         obconversion.SetOptions("n", ob.OBConversion.INOPTIONS)
     
     obmol = ob.OBMol()

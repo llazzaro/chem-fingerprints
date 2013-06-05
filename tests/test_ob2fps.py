@@ -136,6 +136,12 @@ class TestIO(unittest2.TestCase, support.TestIdAndErrors):
         errmsg = run_exit("--FP2 --in xyzzy")
         self.assertIn("Unsupported format specifier", errmsg)
         self.assertIn("xyzzy", errmsg)
+    
+    def test_inchi(self):
+        header, fps = run_split("--FP3", 3, support.EXAMPLES_INCHI)
+        self.assertEquals(fps[0], "0000000402b001\tphenol")
+        self.assertEquals(fps[1], "00000000001001\tbenzene")
+        self.assertEquals(fps[2], "00000000000000\tdeuterated methane")
 
         
 TestIO = unittest2.skipIf(skip_openbabel, "OpenBabel not installed")(TestIO)
