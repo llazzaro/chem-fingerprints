@@ -11,6 +11,8 @@ but deprecated.
 Report problems if the query or target file is in the wrong format,
 instead of giving a stack trace.
 
+ob2fps supports InChI files with a title after the InChI line.
+
 What's new in 1.1p1 (12 Feb 2013)
 =================================
 
