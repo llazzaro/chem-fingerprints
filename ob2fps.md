@@ -1,0 +1,161 @@
+# Introduction #
+
+Open Babel is the best known of the freely available cheminformatics
+tools. It's heritage stretches back to the early 1990s. Version 2.2.x
+implements the FP2, FP3, and FP4 fingerprints, and version 2.3.0 added
+the MACCS fingerprints. (However, the SMARTS definitions in 2.3.0 are
+buggy; use the fixed ones from the development version!)
+
+ob2fps uses OpenBabel to generate FPS fingerprints using either the
+built-in FP2, FP2, FP4 and MACCS implementations or using the
+chemfp pattern definitions for [RDMACCS](RDMACCS.md) and [Substruct](Substruct.md).
+
+More information can be found in the [chemfp documentation](http://readthedocs.org/docs/chemfp/en/latest/).
+
+# Details #
+
+Here are examples of generating each of the fingerprint types. For ease of display I have folded all of the lines to 78 characters; each fingerprint line should have one fingerprint following by a tab and then the record.
+
+```
+ob2fps --FP2 $PUBCHEM/Compound_005050001_005075000.sdf.gz | head | fold -w 78
+#FPS1
+#num_bits=1021
+#type=OpenBabel-FP2/1
+#software=OpenBabel/2.2.3
+#source=/Users/dalke/databases/pubchem/Compound_005050001_005075000.sdf.gz
+#date=2011-09-20T16:27:30
+600601240120804003000620189608048c100081104400400403008820040c025900c0c9002010
+b300a62018000410c0016a4008000040082020008200a8041008031800c01122c0018010400280
+00011094006004202a08c1080800800b0402000006001020001050000200c20208200006b18900
+4112010000840036400000	5050001
+8026002401208040030046001890080480100091100400400003008000000c0019004081003080
+a100a6601800041040011a4000000020082800008200c8040006001c00c0010240008810400288
+00011094004004002a08c1080800800b0002000006001020001050000000020004202006010800
+4112008010840026400000	5050002
+02054100000000840b01020002034000000000c00020420001000080000000011400440021c000
+004002020800014000010a030004a00912040010020006000008a00800030000010000200002c0
+020400901040000010084208b8000408808101040000810004c20080800000102000000211000a
+0300200808006101000100	5050003
+00060002004000c0000002008102001000000098900008040020a020400400201402d800002002
+01000a040820010000000000000000000000000002004000000800080220000080000001000084
+804208a00040202100000000000000410002000024000004000000400000100000000002054001
+0118080008200000001000	5050004
+```
+
+```
+% ob2fps --FP3 $PUBCHEM/Compound_005050001_005075000.sdf.gz | head | fold -w 78
+#FPS1
+#num_bits=55
+#type=OpenBabel-FP3/1
+#software=OpenBabel/2.2.3
+#source=/Users/dalke/databases/pubchem/Compound_005050001_005075000.sdf.gz
+#date=2011-09-20T16:29:03
+04000000303021	5050001
+04000000003021	5050002
+14000000503001	5050003
+06000000307003	5050004
+```
+
+```
+% ob2fps --FP4 $PUBCHEM/Compound_005050001_005075000.sdf.gz | head | fold -w 78
+#FPS1
+#num_bits=307
+#type=OpenBabel-FP4/1
+#software=OpenBabel/2.2.3
+#source=/Users/dalke/databases/pubchem/Compound_005050001_005075000.sdf.gz
+#date=2011-09-20T16:29:36
+018000000000080000008000200000000000000000000000000024000000000000004640402000
+	5050001
+050000000000080000008000200000000000000000009000000000000000000000004640402000
+	5050002
+120002000000010000000000000000000001000000000000000000000000000000004240407000
+	5050003
+00810000000000000000880000000000000100000000a000000000000000000000000640c02500
+	5050004
+```
+
+```
+% ob2fps --MACCS $PUBCHEM/Compound_005050001_005075000.sdf.gz | head | fold -w 78
+#FPS1
+#num_bits=166
+#type=OpenBabel-MACCS/1
+#software=OpenBabel/2.2.3
+#source=/Users/dalke/databases/pubchem/Compound_005050001_005075000.sdf.gz
+#date=2011-09-20T16:30:07
+800400800100449f04e7b5e828f3f0cbdbeb3eff1b	5050001
+800400000000000003e614c808a1d44350e338af1b	5050002
+0000000000000200800800910480216000d8b6d61a	5050003
+80040000000201018000200000940024288ba2571a	5050004
+```
+
+
+In addition, ob2fps supports the --rdmaccs and --substruct options to generate the [RDMACCS](RDMACCS.md) and [Substruct](Substruct.md) keys.
+
+```
+% ob2fps --rdmaccs $PUBCHEM/Compound_005050001_005075000.sdf.gz | head | fold -w 78
+#FPS1
+#num_bits=166
+#type=RDMACCS-OpenBabel/1
+#software=OpenBabel/2.2.3
+#source=/Users/dalke/databases/pubchem/Compound_005050001_005075000.sdf.gz
+#date=2011-09-20T16:30:45
+000000800100449f04e7b5e83af3f0dbdbeb3ffb1f	5050001
+000000000000000001e614c81a21d45350e139af1f	5050002
+0000000000000200800800111401217000d8b7d21e	5050003
+00000000000201018000248000940024280b82571a	5050004
+```
+
+```
+% python ob2fps --substruct $PUBCHEM/Compound_005050001_005075000.sdf.gz | head | fold -w 79
+#FPS1
+#num_bits=881
+#type=ChemFP-Substruct-OpenBabel/1
+#software=OpenBabel/2.2.3
+#source=/Users/dalke/databases/pubchem/Compound_005050001_005075000.sdf.gz
+#date=2011-09-20T16:31:52
+07de1c000200000000000000000000000080000000008c070100000000000280020000782000020
+0003014871b604c83c100204015c0a44e2a0a43000884400010119814261950044d03a989e10430
+0661001b13e03811017100000000044000000000000002200000000000000000	5050001
+07de04000000000000000000000000000080000000003c020000000000000280030000780000000
+000b0108359207c03c910080015c0acee2a004101048c4804101b841c2e1910064f03a989290410
+0661001313e03811017100000000004000000000000000200000000000000000	5050002
+071e1c000000000000000000000000000000000000000c060100000000000081020000580000000
+00030200119404c60010020001140054a0000401000240400101180601113b0e44c21ac58018c44
+a403a85095e111173d71050080100018020002004008000c0100000000000000	5050003
+010e9c0300000000000000000000000000800400000000000000000000000080010000d80000000
+00010200509480c30010020021100054b1040401000240400101180621013b0644c21ac78419804
+2503885095e11176300600000000000000000000000000000000000000000000	5050004
+```
+
+## ob2fps --help ##
+
+```
+usage: ob2fps [-h]
+               [--FP2 | --FP3 | --FP4 | --MACCS | --substruct | --rdmaccs]
+               [--id-tag NAME] [--in FORMAT] [-o FILENAME]
+               [--errors {strict,report,ignore}]
+               [filenames [filenames ...]]
+    
+Generate FPS fingerprints from a structure file using OpenBabel
+    
+positional arguments:
+  filenames             input structure files (default is stdin)
+    
+optional arguments:
+  -h, --help            show this help message and exit
+  --FP2
+  --FP3
+  --FP4
+  --MACCS
+  --substruct           generate ChemFP substructure fingerprints
+  --rdmaccs             generate 166 bit RDKit/MACCS fingerprints
+  --id-tag NAME         tag name containing the record id (SD files only)
+  --in FORMAT           input structure format (default autodetects from the
+                        filename extension)
+  -o FILENAME, --output FILENAME
+                        save the fingerprints to FILENAME (default=stdout)
+  --errors {strict,report,ignore}
+                        how should structure parse errors be handled?
+                        (default=strict)
+
+```
